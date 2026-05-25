@@ -323,9 +323,18 @@ task smoke
 task stop
 task format
 task ci
+task rag:ingest
 ```
 
 Use `uv` for backend Python dependency management. Do not introduce legacy backend install commands.
+
+After changing reviewed public RAG content in `backend/knowledge/resume.md`, rebuild Qdrant with:
+
+```bash
+task rag:ingest
+```
+
+Do not run ingestion against private drafts.
 
 ---
 

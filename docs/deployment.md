@@ -240,10 +240,15 @@ FRONTEND_ORIGIN
 OPENAI_API_KEY
 OPENAI_MODEL
 OPENAI_EMBEDDING_MODEL
+OPENAI_EMBEDDING_DIMENSIONS
+OPENAI_MAX_OUTPUT_TOKENS
 
 QDRANT_URL
 QDRANT_API_KEY
 QDRANT_COLLECTION
+
+RAG_TOP_K
+RAG_SCORE_THRESHOLD
 
 RESEND_API_KEY
 CONTACT_TARGET_EMAIL
@@ -321,7 +326,7 @@ UptimeRobot / cron-job.org:
 Qdrant:
 
 - [ ] Create free cluster.
-- [ ] Create collection.
 - [ ] Configure API key.
+- [ ] Set `QDRANT_URL`, `QDRANT_API_KEY`, and `QDRANT_COLLECTION`.
 - [ ] Run ingestion.
 - [ ] Test retrieval.

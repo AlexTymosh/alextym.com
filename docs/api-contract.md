@@ -370,7 +370,7 @@ max output tokens: configured by model client
 Implementation note:
 
 ```text
-Rate limiting is not implemented in Stage 3.
+Rate limiting is not implemented yet.
 It is tracked as a required pre-public security hardening step and must not be skipped before launch.
 ```
 

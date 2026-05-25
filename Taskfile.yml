@@ -79,6 +79,12 @@ tasks:
     cmds:
       - uv run pytest
 
+  rag:ingest:
+    desc: Rebuild Qdrant vectors from reviewed public knowledge files.
+    dir: backend
+    cmds:
+      - uv run python -m scripts.ingest_knowledge
+
   backend:check:
     desc: Run all backend checks.
     cmds:

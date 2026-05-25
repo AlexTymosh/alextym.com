@@ -4,7 +4,9 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-from app.rag.knowledge_base import get_public_retriever
+from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
+from app.llm.factory import get_configured_llm_client
+from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import Retriever
@@ -46,9 +48,15 @@ class ChatService:
     def __init__(
         self,
         retriever: Retriever | None = None,
+        llm_client: LLMClient | None = None,
         prompt_builder: PromptBuilder | None = None,
     ) -> None:
-        self._retriever = retriever or get_public_retriever()
+        self._retriever = retriever or get_configured_retriever()
+        self._llm_client = (
+            llm_client
+            if llm_client is not None
+            else (get_configured_llm_client() if retriever is None else None)
+        )
         self._prompt_builder = prompt_builder or PromptBuilder()
 
     def answer(self, request: ChatRequest) -> ChatResponse:
@@ -60,11 +68,21 @@ class ChatService:
                 not_enough_data=True,
             )
 
-        chunks = self._retriever.retrieve(request.message)
+        try:
+            chunks = self._retriever.retrieve(request.message)
+        except (ProviderConfigurationError, ProviderRequestError):
+            return ChatResponse(
+                answer=INSUFFICIENT_DATA_ANSWER,
+                sources=[],
+                confidence="low",
+                not_enough_data=True,
+            )
+
         if chunks:
             prompt = self._prompt_builder.build(question=request.message, chunks=chunks)
+            answer = self._answer_from_prompt(prompt, chunks)
             return ChatResponse(
-                answer=self._extractive_answer(chunks, prompt.context),
+                answer=answer,
                 sources=[
                     {
                         "title": chunk.metadata.source,
@@ -128,6 +146,15 @@ class ChatService:
         return "According to Alex's public knowledge base, " + " ".join(
             f"{index}. {excerpt}" for index, excerpt in enumerate(excerpts, start=1)
         )
+
+    def _answer_from_prompt(self, prompt: Any, chunks: list[KnowledgeChunk]) -> str:
+        if self._llm_client is None:
+            return self._extractive_answer(chunks, prompt.context)
+
+        try:
+            return self._llm_client.answer(prompt)
+        except (ProviderConfigurationError, ProviderRequestError):
+            return self._extractive_answer(chunks, prompt.context)
 
     @staticmethod
     def _tokenize(answer: str) -> list[str]:

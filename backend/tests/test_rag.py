@@ -7,6 +7,7 @@ from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import InMemoryRetriever
 from app.schemas.chat import ChatRequest
+from app.llm.client import ProviderRequestError
 from app.services.chat import ChatService
 
 
@@ -126,6 +127,32 @@ def test_chat_service_returns_sources_from_retrieved_public_chunks() -> None:
     assert response.sources[0].section == "Summary"
 
 
+def test_chat_service_uses_configured_llm_client() -> None:
+    chunk = _chunk("public-1", "Alex builds FastAPI services.")
+
+    response = ChatService(
+        retriever=InMemoryRetriever([chunk]),
+        llm_client=StaticLLMClient("LLM grounded answer."),
+    ).answer(ChatRequest(message="What FastAPI experience does Alex have?"))
+
+    assert response.answer == "LLM grounded answer."
+    assert response.not_enough_data is False
+    assert response.sources[0].title == "resume.md"
+
+
+def test_chat_service_falls_back_to_extractive_answer_when_llm_fails() -> None:
+    chunk = _chunk("public-1", "Alex builds FastAPI services.")
+
+    response = ChatService(
+        retriever=InMemoryRetriever([chunk]),
+        llm_client=FailingLLMClient(),
+    ).answer(ChatRequest(message="What FastAPI experience does Alex have?"))
+
+    assert "According to Alex's public knowledge base" in response.answer
+    assert "Alex builds FastAPI services." in response.answer
+    assert response.not_enough_data is False
+
+
 def _chunk(
     chunk_id: str,
     content: str,
@@ -142,6 +169,19 @@ def _chunk(
             visibility=visibility,
         ),
     )
+
+
+class StaticLLMClient:
+    def __init__(self, answer: str) -> None:
+        self._answer = answer
+
+    def answer(self, prompt: object) -> str:
+        return self._answer
+
+
+class FailingLLMClient:
+    def answer(self, prompt: object) -> str:
+        raise ProviderRequestError("Provider failed.")
 
 
 def _local_knowledge_dir(name: str) -> Path:

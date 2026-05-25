@@ -9,6 +9,8 @@ description = "FastAPI backend for alextym."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115,<1.0",
+    "openai>=2.0,<3.0",
+    "qdrant-client>=1.16,<2.0",
     "uvicorn[standard]>=0.48.0,<1.0",
 ]
 
@@ -21,7 +23,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*"]
+include = ["app*", "scripts*"]
 
 [tool.ruff]
 line-length = 100
@@ -29,4 +31,3 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

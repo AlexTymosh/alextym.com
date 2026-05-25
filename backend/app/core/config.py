@@ -8,9 +8,16 @@ class Settings:
     app_name: str
     environment: str
     frontend_origin: str
+    openai_api_key: str
     openai_model: str
     openai_embedding_model: str
+    openai_embedding_dimensions: int
+    openai_max_output_tokens: int
+    qdrant_url: str
+    qdrant_api_key: str
     qdrant_collection: str
+    rag_top_k: int
+    rag_score_threshold: float
     rate_limiting_enabled: bool
     chat_daily_limit_per_ip: int
 
@@ -32,15 +39,32 @@ def _get_int(name: str, default: int) -> int:
         return default
 
 
+def _get_float(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        return float(raw_value)
+    except ValueError:
+        return default
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings(
         app_name=os.getenv("APP_NAME", "alextym API"),
         environment=os.getenv("ENVIRONMENT", "local"),
         frontend_origin=os.getenv("FRONTEND_ORIGIN", "http://localhost:3000"),
-        openai_model=os.getenv("OPENAI_MODEL", ""),
-        openai_embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", ""),
+        openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+        openai_model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
+        openai_embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+        openai_embedding_dimensions=_get_int("OPENAI_EMBEDDING_DIMENSIONS", 1536),
+        openai_max_output_tokens=_get_int("OPENAI_MAX_OUTPUT_TOKENS", 600),
+        qdrant_url=os.getenv("QDRANT_URL", ""),
+        qdrant_api_key=os.getenv("QDRANT_API_KEY", ""),
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "alex_public_knowledge"),
+        rag_top_k=_get_int("RAG_TOP_K", 6),
+        rag_score_threshold=_get_float("RAG_SCORE_THRESHOLD", 0.72),
         rate_limiting_enabled=_get_bool("RATE_LIMITING_ENABLED", True),
         chat_daily_limit_per_ip=_get_int("CHAT_DAILY_LIMIT_PER_IP", 50),
     )

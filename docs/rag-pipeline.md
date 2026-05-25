@@ -140,6 +140,7 @@ The ingestion script should:
 - generate embeddings;
 - store vectors in Qdrant;
 - store metadata with each vector;
+- remove old vectors for the current public source files before upserting new chunks;
 - print ingestion summary.
 
 Script location:
@@ -149,6 +150,19 @@ backend/scripts/ingest_knowledge.py
 ```
 
 Do not generate embeddings during every chat request.
+
+Run ingestion from the repository root:
+
+```powershell
+task rag:ingest
+```
+
+Current defaults:
+
+```text
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSIONS=1536
+```
 
 ---
 
@@ -165,6 +179,13 @@ QDRANT_COLLECTION=alex_public_knowledge
 Store only public knowledge chunks.
 
 Do not store private source documents inside Qdrant.
+
+Current collection settings:
+
+```text
+distance: Cosine
+vector size: OPENAI_EMBEDDING_DIMENSIONS
+```
 
 ---
 
@@ -184,6 +205,9 @@ user question
 If no chunk passes the threshold, return an insufficient-data response.
 
 Do not force the LLM to answer without useful context.
+
+If Qdrant or OpenAI retrieval fails, return the insufficient-data response instead of exposing
+provider errors.
 
 ---
 
@@ -294,6 +318,7 @@ RAG MVP is ready when:
 - ingestion script creates chunks with metadata;
 - embeddings are stored in Qdrant;
 - retriever returns relevant chunks;
+- changing `resume.md` followed by `task rag:ingest` updates Qdrant;
 - weak context triggers insufficient-data response;
 - chat response includes source metadata;
 - private biography is not indexed;
