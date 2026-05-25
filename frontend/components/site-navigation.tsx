@@ -8,6 +8,7 @@ const navigation = [
   { href: "/", label: "Home" },
   { href: "/resume", label: "Resume" },
   { href: "/chat", label: "Chat" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function SiteNavigation() {
@@ -41,4 +42,3 @@ export function SiteNavigation() {
     </header>
   );
 }
-
