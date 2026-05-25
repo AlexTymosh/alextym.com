@@ -16,15 +16,17 @@
 
 The goal of version 1.0 is to create a business-card website with an AI chat that uses a RAG approach to answer questions about Alex's professional profile.
 
-The AI assistant answers employers' questions about Alex's projects, skills, experience, professional path and career transition based on a public knowledge base, which includes:
+The AI assistant answers employers' questions about Alex's projects, skills, experience and professional path based on reviewed public knowledge.
 
-- personal statement;
-- work experience: roles, periods, projects, achievements and reasons for transitions;
-- education;
-- public projects;
-- recruiter-facing biography.
+Current public RAG source:
 
-In future versions, the project may be extended with dialogue escalation to Alex via Telegram, as well as the collection of questions that the assistant could not answer for subsequent manual updates to the knowledge base.
+```text
+backend/knowledge/resume.md
+```
+
+Private drafts and unreviewed biography or project notes must stay in ignored local storage, such as `private/knowledge/`, and must not be committed.
+
+In future versions, the project may collect unanswered question categories for subsequent manual updates to the knowledge base.
 
 Restriction: health information, private contacts, names of colleagues, friends, managers or any other private data of third parties must not be added to GitHub, project files, the frontend or the public RAG knowledge base.
 
@@ -48,7 +50,7 @@ Chat page intro:
 
 ```text
 Hi, I'm Alex's digital assistant.
-Alex created me to help you quickly explore his background. I was built using his public biography, resume and project information.
+Alex created me to help you quickly explore his professional background. I use reviewed public resume information.
 What would you like to know?
 Here are a few quick questions to start:
 ```
@@ -61,7 +63,7 @@ Tell me about your recent projects.
 Tell me about your RAG work
 ```
 
-The AI assistant must not present itself directly as Alex. It answers as Alex's digital assistant and uses only the public knowledge base: the CV, the cleaned recruiter-facing biography, public information about projects and, where available links exist, materials from public talks such as video recordings from Zaporizhzhia Channel 5.
+The AI assistant must not present itself directly as Alex. It answers as Alex's digital assistant and uses only reviewed public knowledge. For now, the committed public RAG source is `backend/knowledge/resume.md`; additional public profile or selected-project summaries can be added later only after privacy review.
 
 Private information must not be included in GitHub, project files, the frontend or the public RAG knowledge base. This includes health information, personal contacts, names of colleagues, friends, managers and any other private data of third parties.
 
@@ -191,9 +193,7 @@ alextym/
 │  │  ├─ llm/
 │  │  └─ core/
 │  ├─ knowledge/
-│  │  ├─ biography_public.md
-│  │  ├─ resume.md
-│  │  └─ projects.md
+│  │  └─ resume.md
 │  ├─ scripts/
 │  ├─ tests/
 │  ├─ Dockerfile
@@ -213,6 +213,9 @@ alextym/
 ├─ scripts/
 │  ├─ smoke.ps1
 │  └─ stop-dev.ps1
+│
+├─ private/
+│  └─ knowledge/
 │
 ├─ README.md
 ├─ AGENTS.md
@@ -239,15 +242,17 @@ alextym/
 
 ## RAG knowledge base
 
-Only public, verified markdown files are used for RAG:
+Only public, verified markdown files are used for RAG.
+
+Current committed public source:
 
 ```text
-backend/knowledge/biography_public.md
 backend/knowledge/resume.md
-backend/knowledge/projects.md
 ```
 
-In the future, project material fragments cleaned of personal data may be added, as well as information extracted from public video recordings of talks on Zaporizhzhia Channel 5, if such materials are available.
+Do not commit `backend/knowledge/biography_public.md` or `backend/knowledge/projects.md` at this stage. Private drafts and unreviewed biography or project notes belong under ignored `private/knowledge/` or another private location.
+
+In the future, selected project summaries or a short public profile can be added after privacy review.
 
 The public knowledge base must not include:
 
@@ -570,11 +575,24 @@ basic prompt injection guard
 backend tests for validation, insufficient data, prompt injection and SSE format
 ```
 
+Completed in Stage 4A:
+
+```text
+public knowledge boundary: backend/knowledge/resume.md only
+private draft boundary through ignored private/knowledge/
+heading-aware markdown chunker
+chunk metadata model
+in-memory retriever abstraction for local tests
+prompt builder with separated system instructions, retrieved context and user question
+ChatService wired to retrieval abstraction without external OpenAI/Qdrant calls
+RAG tests for chunking, metadata, retrieval, prompt building and knowledge loading
+```
+
 Not implemented yet:
 
 ```text
 OpenAI integration
-Qdrant/RAG retrieval
+Qdrant vector retrieval
 production frontend streaming integration
 rate limiting
 ```

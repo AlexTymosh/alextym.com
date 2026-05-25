@@ -13,7 +13,7 @@ The website should demonstrate:
 - privacy-aware handling of personal biography data;
 - deployable architecture.
 
-The site is not just a static portfolio. The main product feature is an AI assistant that answers employer-facing questions about Alex's professional background, projects, skills, and career transition.
+The site is not just a static portfolio. The main product feature is an AI assistant that answers employer-facing questions about Alex's professional background, projects, skills, and experience.
 
 ---
 

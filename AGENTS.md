@@ -68,7 +68,8 @@ Expected structure:
 
 ```text
 alextym/
-├─ _local/
+├─ private/
+│  └─ knowledge/
 ├─ frontend/
 │  ├─ app/
 │  │  ├─ page.tsx
@@ -233,12 +234,27 @@ Use RAG, not fine-tuning.
 Public knowledge files:
 
 ```text
-backend/knowledge/biography_public.md
 backend/knowledge/resume.md
-backend/knowledge/projects.md
 ```
 
-Do not index or commit the full private biography.
+Current rule: `resume.md` is the only committed public RAG source until additional files are
+explicitly reviewed and approved.
+
+Do not index or commit the full private biography, unreviewed biography drafts, or unreviewed
+project notes.
+
+Use ignored local drafts under:
+
+```text
+private/knowledge/
+```
+
+The files below are ignored and must not be committed at this stage:
+
+```text
+backend/knowledge/biography_public.md
+backend/knowledge/projects.md
+```
 
 Do not add health information, private contacts, names of colleagues, friends, managers, or other private/personalized data to GitHub, project files, public knowledge files, or frontend code.
 
@@ -270,7 +286,8 @@ Do not invent:
 Never commit:
 
 - `.env`;
-- `_local`
+- `_local`;
+- `private/`;
 - API keys;
 - provider tokens;
 - private biography documents;

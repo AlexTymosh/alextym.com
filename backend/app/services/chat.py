@@ -4,6 +4,10 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
+from app.rag.knowledge_base import get_public_retriever
+from app.rag.models import KnowledgeChunk
+from app.rag.prompt_builder import PromptBuilder
+from app.rag.retriever import Retriever
 from app.schemas.chat import ChatRequest, ChatResponse
 
 INSUFFICIENT_DATA_ANSWER = (
@@ -39,6 +43,14 @@ PROMPT_INJECTION_PATTERNS = (
 
 
 class ChatService:
+    def __init__(
+        self,
+        retriever: Retriever | None = None,
+        prompt_builder: PromptBuilder | None = None,
+    ) -> None:
+        self._retriever = retriever or get_public_retriever()
+        self._prompt_builder = prompt_builder or PromptBuilder()
+
     def answer(self, request: ChatRequest) -> ChatResponse:
         if self._looks_like_prompt_injection(request.message):
             return ChatResponse(
@@ -46,6 +58,23 @@ class ChatService:
                 sources=[],
                 confidence="low",
                 not_enough_data=True,
+            )
+
+        chunks = self._retriever.retrieve(request.message)
+        if chunks:
+            prompt = self._prompt_builder.build(question=request.message, chunks=chunks)
+            return ChatResponse(
+                answer=self._extractive_answer(chunks, prompt.context),
+                sources=[
+                    {
+                        "title": chunk.metadata.source,
+                        "section": chunk.metadata.section,
+                        "confidence": chunk.metadata.source_confidence,
+                    }
+                    for chunk in chunks
+                ],
+                confidence="medium",
+                not_enough_data=False,
             )
 
         return ChatResponse(
@@ -84,6 +113,23 @@ class ChatService:
         return any(pattern in normalized_message for pattern in PROMPT_INJECTION_PATTERNS)
 
     @staticmethod
+    def _extractive_answer(chunks: list[KnowledgeChunk], context: str) -> str:
+        if not context.strip():
+            return INSUFFICIENT_DATA_ANSWER
+
+        excerpts = [_first_sentence(chunk.content) for chunk in chunks[:2]]
+        excerpts = [excerpt for excerpt in excerpts if excerpt]
+        if not excerpts:
+            return INSUFFICIENT_DATA_ANSWER
+
+        if len(excerpts) == 1:
+            return f"According to Alex's public knowledge base, {excerpts[0]}"
+
+        return "According to Alex's public knowledge base, " + " ".join(
+            f"{index}. {excerpt}" for index, excerpt in enumerate(excerpts, start=1)
+        )
+
+    @staticmethod
     def _tokenize(answer: str) -> list[str]:
         words = answer.split(" ")
         tokens = [words[0]] if words else []
@@ -94,3 +140,23 @@ class ChatService:
     def _sse_event(event: str, data: dict[str, Any]) -> str:
         payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
         return f"event: {event}\ndata: {payload}\n\n"
+
+
+def _first_sentence(text: str, max_length: int = 360) -> str:
+    normalized_text = " ".join(text.split())
+    if not normalized_text:
+        return ""
+
+    sentence_end_candidates = [". ", "! ", "? "]
+    sentence_end_indexes = [
+        normalized_text.find(candidate) + 1
+        for candidate in sentence_end_candidates
+        if normalized_text.find(candidate) != -1
+    ]
+    end_index = min(sentence_end_indexes) if sentence_end_indexes else len(normalized_text)
+    sentence = normalized_text[:end_index].strip()
+
+    if len(sentence) <= max_length:
+        return sentence
+
+    return sentence[: max_length - 1].rstrip() + "..."
