@@ -1,0 +1,118 @@
+version: "3"
+
+vars:
+  BACKEND_PORT: "8000"
+  FRONTEND_PORT: "3000"
+
+env:
+  UV_CACHE_DIR: "{{.ROOT_DIR}}/uv-cache"
+
+tasks:
+  default:
+    desc: Show available tasks.
+    cmds:
+      - task --list
+
+  ci:
+    desc: Run the checks expected before push or pull request.
+    cmds:
+      - task: backend:check
+      - task: frontend:install
+      - task: frontend:build
+
+  format:
+    desc: Apply backend formatting and safe Ruff fixes.
+    cmds:
+      - task: backend:format
+
+  dev:
+    desc: Sync dependencies, then run backend and frontend dev servers.
+    cmds:
+      - task: backend:sync
+      - task: frontend:install
+      - task: dev:servers
+
+  smoke:
+    desc: Check the local backend and frontend dev servers.
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/scripts/smoke.ps1" -BackendPort {{.BACKEND_PORT}} -FrontendPort {{.FRONTEND_PORT}}
+
+  stop:
+    desc: Stop local dev servers on the project ports.
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/scripts/stop-dev.ps1" -BackendPort {{.BACKEND_PORT}} -FrontendPort {{.FRONTEND_PORT}}
+
+  backend:sync:
+    desc: Sync backend dependencies with uv.
+    dir: backend
+    cmds:
+      - uv sync --extra dev
+
+  backend:dev:
+    desc: Run the FastAPI backend dev server.
+    dir: backend
+    cmds:
+      - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port {{.BACKEND_PORT}}
+
+  backend:lint:
+    desc: Run Ruff lint checks.
+    dir: backend
+    cmds:
+      - uv run ruff check .
+
+  backend:format-check:
+    desc: Check backend formatting.
+    dir: backend
+    cmds:
+      - uv run ruff format --check .
+
+  backend:format:
+    desc: Apply safe Ruff fixes and format backend code.
+    dir: backend
+    cmds:
+      - uv run ruff check . --fix
+      - uv run ruff format .
+
+  backend:test:
+    desc: Run backend tests.
+    dir: backend
+    cmds:
+      - uv run pytest
+
+  backend:check:
+    desc: Run all backend checks.
+    cmds:
+      - task: backend:sync
+      - task: backend:lint
+      - task: backend:format-check
+      - task: backend:test
+
+  frontend:install:
+    desc: Install frontend dependencies.
+    dir: frontend
+    cmds:
+      - npm install
+
+  frontend:dev:
+    desc: Run the Next.js frontend dev server.
+    dir: frontend
+    cmds:
+      - npm run dev -- -H 127.0.0.1 -p {{.FRONTEND_PORT}}
+
+  frontend:build:
+    desc: Build the frontend.
+    dir: frontend
+    cmds:
+      - npm run build
+
+  docker:build:
+    desc: Build the backend Docker image.
+    dir: backend
+    cmds:
+      - docker build -t alextym-backend .
+
+  dev:servers:
+    internal: true
+    deps:
+      - backend:dev
+      - frontend:dev
