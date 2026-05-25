@@ -203,6 +203,13 @@ contact: 3-5 messages per IP per day
 max message length: 2000 chars
 ```
 
+Implementation note:
+
+```text
+Rate limiting is not implemented in Stage 3.
+It remains a required pre-public security hardening item before the chat or contact form is publicly launched.
+```
+
 Adjust later based on real usage.
 
 ---
