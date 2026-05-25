@@ -361,7 +361,7 @@ Do not do:
 
 ## Current status
 
-Architecture agreed. Stage 1 and Stage 2 have been implemented.
+Architecture agreed. Stage 1, Stage 2 and Stage 3 have been implemented.
 
 Chosen path:
 
@@ -444,10 +444,47 @@ headless visual screenshots checked for /, /chat desktop, /chat mobile, /resume 
 Browser plugin local navigation attempted but blocked by ERR_BLOCKED_BY_CLIENT; headless Chrome was used as fallback.
 ```
 
+Done in Stage 3:
+
+```text
+backend chat schemas for request, response and source metadata
+POST /api/chat JSON fallback endpoint
+POST /api/chat/stream SSE endpoint
+thin FastAPI chat router
+ChatService orchestration placeholder
+deterministic insufficient-data response
+basic prompt injection guard for instruction/system prompt extraction attempts
+safe SSE error event for unexpected stream failures
+```
+
+Checked in Stage 3:
+
+```text
+pytest via bundled Python + backend .venv site-packages: passed
+ruff check via backend .venv: passed
+ruff format --check via backend .venv: passed
+```
+
+Not done in Stage 3:
+
+```text
+real OpenAI integration
+Qdrant/RAG retrieval
+production streaming frontend integration
+rate limiting
+```
+
+Rate limiting remains mandatory before public launch:
+
+```text
+/api/chat and /api/chat/stream: up to 50 messages per IP per day
+/api/contact: 3-5 messages per IP per day
+```
+
 Next step:
 
 ```text
-Stage 3 — backend chat service. Do not start without explicit instruction from the user.
+Stage 4 — RAG. Do not start without explicit instruction from the user.
 ```
 
 ---
@@ -475,12 +512,12 @@ Stage 3 — backend chat service. Do not start without explicit instruction from
 
 ### Stage 3 — Backend chat service
 
-- [ ] Thin router.
-- [ ] ChatService.
-- [ ] JSON fallback.
-- [ ] SSE endpoint.
-- [ ] Insufficient-data response.
-- [ ] Basic prompt injection guard.
+- [x] Thin router.
+- [x] ChatService.
+- [x] JSON fallback.
+- [x] SSE endpoint.
+- [x] Insufficient-data response.
+- [x] Basic prompt injection guard.
 
 ### Stage 4 — RAG
 
@@ -499,6 +536,13 @@ Stage 3 — backend chat service. Do not start without explicit instruction from
 - [ ] Contact form.
 - [ ] Honeypot.
 - [ ] Resend integration.
+
+### Pre-public security hardening
+
+- [ ] Chat rate limiting up to 50 messages per IP per day.
+- [ ] Contact form rate limiting.
+- [ ] Contact form honeypot.
+- [ ] LLM provider budget limit.
 
 ### Stage 6 — Deployment
 

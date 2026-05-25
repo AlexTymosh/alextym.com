@@ -533,7 +533,7 @@ If third-party open-source code is added to the project, its licence must be pre
 
 ## Status
 
-The project is at the MVP frontend shell stage.
+The project is at the backend chat service stage.
 
 Completed in Stage 1:
 
@@ -556,4 +556,32 @@ chat page UI placeholder with quick prompts, reset, warm-up status and mock resp
 resume page with public CV download link placeholder
 contact page UI placeholder with LinkedIn, GitHub and Facebook links
 local dev /api/* rewrite support through BACKEND_ORIGIN
+```
+
+Completed in Stage 3:
+
+```text
+backend chat request/response schemas
+POST /api/chat JSON fallback endpoint
+POST /api/chat/stream SSE endpoint
+thin FastAPI chat router
+ChatService placeholder with insufficient-data response
+basic prompt injection guard
+backend tests for validation, insufficient data, prompt injection and SSE format
+```
+
+Not implemented yet:
+
+```text
+OpenAI integration
+Qdrant/RAG retrieval
+production frontend streaming integration
+rate limiting
+```
+
+Rate limiting is still required before public launch:
+
+```text
+/api/chat and /api/chat/stream: up to 50 messages per IP per day
+/api/contact: 3-5 messages per IP per day
 ```
