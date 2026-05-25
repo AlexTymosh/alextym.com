@@ -37,9 +37,9 @@ class ChatRequest(BaseModel):
 
 
 class ChatSource(BaseModel):
-    title: str = Field(examples=["projects.md"])
-    section: str | None = Field(default=None, examples=["fastapi-saas-template"])
-    confidence: Confidence = Field(examples=["high"])
+    title: str = Field(examples=["resume.md"])
+    section: str | None = Field(default=None, examples=["Summary"])
+    confidence: Confidence = Field(examples=["medium"])
 
 
 class ChatResponse(BaseModel):

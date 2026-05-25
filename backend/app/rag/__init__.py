@@ -1,1 +1,1 @@
-"""RAG package placeholder for later MVP stages."""
+"""RAG primitives for public knowledge retrieval."""

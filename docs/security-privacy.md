@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`alextym` uses public, reviewed biography data to answer employer-facing questions.
+`alextym` uses public, reviewed professional data to answer employer-facing questions.
 
 Security and privacy are part of the product, not optional extras.
 
@@ -29,7 +29,9 @@ Never commit:
 - Qdrant keys;
 - Resend keys;
 - provider tokens;
-- private source documents.
+- private source documents;
+- `private/`;
+- `_local`;
 - health information, private contacts, names of colleagues, friends, managers, or other private/personalized data.
 
 Required:
@@ -52,13 +54,16 @@ Do not commit the full private biography.
 
 It is categorically forbidden to add health information, private contacts, names of colleagues, friends, managers, or other private/personalized data to GitHub and/or the project.
 
-Use only reviewed public files:
+Use only reviewed public files.
+
+Current committed public source:
 
 ```text
-backend/knowledge/biography_public.md
 backend/knowledge/resume.md
-backend/knowledge/projects.md
 ```
+
+Do not commit `backend/knowledge/biography_public.md` or `backend/knowledge/projects.md` at this
+stage. Keep private or unreviewed source drafts under ignored `private/knowledge/`.
 
 Do not include:
 
@@ -83,9 +88,7 @@ Public RAG content should focus on:
 - projects;
 - skills;
 - work experience;
-- career transition;
 - automation and software development;
-- business/process background;
 - motivation and learning path.
 
 Avoid irrelevant personal stories unless they clearly support professional positioning.

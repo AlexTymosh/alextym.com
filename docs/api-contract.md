@@ -183,9 +183,9 @@ Response:
   "answer": "Alex has worked on...",
   "sources": [
     {
-      "title": "projects.md",
-      "section": "fastapi-saas-template",
-      "confidence": "high"
+      "title": "resume.md",
+      "section": "Summary",
+      "confidence": "medium"
     }
   ],
   "confidence": "medium",
@@ -248,7 +248,7 @@ event: token
 data: {"text":" has"}
 
 event: sources
-data: {"sources":[{"title":"resume.md","section":"summary","confidence":"high"}]}
+data: {"sources":[{"title":"resume.md","section":"Summary","confidence":"medium"}]}
 
 event: done
 data: {"confidence":"medium","not_enough_data":false}

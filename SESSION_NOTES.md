@@ -117,17 +117,17 @@ Use fallback only if Vercel rewrites break SSE streaming or cause timeout/proxy 
 1. Do not do fine-tuning. Use RAG.
 2. Do not store the vector DB inside the backend container.
 3. Do not commit the private biography or any private or personalised data.
-4. Use only public knowledge files:
-   - `backend/knowledge/biography_public.md`
+4. Current committed public RAG source:
    - `backend/knowledge/resume.md`
-   - `backend/knowledge/projects.md`
-5. The Assistant answers as Alex’s digital assistant, not directly as Alex.
-6. If the data is insufficient, the Assistant must say that the data is insufficient.
-7. Chat must have a streaming endpoint and a JSON fallback.
-8. Backend must be portable via Docker.
-9. Koyeb Free can be used only with the cold-start risk taken into account.
-10. Use lightweight `/api/health/live` for keep-alive.
-11. `/api/warmup` must be implemented as a lightweight endpoint for warming up the backend.
+5. Do not commit `backend/knowledge/biography_public.md` or `backend/knowledge/projects.md` at this stage.
+6. Use ignored local drafts under `private/knowledge/` for private source notes.
+7. The Assistant answers as Alex’s digital assistant, not directly as Alex.
+8. If the data is insufficient, the Assistant must say that the data is insufficient.
+9. Chat must have a streaming endpoint and a JSON fallback.
+10. Backend must be portable via Docker.
+11. Koyeb Free can be used only with the cold-start risk taken into account.
+12. Use lightweight `/api/health/live` for keep-alive.
+13. `/api/warmup` must be implemented as a lightweight endpoint for warming up the backend.
 
 ---
 
@@ -469,9 +469,23 @@ Not done in Stage 3:
 
 ```text
 real OpenAI integration
-Qdrant/RAG retrieval
+Qdrant vector retrieval
 production streaming frontend integration
 rate limiting
+```
+
+Done in Stage 4A:
+
+```text
+public knowledge boundary: backend/knowledge/resume.md only
+private draft boundary through ignored private/knowledge/
+backend/knowledge/biography_public.md and backend/knowledge/projects.md ignored at this stage
+heading-aware markdown chunker
+chunk metadata model
+in-memory retriever abstraction for local tests
+prompt builder with separated system instructions, retrieved context and user question
+ChatService wired to retrieval abstraction without external OpenAI/Qdrant calls
+RAG tests for chunking, metadata, retrieval, prompt building and knowledge loading
 ```
 
 Rate limiting remains mandatory before public launch:
@@ -484,7 +498,7 @@ Rate limiting remains mandatory before public launch:
 Next step:
 
 ```text
-Stage 4 — RAG. Do not start without explicit instruction from the user.
+Stage 4B — OpenAI/Qdrant integration. Do not start without explicit instruction from the user.
 ```
 
 ---
@@ -521,13 +535,13 @@ Stage 4 — RAG. Do not start without explicit instruction from the user.
 
 ### Stage 4 — RAG
 
-- [ ] Public knowledge files.
-- [ ] Chunker.
-- [ ] Metadata.
+- [x] Public knowledge boundary.
+- [x] Chunker.
+- [x] Metadata.
 - [ ] Embeddings.
 - [ ] Qdrant ingestion.
-- [ ] Retriever.
-- [ ] Prompt builder.
+- [x] Retriever abstraction.
+- [x] Prompt builder.
 
 ### Stage 5 — Resume and Contact
 
@@ -561,6 +575,7 @@ Mandatory rules:
 
 - do not commit `.env`;
 - do not commit `_local`;
+- do not commit `private/`;
 - do not publish the private biography;
 - do not add to GitHub and/or the project health information, personal contacts, names of colleagues, friends, managers, or any other private or personalised data;
 - do not store secrets in the frontend;
@@ -570,7 +585,7 @@ Mandatory rules:
 - set the chat limit to 50 messages per IP per day;
 - add a honeypot for the contact form;
 - set an LLM budget limit;
-- use only public knowledge files for RAG.
+- use only reviewed public knowledge files for RAG.
 
 ---
 

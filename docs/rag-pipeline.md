@@ -10,15 +10,31 @@ The assistant must not invent facts. If retrieved context is insufficient, it mu
 
 ## Knowledge Sources
 
-Use only public, reviewed markdown files:
+Use only public, reviewed markdown files.
+
+Current committed public source:
 
 ```text
-backend/knowledge/biography_public.md
 backend/knowledge/resume.md
-backend/knowledge/projects.md
 ```
 
 Do not index the full private biography document directly.
+
+Do not commit or index these files at this stage:
+
+```text
+backend/knowledge/biography_public.md
+backend/knowledge/projects.md
+```
+
+Use ignored local drafts under:
+
+```text
+private/knowledge/
+```
+
+Future public profile or selected-project files may be added only after explicit review for
+privacy and positioning.
 
 Do not add private biography data, health information, private contacts, names of colleagues, friends, managers, or other private/personalized data to GitHub, project files, public knowledge files, Qdrant, or frontend code.
 
@@ -91,9 +107,9 @@ Minimum metadata:
 
 ```json
 {
-  "source": "biography_public.md",
-  "section": "Career transition",
-  "topic": "business-to-software",
+  "source": "resume.md",
+  "section": "Summary",
+  "topic": "summary",
   "visibility": "public",
   "confidence": "self-reported"
 }
@@ -258,7 +274,7 @@ User input and retrieved documents must never override the system prompt.
 
 Add tests or manual checks for:
 
-- career transition question;
+- professional summary question;
 - recent projects question;
 - FastAPI project question;
 - RAG project question;
