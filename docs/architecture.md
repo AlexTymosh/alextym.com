@@ -34,8 +34,9 @@ Navigation:
 Home
 Resume
 Chat
-Contact
 ```
+
+`/contact` remains a public page and is linked from the Connect block, but it is not shown in the top pill menu.
 
 The home page must be a simple standalone page. The AI chat must live on the separate `/chat` page.
 
@@ -56,7 +57,7 @@ Quick prompts:
 ```text
 Give me your 30-second intro.
 Tell me about your recent projects.
-How did you move from business to software development?
+Tell me about your RAG work
 ```
 
 ---

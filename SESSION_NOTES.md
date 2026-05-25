@@ -48,8 +48,9 @@ Menu:
 Home
 Resume
 Chat
-Contact
 ```
+
+`/contact` remains a public page and is linked from the Connect block, but it is not shown in the top pill menu.
 
 Home page:
 
@@ -70,7 +71,7 @@ Quick prompts:
 ```text
 Give me your 30-second intro.
 Tell me about your recent projects.
-How did you move from business to software development?
+Tell me about your RAG work
 ```
 
 ---
@@ -360,7 +361,7 @@ Do not do:
 
 ## Current status
 
-Architecture agreed. Stage 1 has been implemented.
+Architecture agreed. Stage 1 and Stage 2 have been implemented.
 
 Chosen path:
 
@@ -408,21 +409,45 @@ task --dry dev/stop/smoke: passed
 task stop with unused ports: passed
 task smoke syntax: passed, failed correctly when backend was not running on port 8000
 task ci after Taskfile smoke/stop fix: passed
+frontend npm run lint: passed
+frontend npm run build: passed
 ```
 
-Verification limitation / note:
+Post-Stage 1 maintenance:
 
 ```text
-frontend build passed through task ci.
-frontend npm run lint was not run separately.
+frontend GitHub CI job now runs npm run lint before npm run build.
+frontend/.eslintrc.json added so next lint runs non-interactively.
 npm install reports 5 dependency audit vulnerabilities: 1 moderate, 4 high.
 Do not fix dependency upgrades without a separate decision, because npm audit fix --force may introduce breaking changes.
+```
+
+Done in Stage 2:
+
+```text
+visual frontend shell based on the provided screenshots
+top pill menu with Home, Resume, Chat and theme toggle
+home page card grid
+separate /chat UI placeholder with quick prompts, reset, warm-up status and mock response
+/resume page with public CV download link placeholder
+/contact page UI placeholder with LinkedIn, GitHub and Facebook links
+local frontend /api/* rewrite support through BACKEND_ORIGIN in next.config.mjs and Taskfile.yml
+```
+
+Checked in Stage 2:
+
+```text
+npm run lint: passed
+npm run build: passed
+local frontend /api/warmup via BACKEND_ORIGIN rewrite: passed
+headless visual screenshots checked for /, /chat desktop, /chat mobile, /resume and /contact
+Browser plugin local navigation attempted but blocked by ERR_BLOCKED_BY_CLIENT; headless Chrome was used as fallback.
 ```
 
 Next step:
 
 ```text
-Stage 2 — frontend chat shell. Do not start without explicit instruction from the user.
+Stage 3 — backend chat service. Do not start without explicit instruction from the user.
 ```
 
 ---
@@ -440,12 +465,13 @@ Stage 2 — frontend chat shell. Do not start without explicit instruction from 
 
 ### Stage 2 — Chat UI
 
-- [ ] Home page.
-- [ ] Chat page.
-- [ ] Quick prompts.
-- [ ] Warm-up request.
-- [ ] Loading/error states.
-- [ ] Streaming UI.
+- [x] Home page.
+- [x] Chat page.
+- [x] Quick prompts.
+- [x] Warm-up request.
+- [x] Loading/error states.
+- [x] Mock response placeholder.
+- [ ] Production streaming UI.
 
 ### Stage 3 — Backend chat service
 

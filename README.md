@@ -58,7 +58,7 @@ Quick questions:
 ```text
 Give me your 30-second intro.
 Tell me about your recent projects.
-How did you move from business to software development?
+Tell me about your RAG work
 ```
 
 The AI assistant must not present itself directly as Alex. It answers as Alex's digital assistant and uses only the public knowledge base: the CV, the cleaned recruiter-facing biography, public information about projects and, where available links exist, materials from public talks such as video recordings from Zaporizhzhia Channel 5.
@@ -83,8 +83,9 @@ Navigation:
 Home
 Resume
 Chat
-Contact
 ```
+
+`/contact` remains a public page and is linked from the Connect block, but it is not shown in the top pill menu.
 
 ---
 
@@ -532,7 +533,7 @@ If third-party open-source code is added to the project, its licence must be pre
 
 ## Status
 
-The project is at the MVP initial skeleton stage.
+The project is at the MVP frontend shell stage.
 
 Completed in Stage 1:
 
@@ -543,4 +544,16 @@ frontend Next.js skeleton with 4 routes
 frontend/vercel.json rewrite placeholder
 backend Dockerfile and .dockerignore
 basic health endpoint tests
+```
+
+Completed in Stage 2:
+
+```text
+visual frontend shell based on the provided screenshots
+top pill menu with Home, Resume, Chat and theme toggle
+home page card grid
+chat page UI placeholder with quick prompts, reset, warm-up status and mock response
+resume page with public CV download link placeholder
+contact page UI placeholder with LinkedIn, GitHub and Facebook links
+local dev /api/* rewrite support through BACKEND_ORIGIN
 ```

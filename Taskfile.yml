@@ -97,7 +97,7 @@ tasks:
     desc: Run the Next.js frontend dev server.
     dir: frontend
     cmds:
-      - npm run dev -- -H 127.0.0.1 -p {{.FRONTEND_PORT}}
+      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/scripts/frontend-dev.ps1" -BackendPort {{.BACKEND_PORT}} -FrontendPort {{.FRONTEND_PORT}}
 
   frontend:build:
     desc: Build the frontend.
