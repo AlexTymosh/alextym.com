@@ -6,15 +6,14 @@ const socialLinks = [
 
 export default function ContactPage() {
   return (
-    <section className="contact-layout">
-      <div className="page-panel contact-intro">
-        <p className="eyebrow">Contact</p>
-        <h1>Start a conversation</h1>
+    <section className="contact-page">
+      <div className="contact-heading">
+        <h1>Contact Me</h1>
         <p>
           This form is a Stage 2 UI placeholder. Backend validation and email delivery will be
           connected in the contact stage.
         </p>
-        <div className="contact-links">
+        <div className="contact-links" aria-label="Social links">
           {socialLinks.map((link) => (
             <a key={link.href} href={link.href} target="_blank" rel="noreferrer">
               {link.label}
@@ -25,11 +24,11 @@ export default function ContactPage() {
 
       <form className="contact-form" aria-label="Contact form placeholder">
         <label>
-          <span>Name</span>
+          <span>Your Name</span>
           <input name="name" type="text" placeholder="Your name" />
         </label>
         <label>
-          <span>Email</span>
+          <span>Email Address</span>
           <input name="email" type="email" placeholder="you@example.com" />
         </label>
         <label>
