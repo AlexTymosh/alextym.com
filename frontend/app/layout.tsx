@@ -25,9 +25,10 @@ export default function RootLayout({
           <SiteNavigation />
           <main className="site-main">{children}</main>
           <footer className="site-footer">
-            <span>{"{"}</span>
-            <span>Thanks for visiting alextym.com</span>
-            <span>{"}"}</span>
+            <span className="site-footer__bracket">{"{"}</span>
+            <span className="site-footer__message">Thanks for visiting</span>
+            <span className="site-footer__domain">alextym.com</span>
+            <span className="site-footer__bracket">{"}"}</span>
           </footer>
         </div>
       </body>
