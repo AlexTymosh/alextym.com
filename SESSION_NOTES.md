@@ -361,7 +361,7 @@ Do not do:
 
 ## Current status
 
-Architecture agreed. Stage 1, Stage 2 and Stage 3 have been implemented.
+Architecture agreed. Stage 1, Stage 2, Stage 3 and Stage 4 have been implemented.
 
 Chosen path:
 
@@ -465,11 +465,9 @@ ruff check via backend .venv: passed
 ruff format --check via backend .venv: passed
 ```
 
-Not done in Stage 3:
+Deferred after Stage 3:
 
 ```text
-real OpenAI integration
-Qdrant vector retrieval
 production streaming frontend integration
 rate limiting
 ```
@@ -488,6 +486,17 @@ ChatService wired to retrieval abstraction without external OpenAI/Qdrant calls
 RAG tests for chunking, metadata, retrieval, prompt building and knowledge loading
 ```
 
+Done in Stage 4B:
+
+```text
+OpenAI dependency and provider clients for embeddings and Responses API
+Qdrant dependency, vector store and retriever
+idempotent public knowledge ingestion script
+task rag:ingest command
+ChatService integration with LLM answer generation and safe extractive fallback
+provider tests with fake OpenAI/Qdrant clients
+```
+
 Rate limiting remains mandatory before public launch:
 
 ```text
@@ -498,7 +507,7 @@ Rate limiting remains mandatory before public launch:
 Next step:
 
 ```text
-Stage 4B — OpenAI/Qdrant integration. Do not start without explicit instruction from the user.
+Frontend production streaming integration or Stage 5 contact form. Do not start without explicit instruction from the user.
 ```
 
 ---
@@ -538,8 +547,8 @@ Stage 4B — OpenAI/Qdrant integration. Do not start without explicit instructio
 - [x] Public knowledge boundary.
 - [x] Chunker.
 - [x] Metadata.
-- [ ] Embeddings.
-- [ ] Qdrant ingestion.
+- [x] Embeddings.
+- [x] Qdrant ingestion.
 - [x] Retriever abstraction.
 - [x] Prompt builder.
 

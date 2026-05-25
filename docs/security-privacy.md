@@ -209,7 +209,7 @@ max message length: 2000 chars
 Implementation note:
 
 ```text
-Rate limiting is not implemented in Stage 3.
+Rate limiting is not implemented yet.
 It remains a required pre-public security hardening item before the chat or contact form is publicly launched.
 ```
 
@@ -230,6 +230,9 @@ Required:
 - contact form spam protection.
 
 Never launch public chat without cost limits.
+
+Current backend configuration supports `OPENAI_MAX_OUTPUT_TOKENS`, but provider-side budget limits
+and application rate limiting must still be configured before public launch.
 
 ---
 

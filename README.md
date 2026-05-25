@@ -273,6 +273,16 @@ The assistant's main rule:
 If there is not enough data in the retrieved context, do not invent an answer.
 ```
 
+After changing reviewed public knowledge, rebuild Qdrant:
+
+```powershell
+task rag:ingest
+```
+
+The ingestion command is idempotent for the current public source set: it removes old vectors for
+`resume.md` and then uploads the current chunks. If `resume.md` is still a placeholder, ingestion
+removes stale public vectors and uploads zero chunks.
+
 ---
 
 ## Local launch
@@ -359,12 +369,17 @@ ENVIRONMENT="local"
 FRONTEND_ORIGIN="http://localhost:3000"
 
 OPENAI_API_KEY=""
-OPENAI_MODEL=""
-OPENAI_EMBEDDING_MODEL=""
+OPENAI_MODEL="gpt-5-mini"
+OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+OPENAI_EMBEDDING_DIMENSIONS="1536"
+OPENAI_MAX_OUTPUT_TOKENS="600"
 
 QDRANT_URL=""
 QDRANT_API_KEY=""
 QDRANT_COLLECTION="alex_public_knowledge"
+
+RAG_TOP_K="6"
+RAG_SCORE_THRESHOLD="0.72"
 
 RESEND_API_KEY=""
 CONTACT_TARGET_EMAIL=""
@@ -538,7 +553,7 @@ If third-party open-source code is added to the project, its licence must be pre
 
 ## Status
 
-The project is at the backend chat service stage.
+The project is at the backend RAG integration stage.
 
 Completed in Stage 1:
 
@@ -588,11 +603,20 @@ ChatService wired to retrieval abstraction without external OpenAI/Qdrant calls
 RAG tests for chunking, metadata, retrieval, prompt building and knowledge loading
 ```
 
+Completed in Stage 4B:
+
+```text
+OpenAI dependency and provider clients for embeddings and Responses API
+Qdrant dependency, vector store and retriever
+idempotent public knowledge ingestion script
+task rag:ingest command
+ChatService integration with LLM answer generation and safe extractive fallback
+provider tests with fake OpenAI/Qdrant clients
+```
+
 Not implemented yet:
 
 ```text
-OpenAI integration
-Qdrant vector retrieval
 production frontend streaming integration
 rate limiting
 ```
