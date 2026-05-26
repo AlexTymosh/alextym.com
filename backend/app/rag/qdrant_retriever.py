@@ -4,6 +4,18 @@ from app.llm.openai_client import OpenAIEmbeddingClient
 from app.rag.models import KnowledgeChunk
 from app.rag.qdrant_store import QdrantKnowledgeStore
 
+LINK_SECTION_NAMES = {"links", "references"}
+LINK_QUERY_TERMS = {
+    "contact",
+    "github",
+    "linkedin",
+    "link",
+    "links",
+    "repo",
+    "repository",
+    "website",
+}
+
 
 class QdrantRetriever:
     def __init__(
@@ -35,8 +47,18 @@ class QdrantRetriever:
 
         effective_limit = limit or self._default_limit
         query_embedding = self._embedding_client.embed_text(normalized_query)
-        return self._store.search(
+        chunks = self._store.search(
             embedding=query_embedding,
             limit=effective_limit,
             score_threshold=self._score_threshold,
         )
+        return _filter_sections_for_query(normalized_query, chunks)
+
+
+def _filter_sections_for_query(query: str, chunks: list[KnowledgeChunk]) -> list[KnowledgeChunk]:
+    query_terms = set(query.lower().replace("/", " ").replace("-", " ").split())
+    if query_terms & LINK_QUERY_TERMS:
+        return chunks
+
+    filtered_chunks = [chunk for chunk in chunks if chunk.metadata.topic not in LINK_SECTION_NAMES]
+    return filtered_chunks or chunks

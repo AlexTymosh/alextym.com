@@ -58,9 +58,9 @@ Here are a few quick questions to start:
 Quick questions:
 
 ```text
-Give me your 30-second intro.
-Tell me about your recent projects.
-Tell me about your RAG work
+Summarize Alex's professional profile.
+Tell me about Alex's FastAPI and backend experience.
+Tell me about Alex's AI-assisted development and RAG-based systems.
 ```
 
 The AI assistant must not present itself directly as Alex. It answers as Alex's digital assistant and uses only reviewed public knowledge. For now, the committed public RAG source is `backend/knowledge/resume.md`; additional public profile or selected-project summaries can be added later only after privacy review.
@@ -279,6 +279,9 @@ After changing reviewed public knowledge, rebuild Qdrant:
 task rag:ingest
 ```
 
+The ingestion task loads `backend/.env` and runs in an isolated `uv` environment so it does not
+depend on an existing local `.venv`.
+
 The ingestion command is idempotent for the current public source set: it removes old vectors for
 `resume.md` and then uploads the current chunks. If `resume.md` is still a placeholder, ingestion
 removes stale public vectors and uploads zero chunks.
@@ -292,6 +295,9 @@ The recommended way to work is via Taskfile:
 ```powershell
 task dev
 ```
+
+Taskfile uses ignored `.tmp/` uv environments for backend commands. This keeps local workflows
+independent from a stale `backend/.venv`.
 
 Check the local dev servers:
 
@@ -373,13 +379,14 @@ OPENAI_MODEL="gpt-5-mini"
 OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
 OPENAI_EMBEDDING_DIMENSIONS="1536"
 OPENAI_MAX_OUTPUT_TOKENS="600"
+OPENAI_REASONING_EFFORT="low"
 
 QDRANT_URL=""
 QDRANT_API_KEY=""
 QDRANT_COLLECTION="alex_public_knowledge"
 
 RAG_TOP_K="6"
-RAG_SCORE_THRESHOLD="0.72"
+RAG_SCORE_THRESHOLD="0.5"
 
 RESEND_API_KEY=""
 CONTACT_TARGET_EMAIL=""
@@ -623,6 +630,18 @@ source metadata display
 JSON /api/chat fallback when streaming is unavailable
 reset/abort handling for in-flight chat requests
 chat error and fallback notices
+```
+
+Completed in RAG activation:
+
+```text
+backend local .env loading for app settings and ingestion
+Qdrant source payload keyword index for idempotent source cleanup
+real Qdrant ingestion from backend/knowledge/resume.md
+RAG score threshold default adjusted to 0.5 after real retrieval score checks
+OpenAI reasoning effort default set to low for stable short Responses API answers
+link/reference sections filtered from normal professional retrieval unless the user asks for links
+quick prompts updated to retrieval-friendly employer-facing questions
 ```
 
 Not implemented yet:

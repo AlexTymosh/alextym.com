@@ -231,8 +231,9 @@ Required:
 
 Never launch public chat without cost limits.
 
-Current backend configuration supports `OPENAI_MAX_OUTPUT_TOKENS`, but provider-side budget limits
-and application rate limiting must still be configured before public launch.
+Current backend configuration supports `OPENAI_MAX_OUTPUT_TOKENS` and
+`OPENAI_REASONING_EFFORT`, but provider-side budget limits and application rate limiting must still
+be configured before public launch.
 
 ---
 
