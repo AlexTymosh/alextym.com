@@ -390,9 +390,11 @@ RAG_SCORE_THRESHOLD="0.4"
 
 RESEND_API_KEY=""
 CONTACT_TARGET_EMAIL=""
+CONTACT_FROM_EMAIL=""
 
 RATE_LIMITING_ENABLED="true"
 CHAT_DAILY_LIMIT_PER_IP="50"
+CONTACT_DAILY_LIMIT_PER_IP="5"
 ```
 
 ---
@@ -644,15 +646,18 @@ link/reference sections filtered from normal professional retrieval unless the u
 quick prompts updated to retrieval-friendly employer-facing questions
 ```
 
-Not implemented yet:
+Completed in contact and rate-limit hardening:
 
 ```text
-rate limiting
+process-local daily rate limiting for /api/chat, /api/chat/stream and /api/contact
+POST /api/contact backend endpoint with validation and honeypot handling
+Resend email delivery provider behind backend-only configuration
+safe generic contact errors without exposing provider details
 ```
 
-Rate limiting is still required before public launch:
+Current limits before public launch:
 
 ```text
 /api/chat and /api/chat/stream: up to 50 messages per IP per day
-/api/contact: 3-5 messages per IP per day
+/api/contact: 5 messages per IP per day
 ```

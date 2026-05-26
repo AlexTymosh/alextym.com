@@ -186,11 +186,22 @@ If filled, treat as spam and return generic success.
 
 Do not expose Resend/SendGrid/Mailgun errors directly to the browser.
 
+Resend configuration must stay backend-only:
+
+```text
+RESEND_API_KEY
+CONTACT_TARGET_EMAIL
+CONTACT_FROM_EMAIL
+```
+
+The form submitter's email may be used as the email `reply_to` value, but it must not be used as
+the sender address.
+
 ---
 
 ## Rate Limiting
 
-Required for public launch:
+Implemented for public launch:
 
 ```text
 /api/chat
@@ -202,15 +213,15 @@ Starting limits:
 
 ```text
 chat: up to 50 messages per IP per day
-contact: 3-5 messages per IP per day
+contact: 5 messages per IP per day
 max message length: 2000 chars
 ```
 
 Implementation note:
 
 ```text
-Rate limiting is not implemented yet.
-It remains a required pre-public security hardening item before the chat or contact form is publicly launched.
+The current limiter is process-local and resets on backend restart.
+Use shared storage later if the backend runs more than one instance or needs stronger abuse protection.
 ```
 
 Adjust later based on real usage.

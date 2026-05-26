@@ -322,6 +322,27 @@ Response:
 
 Do not expose provider errors directly to the user.
 
+Provider requirements:
+
+```text
+RESEND_API_KEY
+CONTACT_TARGET_EMAIL
+CONTACT_FROM_EMAIL
+```
+
+`CONTACT_FROM_EMAIL` must be a Resend-verified sender address. The user-provided email is used
+as `reply_to`, not as the sender.
+
+Provider failure response:
+
+```json
+{
+  "detail": "Could not send message. Please try again later."
+}
+```
+
+Use HTTP 502 for provider delivery failures and HTTP 503 when the contact form is not configured.
+
 ---
 
 ## Error Handling
@@ -350,7 +371,7 @@ Do not return:
 
 ## Rate Limiting
 
-Required before public launch:
+Implemented before public launch:
 
 ```text
 /api/chat
@@ -362,7 +383,7 @@ Starting limits:
 
 ```text
 chat: up to 50 messages per IP per day
-contact: 3-5 messages per IP per day
+contact: 5 messages per IP per day
 max input length: 2000 chars
 max output tokens: configured by model client
 ```
@@ -370,8 +391,8 @@ max output tokens: configured by model client
 Implementation note:
 
 ```text
-Rate limiting is not implemented yet.
-It is tracked as a required pre-public security hardening step and must not be skipped before launch.
+The MVP limiter is process-local and resets on restart.
+Move to shared storage if the backend runs multiple instances or needs stronger abuse protection.
 ```
 
 ---

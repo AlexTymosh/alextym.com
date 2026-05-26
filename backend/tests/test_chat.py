@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.chat import get_chat_service
+from app.core.config import Settings, get_settings
 from app.main import app
 from app.rag.retriever import EmptyRetriever
 from app.services.chat import INSUFFICIENT_DATA_ANSWER
@@ -78,3 +79,41 @@ def test_chat_stream_returns_sse_events() -> None:
     assert "event: done\n" in stream_text
     assert '"confidence":"low"' in stream_text
     assert '"not_enough_data":true' in stream_text
+
+
+def test_chat_rate_limit_returns_429() -> None:
+    app.dependency_overrides[get_settings] = lambda: _settings(chat_daily_limit_per_ip=1)
+
+    first_response = client.post("/api/chat", json={"message": "Tell me about Alex."})
+    second_response = client.post("/api/chat", json={"message": "Tell me about Alex again."})
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 429
+    assert second_response.json() == {
+        "detail": "Daily request limit reached. Please try again later."
+    }
+
+
+def _settings(*, chat_daily_limit_per_ip: int = 50) -> Settings:
+    return Settings(
+        app_name="test",
+        environment="test",
+        frontend_origin="http://localhost:3000",
+        openai_api_key="",
+        openai_model="gpt-5-mini",
+        openai_embedding_model="text-embedding-3-small",
+        openai_embedding_dimensions=1536,
+        openai_max_output_tokens=600,
+        openai_reasoning_effort="low",
+        qdrant_url="",
+        qdrant_api_key="",
+        qdrant_collection="alex_public_knowledge",
+        rag_top_k=6,
+        rag_score_threshold=0.4,
+        resend_api_key="",
+        contact_target_email="",
+        contact_from_email="",
+        rate_limiting_enabled=True,
+        chat_daily_limit_per_ip=chat_daily_limit_per_ip,
+        contact_daily_limit_per_ip=5,
+    )
