@@ -49,6 +49,16 @@ def test_chat_returns_insufficient_data_response() -> None:
     }
 
 
+def test_chat_handles_greeting_without_insufficient_data() -> None:
+    response = client.post("/api/chat", json={"message": "hi"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["not_enough_data"] is False
+    assert body["sources"] == []
+    assert "Alex's digital assistant" in body["answer"]
+
+
 def test_chat_handles_prompt_injection_attempt_safely() -> None:
     response = client.post(
         "/api/chat",

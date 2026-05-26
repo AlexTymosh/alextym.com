@@ -655,6 +655,22 @@ Resend email delivery provider behind backend-only configuration
 safe generic contact errors without exposing provider details
 ```
 
+Completed in frontend contact integration:
+
+```text
+/contact form posts to /api/contact
+frontend handles sending, success, validation, rate-limit and delivery-error states
+hidden company_website honeypot is submitted without exposing private contact details
+```
+
+Completed in hybrid chat behaviour:
+
+```text
+greetings and help requests respond naturally without RAG
+general non-Alex questions can be answered like a normal AI chat
+factual questions about Alex still use RAG and source metadata
+```
+
 Current limits before public launch:
 
 ```text

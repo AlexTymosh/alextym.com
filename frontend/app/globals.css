@@ -964,6 +964,47 @@ p {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
+.contact-form input:disabled,
+.contact-form textarea:disabled,
+.contact-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.contact-form__honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.contact-form__submit {
+  width: fit-content;
+  margin-top: 0;
+}
+
+.contact-form__notice {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.contact-form__notice--success {
+  border-color: color-mix(in srgb, var(--ok) 38%, var(--border));
+  color: var(--text);
+}
+
+.contact-form__notice--error {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
+  color: var(--danger);
+}
+
 .contact-links {
   justify-content: center;
   margin-top: 22px;
