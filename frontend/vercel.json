@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR-KOYEB-APP.koyeb.app/api/:path*"
+      "destination": "https://alextym-backend.onrender.com/api/:path*"
     }
   ]
 }
