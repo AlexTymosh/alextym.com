@@ -225,8 +225,15 @@ export function ChatShell() {
         ) : (
           <div className="message-list" aria-live="polite">
             {messages.map((message, index) => (
-              <div key={message.id || `${message.role}-${index}`} className={`message message--${message.role}`}>
-                <span>{message.text || (message.role === "assistant" ? "Thinking..." : "")}</span>
+              <div
+                key={message.id || `${message.role}-${index}`}
+                className={`message message--${message.role}`}
+              >
+                <div className="message__content">
+                  {renderMessageText(
+                    message.text || (message.role === "assistant" ? "Thinking..." : ""),
+                  )}
+                </div>
                 {message.role === "assistant" && message.sources?.length ? (
                   <div className="message-sources" aria-label="Sources">
                     {message.sources.map((source) => (
@@ -410,6 +417,53 @@ function createMessageId(prefix: string): string {
   }
 
   return `${prefix}-${Date.now()}`;
+}
+
+function renderMessageText(text: string) {
+  const normalizedText = text
+    .replace(/:\s+[-*]\s+/g, ":\n- ")
+    .replace(/\s+[-*]\s+(?=[A-ZА-ЯЁ0-9])/g, "\n- ");
+  const lines = normalizedText.split(/\r?\n/);
+  const nodes: JSX.Element[] = [];
+  let listItems: string[] = [];
+
+  function flushList(key: string) {
+    if (!listItems.length) {
+      return;
+    }
+
+    nodes.push(
+      <ul key={`list-${key}`}>
+        {listItems.map((item, index) => (
+          <li key={`${key}-${index}`}>{item}</li>
+        ))}
+      </ul>,
+    );
+    listItems = [];
+  }
+
+  lines.forEach((line, index) => {
+    const trimmedLine = line.trim();
+    const bulletMatch = trimmedLine.match(/^[-*]\s+(.+)$/);
+
+    if (bulletMatch) {
+      listItems.push(bulletMatch[1]);
+      return;
+    }
+
+    flushList(String(index));
+
+    if (!trimmedLine) {
+      nodes.push(<span key={`break-${index}`} className="message__break" aria-hidden="true" />);
+      return;
+    }
+
+    nodes.push(<p key={`paragraph-${index}`}>{trimmedLine}</p>);
+  });
+
+  flushList("end");
+
+  return nodes.length ? nodes : <p>{normalizedText}</p>;
 }
 
 function isAbortError(error: unknown): boolean {

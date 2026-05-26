@@ -109,7 +109,7 @@ def get_settings() -> Settings:
         qdrant_api_key=os.getenv("QDRANT_API_KEY", ""),
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "alex_public_knowledge"),
         rag_top_k=_get_int("RAG_TOP_K", 6),
-        rag_score_threshold=_get_float("RAG_SCORE_THRESHOLD", 0.5),
+        rag_score_threshold=_get_float("RAG_SCORE_THRESHOLD", 0.4),
         rate_limiting_enabled=_get_bool("RATE_LIMITING_ENABLED", True),
         chat_daily_limit_per_ip=_get_int("CHAT_DAILY_LIMIT_PER_IP", 50),
     )

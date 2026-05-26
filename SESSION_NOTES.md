@@ -530,6 +530,15 @@ task rag:ingest: passed with isolated uv ingestion
 real ChatService checks: professional summary, FastAPI/backend, AI-assisted/RAG, GitHub link, health-data refusal and prompt-injection refusal passed
 ```
 
+Done in RAG answer quality pass:
+
+```text
+frontend chat answers render paragraphs and bullet lists instead of collapsed plain text
+RAG score threshold default adjusted to 0.4 after short SQL question checks
+lightweight query expansion added for SQL/database, FastAPI/backend, RAG/AI, projects and common Russian wording
+public resume knowledge now states practical SQL/database experience explicitly
+```
+
 Rate limiting remains mandatory before public launch:
 
 ```text
