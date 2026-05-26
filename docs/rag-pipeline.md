@@ -89,7 +89,7 @@ Recommended v1 parameters:
 chunk size: 500-900 tokens
 overlap: 80-150 tokens
 top_k: 6
-score_threshold: 0.5
+score_threshold: 0.4
 max_context_tokens: 3500-5000
 ```
 
@@ -200,12 +200,17 @@ Retrieval flow:
 
 ```text
 user question
+  -> lightweight query expansion for short/common technology questions
   -> query embedding
   -> Qdrant top_k search
   -> score threshold filtering
   -> metadata-aware context selection
   -> prompt context block
 ```
+
+Current query expansion is intentionally small and focused on common employer questions, such as
+SQL/database experience, FastAPI/backend experience, RAG/AI-assisted development, projects, and
+Russian-language variants of "experience", "worked", and "projects".
 
 If no chunk passes the threshold, return an insufficient-data response.
 

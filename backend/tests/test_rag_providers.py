@@ -170,6 +170,29 @@ def test_qdrant_retriever_keeps_link_sections_for_link_queries() -> None:
     ]
 
 
+def test_qdrant_retriever_expands_short_sql_queries() -> None:
+    fake_embedding_client = FakeEmbeddingClient()
+    retriever = QdrantRetriever(
+        embedding_client=fake_embedding_client,
+        store=FakeSearchStore(
+            [
+                _chunk(
+                    "database", "Alex has SQL experience.", section="Python and Backend Development"
+                )
+            ]
+        ),
+        default_limit=6,
+        score_threshold=0.4,
+    )
+
+    chunks = retriever.retrieve("У Алекса есть опыт с SQL?")
+
+    assert chunks
+    assert fake_embedding_client.last_text is not None
+    assert "PostgreSQL SQLAlchemy Alembic" in fake_embedding_client.last_text
+    assert "experience skills practical work" in fake_embedding_client.last_text
+
+
 def test_ingestion_replaces_vectors_from_reviewed_public_knowledge() -> None:
     knowledge_dir = _local_knowledge_dir("provider-ingestion")
     (knowledge_dir / "resume.md").write_text(
@@ -282,12 +305,14 @@ class FakeQdrantClient:
 class FakeEmbeddingClient:
     def __init__(self) -> None:
         self.texts: list[str] = []
+        self.last_text: str | None = None
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         self.texts = texts
         return [[1.0, 0.0] for _ in texts]
 
     def embed_text(self, text: str) -> list[float]:
+        self.last_text = text
         return [1.0, 0.0] if text else []
 
 

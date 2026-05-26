@@ -4,6 +4,40 @@ from app.llm.openai_client import OpenAIEmbeddingClient
 from app.rag.models import KnowledgeChunk
 from app.rag.qdrant_store import QdrantKnowledgeStore
 
+QUERY_EXPANSIONS = (
+    (
+        (
+            "sql",
+            "postgres",
+            "postgresql",
+            "sqlalchemy",
+            "alembic",
+            "database",
+            "databases",
+            "баз",
+            "данн",
+            "субд",
+        ),
+        "SQL PostgreSQL SQLAlchemy Alembic relational databases database-backed workflows",
+    ),
+    (
+        ("fastapi", "backend", "api", "бекенд", "бэкенд", "апи"),
+        "Python FastAPI backend REST APIs request response validation internal services",
+    ),
+    (
+        ("rag", "llm", "ai-assisted", "assistant", "ассист", "ии", "нейро"),
+        "RAG AI-assisted development knowledge-base assistants LLM automation workflows",
+    ),
+    (
+        ("project", "projects", "portfolio", "repo", "repository", "проект"),
+        "projects repositories portfolio FastAPI RAG automation backend templates",
+    ),
+    (
+        ("experience", "skills", "worked", "used", "опыт", "работал", "умеет", "навык"),
+        "experience skills practical work used implemented built",
+    ),
+)
+
 LINK_SECTION_NAMES = {"links", "references"}
 LINK_QUERY_TERMS = {
     "contact",
@@ -46,13 +80,25 @@ class QdrantRetriever:
             return []
 
         effective_limit = limit or self._default_limit
-        query_embedding = self._embedding_client.embed_text(normalized_query)
+        query_embedding = self._embedding_client.embed_text(_expand_query(normalized_query))
         chunks = self._store.search(
             embedding=query_embedding,
             limit=effective_limit,
             score_threshold=self._score_threshold,
         )
         return _filter_sections_for_query(normalized_query, chunks)
+
+
+def _expand_query(query: str) -> str:
+    normalized_query = query.casefold()
+    expansions = [
+        expansion
+        for triggers, expansion in QUERY_EXPANSIONS
+        if any(trigger in normalized_query for trigger in triggers)
+    ]
+    if not expansions:
+        return query
+    return " ".join([query, *expansions])
 
 
 def _filter_sections_for_query(query: str, chunks: list[KnowledgeChunk]) -> list[KnowledgeChunk]:

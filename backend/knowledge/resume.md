@@ -26,6 +26,7 @@ He also works with AI-assisted development and RAG-based systems, using AI tools
 - Used FastAPI for backend API development, internal services, API experiments, and RAG-related backend functionality.
 - Worked with REST APIs, request/response validation, backend documentation, and API integration patterns.
 - Worked with PostgreSQL, SQLAlchemy, Alembic, and Redis in backend project contexts.
+- Has practical SQL and database experience through PostgreSQL, SQLAlchemy, Alembic, relational database migration, and database-backed reporting workflows.
 - Used backend development practices to support structured data workflows, API-connected systems, and automation-focused applications.
 
 ### Systems Integration and ERP/CRM

@@ -716,6 +716,32 @@ p {
   color: var(--muted);
 }
 
+.message__content {
+  display: grid;
+  gap: 8px;
+}
+
+.message__content p {
+  margin: 0;
+}
+
+.message__content ul,
+.message__content ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.message__content li {
+  padding-left: 2px;
+}
+
+.message__break {
+  display: block;
+  height: 2px;
+}
+
 .message-sources {
   display: flex;
   flex-wrap: wrap;
