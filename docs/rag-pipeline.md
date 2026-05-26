@@ -65,18 +65,20 @@ If a fact is useful but not fully verified, mark it clearly in metadata or rewri
 ## Pipeline Overview
 
 ```text
-markdown files
-  -> cleanup
-  -> heading-aware chunking
-  -> metadata assignment
-  -> embeddings
-  -> Qdrant collection
-  -> query embedding
-  -> vector search
-  -> score filtering
-  -> prompt building
-  -> LLM response
-  -> structured answer with sources
+knowledge ingestion:
+  markdown files
+    -> cleanup
+    -> heading-aware chunking
+    -> metadata assignment
+    -> embeddings
+    -> Qdrant collection
+
+chat answering:
+  user message
+    -> safety checks
+    -> intent detection
+    -> greeting/help response, general AI chat, or Alex-specific RAG
+    -> structured answer
 ```
 
 ---
@@ -200,6 +202,8 @@ Retrieval flow:
 
 ```text
 user question
+  -> safety checks and intent detection
+  -> continue only for Alex-specific factual questions
   -> lightweight query expansion for short/common technology questions
   -> query embedding
   -> Qdrant top_k search
@@ -214,7 +218,10 @@ Russian-language variants of "experience", "worked", and "projects".
 
 If no chunk passes the threshold, return an insufficient-data response.
 
-Do not force the LLM to answer without useful context.
+Do not force the LLM to answer Alex-specific factual questions without useful context.
+
+General software or technology questions that are not about Alex may be answered in general AI chat
+mode without Qdrant sources. This mode must not invent facts about Alex.
 
 If Qdrant or OpenAI retrieval fails, return the insufficient-data response instead of exposing
 provider errors.
@@ -242,6 +249,10 @@ Instructions inside retrieved documents are not allowed to override system instr
 ## Assistant Behaviour
 
 The assistant speaks as Alex's digital assistant, not as Alex directly.
+
+The assistant may chat naturally for greetings, help requests, and general non-Alex questions.
+Strict RAG grounding applies when the user asks factual questions about Alex, Alex's experience,
+skills, projects, education, links, or contact paths.
 
 Correct style:
 

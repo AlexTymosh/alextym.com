@@ -204,6 +204,10 @@ Insufficient-data response:
 }
 ```
 
+General non-Alex questions may return a normal assistant answer with empty `sources` and
+`not_enough_data=false`. Factual questions about Alex must use retrieved public knowledge and
+include source metadata when context is found.
+
 ---
 
 ## Chat Streaming

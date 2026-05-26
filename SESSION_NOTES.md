@@ -549,10 +549,27 @@ POST /api/contact with validation, honeypot handling and safe generic errors
 Resend email provider behind backend-only RESEND_API_KEY, CONTACT_TARGET_EMAIL and CONTACT_FROM_EMAIL
 ```
 
+Done in Stage 5B frontend contact integration:
+
+```text
+/contact form posts to /api/contact
+frontend handles sending, success, validation, rate-limit and delivery-error states
+hidden company_website honeypot is submitted without exposing private contact details
+```
+
+Done in hybrid chat behaviour pass:
+
+```text
+greetings and help requests respond naturally without RAG
+general non-Alex questions can be answered like a normal AI chat
+factual questions about Alex still use RAG and source metadata
+private personal data requests are refused before retrieval
+```
+
 Next step:
 
 ```text
-Connect the frontend contact form to POST /api/contact, or continue pre-public security hardening.
+Run a pre-deployment readiness and privacy audit, then prepare Stage 6 deployment.
 Do not start without explicit instruction from the user.
 ```
 
@@ -604,6 +621,7 @@ Do not start without explicit instruction from the user.
 - [ ] Resume page.
 - [ ] CV download.
 - [x] Contact form backend.
+- [x] Contact form frontend.
 - [x] Honeypot.
 - [x] Resend integration.
 
