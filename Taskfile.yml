@@ -5,7 +5,8 @@ vars:
   FRONTEND_PORT: "3000"
 
 env:
-  UV_CACHE_DIR: "{{.ROOT_DIR}}/uv-cache"
+  UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache"
+  UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-venv"
 
 tasks:
   default:
@@ -82,8 +83,11 @@ tasks:
   rag:ingest:
     desc: Rebuild Qdrant vectors from reviewed public knowledge files.
     dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
     cmds:
-      - uv run python -m scripts.ingest_knowledge
+      - uv run --isolated --env-file .env python -m scripts.ingest_knowledge
 
   backend:check:
     desc: Run all backend checks.

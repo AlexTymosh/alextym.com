@@ -40,18 +40,32 @@ class QdrantKnowledgeStore:
             raise ProviderConfigurationError("Qdrant vector size must be positive.")
 
         try:
-            if self._client.collection_exists(collection_name=self._collection_name):
-                return
-
-            self._client.create_collection(
-                collection_name=self._collection_name,
-                vectors_config=models.VectorParams(
-                    size=vector_size,
-                    distance=models.Distance.COSINE,
-                ),
+            collection_exists = self._client.collection_exists(
+                collection_name=self._collection_name
             )
+            if not collection_exists:
+                self._client.create_collection(
+                    collection_name=self._collection_name,
+                    vectors_config=models.VectorParams(
+                        size=vector_size,
+                        distance=models.Distance.COSINE,
+                    ),
+                )
+            self._ensure_payload_indexes()
         except Exception as exc:
             raise ProviderRequestError("Qdrant collection setup failed.") from exc
+
+    def _ensure_payload_indexes(self) -> None:
+        try:
+            self._client.create_payload_index(
+                collection_name=self._collection_name,
+                field_name="source",
+                field_schema=models.PayloadSchemaType.KEYWORD,
+            )
+        except Exception as exc:
+            if "already" in str(exc).lower():
+                return
+            raise
 
     def replace_source_chunks(
         self,

@@ -69,9 +69,9 @@ Ask me about my RAG projects or AI automation workflows.
 Quick prompts:
 
 ```text
-Give me your 30-second intro.
-Tell me about your recent projects.
-Tell me about your RAG work
+Summarize Alex's professional profile.
+Tell me about Alex's FastAPI and backend experience.
+Tell me about Alex's AI-assisted development and RAG-based systems.
 ```
 
 ---
@@ -507,6 +507,29 @@ reset/abort handling for in-flight chat requests
 chat error and fallback notices
 ```
 
+Done in RAG activation:
+
+```text
+backend local .env loading for app settings and ingestion
+Taskfile backend commands moved to ignored .tmp uv environments to avoid stale backend/.venv issues
+Qdrant source payload keyword index for idempotent source cleanup
+real Qdrant ingestion from backend/knowledge/resume.md
+RAG score threshold default adjusted to 0.5 after real retrieval score checks
+OpenAI reasoning effort default set to low for stable short Responses API answers
+link/reference sections filtered from normal professional retrieval unless the user asks for links
+quick prompts updated to retrieval-friendly employer-facing questions
+```
+
+Checked in RAG activation:
+
+```text
+OpenAI embeddings request: passed
+Qdrant collection setup and source cleanup: passed
+task-equivalent ingestion: indexed 20 chunk(s) from resume.md
+task rag:ingest: passed with isolated uv ingestion
+real ChatService checks: professional summary, FastAPI/backend, AI-assisted/RAG, GitHub link, health-data refusal and prompt-injection refusal passed
+```
+
 Rate limiting remains mandatory before public launch:
 
 ```text
@@ -561,6 +584,7 @@ Stage 5 contact form or pre-public security hardening. Do not start without expl
 - [x] Qdrant ingestion.
 - [x] Retriever abstraction.
 - [x] Prompt builder.
+- [x] Real Qdrant/OpenAI activation check.
 
 ### Stage 5 — Resume and Contact
 

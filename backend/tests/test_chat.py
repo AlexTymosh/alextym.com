@@ -1,10 +1,21 @@
+import pytest
 from fastapi.testclient import TestClient
 
+from app.api.chat import get_chat_service
 from app.main import app
+from app.rag.retriever import EmptyRetriever
 from app.services.chat import INSUFFICIENT_DATA_ANSWER
+from app.services.chat import ChatService
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def use_empty_chat_service() -> None:
+    app.dependency_overrides[get_chat_service] = lambda: ChatService(retriever=EmptyRetriever())
+    yield
+    app.dependency_overrides.clear()
 
 
 def test_chat_rejects_empty_message() -> None:

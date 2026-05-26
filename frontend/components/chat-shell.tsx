@@ -32,9 +32,9 @@ type SseEvent = {
 };
 
 const quickPrompts = [
-  "Give me your 30-second intro.",
-  "Tell me about your recent projects.",
-  "Tell me about your RAG work",
+  "Summarize Alex's professional profile.",
+  "Tell me about Alex's FastAPI and backend experience.",
+  "Tell me about Alex's AI-assisted development and RAG-based systems.",
 ];
 
 export function ChatShell() {

@@ -66,6 +66,7 @@ class OpenAIResponsesClient:
         api_key: str,
         model: str,
         max_output_tokens: int,
+        reasoning_effort: str,
         client: Any | None = None,
     ) -> None:
         if not api_key and client is None:
@@ -78,6 +79,7 @@ class OpenAIResponsesClient:
         self._client = client or OpenAI(api_key=api_key)
         self._model = model
         self._max_output_tokens = max_output_tokens
+        self._reasoning_effort = reasoning_effort.strip().lower()
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "OpenAIResponsesClient":
@@ -85,15 +87,20 @@ class OpenAIResponsesClient:
             api_key=settings.openai_api_key,
             model=settings.openai_model,
             max_output_tokens=settings.openai_max_output_tokens,
+            reasoning_effort=settings.openai_reasoning_effort,
         )
 
     def answer(self, prompt: PromptBundle) -> str:
+        request_options: dict[str, Any] = {
+            "model": self._model,
+            "input": prompt.as_messages(),
+            "max_output_tokens": self._max_output_tokens,
+        }
+        if self._reasoning_effort and self._reasoning_effort != "disabled":
+            request_options["reasoning"] = {"effort": self._reasoning_effort}
+
         try:
-            response = self._client.responses.create(
-                model=self._model,
-                input=prompt.as_messages(),
-                max_output_tokens=self._max_output_tokens,
-            )
+            response = self._client.responses.create(**request_options)
         except Exception as exc:
             raise ProviderRequestError("OpenAI response request failed.") from exc
 

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from app.core.config import Settings
 from app.llm.openai_client import OpenAIEmbeddingClient, OpenAIResponsesClient
 from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.qdrant_retriever import QdrantRetriever
 from app.rag.qdrant_store import QdrantKnowledgeStore
 from scripts.ingest_knowledge import ingest_public_knowledge
 
@@ -33,6 +34,7 @@ def test_openai_responses_client_returns_output_text() -> None:
         api_key="",
         model="gpt-5-mini",
         max_output_tokens=300,
+        reasoning_effort="low",
         client=SimpleNamespace(responses=fake_responses),
     )
 
@@ -49,6 +51,7 @@ def test_openai_responses_client_returns_output_text() -> None:
     assert answer == "Grounded answer."
     assert fake_responses.last_request["model"] == "gpt-5-mini"
     assert fake_responses.last_request["max_output_tokens"] == 300
+    assert fake_responses.last_request["reasoning"] == {"effort": "low"}
 
 
 def test_qdrant_store_replaces_source_chunks() -> None:
@@ -68,9 +71,30 @@ def test_qdrant_store_replaces_source_chunks() -> None:
         vector_size=2,
     )
 
-    assert fake_qdrant.operations == ["collection_exists", "create_collection", "delete", "upsert"]
+    assert fake_qdrant.operations == [
+        "collection_exists",
+        "create_collection",
+        "create_payload_index",
+        "delete",
+        "upsert",
+    ]
     assert fake_qdrant.upserted_points[0].payload["chunk_id"] == "chunk-1"
     assert fake_qdrant.upserted_points[0].payload["source"] == "resume.md"
+
+
+def test_qdrant_store_ensures_source_payload_index_for_existing_collection() -> None:
+    fake_qdrant = FakeQdrantClient(collection_exists=True)
+    store = QdrantKnowledgeStore(
+        url="",
+        api_key="",
+        collection_name="alex_public_knowledge",
+        client=fake_qdrant,
+    )
+
+    store.ensure_collection(vector_size=2)
+
+    assert fake_qdrant.operations == ["collection_exists", "create_payload_index"]
+    assert fake_qdrant.indexed_fields == [("source", "keyword")]
 
 
 def test_qdrant_store_search_maps_payload_to_chunks() -> None:
@@ -105,6 +129,45 @@ def test_qdrant_store_search_maps_payload_to_chunks() -> None:
     assert chunks[0].id == "chunk-1"
     assert chunks[0].metadata.source == "resume.md"
     assert chunks[0].metadata.tags == ("backend",)
+
+
+def test_qdrant_retriever_filters_link_sections_for_professional_queries() -> None:
+    retriever = QdrantRetriever(
+        embedding_client=FakeEmbeddingClient(),
+        store=FakeSearchStore(
+            [
+                _chunk("links", "GitHub profile.", section="Links"),
+                _chunk("backend", "Alex uses FastAPI.", section="Python and Backend Development"),
+            ]
+        ),
+        default_limit=6,
+        score_threshold=0.5,
+    )
+
+    chunks = retriever.retrieve("Tell me about Alex FastAPI backend experience")
+
+    assert [chunk.metadata.section for chunk in chunks] == ["Python and Backend Development"]
+
+
+def test_qdrant_retriever_keeps_link_sections_for_link_queries() -> None:
+    retriever = QdrantRetriever(
+        embedding_client=FakeEmbeddingClient(),
+        store=FakeSearchStore(
+            [
+                _chunk("links", "GitHub profile.", section="Links"),
+                _chunk("backend", "Alex uses FastAPI.", section="Python and Backend Development"),
+            ]
+        ),
+        default_limit=6,
+        score_threshold=0.5,
+    )
+
+    chunks = retriever.retrieve("Show me Alex GitHub link")
+
+    assert [chunk.metadata.section for chunk in chunks] == [
+        "Links",
+        "Python and Backend Development",
+    ]
 
 
 def test_ingestion_replaces_vectors_from_reviewed_public_knowledge() -> None:
@@ -177,17 +240,33 @@ class FakeOpenAIResponses:
 
 
 class FakeQdrantClient:
-    def __init__(self, search_points: list[SimpleNamespace] | None = None) -> None:
+    def __init__(
+        self,
+        search_points: list[SimpleNamespace] | None = None,
+        collection_exists: bool = False,
+    ) -> None:
         self.operations: list[str] = []
         self.upserted_points: list[object] = []
+        self.indexed_fields: list[tuple[str, object]] = []
         self._search_points = search_points or []
+        self._collection_exists = collection_exists
 
     def collection_exists(self, *, collection_name: str) -> bool:
         self.operations.append("collection_exists")
-        return False
+        return self._collection_exists
 
     def create_collection(self, **kwargs: object) -> None:
         self.operations.append("create_collection")
+
+    def create_payload_index(
+        self,
+        *,
+        collection_name: str,
+        field_name: str,
+        field_schema: object,
+    ) -> None:
+        self.operations.append("create_payload_index")
+        self.indexed_fields.append((field_name, getattr(field_schema, "value", field_schema)))
 
     def delete(self, **kwargs: object) -> None:
         self.operations.append("delete")
@@ -233,11 +312,29 @@ class FakeVectorStore:
         self.vector_size = vector_size
 
 
-def _chunk(chunk_id: str, content: str) -> KnowledgeChunk:
+class FakeSearchStore:
+    def __init__(self, chunks: list[KnowledgeChunk]) -> None:
+        self._chunks = chunks
+
+    def search(
+        self,
+        *,
+        embedding: list[float],
+        limit: int,
+        score_threshold: float,
+    ) -> list[KnowledgeChunk]:
+        return self._chunks[:limit]
+
+
+def _chunk(chunk_id: str, content: str, section: str = "Summary") -> KnowledgeChunk:
     return KnowledgeChunk(
         id=chunk_id,
         content=content,
-        metadata=ChunkMetadata(source="resume.md", section="Summary", topic="summary"),
+        metadata=ChunkMetadata(
+            source="resume.md",
+            section=section,
+            topic=section.lower().replace(" ", "-"),
+        ),
     )
 
 
@@ -251,6 +348,7 @@ def _settings() -> Settings:
         openai_embedding_model="text-embedding-3-small",
         openai_embedding_dimensions=2,
         openai_max_output_tokens=300,
+        openai_reasoning_effort="low",
         qdrant_url="http://qdrant.test",
         qdrant_api_key="",
         qdrant_collection="alex_public_knowledge",

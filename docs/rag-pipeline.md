@@ -89,7 +89,7 @@ Recommended v1 parameters:
 chunk size: 500-900 tokens
 overlap: 80-150 tokens
 top_k: 6
-score_threshold: 0.72
+score_threshold: 0.5
 max_context_tokens: 3500-5000
 ```
 
@@ -157,11 +157,15 @@ Run ingestion from the repository root:
 task rag:ingest
 ```
 
+The task loads `backend/.env` and uses an isolated `uv` run for ingestion. This keeps the command
+independent from a stale or missing local `.venv`.
+
 Current defaults:
 
 ```text
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENAI_EMBEDDING_DIMENSIONS=1536
+OPENAI_REASONING_EFFORT=low
 ```
 
 ---
@@ -185,6 +189,7 @@ Current collection settings:
 ```text
 distance: Cosine
 vector size: OPENAI_EMBEDDING_DIMENSIONS
+payload index: source keyword
 ```
 
 ---
