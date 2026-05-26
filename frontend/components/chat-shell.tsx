@@ -17,6 +17,11 @@ type ChatResponse = {
   not_enough_data: boolean;
 };
 
+type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
@@ -36,6 +41,10 @@ const quickPrompts = [
   "Tell me about Alex's FastAPI and backend experience.",
   "Tell me about Alex's AI-assisted development and RAG-based systems.",
 ];
+
+const CHAT_HISTORY_LIMIT = 8;
+const CHAT_HISTORY_ITEM_MAX_CHARS = 1000;
+const CHAT_HISTORY_TOTAL_MAX_CHARS = 6000;
 
 export function ChatShell() {
   const [input, setInput] = useState("");
@@ -100,6 +109,7 @@ export function ChatShell() {
     }
 
     const assistantId = createMessageId("assistant");
+    const history = buildChatHistory(messages);
     let streamedText = "";
 
     abortControllerRef.current?.abort();
@@ -118,6 +128,7 @@ export function ChatShell() {
     try {
       await streamChatResponse({
         message: trimmedInput,
+        history,
         signal: abortController.signal,
         onToken: (token) => {
           streamedText += token;
@@ -137,7 +148,11 @@ export function ChatShell() {
 
       if (!streamedText) {
         try {
-          const fallbackResponse = await fetchJsonChatResponse(trimmedInput, abortController.signal);
+          const fallbackResponse = await fetchJsonChatResponse(
+            trimmedInput,
+            history,
+            abortController.signal,
+          );
           updateAssistantMessage(assistantId, {
             text: fallbackResponse.answer,
             sources: fallbackResponse.sources,
@@ -279,12 +294,14 @@ export function ChatShell() {
 
 async function streamChatResponse({
   message,
+  history,
   signal,
   onToken,
   onSources,
   onDone,
 }: {
   message: string;
+  history: ChatHistoryMessage[];
   signal: AbortSignal;
   onToken: (token: string) => void;
   onSources: (sources: ChatSource[]) => void;
@@ -296,7 +313,7 @@ async function streamChatResponse({
       "Content-Type": "application/json",
       Accept: "text/event-stream",
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, history }),
     signal,
   });
 
@@ -329,14 +346,18 @@ async function streamChatResponse({
   }
 }
 
-async function fetchJsonChatResponse(message: string, signal: AbortSignal): Promise<ChatResponse> {
+async function fetchJsonChatResponse(
+  message: string,
+  history: ChatHistoryMessage[],
+  signal: AbortSignal,
+): Promise<ChatResponse> {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, history }),
     signal,
   });
 
@@ -417,6 +438,36 @@ function createMessageId(prefix: string): string {
   }
 
   return `${prefix}-${Date.now()}`;
+}
+
+function buildChatHistory(messages: Message[]): ChatHistoryMessage[] {
+  const history: ChatHistoryMessage[] = [];
+  let totalChars = 0;
+
+  for (const message of [...messages].reverse()) {
+    if (history.length >= CHAT_HISTORY_LIMIT) {
+      break;
+    }
+
+    const content = compactHistoryContent(message.text);
+    if (!content) {
+      continue;
+    }
+
+    if (totalChars + content.length > CHAT_HISTORY_TOTAL_MAX_CHARS) {
+      break;
+    }
+
+    history.unshift({ role: message.role, content });
+    totalChars += content.length;
+  }
+
+  return history;
+}
+
+function compactHistoryContent(text: string): string {
+  const compactText = text.replace(/\s+/g, " ").trim();
+  return compactText.slice(0, CHAT_HISTORY_ITEM_MAX_CHARS);
 }
 
 function renderMessageText(text: string) {

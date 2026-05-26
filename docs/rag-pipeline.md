@@ -76,8 +76,10 @@ knowledge ingestion:
 chat answering:
   user message
     -> safety checks
-    -> intent detection
+    -> optional short history validation
+    -> intent detection and conservative subject resolution
     -> greeting/help response, general AI chat, or Alex-specific RAG
+    -> query rewrite for retrieval only when needed
     -> structured answer
 ```
 
@@ -203,7 +205,9 @@ Retrieval flow:
 ```text
 user question
   -> safety checks and intent detection
+  -> optional short history for pronoun/follow-up understanding only
   -> continue only for Alex-specific factual questions
+  -> rewrite follow-up wording into a standalone Alex retrieval query when needed
   -> lightweight query expansion for short/common technology questions
   -> query embedding
   -> Qdrant top_k search
@@ -214,7 +218,15 @@ user question
 
 Current query expansion is intentionally small and focused on common employer questions, such as
 SQL/database experience, FastAPI/backend experience, RAG/AI-assisted development, projects, and
-Russian-language variants of "experience", "worked", and "projects".
+professional experience.
+
+Conversation history is not a factual source. It may only help resolve short follow-up wording such
+as "Tell me about him" after the assistant has introduced itself as Alex's digital assistant. The
+retrieval query may be rewritten to a standalone Alex-focused query, but the original user message
+remains in the prompt for a natural answer.
+
+MVP subject resolution is English-only. Non-English input must not crash the endpoint, but answer
+quality for non-English questions is outside this stage.
 
 If no chunk passes the threshold, return an insufficient-data response.
 
@@ -222,6 +234,9 @@ Do not force the LLM to answer Alex-specific factual questions without useful co
 
 General software or technology questions that are not about Alex may be answered in general AI chat
 mode without Qdrant sources. This mode must not invent facts about Alex.
+
+Questions about unrelated third-party people should not trigger Alex RAG. The assistant should
+return a short scope-boundary answer instead of treating pronouns or external subjects as Alex.
 
 If Qdrant or OpenAI retrieval fails, return the insufficient-data response instead of exposing
 provider errors.

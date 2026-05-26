@@ -165,7 +165,17 @@ Request:
 ```json
 {
   "message": "Tell me about Alex's recent projects",
-  "session_id": "optional-session-id"
+  "session_id": "optional-session-id",
+  "history": [
+    {
+      "role": "user",
+      "content": "Hi"
+    },
+    {
+      "role": "assistant",
+      "content": "Hi, I'm Alex's digital assistant."
+    }
+  ]
 }
 ```
 
@@ -174,7 +184,15 @@ Validation:
 ```text
 message: required, 1-2000 characters
 session_id: optional, max 100 characters
+history: optional, latest short conversation context
+history item role: user or assistant
+history item content: 1-2000 characters
+history item count: max 10
+history total content: max 6000 characters
 ```
+
+`history` is used only for conversational context, such as pronoun resolution and follow-up
+understanding. It is not a source of factual claims about Alex.
 
 Response:
 
@@ -208,6 +226,10 @@ General non-Alex questions may return a normal assistant answer with empty `sour
 `not_enough_data=false`. Factual questions about Alex must use retrieved public knowledge and
 include source metadata when context is found.
 
+Questions about unrelated third-party people should not trigger Alex RAG. The assistant should
+return a short scope-boundary response and stay focused on Alex's professional profile and general
+software topics.
+
 ---
 
 ## Chat Streaming
@@ -235,7 +257,8 @@ Request:
 ```json
 {
   "message": "Give me your 30-second intro.",
-  "session_id": "optional-session-id"
+  "session_id": "optional-session-id",
+  "history": []
 }
 ```
 
