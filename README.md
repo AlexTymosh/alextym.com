@@ -614,10 +614,20 @@ ChatService integration with LLM answer generation and safe extractive fallback
 provider tests with fake OpenAI/Qdrant clients
 ```
 
+Completed in Stage 4C:
+
+```text
+frontend chat shell connected to POST /api/chat/stream
+incremental SSE token rendering
+source metadata display
+JSON /api/chat fallback when streaming is unavailable
+reset/abort handling for in-flight chat requests
+chat error and fallback notices
+```
+
 Not implemented yet:
 
 ```text
-production frontend streaming integration
 rate limiting
 ```
 
