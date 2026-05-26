@@ -539,17 +539,21 @@ lightweight query expansion added for SQL/database, FastAPI/backend, RAG/AI, pro
 public resume knowledge now states practical SQL/database experience explicitly
 ```
 
-Rate limiting remains mandatory before public launch:
+Done in Stage 5 backend contact and rate-limit hardening:
 
 ```text
-/api/chat and /api/chat/stream: up to 50 messages per IP per day
-/api/contact: 3-5 messages per IP per day
+process-local daily rate limiting for /api/chat, /api/chat/stream and /api/contact
+/api/chat and /api/chat/stream limit: 50 messages per IP per day
+/api/contact limit: 5 messages per IP per day
+POST /api/contact with validation, honeypot handling and safe generic errors
+Resend email provider behind backend-only RESEND_API_KEY, CONTACT_TARGET_EMAIL and CONTACT_FROM_EMAIL
 ```
 
 Next step:
 
 ```text
-Stage 5 contact form or pre-public security hardening. Do not start without explicit instruction from the user.
+Connect the frontend contact form to POST /api/contact, or continue pre-public security hardening.
+Do not start without explicit instruction from the user.
 ```
 
 ---
@@ -599,15 +603,15 @@ Stage 5 contact form or pre-public security hardening. Do not start without expl
 
 - [ ] Resume page.
 - [ ] CV download.
-- [ ] Contact form.
-- [ ] Honeypot.
-- [ ] Resend integration.
+- [x] Contact form backend.
+- [x] Honeypot.
+- [x] Resend integration.
 
 ### Pre-public security hardening
 
-- [ ] Chat rate limiting up to 50 messages per IP per day.
-- [ ] Contact form rate limiting.
-- [ ] Contact form honeypot.
+- [x] Chat rate limiting up to 50 messages per IP per day.
+- [x] Contact form rate limiting.
+- [x] Contact form honeypot.
 - [ ] LLM provider budget limit.
 
 ### Stage 6 — Deployment
@@ -634,8 +638,9 @@ Mandatory rules:
 - do not log the full system prompt;
 - do not log private data unless necessary;
 - add rate limiting;
-- set the chat limit to 50 messages per IP per day;
-- add a honeypot for the contact form;
+- chat limit is 50 messages per IP per day;
+- contact limit is 5 messages per IP per day;
+- contact form honeypot is implemented;
 - set an LLM budget limit;
 - use only reviewed public knowledge files for RAG.
 

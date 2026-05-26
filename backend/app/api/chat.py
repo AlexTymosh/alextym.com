@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
+from app.api.rate_limit import enforce_chat_rate_limit
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat import ChatService
 
@@ -16,6 +17,7 @@ def get_chat_service() -> ChatService:
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     chat_request: ChatRequest,
+    _: None = Depends(enforce_chat_rate_limit),
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
     return service.answer(chat_request)
@@ -25,6 +27,7 @@ async def chat(
 async def chat_stream(
     chat_request: ChatRequest,
     request: Request,
+    _: None = Depends(enforce_chat_rate_limit),
     service: ChatService = Depends(get_chat_service),
 ) -> StreamingResponse:
     async def event_generator() -> AsyncIterator[str]:

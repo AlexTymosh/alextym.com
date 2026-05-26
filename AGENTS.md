@@ -311,6 +311,9 @@ Public launch must include:
 - no private biography in public repo;
 - safe logging.
 
+Contact delivery requires backend-only `RESEND_API_KEY`, `CONTACT_TARGET_EMAIL`, and
+`CONTACT_FROM_EMAIL`.
+
 ---
 
 ## Local Commands

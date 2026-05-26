@@ -379,8 +379,12 @@ def _settings() -> Settings:
         qdrant_collection="alex_public_knowledge",
         rag_top_k=6,
         rag_score_threshold=0.72,
+        resend_api_key="",
+        contact_target_email="",
+        contact_from_email="",
         rate_limiting_enabled=True,
         chat_daily_limit_per_ip=50,
+        contact_daily_limit_per_ip=5,
     )
 
 

@@ -20,8 +20,12 @@ class Settings:
     qdrant_collection: str
     rag_top_k: int
     rag_score_threshold: float
+    resend_api_key: str
+    contact_target_email: str
+    contact_from_email: str
     rate_limiting_enabled: bool
     chat_daily_limit_per_ip: int
+    contact_daily_limit_per_ip: int
 
 
 def _load_env_file(env_path: Path) -> None:
@@ -110,6 +114,10 @@ def get_settings() -> Settings:
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "alex_public_knowledge"),
         rag_top_k=_get_int("RAG_TOP_K", 6),
         rag_score_threshold=_get_float("RAG_SCORE_THRESHOLD", 0.4),
+        resend_api_key=os.getenv("RESEND_API_KEY", ""),
+        contact_target_email=os.getenv("CONTACT_TARGET_EMAIL", ""),
+        contact_from_email=os.getenv("CONTACT_FROM_EMAIL", ""),
         rate_limiting_enabled=_get_bool("RATE_LIMITING_ENABLED", True),
         chat_daily_limit_per_ip=_get_int("CHAT_DAILY_LIMIT_PER_IP", 50),
+        contact_daily_limit_per_ip=_get_int("CONTACT_DAILY_LIMIT_PER_IP", 5),
     )
