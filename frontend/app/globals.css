@@ -74,6 +74,12 @@ button {
   cursor: pointer;
 }
 
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -695,6 +701,7 @@ p {
   padding: 12px 14px;
   border-radius: 8px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .message--user {
@@ -707,6 +714,24 @@ p {
   justify-self: start;
   background: var(--surface-strong);
   color: var(--muted);
+}
+
+.message-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.message-sources span {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-strong);
+  font-size: 11px;
 }
 
 .chat-shell__notice {

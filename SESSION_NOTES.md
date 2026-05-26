@@ -468,7 +468,6 @@ ruff format --check via backend .venv: passed
 Deferred after Stage 3:
 
 ```text
-production streaming frontend integration
 rate limiting
 ```
 
@@ -497,6 +496,17 @@ ChatService integration with LLM answer generation and safe extractive fallback
 provider tests with fake OpenAI/Qdrant clients
 ```
 
+Done in Stage 4C:
+
+```text
+frontend chat shell connected to POST /api/chat/stream
+incremental SSE token rendering
+source metadata display
+JSON /api/chat fallback when streaming is unavailable
+reset/abort handling for in-flight chat requests
+chat error and fallback notices
+```
+
 Rate limiting remains mandatory before public launch:
 
 ```text
@@ -507,7 +517,7 @@ Rate limiting remains mandatory before public launch:
 Next step:
 
 ```text
-Frontend production streaming integration or Stage 5 contact form. Do not start without explicit instruction from the user.
+Stage 5 contact form or pre-public security hardening. Do not start without explicit instruction from the user.
 ```
 
 ---
@@ -531,7 +541,7 @@ Frontend production streaming integration or Stage 5 contact form. Do not start 
 - [x] Warm-up request.
 - [x] Loading/error states.
 - [x] Mock response placeholder.
-- [ ] Production streaming UI.
+- [x] Production streaming UI.
 
 ### Stage 3 — Backend chat service
 
