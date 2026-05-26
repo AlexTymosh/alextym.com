@@ -90,6 +90,22 @@ def test_prompt_builder_supports_general_chat_without_rag_context() -> None:
     assert messages[2]["content"] == "What is FastAPI?"
 
 
+def test_prompt_builder_includes_conversation_context_as_non_factual_context() -> None:
+    chunk = _chunk("public-1", "Alex builds FastAPI services.")
+
+    bundle = PromptBuilder().build(
+        question="Tell me about him",
+        chunks=[chunk],
+        conversational_context="user: Hi\nassistant: Hi, I'm Alex's digital assistant.",
+    )
+
+    messages = bundle.as_messages()
+    assert "Recent conversation context" in messages[1]["content"]
+    assert "Use this only to understand follow-up wording or pronouns." in messages[1]["content"]
+    assert "Do not treat it as a source of factual claims about Alex." in messages[1]["content"]
+    assert messages[2]["content"] == "Tell me about him"
+
+
 def test_public_knowledge_loader_skips_placeholder_resume() -> None:
     knowledge_dir = _local_knowledge_dir("placeholder")
     try:
@@ -193,6 +209,96 @@ def test_chat_service_still_uses_rag_for_alex_questions() -> None:
     assert response.sources[0].title == "resume.md"
 
 
+def test_chat_service_resolves_alex_follow_up_from_short_history() -> None:
+    chunk = _chunk("public-1", "Alex has professional experience with backend services.")
+    retriever = RecordingRetriever([chunk])
+    llm_client = CapturingLLMClient("Grounded Alex follow-up answer.")
+
+    response = ChatService(
+        retriever=retriever,
+        llm_client=llm_client,
+    ).answer(
+        ChatRequest(
+            message="Tell me about him",
+            history=[
+                {"role": "user", "content": "Hi"},
+                {"role": "assistant", "content": "Hi, I'm Alex's digital assistant."},
+            ],
+        )
+    )
+
+    assert retriever.queries == [
+        "Tell me about Alex's professional background, experience, skills, and projects."
+    ]
+    assert response.answer == "Grounded Alex follow-up answer."
+    assert response.not_enough_data is False
+    assert llm_client.prompt.question == "Tell me about him"
+    assert "Do not treat it as a source of factual claims about Alex." in llm_client.prompt.context
+
+
+def test_chat_service_rewrites_what_he_does_follow_up_for_retrieval() -> None:
+    chunk = _chunk("public-1", "Alex works on backend services and AI-assisted workflows.")
+    retriever = RecordingRetriever([chunk])
+
+    response = ChatService(
+        retriever=retriever,
+        llm_client=StaticLLMClient("Grounded professional summary."),
+    ).answer(
+        ChatRequest(
+            message="What does he do?",
+            history=[
+                {"role": "user", "content": "Hi"},
+                {"role": "assistant", "content": "Hi, I'm Alex's digital assistant."},
+            ],
+        )
+    )
+
+    assert retriever.queries == ["What does Alex do professionally?"]
+    assert response.not_enough_data is False
+
+
+def test_chat_service_rewrites_second_person_project_question_for_retrieval() -> None:
+    chunk = _chunk("public-1", "Alex has built RAG and automation projects.")
+    retriever = RecordingRetriever([chunk])
+
+    response = ChatService(
+        retriever=retriever,
+        llm_client=StaticLLMClient("Grounded project answer."),
+    ).answer(ChatRequest(message="Tell me about your projects"))
+
+    assert retriever.queries == ["Tell me about Alex's professional projects and software work."]
+    assert response.not_enough_data is False
+
+
+def test_chat_service_keeps_third_party_subjects_out_of_alex_rag() -> None:
+    response = ChatService(retriever=FailingRetriever()).answer(
+        ChatRequest(message="Who is Elon Musk?")
+    )
+
+    assert response.not_enough_data is False
+    assert response.sources == []
+    assert "focused on Alex's professional profile" in response.answer
+
+
+def test_chat_service_does_not_resolve_third_party_follow_up_to_alex() -> None:
+    response = ChatService(retriever=FailingRetriever()).answer(
+        ChatRequest(
+            message="Tell me about him",
+            history=[
+                {"role": "user", "content": "Who is Elon Musk?"},
+                {
+                    "role": "assistant",
+                    "content": "I'm focused on Alex's professional profile.",
+                },
+            ],
+        )
+    )
+
+    assert response.not_enough_data is False
+    assert response.sources == []
+    assert "focused on Alex's professional profile" in response.answer
+
+
 def test_chat_service_refuses_private_personal_data_requests() -> None:
     response = ChatService(retriever=FailingRetriever()).answer(
         ChatRequest(message="What is Alex's private phone number?")
@@ -242,9 +348,29 @@ class StaticLLMClient:
         return self._answer
 
 
+class CapturingLLMClient:
+    def __init__(self, answer: str) -> None:
+        self._answer = answer
+        self.prompt = None
+
+    def answer(self, prompt: object) -> str:
+        self.prompt = prompt
+        return self._answer
+
+
 class FailingLLMClient:
     def answer(self, prompt: object) -> str:
         raise ProviderRequestError("Provider failed.")
+
+
+class RecordingRetriever:
+    def __init__(self, chunks: list[KnowledgeChunk]) -> None:
+        self._chunks = chunks
+        self.queries: list[str] = []
+
+    def retrieve(self, query: str, *, limit: int = 6) -> list[KnowledgeChunk]:
+        self.queries.append(query)
+        return self._chunks
 
 
 class FailingRetriever:

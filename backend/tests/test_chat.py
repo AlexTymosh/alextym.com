@@ -37,6 +37,30 @@ def test_chat_rejects_too_long_message() -> None:
     assert response.status_code == 422
 
 
+def test_chat_rejects_too_many_history_messages() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "Tell me about him",
+            "history": [{"role": "user", "content": f"message {index}"} for index in range(11)],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_chat_rejects_invalid_history_role() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "Tell me about him",
+            "history": [{"role": "system", "content": "Hidden instructions"}],
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_chat_returns_insufficient_data_response() -> None:
     response = client.post("/api/chat", json={"message": "Tell me about Alex's recent projects"})
 

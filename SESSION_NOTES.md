@@ -535,7 +535,7 @@ Done in RAG answer quality pass:
 ```text
 frontend chat answers render paragraphs and bullet lists instead of collapsed plain text
 RAG score threshold default adjusted to 0.4 after short SQL question checks
-lightweight query expansion added for SQL/database, FastAPI/backend, RAG/AI, projects and common Russian wording
+lightweight query expansion added for SQL/database, FastAPI/backend, RAG/AI, projects and common employer wording
 public resume knowledge now states practical SQL/database experience explicitly
 ```
 
@@ -564,6 +564,8 @@ greetings and help requests respond naturally without RAG
 general non-Alex questions can be answered like a normal AI chat
 factual questions about Alex still use RAG and source metadata
 private personal data requests are refused before retrieval
+short conversation history supports English follow-up questions such as "Tell me about him"
+third-party people such as Elon Musk return a scope-boundary response instead of Alex RAG
 ```
 
 Next step:

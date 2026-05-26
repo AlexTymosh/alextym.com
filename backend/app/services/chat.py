@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
@@ -10,7 +11,7 @@ from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import Retriever
-from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.chat import ChatHistoryMessage, ChatRequest, ChatResponse
 
 INSUFFICIENT_DATA_ANSWER = (
     "I do not have enough reliable information in Alex's public knowledge base to answer that "
@@ -64,6 +65,11 @@ GENERAL_CHAT_UNAVAILABLE_ANSWER = (
 PRIVATE_DATA_ANSWER = (
     "I can't provide private personal information. I can answer questions about Alex's public "
     "professional profile, skills, projects, and experience."
+)
+
+SCOPE_BOUNDARY_ANSWER = (
+    "I'm focused on Alex's professional profile. I can help with Alex's experience, projects, "
+    "skills, or general software topics."
 )
 
 GREETING_PATTERNS = (
@@ -172,6 +178,37 @@ SECOND_PERSON_TERMS = (
     "ваши",
 )
 
+FOLLOW_UP_PRONOUN_TERMS = (
+    "he",
+    "him",
+    "his",
+)
+
+FOLLOW_UP_PROFILE_TERMS = (
+    "background",
+    "career",
+    "do",
+    "does",
+    "experience",
+    "profile",
+    "project",
+    "projects",
+    "skill",
+    "skills",
+    "tell",
+    "work",
+)
+
+KNOWN_THIRD_PARTY_SUBJECTS = ("elon musk",)
+
+
+@dataclass(frozen=True)
+class QuestionResolution:
+    is_alex_specific: bool
+    retrieval_query: str
+    conversational_context: str
+    is_out_of_scope_subject: bool = False
+
 
 class ChatService:
     def __init__(
@@ -221,11 +258,23 @@ class ChatService:
                 not_enough_data=False,
             )
 
-        if not self._is_alex_specific_question(request.message):
-            return self._answer_general_chat(request.message)
+        resolution = self._resolve_question(request)
+        if resolution.is_out_of_scope_subject:
+            return ChatResponse(
+                answer=SCOPE_BOUNDARY_ANSWER,
+                sources=[],
+                confidence="medium",
+                not_enough_data=False,
+            )
+
+        if not resolution.is_alex_specific:
+            return self._answer_general_chat(
+                request.message,
+                conversational_context=resolution.conversational_context,
+            )
 
         try:
-            chunks = self._retriever.retrieve(request.message)
+            chunks = self._retriever.retrieve(resolution.retrieval_query)
         except (ProviderConfigurationError, ProviderRequestError):
             return ChatResponse(
                 answer=INSUFFICIENT_DATA_ANSWER,
@@ -235,7 +284,11 @@ class ChatService:
             )
 
         if chunks:
-            prompt = self._prompt_builder.build(question=request.message, chunks=chunks)
+            prompt = self._prompt_builder.build(
+                question=request.message,
+                chunks=chunks,
+                conversational_context=resolution.conversational_context,
+            )
             answer = self._answer_from_prompt(prompt, chunks)
             return ChatResponse(
                 answer=answer,
@@ -315,6 +368,48 @@ class ChatService:
         return False
 
     @staticmethod
+    def _resolve_question(request: ChatRequest) -> QuestionResolution:
+        conversational_context = _format_conversation_context(request.history)
+        normalized_message = _normalize_message(request.message)
+
+        if _is_direct_third_party_subject(normalized_message):
+            return QuestionResolution(
+                is_alex_specific=False,
+                retrieval_query=request.message,
+                conversational_context=conversational_context,
+                is_out_of_scope_subject=True,
+            )
+
+        if ChatService._is_alex_specific_question(request.message):
+            return QuestionResolution(
+                is_alex_specific=True,
+                retrieval_query=_rewrite_alex_retrieval_query(request.message),
+                conversational_context=conversational_context,
+            )
+
+        if _is_follow_up_profile_question(normalized_message):
+            subject = _last_explicit_user_subject(request.history)
+            if subject == "third_party":
+                return QuestionResolution(
+                    is_alex_specific=False,
+                    retrieval_query=request.message,
+                    conversational_context=conversational_context,
+                    is_out_of_scope_subject=True,
+                )
+            if subject == "alex" or _history_has_alex_assistant_context(request.history):
+                return QuestionResolution(
+                    is_alex_specific=True,
+                    retrieval_query=_rewrite_alex_retrieval_query(request.message),
+                    conversational_context=conversational_context,
+                )
+
+        return QuestionResolution(
+            is_alex_specific=False,
+            retrieval_query=request.message,
+            conversational_context=conversational_context,
+        )
+
+    @staticmethod
     def _extractive_answer(chunks: list[KnowledgeChunk], context: str) -> str:
         if not context.strip():
             return INSUFFICIENT_DATA_ANSWER
@@ -340,7 +435,12 @@ class ChatService:
         except (ProviderConfigurationError, ProviderRequestError):
             return self._extractive_answer(chunks, prompt.context)
 
-    def _answer_general_chat(self, message: str) -> ChatResponse:
+    def _answer_general_chat(
+        self,
+        message: str,
+        *,
+        conversational_context: str = "",
+    ) -> ChatResponse:
         if self._llm_client is None:
             return ChatResponse(
                 answer=GENERAL_CHAT_UNAVAILABLE_ANSWER,
@@ -349,7 +449,10 @@ class ChatService:
                 not_enough_data=False,
             )
 
-        prompt = self._prompt_builder.build_general_chat(question=message)
+        prompt = self._prompt_builder.build_general_chat(
+            question=message,
+            conversational_context=conversational_context,
+        )
         try:
             answer = self._llm_client.answer(prompt)
         except (ProviderConfigurationError, ProviderRequestError):
@@ -399,4 +502,62 @@ def _first_sentence(text: str, max_length: int = 360) -> str:
 
 
 def _normalize_message(message: str) -> str:
-    return " ".join(message.casefold().strip(" \t\r\n.,!?;:…").split())
+    return " ".join(message.casefold().strip(" \t\r\n.,!?;:\u2026").split())
+
+
+def _format_conversation_context(history: list[ChatHistoryMessage]) -> str:
+    lines = []
+    for item in history:
+        content = " ".join(item.content.split())
+        if len(content) > 500:
+            content = content[:497].rstrip() + "..."
+        lines.append(f"{item.role}: {content}")
+    return "\n".join(lines)
+
+
+def _is_direct_third_party_subject(normalized_message: str) -> bool:
+    if any(term in normalized_message for term in ALEX_TERMS):
+        return False
+    return any(subject in normalized_message for subject in KNOWN_THIRD_PARTY_SUBJECTS)
+
+
+def _is_follow_up_profile_question(normalized_message: str) -> bool:
+    tokens = set(normalized_message.split())
+    if not tokens.intersection(FOLLOW_UP_PRONOUN_TERMS):
+        return False
+    return bool(tokens.intersection(FOLLOW_UP_PROFILE_TERMS))
+
+
+def _last_explicit_user_subject(history: list[ChatHistoryMessage]) -> str | None:
+    for item in reversed(history):
+        if item.role != "user":
+            continue
+        normalized_content = _normalize_message(item.content)
+        if any(subject in normalized_content for subject in KNOWN_THIRD_PARTY_SUBJECTS):
+            return "third_party"
+        if any(term in normalized_content for term in ALEX_TERMS):
+            return "alex"
+    return None
+
+
+def _history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> bool:
+    for item in reversed(history):
+        if item.role != "assistant":
+            continue
+        normalized_content = _normalize_message(item.content)
+        if "alex's digital assistant" in normalized_content:
+            return True
+    return False
+
+
+def _rewrite_alex_retrieval_query(message: str) -> str:
+    normalized_message = _normalize_message(message)
+    if normalized_message == "tell me about him":
+        return "Tell me about Alex's professional background, experience, skills, and projects."
+    if normalized_message == "what does he do":
+        return "What does Alex do professionally?"
+    if "your" in normalized_message and "project" in normalized_message:
+        return "Tell me about Alex's professional projects and software work."
+    if _is_follow_up_profile_question(normalized_message):
+        return "Tell me about Alex's professional background, experience, skills, and projects."
+    return message

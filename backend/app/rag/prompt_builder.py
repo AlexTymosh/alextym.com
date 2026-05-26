@@ -31,18 +31,55 @@ class PromptBundle:
 
 
 class PromptBuilder:
-    def build(self, *, question: str, chunks: list[KnowledgeChunk]) -> PromptBundle:
+    def build(
+        self,
+        *,
+        question: str,
+        chunks: list[KnowledgeChunk],
+        conversational_context: str = "",
+    ) -> PromptBundle:
+        context = self._build_context(chunks)
+        if conversational_context.strip():
+            context = "\n\n".join(
+                [context, self._build_conversation_context(conversational_context)]
+            )
+
         return PromptBundle(
             system=SYSTEM_INSTRUCTIONS,
-            context=self._build_context(chunks),
+            context=context,
             question=question,
         )
 
-    def build_general_chat(self, *, question: str) -> PromptBundle:
+    def build_general_chat(
+        self,
+        *,
+        question: str,
+        conversational_context: str = "",
+    ) -> PromptBundle:
+        context = "General chat mode. No Alex-specific public knowledge context is being used."
+        if conversational_context.strip():
+            context = "\n\n".join(
+                [context, self._build_conversation_context(conversational_context)]
+            )
+
         return PromptBundle(
             system=GENERAL_CHAT_SYSTEM_INSTRUCTIONS,
-            context="General chat mode. No Alex-specific public knowledge context is being used.",
+            context=context,
             question=question,
+        )
+
+    @staticmethod
+    def _build_conversation_context(conversational_context: str) -> str:
+        return "\n".join(
+            [
+                "Recent conversation context.",
+                "Use this only to understand follow-up wording or pronouns.",
+                "Do not treat it as a source of factual claims about Alex.",
+                "",
+                "<conversation_context>",
+                conversational_context,
+                "</conversation_context>",
+            ]
         )
 
     @staticmethod

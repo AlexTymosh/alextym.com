@@ -1,8 +1,31 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Confidence = Literal["low", "medium", "high"]
+ChatHistoryRole = Literal["user", "assistant"]
+
+MAX_CHAT_HISTORY_ITEMS = 10
+MAX_CHAT_HISTORY_TOTAL_CHARS = 6000
+
+
+class ChatHistoryMessage(BaseModel):
+    role: ChatHistoryRole = Field(examples=["user"])
+    content: str = Field(min_length=1, max_length=2000, examples=["Hi"])
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def strip_content(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("content")
+    @classmethod
+    def reject_blank_content(cls, value: str) -> str:
+        if not value:
+            raise ValueError("History content must not be blank.")
+        return value
 
 
 class ChatRequest(BaseModel):
@@ -12,6 +35,11 @@ class ChatRequest(BaseModel):
         examples=["Tell me about Alex's recent projects"],
     )
     session_id: str | None = Field(default=None, max_length=100, examples=["optional-session-id"])
+    history: list[ChatHistoryMessage] = Field(
+        default_factory=list,
+        max_length=MAX_CHAT_HISTORY_ITEMS,
+        description="Optional short prior conversation context. It is not a source of facts.",
+    )
 
     @field_validator("message", mode="before")
     @classmethod
@@ -34,6 +62,13 @@ class ChatRequest(BaseModel):
             stripped_value = value.strip()
             return stripped_value or None
         return value
+
+    @model_validator(mode="after")
+    def reject_oversized_history(self) -> "ChatRequest":
+        total_chars = sum(len(item.content) for item in self.history)
+        if total_chars > MAX_CHAT_HISTORY_TOTAL_CHARS:
+            raise ValueError("Chat history is too large.")
+        return self
 
 
 class ChatSource(BaseModel):

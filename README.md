@@ -65,6 +65,9 @@ Tell me about Alex's AI-assisted development and RAG-based systems.
 
 The AI assistant must not present itself directly as Alex. It answers as Alex's digital assistant and uses only reviewed public knowledge. For now, the committed public RAG source is `backend/knowledge/resume.md`; additional public profile or selected-project summaries can be added later only after privacy review.
 
+The chat may send a short recent history with each request. The backend uses it only to understand
+follow-up wording and pronouns; factual answers about Alex still require retrieved public knowledge.
+
 Private information must not be included in GitHub, project files, the frontend or the public RAG knowledge base. This includes health information, personal contacts, names of colleagues, friends, managers and any other private data of third parties.
 
 If there is not enough data, the assistant must state this honestly rather than inventing facts.
@@ -669,6 +672,8 @@ Completed in hybrid chat behaviour:
 greetings and help requests respond naturally without RAG
 general non-Alex questions can be answered like a normal AI chat
 factual questions about Alex still use RAG and source metadata
+short conversation history supports English follow-up questions such as "Tell me about him"
+third-party people such as Elon Musk do not trigger Alex RAG
 ```
 
 Current limits before public launch:

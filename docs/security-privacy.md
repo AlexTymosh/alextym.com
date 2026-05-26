@@ -113,6 +113,14 @@ The assistant may answer general non-Alex questions as a normal AI chat. When th
 factual information about Alex, the assistant must use Alex's public knowledge base and must not
 invent unsupported facts.
 
+Short chat history may be sent with a request only for conversational context, such as pronoun
+resolution and follow-up understanding. It must not be treated as a source of factual claims about
+Alex.
+
+Questions about unrelated third-party people should not trigger Alex RAG. The assistant should
+return a concise scope-boundary response and stay focused on Alex's professional profile and
+general software topics.
+
 Standard insufficient-data response:
 
 ```text
@@ -278,6 +286,7 @@ Backend must:
 
 - validate all requests with Pydantic;
 - enforce message length limits;
+- enforce chat history item and total-size limits;
 - sanitize/log safely;
 - use CORS only when needed;
 - keep provider clients server-side;
