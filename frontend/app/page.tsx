@@ -1,20 +1,22 @@
+import Image from "next/image";
 import Link from "next/link";
 
-const softwareItems = [
-  ["FastAPI backend", "Python / API"],
-  ["Next.js frontend", "TypeScript"],
-  ["RAG pipeline", "Qdrant / LLM"],
-  ["Automation workflows", "Process design"],
-];
+import type { FeaturedProjectPreviewItem } from "../content/home";
+import {
+  assistantCard,
+  buildFocus,
+  featuredAutomationDemo,
+  featuredProject,
+  profileCard,
+  projectStack,
+} from "../content/home";
+import styles from "./page.module.css";
 
-const techStack = ["Python", "FastAPI", "Next.js", "TypeScript", "Tailwind", "Docker", "Qdrant", "RAG"];
-
-const focusAreas = [
-  ["AI portfolio", "Personal assistant"],
-  ["Backend systems", "FastAPI"],
-  ["Workflow automation", "Operations"],
-  ["Business to software", "Career transition"],
-];
+const projectPreviewSlotClassNames: Record<FeaturedProjectPreviewItem["slot"], string> = {
+  "top-left": styles.projectPreviewTileTopLeft,
+  "top-right": styles.projectPreviewTileTopRight,
+  "bottom-right": styles.projectPreviewTileBottomRight,
+};
 
 function GitHubIcon() {
   return (
@@ -40,30 +42,77 @@ function FacebookIcon() {
   );
 }
 
+function getYouTubeEmbedUrl(videoId: string) {
+  return `https://www.youtube-nocookie.com/embed/${videoId}`;
+}
+
+function getYouTubeWatchUrl(videoId: string) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+function isExternalUrl(href: string) {
+  return href.startsWith("http://") || href.startsWith("https://");
+}
+
+function FeaturedProjectCta() {
+  if (isExternalUrl(featuredProject.href)) {
+    return (
+      <a className="primary-link" href={featuredProject.href} target="_blank" rel="noreferrer">
+        {featuredProject.cta}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={featuredProject.href} className="primary-link">
+      {featuredProject.cta}
+    </Link>
+  );
+}
+
+function ProjectPreviewTitle({ item }: { item: FeaturedProjectPreviewItem }) {
+  if (isExternalUrl(item.href)) {
+    return (
+      <a href={item.href} target="_blank" rel="noreferrer">
+        {item.title}
+      </a>
+    );
+  }
+
+  return <Link href={item.href}>{item.title}</Link>;
+}
+
 export default function HomePage() {
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(featuredAutomationDemo.youtubeVideoId);
+  const youtubeWatchUrl = getYouTubeWatchUrl(featuredAutomationDemo.youtubeVideoId);
+
   return (
     <section className="home-grid" aria-label="Alex Tymoshenko portfolio overview">
       <article className="card profile-card">
-        <div className="avatar-mark" aria-hidden="true">
-          AT
+        <div className={`avatar-mark ${styles.profileImageFrame}`} aria-hidden="true">
+          <Image
+            src={profileCard.imageSrc}
+            alt={profileCard.imageAlt}
+            width={208}
+            height={208}
+            className={styles.profileImage}
+            priority
+          />
         </div>
         <div>
-          <h1>Alex Tymoshenko</h1>
-          <p>
-            Building practical AI automation, RAG-based assistants, and deploy-ready web
-            applications with FastAPI and Next.js.
-          </p>
+          <h1>{profileCard.name}</h1>
+          <p>{profileCard.summary}</p>
         </div>
       </article>
 
       <article className="card accent-card">
-        <p className="eyebrow">Digital Assistant</p>
+        <p className="eyebrow">{assistantCard.eyebrow}</p>
         <div className="mini-chat" aria-hidden="true">
-          <strong>Hi, I&apos;m Alex&apos;s digital assistant.</strong>
-          <span>Ask about projects, stack, and automation workflows.</span>
+          <strong>{assistantCard.title}</strong>
+          <span>{assistantCard.description}</span>
         </div>
-        <Link href="/chat" className="text-link">
-          Talk to assistant
+        <Link href={assistantCard.href} className="text-link">
+          {assistantCard.cta}
         </Link>
       </article>
 
@@ -92,59 +141,83 @@ export default function HomePage() {
         </div>
       </article>
 
-      <article className="card feature-card">
-        <div className="feature-preview" aria-hidden="true">
-          <div className="preview-bar" />
-          <div className="preview-grid">
-            <span />
-            <span />
-            <span />
-            <span />
+      <article className={`card list-card ${styles.portfolioCard}`}>
+        <div className={styles.projectPreview}>
+          <div className={styles.projectPreviewHeading}>{featuredProject.previewHeading}</div>
+          <div className={styles.projectPreviewGrid}>
+            {featuredProject.previewItems.map((item) => (
+              <div
+                key={item.title}
+                className={`${styles.projectPreviewTile} ${projectPreviewSlotClassNames[item.slot]}`}
+              >
+                {item.imageSrc ? (
+                  <Image
+                    src={item.imageSrc}
+                    alt={item.imageAlt ?? ""}
+                    fill
+                    sizes="(max-width: 860px) 50vw, 240px"
+                    className={styles.projectPreviewImage}
+                  />
+                ) : null}
+                <div className={styles.projectPreviewTileCopy}>
+                  <strong>
+                    <ProjectPreviewTitle item={item} />
+                  </strong>
+                  <span>{item.detail}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="feature-card__copy">
-          <p className="eyebrow">Featured Project</p>
-          <h2>alextym.com</h2>
-          <p>
-            A personal AI portfolio with a FastAPI backend, Next.js frontend, warm-up flow, and a
-            planned RAG knowledge base.
-          </p>
-          <Link href="/chat" className="primary-link">
-            Open Chat
-          </Link>
+
+        <div className={styles.portfolioCopy}>
+          <h2>{featuredProject.title}</h2>
+          <div className={styles.portfolioDescription}>
+            {featuredProject.description.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
+          <FeaturedProjectCta />
         </div>
       </article>
 
-      <article className="card list-card">
-        <p className="eyebrow">AI & Software</p>
-        <div className="stack-list">
-          {softwareItems.map(([name, tag]) => (
-            <div key={name} className="stack-list__item">
-              <span>{name}</span>
-              <small>{tag}</small>
-            </div>
-          ))}
+      <article className={`card list-card ${styles.videoCard}`}>
+        <p className="eyebrow">{featuredAutomationDemo.eyebrow}</p>
+
+        <div className={styles.videoFrame}>
+          <iframe
+            src={youtubeEmbedUrl}
+            title={featuredAutomationDemo.youtubeTitle}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+
+        <div className={styles.videoCopy}>
+          <h2>{featuredAutomationDemo.title}</h2>
+          <p>{featuredAutomationDemo.description}</p>
+          <a className="text-link" href={youtubeWatchUrl} target="_blank" rel="noreferrer">
+            {featuredAutomationDemo.cta}
+          </a>
         </div>
       </article>
 
-      <article className="card tags-card">
-        <p className="eyebrow">Tech Stack</p>
-        <div className="tag-cloud">
-          {techStack.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </div>
-      </article>
+      <article className={`card wide-card ${styles.buildFocusCard}`}>
+        <p className="eyebrow">{buildFocus.eyebrow}</p>
 
-      <article className="card wide-card">
-        <p className="eyebrow">Focus Areas</p>
-        <div className="focus-grid">
-          {focusAreas.map(([title, subtitle]) => (
-            <div key={title}>
-              <strong>{title}</strong>
-              <span>{subtitle}</span>
-            </div>
-          ))}
+        <div className={styles.buildFocusCopy}>
+          <h2>{buildFocus.title}</h2>
+          <p>{buildFocus.description}</p>
+        </div>
+
+        <div className={styles.embeddedStack}>
+          <p className="eyebrow">Project Stack</p>
+          <div className="tag-cloud">
+            {projectStack.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
         </div>
       </article>
     </section>
