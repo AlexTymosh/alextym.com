@@ -1,8 +1,5 @@
-const resumeHighlights = [
-  "AI automation and RAG-focused portfolio work",
-  "FastAPI backend and Next.js frontend delivery",
-  "Business process background with software engineering execution",
-];
+import { resumeEntries } from "../../content/resume";
+import { ResumeTimeline } from "./_components/ResumeTimeline";
 
 export default function ResumePage() {
   return (
@@ -11,7 +8,8 @@ export default function ResumePage() {
         <p className="eyebrow">Resume</p>
         <h1>Alex Tymoshenko</h1>
         <p>
-          Short public CV download. The PDF file will be added later without phone number or email.
+          Public CV summary with a downloadable PDF version. The PDF file will be added later without
+          phone number or email.
         </p>
       </div>
 
@@ -19,16 +17,7 @@ export default function ResumePage() {
         Download CV
       </a>
 
-      <div className="resume-timeline" aria-label="Resume highlights">
-        {resumeHighlights.map((highlight, index) => (
-          <article key={highlight} className="resume-timeline__item">
-            <span className="resume-timeline__marker" aria-hidden="true" />
-            <small>{`0${index + 1}`}</small>
-            <h2>{highlight}</h2>
-            <p>Detailed resume content will be added after the public CV is finalized.</p>
-          </article>
-        ))}
-      </div>
+      <ResumeTimeline entries={resumeEntries} />
     </section>
   );
 }
