@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 type Confidence = "low" | "medium" | "high";
 
@@ -475,7 +476,7 @@ function renderMessageText(text: string) {
     .replace(/:\s+[-*]\s+/g, ":\n- ")
     .replace(/\s+[-*]\s+(?=[A-ZА-ЯЁ0-9])/g, "\n- ");
   const lines = normalizedText.split(/\r?\n/);
-  const nodes: JSX.Element[] = [];
+  const nodes: ReactNode[] = [];
   let listItems: string[] = [];
 
   function flushList(key: string) {
