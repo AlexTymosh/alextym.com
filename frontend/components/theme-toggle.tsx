@@ -1,29 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 type Theme = "dark" | "light";
 
 const storageKey = "alextym-theme";
+const themeChangeEvent = "alextym-theme-change";
+
+function readTheme(): Theme {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+
+  return localStorage.getItem(storageKey) === "light" ? "light" : "dark";
+}
+
+function subscribeToThemeChanges(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(themeChangeEvent, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(themeChangeEvent, callback);
+  };
+}
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem(storageKey, theme);
+  window.dispatchEvent(new Event(themeChangeEvent));
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const theme = useSyncExternalStore(subscribeToThemeChanges, readTheme, () => "dark");
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem(storageKey);
-    const initialTheme: Theme = storedTheme === "light" ? "light" : "dark";
-    setTheme(initialTheme);
-    document.documentElement.dataset.theme = initialTheme;
-  }, []);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
     applyTheme(nextTheme);
   }
 
