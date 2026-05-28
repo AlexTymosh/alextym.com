@@ -78,3 +78,6 @@ class EscalationRequest(BaseModel):
 
 class EscalationResponse(BaseModel):
     status: str = Field(default="ok", examples=["ok"])
+    handoff_id: str | None = Field(default=None, examples=["hnd_2d9f2c4e"])
+    state: str | None = Field(default=None, examples=["waiting_for_alex"])
+    expires_in_seconds: int | None = Field(default=None, examples=[7200])

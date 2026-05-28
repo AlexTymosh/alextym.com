@@ -16,7 +16,11 @@ def get_escalation_service(settings: Settings = Depends(get_settings)) -> Escala
     return EscalationService.from_settings(settings)
 
 
-@router.post("/escalations", response_model=EscalationResponse)
+@router.post(
+    "/escalations",
+    response_model=EscalationResponse,
+    response_model_exclude_none=True,
+)
 async def escalate(
     escalation_request: EscalationRequest,
     request: Request,
