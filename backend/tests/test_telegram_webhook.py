@@ -5,6 +5,7 @@ from app.api.telegram import get_telegram_webhook_service
 from app.core.config import Settings, get_settings
 from app.main import app
 from app.services.escalation_sessions import (
+    ESCALATION_SESSION_STATE_CLOSED,
     ESCALATION_SESSION_STATE_CONNECTED,
     EscalationSessionRecord,
     EscalationSessionStoreError,
@@ -34,10 +35,7 @@ def test_telegram_webhook_rejects_missing_secret_configuration() -> None:
 
 def test_telegram_webhook_rejects_invalid_secret_header() -> None:
     app.dependency_overrides[get_settings] = lambda: _settings()
-    app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
-        owner_chat_id="123456789",
-        session_store=FakeEscalationSessionStore(),
-    )
+    _use_webhook_service(FakeEscalationSessionStore())
 
     response = client.post(
         "/api/telegram/webhook",
@@ -52,10 +50,7 @@ def test_telegram_webhook_rejects_invalid_secret_header() -> None:
 def test_telegram_webhook_stores_owner_reply_when_handoff_id_is_found() -> None:
     store = FakeEscalationSessionStore()
     app.dependency_overrides[get_settings] = lambda: _settings()
-    app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
-        owner_chat_id="123456789",
-        session_store=store,
-    )
+    _use_webhook_service(store)
 
     response = client.post(
         "/api/telegram/webhook",
@@ -68,13 +63,60 @@ def test_telegram_webhook_stores_owner_reply_when_handoff_id_is_found() -> None:
     assert store.appended_messages == [(TEST_HANDOFF_ID, "I can discuss availability tomorrow.")]
 
 
+def test_telegram_webhook_closes_handoff_with_reply_command() -> None:
+    store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_valid_update(text="/close"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.closed_handoff_ids == [TEST_HANDOFF_ID]
+    assert store.appended_messages == []
+
+
+def test_telegram_webhook_closes_handoff_with_inline_command_id() -> None:
+    store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_valid_update(text=f"/close {TEST_HANDOFF_ID}", reply_text=None),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.closed_handoff_ids == [TEST_HANDOFF_ID]
+
+
+def test_telegram_webhook_ignores_unknown_command() -> None:
+    store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_valid_update(text="/status"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ignored"}
+    assert store.appended_messages == []
+    assert store.closed_handoff_ids == []
+
+
 def test_telegram_webhook_ignores_non_owner_chat() -> None:
     store = FakeEscalationSessionStore()
     app.dependency_overrides[get_settings] = lambda: _settings()
-    app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
-        owner_chat_id="123456789",
-        session_store=store,
-    )
+    _use_webhook_service(store)
 
     payload = _valid_update(chat_id=987654321)
     response = client.post(
@@ -91,10 +133,7 @@ def test_telegram_webhook_ignores_non_owner_chat() -> None:
 def test_telegram_webhook_ignores_message_without_reply_handoff_id() -> None:
     store = FakeEscalationSessionStore()
     app.dependency_overrides[get_settings] = lambda: _settings()
-    app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
-        owner_chat_id="123456789",
-        session_store=store,
-    )
+    _use_webhook_service(store)
 
     payload = _valid_update(reply_text="New handoff request without id")
     response = client.post(
@@ -110,10 +149,7 @@ def test_telegram_webhook_ignores_message_without_reply_handoff_id() -> None:
 
 def test_telegram_webhook_returns_safe_error_when_store_fails() -> None:
     app.dependency_overrides[get_settings] = lambda: _settings()
-    app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
-        owner_chat_id="123456789",
-        session_store=FailingEscalationSessionStore(),
-    )
+    _use_webhook_service(FailingEscalationSessionStore())
 
     response = client.post(
         "/api/telegram/webhook",
@@ -129,28 +165,29 @@ def _valid_update(
     *,
     chat_id: int = 123456789,
     text: str = "Hello from Alex",
-    reply_text: str | None = None,
+    reply_text: str | None = "default",
 ) -> dict[str, object]:
-    return {
-        "update_id": 1,
-        "message": {
-            "message_id": 200,
-            "chat": {"id": chat_id, "type": "private"},
-            "text": text,
-            "reply_to_message": {
-                "message_id": 100,
-                "chat": {"id": chat_id, "type": "private"},
-                "text": reply_text
-                if reply_text is not None
-                else f"New handoff request from alextym.com\nHandoff ID: {TEST_HANDOFF_ID}",
-            },
-        },
+    message: dict[str, object] = {
+        "message_id": 200,
+        "chat": {"id": chat_id, "type": "private"},
+        "text": text,
     }
+    if reply_text is not None:
+        message["reply_to_message"] = {
+            "message_id": 100,
+            "chat": {"id": chat_id, "type": "private"},
+            "text": reply_text
+            if reply_text != "default"
+            else f"New handoff request from alextym.com\nHandoff ID: {TEST_HANDOFF_ID}",
+        }
+
+    return {"update_id": 1, "message": message}
 
 
 class FakeEscalationSessionStore:
     def __init__(self) -> None:
         self.appended_messages: list[tuple[str, str]] = []
+        self.closed_handoff_ids: list[str] = []
 
     async def append_alex_message(
         self,
@@ -174,6 +211,16 @@ class FakeEscalationSessionStore:
             ],
         )
 
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+        self.closed_handoff_ids.append(handoff_id)
+        return EscalationSessionRecord(
+            handoff_id=handoff_id,
+            state=ESCALATION_SESSION_STATE_CLOSED,
+            created_at="2026-01-01T00:00:00+00:00",
+            expires_at="2026-01-01T02:00:00+00:00",
+            transcript=[],
+        )
+
 
 class FailingEscalationSessionStore:
     async def append_alex_message(
@@ -182,6 +229,16 @@ class FailingEscalationSessionStore:
         content: str,
     ) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("redis failed")
+
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+        raise EscalationSessionStoreError("redis failed")
+
+
+def _use_webhook_service(store) -> None:
+    app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
+        owner_chat_id="123456789",
+        session_store=store,
+    )
 
 
 def _settings(*, telegram_webhook_secret: str = TEST_SECRET) -> Settings:

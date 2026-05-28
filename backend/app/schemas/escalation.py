@@ -11,7 +11,11 @@ MAX_ESCALATION_MESSAGE_CHARS = 2000
 
 class EscalationTranscriptMessage(BaseModel):
     role: EscalationRole = Field(examples=["user"])
-    content: str = Field(min_length=1, max_length=2000, examples=["Can I speak to Alex?"])
+    content: str = Field(
+        min_length=1,
+        max_length=2000,
+        examples=["Can I speak to Alex?"],
+    )
 
     @field_validator("content", mode="before")
     @classmethod
@@ -38,7 +42,7 @@ class EscalationRequest(BaseModel):
     transcript: list[EscalationTranscriptMessage] = Field(
         min_length=1,
         max_length=MAX_ESCALATION_TRANSCRIPT_MESSAGES,
-        description="Current chat transcript shared with Alex after explicit user consent.",
+        description="Current chat transcript shared after explicit user consent.",
     )
     company_website: str | None = Field(default=None, max_length=200, examples=[""])
 
@@ -118,3 +122,8 @@ class EscalationMessageRequest(BaseModel):
 
 class EscalationMessageResponse(BaseModel):
     status: str = Field(default="ok", examples=["ok"])
+
+
+class EscalationCloseResponse(BaseModel):
+    status: str = Field(default="ok", examples=["ok"])
+    state: str = Field(default="closed", examples=["closed"])

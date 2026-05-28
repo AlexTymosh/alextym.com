@@ -46,6 +46,11 @@ type EscalationMessageResponse = {
   status: string;
 };
 
+type EscalationCloseResponse = {
+  status: string;
+  state: string;
+};
+
 type EscalationStreamMessage = {
   id?: string;
   role?: string;
@@ -215,22 +220,60 @@ const ESCALATION_TRANSCRIPT_ITEM_MAX_CHARS = 2000;
 const ESCALATION_TRANSCRIPT_TOTAL_MAX_CHARS = 8000;
 const ESCALATION_CONSENT_COPY =
   "If you connect with Alex, this chat history will be shared with him so he can " +
-  "understand the context. No email or phone number will be shared unless you type it yourself.";
+  "understand the context. No email or phone number will be shared unless you " +
+  "type it yourself.";
 
 const HANDOFF_REQUEST_PATTERNS = [
   /\bconnect\s+(me\s+)?(with|to)\s+alex\b/i,
   /\bcan\s+you\s+connect\s+me\s+(with|to)\s+alex\b/i,
-  /\bi\s+(want|would\s+like|need)\s+(to\s+)?(talk|speak|chat)\s+(to|with)\s+alex\b/i,
+  new RegExp(
+    String.raw`\bi\s+(want|would\s+like|need)\s+(to\s+)?` +
+      String.raw`(talk|speak|chat)\s+(to|with)\s+alex\b`,
+    "i",
+  ),
   /\b(talk|speak|chat)\s+(to|with)\s+alex\b/i,
   /\bcan\s+alex\s+(contact|call|message|email|reach)\s+me\b/i,
-  /\bget\s+alex\s+(to\s+)?(contact|call|message|email|reply\s+to)\s+me\b/i,
-  /\bplease\s+(connect|put)\s+me\s+(through\s+)?(to\s+)?alex\b/i,
-  /\bi\s+(want|would\s+like|need)\s+(to\s+)?(talk|speak|chat)\s+(to|with)\s+(a\s+)?(human|person|real\s+person|agent|representative)\b/i,
-  /\b(talk|speak|chat)\s+(to|with)\s+(a\s+)?(human|person|real\s+person|agent|representative)\b/i,
-  /\b(connect|handoff|escalate)\s+(me\s+)?(to\s+)?(a\s+)?(human|person|real\s+person|agent|representative)\b/i,
-  /\bconnect\s+me\s+with\s+(a\s+)?(human|person|real\s+person|agent|representative)\b/i,
-  /\bi\s+need\s+(a\s+)?(human|person|real\s+person|agent|representative)\b/i,
-  /\bcan\s+i\s+(talk|speak|chat)\s+(to|with)\s+(a\s+)?(human|person|real\s+person|agent|representative)\b/i,
+  new RegExp(
+    String.raw`\bget\s+alex\s+(to\s+)?` +
+      String.raw`(contact|call|message|email|reply\s+to)\s+me\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bplease\s+(connect|put)\s+me\s+` +
+      String.raw`(through\s+)?(to\s+)?alex\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bi\s+(want|would\s+like|need)\s+(to\s+)?` +
+      String.raw`(talk|speak|chat)\s+(to|with)\s+(a\s+)?` +
+      String.raw`(human|person|real\s+person|agent|representative)\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b(talk|speak|chat)\s+(to|with)\s+(a\s+)?` +
+      String.raw`(human|person|real\s+person|agent|representative)\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b(connect|handoff|escalate)\s+(me\s+)?(to\s+)?` +
+      String.raw`(a\s+)?(human|person|real\s+person|agent|representative)\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bconnect\s+me\s+with\s+(a\s+)?` +
+      String.raw`(human|person|real\s+person|agent|representative)\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bi\s+need\s+(a\s+)?` +
+      String.raw`(human|person|real\s+person|agent|representative)\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bcan\s+i\s+(talk|speak|chat)\s+(to|with)\s+(a\s+)?` +
+      String.raw`(human|person|real\s+person|agent|representative)\b`,
+    "i",
+  ),
   /^\s*(human|person|real\s+person|agent|representative|operator)\s*[.!?]*\s*$/i,
 ] as const;
 
@@ -244,6 +287,7 @@ export function ChatShell() {
   const [notice, setNotice] = useState<string | null>(null);
   const [isEscalating, setIsEscalating] = useState(false);
   const [isSendingHandoffMessage, setIsSendingHandoffMessage] = useState(false);
+  const [isClosingHandoff, setIsClosingHandoff] = useState(false);
   const [escalationSent, setEscalationSent] = useState(false);
   const [handoffId, setHandoffId] = useState<string | null>(null);
   const [handoffState, setHandoffState] = useState<HandoffState>("idle");
@@ -324,6 +368,7 @@ export function ChatShell() {
       isThinking ||
       isEscalating ||
       isSendingHandoffMessage ||
+      isClosingHandoff ||
       escalationSent ||
       !messages.length
     ) {
@@ -349,6 +394,7 @@ export function ChatShell() {
   }, [
     dismissedHandoffMessageCount,
     escalationSent,
+    isClosingHandoff,
     isEscalating,
     isSendingHandoffMessage,
     isThinking,
@@ -366,6 +412,7 @@ export function ChatShell() {
     setNotice(null);
     setIsEscalating(false);
     setIsSendingHandoffMessage(false);
+    setIsClosingHandoff(false);
     setEscalationSent(false);
     setHandoffId(null);
     setHandoffState("idle");
@@ -374,7 +421,7 @@ export function ChatShell() {
   }
 
   async function sendScriptedResponse(prompt: QuickPrompt) {
-    if (isThinking || isEscalating || isSendingHandoffMessage) {
+    if (isThinking || isEscalating || isSendingHandoffMessage || isClosingHandoff) {
       return;
     }
 
@@ -421,7 +468,7 @@ export function ChatShell() {
     if (!trimmedInput) {
       return;
     }
-    if (isThinking || isEscalating || isSendingHandoffMessage) {
+    if (isThinking || isEscalating || isSendingHandoffMessage || isClosingHandoff) {
       return;
     }
 
@@ -585,8 +632,13 @@ export function ChatShell() {
           id: createMessageId("assistant"),
           role: "assistant",
           text: nextHandoffId
-            ? "Alex has been notified and can review this chat for context. Keep this page open — any replies from Alex will appear here automatically. You can continue with the AI assistant while you wait."
-            : "Alex has been notified and will be able to review this chat for context. You can continue with the AI assistant while you wait.",
+            ? "Alex has been notified and can review this chat for context. " +
+              "Keep this page open — any replies from Alex will appear here " +
+              "automatically. You can continue with the AI assistant while " +
+              "you wait."
+            : "Alex has been notified and will be able to review this chat " +
+              "for context. You can continue with the AI assistant while " +
+              "you wait.",
         },
       ]);
     } catch {
@@ -595,6 +647,35 @@ export function ChatShell() {
       );
     } finally {
       setIsEscalating(false);
+    }
+  }
+
+  async function closeHandoff() {
+    if (!handoffId || handoffState === "closed" || isClosingHandoff) {
+      return;
+    }
+
+    setIsClosingHandoff(true);
+    setNotice(null);
+
+    try {
+      await submitEscalationClose(handoffId);
+      closeEscalationStream(escalationEventSourceRef);
+      setHandoffState("closed");
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        {
+          id: createMessageId("assistant"),
+          role: "assistant",
+          text:
+            "This handoff has been closed. New messages will go to " +
+            "the AI assistant unless you request a new connection.",
+        },
+      ]);
+    } catch {
+      setNotice("Could not close this handoff right now. Please try again later.");
+    } finally {
+      setIsClosingHandoff(false);
     }
   }
 
@@ -645,7 +726,9 @@ export function ChatShell() {
         {
           id: createMessageId("assistant"),
           role: "assistant",
-          text: "This handoff session has expired. You can continue with the AI assistant or request a new connection with Alex.",
+          text:
+            "This handoff session has expired. You can continue with the " +
+            "AI assistant or request a new connection with Alex.",
         },
       ]);
     });
@@ -707,7 +790,10 @@ export function ChatShell() {
                   className="prompt-button"
                   onClick={() => void sendScriptedResponse(prompt)}
                   disabled={
-                    isThinking || isEscalating || isSendingHandoffMessage
+                    isThinking ||
+                    isEscalating ||
+                    isSendingHandoffMessage ||
+                    isClosingHandoff
                   }
                 >
                   <span className="prompt-button__icon" aria-hidden="true">
@@ -723,7 +809,11 @@ export function ChatShell() {
             {messages.map((message, index) => (
               <div
                 key={message.id || `${message.role}-${index}`}
-                className={`message message--${message.role === "alex" ? "assistant" : message.role}`}
+                className={
+                  `message message--${
+                    message.role === "alex" ? "assistant" : message.role
+                  }`
+                }
               >
                 <div className="message__content">
                   {renderMessageText(
@@ -765,7 +855,7 @@ export function ChatShell() {
               type="button"
               className="prompt-button"
               onClick={() => void connectWithAlex()}
-              disabled={isEscalating}
+              disabled={isEscalating || isClosingHandoff}
             >
               <span className="prompt-button__icon" aria-hidden="true">
                 {">"}
@@ -778,11 +868,40 @@ export function ChatShell() {
               type="button"
               className="prompt-button"
               onClick={continueWithAi}
+              disabled={isClosingHandoff}
             >
               <span className="prompt-button__icon" aria-hidden="true">
                 {">"}
               </span>
               <span>Continue with AI</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {isHumanHandoffActive(handoffId, handoffState) ? (
+        <div
+          className="message message--assistant"
+          role="region"
+          aria-label="Active handoff"
+        >
+          <div className="message__content">
+            <p>
+              <strong>Human handoff is active.</strong>
+            </p>
+            <p>Messages you send now go to Alex, not to the AI assistant.</p>
+          </div>
+          <div className="prompt-list" aria-label="Active handoff actions">
+            <button
+              type="button"
+              className="prompt-button"
+              onClick={() => void closeHandoff()}
+              disabled={isClosingHandoff}
+            >
+              <span className="prompt-button__icon" aria-hidden="true">
+                {">"}
+              </span>
+              <span>{isClosingHandoff ? "Closing..." : "End handoff"}</span>
             </button>
           </div>
         </div>
@@ -811,7 +930,12 @@ export function ChatShell() {
           onChange={(event) => setInput(event.target.value)}
           placeholder={inputPlaceholder}
           maxLength={2000}
-          disabled={isThinking || isEscalating || isSendingHandoffMessage}
+          disabled={
+            isThinking ||
+            isEscalating ||
+            isSendingHandoffMessage ||
+            isClosingHandoff
+          }
         />
         <button
           type="submit"
@@ -820,6 +944,7 @@ export function ChatShell() {
             isThinking ||
             isEscalating ||
             isSendingHandoffMessage ||
+            isClosingHandoff ||
             !input.trim()
           }
         >
@@ -1019,6 +1144,26 @@ async function submitEscalationMessage(
   }
 
   return (await response.json()) as EscalationMessageResponse;
+}
+
+async function submitEscalationClose(
+  handoffId: string,
+): Promise<EscalationCloseResponse> {
+  const response = await fetch(
+    `/api/escalations/${encodeURIComponent(handoffId)}/close`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Escalation close request unavailable.");
+  }
+
+  return (await response.json()) as EscalationCloseResponse;
 }
 
 function parseSseEvent(rawEvent: string): SseEvent | null {
@@ -1234,15 +1379,24 @@ function handoffStatusCopy(
     : "";
 
   if (state === "connected") {
-    return `Alex has replied in this chat. New messages you send here will go to Alex.${expirySuffix}`;
+    return (
+      "Alex has replied in this chat. New messages you send here will go " +
+      `to Alex.${expirySuffix}`
+    );
   }
   if (state === "closed") {
-    return "This handoff session has closed. You can continue with the AI assistant or request a new connection.";
+    return (
+      "This handoff session has closed. You can continue with the AI " +
+      "assistant or request a new connection."
+    );
   }
   if (state === "error") {
     return "The live handoff connection is reconnecting. Keep this page open.";
   }
-  return `Waiting for Alex. His replies will appear here automatically, and new messages you send here will go to Alex.${expirySuffix}`;
+  return (
+    "Waiting for Alex. His replies will appear here automatically, and " +
+    `new messages you send here will go to Alex.${expirySuffix}`
+  );
 }
 
 function formatDuration(totalSeconds: number): string {
