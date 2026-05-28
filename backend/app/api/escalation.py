@@ -4,9 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
-from app.api.rate_limit import enforce_escalation_rate_limit
+from app.api.rate_limit import (
+    enforce_escalation_message_rate_limit,
+    enforce_escalation_rate_limit,
+)
 from app.core.config import Settings, get_settings
-from app.schemas.escalation import EscalationRequest, EscalationResponse
+from app.schemas.escalation import (
+    EscalationMessageRequest,
+    EscalationMessageResponse,
+    EscalationRequest,
+    EscalationResponse,
+)
 from app.services.escalation import (
     EscalationConfigurationError,
     EscalationDeliveryError,
@@ -46,6 +54,41 @@ async def escalate(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not connect with Alex. Please try again later.",
+        ) from exc
+
+
+@router.post(
+    "/escalations/{handoff_id}/messages",
+    response_model=EscalationMessageResponse,
+)
+async def send_escalation_message(
+    handoff_id: str,
+    message_request: EscalationMessageRequest,
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    service: EscalationService = Depends(get_escalation_service),
+) -> EscalationMessageResponse:
+    if message_request.is_honeypot_filled:
+        return EscalationMessageResponse()
+
+    enforce_escalation_message_rate_limit(request, settings)
+
+    try:
+        return await service.submit_user_message(handoff_id, message_request)
+    except EscalationConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Escalation messaging is not configured.",
+        ) from exc
+    except EscalationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Escalation session was not found.",
+        ) from exc
+    except EscalationDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not send this message to Alex. Please try again later.",
         ) from exc
 
 

@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from app.core.config import Settings
-from app.schemas.escalation import EscalationRequest, EscalationResponse
+from app.schemas.escalation import (
+    EscalationMessageRequest,
+    EscalationMessageResponse,
+    EscalationRequest,
+    EscalationResponse,
+)
 from app.services.escalation_sessions import (
     ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
     EscalationSessionRecord,
@@ -38,11 +43,21 @@ class EscalationNotifier(Protocol):
     ) -> None:
         pass
 
+    async def notify_user_message(
+        self,
+        message_request: EscalationMessageRequest,
+        *,
+        handoff_id: str,
+    ) -> None:
+        pass
+
 
 class NoopEscalationNotifier:
     def __init__(self) -> None:
         self.sent_requests: list[EscalationRequest] = []
         self.sent_handoff_ids: list[str | None] = []
+        self.sent_message_requests: list[EscalationMessageRequest] = []
+        self.sent_message_handoff_ids: list[str] = []
 
     async def notify(
         self,
@@ -52,6 +67,15 @@ class NoopEscalationNotifier:
     ) -> None:
         self.sent_requests.append(escalation_request)
         self.sent_handoff_ids.append(handoff_id)
+
+    async def notify_user_message(
+        self,
+        message_request: EscalationMessageRequest,
+        *,
+        handoff_id: str,
+    ) -> None:
+        self.sent_message_requests.append(message_request)
+        self.sent_message_handoff_ids.append(handoff_id)
 
 
 class TelegramEscalationNotifier:
@@ -71,6 +95,24 @@ class TelegramEscalationNotifier:
         except TelegramDeliveryError as exc:
             raise EscalationDeliveryError(
                 "Escalation notification could not be delivered."
+            ) from exc
+
+    async def notify_user_message(
+        self,
+        message_request: EscalationMessageRequest,
+        *,
+        handoff_id: str,
+    ) -> None:
+        try:
+            await self._telegram_client.send_message(
+                _build_telegram_user_message_notification(
+                    message_request,
+                    handoff_id=handoff_id,
+                )
+            )
+        except TelegramDeliveryError as exc:
+            raise EscalationDeliveryError(
+                "Escalation user message could not be delivered."
             ) from exc
 
 
@@ -149,6 +191,26 @@ class EscalationService:
             state=session_record.state,
             expires_in_seconds=self._session_ttl_seconds,
         )
+
+    async def submit_user_message(
+        self,
+        handoff_id: str,
+        message_request: EscalationMessageRequest,
+    ) -> EscalationMessageResponse:
+        if message_request.is_honeypot_filled:
+            return EscalationMessageResponse()
+
+        if self._notifier is None:
+            raise EscalationConfigurationError("Escalation notifications are not configured.")
+        if self._session_store is None:
+            raise EscalationConfigurationError("Escalation session storage is not configured.")
+
+        session_record = await self._get_session(handoff_id)
+        if session_record is None or _is_expired(session_record):
+            raise EscalationNotFoundError("Escalation session was not found.")
+
+        await self._notifier.notify_user_message(message_request, handoff_id=handoff_id)
+        return EscalationMessageResponse()
 
     async def ensure_stream_available(self, handoff_id: str) -> None:
         if self._session_store is None:
@@ -270,6 +332,22 @@ def _build_telegram_notification(
             "\n".join(header_lines),
             "Transcript:\n" + "\n\n".join(transcript_lines),
             "No email or phone number was shared unless the visitor typed it manually.",
+        ]
+    )
+
+
+def _build_telegram_user_message_notification(
+    message_request: EscalationMessageRequest,
+    *,
+    handoff_id: str,
+) -> str:
+    created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    return "\n\n".join(
+        [
+            "New visitor message from alextym.com",
+            f"Created at: {created_at}\nHandoff ID: {handoff_id}",
+            f"User: {message_request.content}",
+            "Reply to this Telegram message to send your answer back to the website chat.",
         ]
     )
 

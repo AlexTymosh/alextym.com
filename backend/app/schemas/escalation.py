@@ -6,6 +6,7 @@ EscalationRole = Literal["user", "assistant"]
 
 MAX_ESCALATION_TRANSCRIPT_MESSAGES = 20
 MAX_ESCALATION_TRANSCRIPT_TOTAL_CHARS = 8000
+MAX_ESCALATION_MESSAGE_CHARS = 2000
 
 
 class EscalationTranscriptMessage(BaseModel):
@@ -81,3 +82,39 @@ class EscalationResponse(BaseModel):
     handoff_id: str | None = Field(default=None, examples=["hnd_2d9f2c4e"])
     state: str | None = Field(default=None, examples=["waiting_for_alex"])
     expires_in_seconds: int | None = Field(default=None, examples=[7200])
+
+
+class EscalationMessageRequest(BaseModel):
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_ESCALATION_MESSAGE_CHARS,
+        examples=["I would like to discuss a Python automation role."],
+    )
+    company_website: str | None = Field(default=None, max_length=200, examples=[""])
+
+    @field_validator("content", "company_website", mode="before")
+    @classmethod
+    def strip_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("content")
+    @classmethod
+    def reject_blank_content(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Message content must not be blank.")
+        return value
+
+    @field_validator("company_website")
+    @classmethod
+    def normalize_honeypot(cls, value: str | None) -> str | None:
+        return value or None
+
+    @property
+    def is_honeypot_filled(self) -> bool:
+        return bool(self.company_website)
+
+
+class EscalationMessageResponse(BaseModel):
+    status: str = Field(default="ok", examples=["ok"])

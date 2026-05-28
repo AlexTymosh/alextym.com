@@ -31,6 +31,7 @@ class Settings:
     telegram_webhook_secret: str = ""
     telegram_webhook_url: str = ""
     escalation_daily_limit_per_ip: int = 3
+    escalation_message_daily_limit_per_ip: int = 30
     escalation_transcript_max_messages: int = 20
     escalation_transcript_max_chars: int = 8000
     upstash_redis_rest_url: str = ""
@@ -135,6 +136,7 @@ def get_settings() -> Settings:
         telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", ""),
         telegram_webhook_url=os.getenv("TELEGRAM_WEBHOOK_URL", ""),
         escalation_daily_limit_per_ip=_get_int("ESCALATION_DAILY_LIMIT_PER_IP", 3),
+        escalation_message_daily_limit_per_ip=_get_int("ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP", 30),
         escalation_transcript_max_messages=_get_int("ESCALATION_TRANSCRIPT_MAX_MESSAGES", 20),
         escalation_transcript_max_chars=_get_int("ESCALATION_TRANSCRIPT_MAX_CHARS", 8000),
         upstash_redis_rest_url=os.getenv("UPSTASH_REDIS_REST_URL", ""),

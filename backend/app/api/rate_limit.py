@@ -44,6 +44,18 @@ def enforce_escalation_rate_limit(
     )
 
 
+def enforce_escalation_message_rate_limit(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    _enforce_daily_rate_limit(
+        request=request,
+        scope="escalation_message",
+        limit=settings.escalation_message_daily_limit_per_ip,
+        enabled=settings.rate_limiting_enabled,
+    )
+
+
 def _enforce_daily_rate_limit(
     *,
     request: Request,
