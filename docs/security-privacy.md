@@ -30,6 +30,8 @@ Never commit:
 - Qdrant keys;
 - Resend keys;
 - Telegram bot tokens;
+- Telegram webhook secrets;
+- Redis/Upstash tokens;
 - provider tokens;
 - private source documents;
 - `private/`;
@@ -174,6 +176,8 @@ Do not log:
 - full contact form messages;
 - full escalation transcripts;
 - Telegram bot tokens;
+- Telegram webhook secrets;
+- Redis/Upstash tokens;
 - private biography content;
 - full retrieved context.
 
@@ -217,10 +221,11 @@ the sender address.
 
 ## Telegram Handoff Security
 
-The current Telegram handoff is notification-only:
+The current Telegram handoff supports:
 
 ```text
 user consent -> POST /api/escalations -> Telegram notification to owner chat
+owner reply -> Telegram webhook -> Redis TTL handoff session
 ```
 
 Required controls:
@@ -230,17 +235,24 @@ Required controls:
 - rate limiting;
 - honeypot field;
 - backend-only Telegram bot token;
+- backend-only webhook secret;
+- temporary Redis TTL storage;
+- owner-chat validation;
 - safe generic errors;
-- no frontend access to Telegram secrets.
+- no frontend access to Telegram or Redis secrets.
 
 Backend-only configuration:
 
 ```text
 TELEGRAM_BOT_TOKEN
 TELEGRAM_OWNER_CHAT_ID
+TELEGRAM_WEBHOOK_SECRET
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
 ESCALATION_DAILY_LIMIT_PER_IP
 ESCALATION_TRANSCRIPT_MAX_MESSAGES
 ESCALATION_TRANSCRIPT_MAX_CHARS
+ESCALATION_SESSION_TTL_SECONDS
 ```
 
 Honeypot field:
@@ -258,13 +270,21 @@ If the visitor connects with Alex, the current chat history is shared with Alex 
 No email or phone number is shared unless the visitor types it manually.
 ```
 
+Telegram webhook requirements:
+
+- validate `X-Telegram-Bot-Api-Secret-Token`;
+- accept replies only from `TELEGRAM_OWNER_CHAT_ID`;
+- store replies only when a valid handoff id is present;
+- ignore unrelated Telegram updates safely;
+- do not expose Telegram errors to the browser;
+- do not log full Telegram reply text unless temporarily debugging locally.
+
 Do not use Tool Calling to perform Telegram side effects directly.
 
-Future live handoff must add:
+Future live browser delivery must add:
 
-- temporary session storage with TTL;
-- webhook secret validation;
-- message expiry;
+- Server-Sent Events or equivalent browser delivery;
+- message expiry handling in the UI;
 - safe transcript retention rules;
 - clear user-facing state when a session expires.
 
@@ -385,7 +405,7 @@ Telegram:
 
 - store bot token only in backend environment variables;
 - rotate token if exposed;
-- use webhook secret token when live Telegram replies are implemented;
+- validate webhook secret token for every webhook update;
 - use local tunnelling only for development webhook testing.
 
 ---
@@ -400,6 +420,8 @@ MVP security is acceptable when:
 - chat, contact, and escalation have basic rate limiting;
 - contact form has honeypot;
 - escalation has explicit consent and honeypot;
+- Telegram webhook has secret-token validation;
+- Telegram webhook accepts replies only from the owner chat;
 - assistant refuses prompt extraction;
 - assistant uses insufficient-data response;
 - LLM budget limit is configured;
