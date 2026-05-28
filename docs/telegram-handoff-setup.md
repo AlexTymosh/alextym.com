@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document explains how to configure the Telegram handoff flow.
+This document explains how to configure the Telegram live handoff flow.
 
 The current implementation supports:
 
@@ -10,13 +10,19 @@ The current implementation supports:
 Visitor uses /chat
 -> visitor explicitly chooses "Connect me with Alex"
 -> frontend sends the current transcript to POST /api/escalations
--> backend stores a temporary handoff session in Redis TTL storage when configured
+-> backend stores a temporary handoff session in Upstash Redis TTL
 -> backend sends a Telegram notification to the configured owner chat
--> Alex can reply to the Telegram notification
--> backend receives the Telegram webhook and stores Alex's reply in the temporary handoff session
+-> frontend opens an SSE stream at GET /api/escalations/{handoff_id}/stream
+-> Alex replies to the Telegram handoff message
+-> Telegram sends the reply to POST /api/telegram/webhook
+-> backend validates the webhook and owner chat id
+-> backend stores Alex's reply in the temporary Redis handoff session
+-> browser receives Alex's reply through SSE
+-> visitor messages during handoff go to POST /api/escalations/{handoff_id}/messages
+-> backend forwards those visitor messages to Telegram
 ```
 
-Replies from Telegram are stored for the future browser delivery stage. The browser-facing live stream/SSE step is still a later stage.
+No PostgreSQL is required for the current live handoff MVP. Redis is used only for temporary active handoff sessions.
 
 ---
 
@@ -25,24 +31,30 @@ Replies from Telegram are stored for the future browser delivery stage. The brow
 Implemented:
 
 - explicit user consent before transcript sharing;
-- transcript validation and size limits;
+- transcript validation and fixed backend schema size limits;
 - honeypot field;
-- escalation rate limiting;
+- escalation request rate limiting;
+- escalation message rate limiting;
 - backend-only Telegram token;
+- backend-only Upstash Redis token;
 - safe browser errors;
 - Telegram message splitting for long notifications;
 - optional Redis TTL session storage through Upstash Redis REST API;
 - handoff id returned from `POST /api/escalations` when Redis storage is configured;
-- handoff id included in the Telegram notification when Redis storage is configured;
+- handoff id included in Telegram notifications;
 - Telegram webhook endpoint at `POST /api/telegram/webhook`;
 - Telegram webhook secret-token validation;
 - owner-chat validation;
-- Alex replies stored in the temporary handoff session when the owner replies to the Telegram notification.
+- Alex replies stored in the temporary handoff session when the owner replies to a Telegram handoff message;
+- Server-Sent Events at `GET /api/escalations/{handoff_id}/stream`;
+- browser-side handoff mode;
+- visitor follow-up messages sent to Telegram through `POST /api/escalations/{handoff_id}/messages`.
 
 Not implemented yet:
 
-- Server-Sent Events for live handoff messages back to the browser;
-- browser-side live handoff mode;
+- explicit close endpoint / `/close` command;
+- richer Telegram operator commands such as `/status` or `/help`;
+- Redis-backed rate limiter;
 - Tool Calling / structured model-triggered handoff proposals.
 
 ---
@@ -150,7 +162,7 @@ Reason:
 
 - no new Python runtime dependency is required;
 - no `uv.lock` change is needed;
-- HTTP REST calls work well on Render Free;
+- HTTP REST calls work on Render Free;
 - the token remains backend-only.
 
 Required variables:
@@ -180,11 +192,12 @@ The intended Telegram workflow is:
 ```text
 1. A visitor starts handoff on /chat.
 2. The backend sends a Telegram notification with a Handoff ID.
-3. Alex replies directly to that Telegram notification.
+3. Alex replies directly to a Telegram handoff message containing that Handoff ID.
 4. Telegram sends the reply update to POST /api/telegram/webhook.
 5. The backend verifies the webhook secret and owner chat id.
 6. The backend extracts the Handoff ID from the replied-to notification.
 7. The backend stores Alex's reply in the Redis TTL handoff session.
+8. The browser receives the reply from GET /api/escalations/{handoff_id}/stream.
 ```
 
 ### Required variables
@@ -202,7 +215,7 @@ TELEGRAM_WEBHOOK_URL
 https://alextym.com/api/telegram/webhook
 ```
 
-The backend endpoint itself validates `TELEGRAM_WEBHOOK_SECRET`; it does not need `TELEGRAM_WEBHOOK_URL` at request time.
+The backend endpoint validates `TELEGRAM_WEBHOOK_SECRET`; it does not need `TELEGRAM_WEBHOOK_URL` at request time.
 
 ### Register webhook
 
@@ -248,12 +261,11 @@ TELEGRAM_BOT_TOKEN=<bot token from BotFather>
 TELEGRAM_OWNER_CHAT_ID=<owner Telegram chat id>
 TELEGRAM_WEBHOOK_SECRET=<random secret token used in setWebhook>
 TELEGRAM_WEBHOOK_URL=https://alextym.com/api/telegram/webhook
-ESCALATION_DAILY_LIMIT_PER_IP=3
-ESCALATION_TRANSCRIPT_MAX_MESSAGES=20
-ESCALATION_TRANSCRIPT_MAX_CHARS=8000
 UPSTASH_REDIS_REST_URL=<Upstash REST URL>
 UPSTASH_REDIS_REST_TOKEN=<Upstash REST token>
 ESCALATION_SESSION_TTL_SECONDS=7200
+ESCALATION_DAILY_LIMIT_PER_IP=10
+ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP=50
 ```
 
 Notes:
@@ -262,9 +274,10 @@ Notes:
 - `TELEGRAM_OWNER_CHAT_ID` identifies where handoff notifications are sent.
 - `TELEGRAM_WEBHOOK_SECRET` protects the webhook endpoint.
 - `UPSTASH_REDIS_REST_TOKEN` must remain backend-only.
-- `ESCALATION_DAILY_LIMIT_PER_IP` limits abuse of the handoff endpoint.
-- Transcript limits should stay aligned with backend validation.
-- Session TTL controls how long the temporary handoff record exists.
+- `ESCALATION_DAILY_LIMIT_PER_IP` limits abuse of the handoff creation endpoint.
+- `ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP` limits visitor messages sent to Telegram during active handoff.
+- `ESCALATION_SESSION_TTL_SECONDS` controls how long the temporary handoff record exists.
+- Transcript and message size limits are backend schema constants. Do not configure `ESCALATION_TRANSCRIPT_MAX_MESSAGES` or `ESCALATION_TRANSCRIPT_MAX_CHARS`.
 
 After changing Render environment variables, redeploy the backend service.
 
@@ -311,7 +324,7 @@ Register that tunnel URL with `setWebhook` during local webhook testing.
 Invoke-RestMethod "https://alextym.com/api/health/ready"
 ```
 
-This verifies the general app, Qdrant, LLM, and contact email readiness. It does not expose Redis handoff readiness yet.
+This verifies general app, Qdrant, LLM, and contact email readiness. It does not expose Redis handoff readiness.
 
 ### 2. Test escalation endpoint
 
@@ -358,21 +371,64 @@ A new handoff notification appears in the configured Telegram chat.
 
 The Telegram notification should include the handoff id.
 
-### 3. Test Telegram reply capture
+### 3. Test Telegram reply capture and browser delivery
 
-Reply directly to the Telegram notification.
+1. Open `/chat` in a browser.
+2. Start a handoff through the UI.
+3. Reply directly to the Telegram handoff notification.
+4. Keep the browser tab open.
 
-Expected backend behaviour:
+Expected behaviour:
 
 ```text
-Telegram -> POST /api/telegram/webhook -> backend validates secret -> backend stores Alex reply in Redis TTL session
+Telegram -> POST /api/telegram/webhook -> backend validates secret
+-> backend stores Alex reply in Redis TTL session
+-> browser receives the reply through GET /api/escalations/{handoff_id}/stream
 ```
 
-Until browser SSE is implemented, this stored reply is not yet visible in `/chat`.
+### 4. Test visitor message forwarding to Telegram
+
+After handoff is active, send another message from the website chat.
+
+Expected behaviour:
+
+```text
+browser -> POST /api/escalations/{handoff_id}/messages
+-> backend validates the active session
+-> backend forwards the visitor message to Telegram
+```
+
+Expected Telegram result:
+
+```text
+A new visitor message from alextym.com
+Handoff ID: hnd_...
+User: ...
+```
+
+Reply to that Telegram message to send an answer back to the website chat.
 
 ---
 
 ## Troubleshooting
+
+### 503: Escalation is not configured
+
+Likely causes:
+
+- `TELEGRAM_BOT_TOKEN` is missing;
+- `TELEGRAM_OWNER_CHAT_ID` is missing;
+- variables were added to the frontend service instead of the backend service;
+- backend was not redeployed after changing environment variables.
+
+### 503: Escalation streaming is not configured
+
+Likely causes:
+
+- `UPSTASH_REDIS_REST_URL` is missing;
+- `UPSTASH_REDIS_REST_TOKEN` is missing;
+- Redis values are configured only partially;
+- backend was not redeployed after changing environment variables.
 
 ### 503: Telegram webhook is not configured
 
@@ -393,6 +449,15 @@ Likely causes:
 - `TELEGRAM_WEBHOOK_SECRET` in Render contains extra spaces or quotes;
 - webhook was registered before the latest secret value was deployed.
 
+### 404: Escalation session was not found
+
+Likely causes:
+
+- the handoff session expired;
+- Redis TTL removed the session;
+- the visitor used an old page after deployment;
+- the wrong `handoff_id` was used.
+
 ### 502: Telegram reply could not be processed
 
 Likely causes:
@@ -401,6 +466,15 @@ Likely causes:
 - Upstash Redis token is invalid;
 - the handoff session payload in Redis is corrupted.
 
+### 502: Could not send this message to Alex
+
+Likely causes:
+
+- Telegram Bot API request failed;
+- Telegram token is invalid;
+- owner chat id is wrong;
+- the bot was blocked or the owner never started the bot.
+
 ### Webhook returns `ignored`
 
 Expected for:
@@ -408,7 +482,8 @@ Expected for:
 - messages not sent from `TELEGRAM_OWNER_CHAT_ID`;
 - messages without text;
 - messages not replying to a handoff notification;
-- replies to expired handoff sessions.
+- replies to expired handoff sessions;
+- replies to Telegram messages that do not contain a `Handoff ID`.
 
 ---
 
@@ -428,18 +503,13 @@ Expected for:
 
 ---
 
-## Next Planned Stage
+## Known Technical Debt
 
-The next stage is browser delivery for stored Alex replies:
-
-```text
-website chat <- backend Redis TTL session <- Telegram bot <- Alex
-```
-
-Target design:
-
-- Server-Sent Events for Alex replies back to the browser;
-- frontend handoff mode;
-- user messages after handoff sent to escalation endpoint instead of AI endpoint;
-- no PostgreSQL in the MVP;
-- no local SQLite for production state on free hosting.
+- Add explicit handoff close flow:
+  - `POST /api/escalations/{handoff_id}/close`;
+  - frontend `End handoff` button;
+  - Telegram `/close hnd_...` command.
+- Improve Telegram reply routing with a separate short control message that always contains the `Handoff ID`.
+- Consider Redis-backed rate limiting instead of the current in-memory limiter.
+- Consider structured handoff suggestion from AI responses instead of text parsing in the frontend.
+- Add frontend E2E tests for handoff UI and SSE delivery.
