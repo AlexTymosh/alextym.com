@@ -9,8 +9,7 @@ from app.services.escalation_sessions import (
     EscalationSessionRecord,
     EscalationSessionStore,
     EscalationSessionStoreError,
-    MisconfiguredEscalationSessionStore,
-    UpstashRedisEscalationSessionStore,
+    build_escalation_session_store,
 )
 from app.services.telegram import TelegramBotClient, TelegramDeliveryError
 
@@ -89,7 +88,7 @@ class EscalationService:
         is_configured = all(configured_values)
         has_partial_config = any(configured_values)
 
-        session_store = _build_session_store(settings)
+        session_store = build_escalation_session_store(settings)
 
         if is_configured:
             return cls(
@@ -164,22 +163,6 @@ class EscalationService:
 
         with suppress(EscalationSessionStoreError):
             await self._session_store.delete(session_record.handoff_id)
-
-
-def _build_session_store(settings: Settings) -> EscalationSessionStore | None:
-    upstash_values = (
-        settings.upstash_redis_rest_url,
-        settings.upstash_redis_rest_token,
-    )
-    if all(upstash_values):
-        return UpstashRedisEscalationSessionStore(
-            rest_url=settings.upstash_redis_rest_url,
-            rest_token=settings.upstash_redis_rest_token,
-        )
-    if any(upstash_values):
-        return MisconfiguredEscalationSessionStore()
-
-    return None
 
 
 def _build_telegram_notification(

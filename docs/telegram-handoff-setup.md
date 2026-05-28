@@ -10,12 +10,13 @@ The current implementation supports:
 Visitor uses /chat
 -> visitor explicitly chooses "Connect me with Alex"
 -> frontend sends the current transcript to POST /api/escalations
--> backend optionally stores a temporary handoff session in Redis TTL storage
+-> backend stores a temporary handoff session in Redis TTL storage when configured
 -> backend sends a Telegram notification to the configured owner chat
--> visitor can continue with the AI assistant while waiting
+-> Alex can reply to the Telegram notification
+-> backend receives the Telegram webhook and stores Alex's reply in the temporary handoff session
 ```
 
-Replies from Telegram back to the website are a later stage. This stage only introduces the temporary Redis TTL session store needed for the future live bridge.
+Replies from Telegram are stored for the future browser delivery stage. The browser-facing live stream/SSE step is still a later stage.
 
 ---
 
@@ -32,13 +33,16 @@ Implemented:
 - Telegram message splitting for long notifications;
 - optional Redis TTL session storage through Upstash Redis REST API;
 - handoff id returned from `POST /api/escalations` when Redis storage is configured;
-- handoff id included in the Telegram notification when Redis storage is configured.
+- handoff id included in the Telegram notification when Redis storage is configured;
+- Telegram webhook endpoint at `POST /api/telegram/webhook`;
+- Telegram webhook secret-token validation;
+- owner-chat validation;
+- Alex replies stored in the temporary handoff session when the owner replies to the Telegram notification.
 
 Not implemented yet:
 
-- Telegram webhook;
-- replies from Telegram back to the website;
-- Server-Sent Events for live handoff messages;
+- Server-Sent Events for live handoff messages back to the browser;
+- browser-side live handoff mode;
 - Tool Calling / structured model-triggered handoff proposals.
 
 ---
@@ -115,7 +119,7 @@ Do not commit it if you prefer to treat it as private configuration.
 
 ### Why Redis TTL is used
 
-The live handoff bridge needs temporary state so future Telegram replies can be mapped back to a website chat.
+The live handoff bridge needs temporary state so Telegram replies can be mapped back to a website chat.
 
 This is not long-term chat history storage. It is temporary active-session state only.
 
@@ -127,6 +131,7 @@ state
 created_at
 expires_at
 transcript
+messages
 ```
 
 Default TTL:
@@ -164,6 +169,76 @@ If both values are configured, `POST /api/escalations` stores the temporary hand
 
 ---
 
+## Telegram Webhook
+
+### Why webhook is needed
+
+The webhook lets the backend receive messages sent by Alex to the bot.
+
+The intended Telegram workflow is:
+
+```text
+1. A visitor starts handoff on /chat.
+2. The backend sends a Telegram notification with a Handoff ID.
+3. Alex replies directly to that Telegram notification.
+4. Telegram sends the reply update to POST /api/telegram/webhook.
+5. The backend verifies the webhook secret and owner chat id.
+6. The backend extracts the Handoff ID from the replied-to notification.
+7. The backend stores Alex's reply in the Redis TTL handoff session.
+```
+
+### Required variables
+
+```text
+TELEGRAM_WEBHOOK_SECRET
+TELEGRAM_WEBHOOK_URL
+```
+
+`TELEGRAM_WEBHOOK_SECRET` must be a secret token used when registering the Telegram webhook.
+
+`TELEGRAM_WEBHOOK_URL` is documentation/configuration value for the public webhook URL, for example:
+
+```text
+https://alextym.com/api/telegram/webhook
+```
+
+The backend endpoint itself validates `TELEGRAM_WEBHOOK_SECRET`; it does not need `TELEGRAM_WEBHOOK_URL` at request time.
+
+### Register webhook
+
+Example PowerShell shape:
+
+```powershell
+$body = @{
+  url = "https://alextym.com/api/telegram/webhook"
+  secret_token = "<TELEGRAM_WEBHOOK_SECRET>"
+  allowed_updates = @("message")
+  drop_pending_updates = $true
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod `
+  -Uri "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+### Verify webhook
+
+```powershell
+Invoke-RestMethod "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo"
+```
+
+Expected:
+
+```text
+url: https://alextym.com/api/telegram/webhook
+pending_update_count: low/0 after processing
+last_error_message: empty
+```
+
+---
+
 ## Render Backend Environment Variables
 
 Set these on the backend service, not on the frontend:
@@ -171,6 +246,8 @@ Set these on the backend service, not on the frontend:
 ```text
 TELEGRAM_BOT_TOKEN=<bot token from BotFather>
 TELEGRAM_OWNER_CHAT_ID=<owner Telegram chat id>
+TELEGRAM_WEBHOOK_SECRET=<random secret token used in setWebhook>
+TELEGRAM_WEBHOOK_URL=https://alextym.com/api/telegram/webhook
 ESCALATION_DAILY_LIMIT_PER_IP=3
 ESCALATION_TRANSCRIPT_MAX_MESSAGES=20
 ESCALATION_TRANSCRIPT_MAX_CHARS=8000
@@ -183,6 +260,7 @@ Notes:
 
 - `TELEGRAM_BOT_TOKEN` must remain backend-only.
 - `TELEGRAM_OWNER_CHAT_ID` identifies where handoff notifications are sent.
+- `TELEGRAM_WEBHOOK_SECRET` protects the webhook endpoint.
 - `UPSTASH_REDIS_REST_TOKEN` must remain backend-only.
 - `ESCALATION_DAILY_LIMIT_PER_IP` limits abuse of the handoff endpoint.
 - Transcript limits should stay aligned with backend validation.
@@ -205,13 +283,23 @@ For notification-only local development:
 ```text
 TELEGRAM_BOT_TOKEN=""
 TELEGRAM_OWNER_CHAT_ID=""
+TELEGRAM_WEBHOOK_SECRET=""
+TELEGRAM_WEBHOOK_URL=""
 UPSTASH_REDIS_REST_URL=""
 UPSTASH_REDIS_REST_TOKEN=""
 ```
 
-When both Telegram values are empty in `local` or `test`, the backend uses a no-op notifier for development and tests.
+When both Telegram notification values are empty in `local` or `test`, the backend uses a no-op notifier for development and tests.
 
 When both Upstash values are empty, the backend skips temporary session persistence and keeps notification-only behaviour.
+
+Webhook local development requires a public HTTPS tunnel such as ngrok or Cloudflare Tunnel:
+
+```text
+https://<tunnel-host>/api/telegram/webhook
+```
+
+Register that tunnel URL with `setWebhook` during local webhook testing.
 
 ---
 
@@ -251,14 +339,6 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-Expected response without Redis configured:
-
-```json
-{
-  "status": "ok"
-}
-```
-
 Expected response with Redis configured:
 
 ```json
@@ -276,41 +356,59 @@ Expected Telegram result:
 A new handoff notification appears in the configured Telegram chat.
 ```
 
-When Redis is configured, the Telegram notification should include the handoff id.
+The Telegram notification should include the handoff id.
+
+### 3. Test Telegram reply capture
+
+Reply directly to the Telegram notification.
+
+Expected backend behaviour:
+
+```text
+Telegram -> POST /api/telegram/webhook -> backend validates secret -> backend stores Alex reply in Redis TTL session
+```
+
+Until browser SSE is implemented, this stored reply is not yet visible in `/chat`.
 
 ---
 
 ## Troubleshooting
 
-### 503: Escalation is not configured
+### 503: Telegram webhook is not configured
 
 Likely causes:
 
-- `TELEGRAM_BOT_TOKEN` is missing;
+- `TELEGRAM_WEBHOOK_SECRET` is missing;
 - `TELEGRAM_OWNER_CHAT_ID` is missing;
-- the variables were added to the frontend service instead of the backend service;
-- the backend was not redeployed after changing environment variables.
+- `UPSTASH_REDIS_REST_URL` is missing;
+- `UPSTASH_REDIS_REST_TOKEN` is missing;
+- variables were added to the frontend service instead of the backend service;
+- backend was not redeployed after changing environment variables.
 
-### 502: Could not connect with Alex
+### 403: Invalid Telegram webhook secret
 
 Likely causes:
 
-- invalid bot token;
-- invalid chat id;
-- the owner has not sent `/start` to the bot;
-- Telegram API request failed or timed out;
-- Upstash Redis REST URL/token is invalid;
-- Upstash Redis REST request failed.
+- `secret_token` used in `setWebhook` does not match `TELEGRAM_WEBHOOK_SECRET`;
+- `TELEGRAM_WEBHOOK_SECRET` in Render contains extra spaces or quotes;
+- webhook was registered before the latest secret value was deployed.
 
-### No Telegram message, but API returns `ok`
+### 502: Telegram reply could not be processed
 
-Check whether the request filled the honeypot field:
+Likely causes:
 
-```text
-company_website
-```
+- Upstash Redis REST request failed;
+- Upstash Redis token is invalid;
+- the handoff session payload in Redis is corrupted.
 
-If the honeypot is filled, the backend returns generic success and intentionally does not send a notification.
+### Webhook returns `ignored`
+
+Expected for:
+
+- messages not sent from `TELEGRAM_OWNER_CHAT_ID`;
+- messages without text;
+- messages not replying to a handoff notification;
+- replies to expired handoff sessions.
 
 ---
 
@@ -324,24 +422,24 @@ If the honeypot is filled, the backend returns generic success and intentionally
 - Keep browser-facing errors generic.
 - Keep rate limiting enabled.
 - Use TTL for temporary handoff sessions.
+- Validate `X-Telegram-Bot-Api-Secret-Token` for every webhook request.
+- Accept webhook replies only from `TELEGRAM_OWNER_CHAT_ID`.
 - Do not use Tool Calling to trigger Telegram side effects directly.
 
 ---
 
 ## Next Planned Stage
 
-The next larger stage is the live handoff bridge:
+The next stage is browser delivery for stored Alex replies:
 
 ```text
-website chat <-> backend Redis TTL session <-> Telegram bot <-> Alex
+website chat <- backend Redis TTL session <- Telegram bot <- Alex
 ```
 
 Target design:
 
-- Telegram webhook;
-- webhook secret token validation;
 - Server-Sent Events for Alex replies back to the browser;
+- frontend handoff mode;
+- user messages after handoff sent to escalation endpoint instead of AI endpoint;
 - no PostgreSQL in the MVP;
 - no local SQLite for production state on free hosting.
-
-That stage should be implemented separately from this Redis TTL session storage stage.
