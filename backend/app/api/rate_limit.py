@@ -32,6 +32,18 @@ def enforce_contact_rate_limit(
     )
 
 
+def enforce_escalation_rate_limit(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    _enforce_daily_rate_limit(
+        request=request,
+        scope="escalation",
+        limit=settings.escalation_daily_limit_per_ip,
+        enabled=settings.rate_limiting_enabled,
+    )
+
+
 def _enforce_daily_rate_limit(
     *,
     request: Request,
