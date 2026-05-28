@@ -12,7 +12,7 @@ Backend: Render Free
 Vector DB: Qdrant Cloud Free
 DNS/Registrar: Cloudflare
 Email delivery: Resend
-Telegram handoff: Telegram Bot API
+Telegram handoff: Telegram Bot API + Upstash Redis TTL + SSE
 Keep-alive: UptimeRobot or cron-job.org
 ```
 
@@ -122,7 +122,7 @@ Do not store important production state in:
 - generated embeddings on local disk;
 - Telegram handoff sessions.
 
-Reason: free hosting local filesystems are not suitable for important durable state. Use external storage for future live handoff sessions.
+Reason: free hosting local filesystems are not suitable for important durable state. Temporary handoff state is externalised to Upstash Redis TTL.
 
 ---
 
@@ -273,13 +273,18 @@ CONTACT_FROM_EMAIL
 
 TELEGRAM_BOT_TOKEN
 TELEGRAM_OWNER_CHAT_ID
+TELEGRAM_WEBHOOK_SECRET
+TELEGRAM_WEBHOOK_URL
+
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+ESCALATION_SESSION_TTL_SECONDS
 
 RATE_LIMITING_ENABLED
 CHAT_DAILY_LIMIT_PER_IP
 CONTACT_DAILY_LIMIT_PER_IP
 ESCALATION_DAILY_LIMIT_PER_IP
-ESCALATION_TRANSCRIPT_MAX_MESSAGES
-ESCALATION_TRANSCRIPT_MAX_CHARS
+ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP
 ```
 
 Starting limits:
@@ -288,9 +293,15 @@ Starting limits:
 CHAT_DAILY_LIMIT_PER_IP=50
 CONTACT_DAILY_LIMIT_PER_IP=5
 ESCALATION_DAILY_LIMIT_PER_IP=10
-ESCALATION_TRANSCRIPT_MAX_MESSAGES=50
-ESCALATION_TRANSCRIPT_MAX_CHARS=8000
+ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP=50
+ESCALATION_SESSION_TTL_SECONDS=7200
 ```
+
+Notes:
+
+- transcript and message size limits are enforced by backend schema constants, not runtime env variables;
+- do not add `ESCALATION_TRANSCRIPT_MAX_MESSAGES` or `ESCALATION_TRANSCRIPT_MAX_CHARS` to production env;
+- `ESCALATION_SESSION_TTL_SECONDS` controls only temporary live handoff session lifetime.
 
 Rules:
 
@@ -298,7 +309,7 @@ Rules:
 - keep `.env.example` current;
 - store secrets in the hosting provider dashboard;
 - do not expose backend secrets through Next.js public variables;
-- do not use `NEXT_PUBLIC_*` for Telegram or provider secrets.
+- do not use `NEXT_PUBLIC_*` for Telegram, Redis, Resend, OpenAI, or Qdrant secrets.
 
 ---
 
@@ -338,30 +349,41 @@ Invoke-RestMethod `
 
 ---
 
-## Telegram Handoff Setup
+## Telegram Live Handoff Setup
 
 Current stage:
 
 ```text
-Notification-only handoff.
+Live Telegram handoff bridge.
 ```
 
-The visitor stays on `/chat`. After explicit consent, the frontend sends the current transcript to:
+The visitor stays on `/chat`. After explicit consent:
 
 ```text
-POST /api/escalations
+frontend sends the current transcript to POST /api/escalations
+-> backend stores a temporary handoff session in Upstash Redis TTL
+-> backend sends a Telegram notification with a Handoff ID
+-> frontend opens GET /api/escalations/{handoff_id}/stream
+-> Alex replies in Telegram by replying to a handoff message
+-> Telegram sends the reply to POST /api/telegram/webhook
+-> backend stores Alex's reply in Redis TTL
+-> SSE streams Alex's reply back to the browser
+-> visitor messages during handoff go to POST /api/escalations/{handoff_id}/messages
+-> backend forwards those messages to Telegram
 ```
-
-The backend sends a Telegram notification to the configured owner chat.
 
 Required variables:
 
 ```text
 TELEGRAM_BOT_TOKEN
 TELEGRAM_OWNER_CHAT_ID
+TELEGRAM_WEBHOOK_SECRET
+TELEGRAM_WEBHOOK_URL
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+ESCALATION_SESSION_TTL_SECONDS
 ESCALATION_DAILY_LIMIT_PER_IP
-ESCALATION_TRANSCRIPT_MAX_MESSAGES
-ESCALATION_TRANSCRIPT_MAX_CHARS
+ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP
 ```
 
 Setup details:
@@ -370,45 +392,7 @@ Setup details:
 docs/telegram-handoff-setup.md
 ```
 
-Smoke test:
-
-```powershell
-$body = @{
-  consent_accepted = $true
-  reason = "user_requested_human"
-  transcript = @(
-    @{
-      role = "user"
-      content = "Can I speak to Alex?"
-    },
-    @{
-      role = "assistant"
-      content = "Would you like me to connect you with Alex?"
-    }
-  )
-  company_website = ""
-} | ConvertTo-Json -Depth 5
-
-Invoke-RestMethod `
-  -Uri "https://alextym.com/api/escalations" `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $body
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-Expected result:
-
-```text
-A Telegram notification is delivered to the configured owner chat.
-```
+The Telegram bot token and Upstash token are backend-only secrets.
 
 ---
 
@@ -444,12 +428,28 @@ contact_email: configured
 
 ### Functional checks
 
-- ask one chat question;
-- trigger the handoff prompt and verify Telegram notification;
+- ask one AI chat question;
+- trigger the handoff prompt and verify that Telegram receives a notification;
+- confirm the Telegram notification contains a `Handoff ID`;
+- reply in Telegram to the handoff message and verify that the reply appears in `/chat`;
+- send a new message from `/chat` while handoff is active and verify that it appears in Telegram;
+- wait for or simulate a closed/expired handoff and verify safe UI behaviour;
 - submit a contact form smoke test;
 - check Render logs for unexpected 5xx errors;
 - check Resend logs if contact delivery fails;
-- check Telegram delivery if escalation fails.
+- check Telegram delivery and webhook logs if escalation fails.
+
+### Manual handoff checks
+
+1. Open `/chat`.
+2. Ask for a human handoff or use an answer that offers a handoff.
+3. Click `Connect me with Alex`.
+4. Verify that Telegram receives the handoff transcript and `Handoff ID`.
+5. Reply in Telegram to the handoff notification.
+6. Verify that the reply appears in the website chat.
+7. Send another visitor message from the website chat.
+8. Verify that the message arrives in Telegram.
+9. Keep the tab open long enough to ensure SSE stays connected or reconnects safely.
 
 ---
 
@@ -464,9 +464,12 @@ Migration from Render to Railway/Fly.io/another backend host should require only
 - verify `/api/health/live`;
 - verify `/api/health/ready`;
 - verify `/api/warmup`;
+- verify `/api/escalations`;
+- verify `/api/escalations/{handoff_id}/stream`;
+- verify `/api/telegram/webhook`;
 - update `frontend/vercel.json` rewrite destination;
 - redeploy frontend;
-- test chat, contact form, and Telegram handoff.
+- test chat, contact form, and Telegram live handoff.
 
 No frontend code changes should be required.
 
@@ -488,6 +491,7 @@ Vercel:
 - [ ] Verify `/`, `/resume`, `/contact`.
 - [ ] Verify `/chat`.
 - [ ] Verify `/api/*` rewrites.
+- [ ] Verify SSE through rewrite with live handoff.
 
 Render:
 
@@ -519,12 +523,26 @@ Resend:
 - [ ] Set `RESEND_API_KEY`.
 - [ ] Set `CONTACT_TARGET_EMAIL`.
 - [ ] Set `CONTACT_FROM_EMAIL`.
-- [ ] Test `/api/contact`.
+- [ ] Smoke test `/api/contact`.
 
-Telegram:
+Telegram / Upstash:
 
-- [ ] Create bot with BotFather.
-- [ ] Send `/start` to the bot.
+- [ ] Create Telegram bot.
+- [ ] Get `TELEGRAM_OWNER_CHAT_ID`.
 - [ ] Set `TELEGRAM_BOT_TOKEN`.
 - [ ] Set `TELEGRAM_OWNER_CHAT_ID`.
-- [ ] Test `/api/escalations`.
+- [ ] Set `TELEGRAM_WEBHOOK_SECRET`.
+- [ ] Set `TELEGRAM_WEBHOOK_URL`.
+- [ ] Create Upstash Redis instance.
+- [ ] Set `UPSTASH_REDIS_REST_URL`.
+- [ ] Set `UPSTASH_REDIS_REST_TOKEN`.
+- [ ] Set `ESCALATION_SESSION_TTL_SECONDS`.
+- [ ] Register Telegram webhook with the same secret.
+- [ ] Verify `getWebhookInfo`.
+- [ ] Smoke test full live handoff.
+
+OpenAI:
+
+- [ ] Set project budget/alerts in OpenAI dashboard.
+- [ ] Keep application rate limits enabled.
+- [ ] Verify chat still works after deployment.
