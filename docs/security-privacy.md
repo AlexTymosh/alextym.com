@@ -16,6 +16,7 @@ Security and privacy are part of the product, not optional extras.
 4. Do not let the assistant invent facts.
 5. Do not let user input override system instructions.
 6. Keep the MVP simple and auditable.
+7. Share chat transcripts with a human only after explicit user consent.
 
 ---
 
@@ -28,6 +29,7 @@ Never commit:
 - OpenAI/OpenRouter keys;
 - Qdrant keys;
 - Resend keys;
+- Telegram bot tokens;
 - provider tokens;
 - private source documents;
 - `private/`;
@@ -170,6 +172,8 @@ Do not log:
 - raw system prompts;
 - full user messages unless explicitly needed for debugging;
 - full contact form messages;
+- full escalation transcripts;
+- Telegram bot tokens;
 - private biography content;
 - full retrieved context.
 
@@ -211,6 +215,61 @@ the sender address.
 
 ---
 
+## Telegram Handoff Security
+
+The current Telegram handoff is notification-only:
+
+```text
+user consent -> POST /api/escalations -> Telegram notification to owner chat
+```
+
+Required controls:
+
+- explicit user consent before transcript sharing;
+- transcript size limits;
+- rate limiting;
+- honeypot field;
+- backend-only Telegram bot token;
+- safe generic errors;
+- no frontend access to Telegram secrets.
+
+Backend-only configuration:
+
+```text
+TELEGRAM_BOT_TOKEN
+TELEGRAM_OWNER_CHAT_ID
+ESCALATION_DAILY_LIMIT_PER_IP
+ESCALATION_TRANSCRIPT_MAX_MESSAGES
+ESCALATION_TRANSCRIPT_MAX_CHARS
+```
+
+Honeypot field:
+
+```text
+company_website
+```
+
+If filled, treat as spam and return generic success.
+
+Consent copy must make clear that:
+
+```text
+If the visitor connects with Alex, the current chat history is shared with Alex for context.
+No email or phone number is shared unless the visitor types it manually.
+```
+
+Do not use Tool Calling to perform Telegram side effects directly.
+
+Future live handoff must add:
+
+- temporary session storage with TTL;
+- webhook secret validation;
+- message expiry;
+- safe transcript retention rules;
+- clear user-facing state when a session expires.
+
+---
+
 ## Rate Limiting
 
 Implemented for public launch:
@@ -219,6 +278,7 @@ Implemented for public launch:
 /api/chat
 /api/chat/stream
 /api/contact
+/api/escalations
 ```
 
 Starting limits:
@@ -226,7 +286,9 @@ Starting limits:
 ```text
 chat: up to 50 messages per IP per day
 contact: 5 messages per IP per day
-max message length: 2000 chars
+escalation: 10 handoff requests per IP per day
+max chat/contact message length: 2000 chars
+escalation transcript: up to 50 messages / 8000 chars
 ```
 
 Implementation note:
@@ -250,7 +312,8 @@ Required:
 - max input length;
 - max output tokens;
 - rate limit;
-- contact form spam protection.
+- contact form spam protection;
+- escalation spam protection.
 
 Never launch public chat without cost limits.
 
@@ -268,7 +331,8 @@ Frontend must not contain:
 - provider keys;
 - private biography;
 - raw prompts;
-- hidden sensitive data.
+- hidden sensitive data;
+- Telegram bot token.
 
 Frontend should call:
 
@@ -287,6 +351,7 @@ Backend must:
 - validate all requests with Pydantic;
 - enforce message length limits;
 - enforce chat history item and total-size limits;
+- enforce escalation transcript size limits;
 - sanitize/log safely;
 - use CORS only when needed;
 - keep provider clients server-side;
@@ -302,18 +367,26 @@ Cloudflare:
 - use DNS Only for Vercel records;
 - do not proxy Vercel records unless there is a specific reason.
 
-Koyeb/Railway/Render/Fly.io:
+Render/Railway/Fly.io:
 
 - store secrets as environment variables;
 - do not build images with secrets baked in;
 - verify logs after deploy;
-- keep Docker image minimal.
+- keep Docker image minimal;
+- do not rely on local disk for important state.
 
 Vercel:
 
 - use rewrites for `/api/*`;
 - keep backend URL configurable;
 - do not expose private env vars to frontend.
+
+Telegram:
+
+- store bot token only in backend environment variables;
+- rotate token if exposed;
+- use webhook secret token when live Telegram replies are implemented;
+- use local tunnelling only for development webhook testing.
 
 ---
 
@@ -324,8 +397,9 @@ MVP security is acceptable when:
 - no secrets are committed;
 - private biography is not committed;
 - public knowledge files are reviewed;
-- chat and contact have basic rate limiting;
+- chat, contact, and escalation have basic rate limiting;
 - contact form has honeypot;
+- escalation has explicit consent and honeypot;
 - assistant refuses prompt extraction;
 - assistant uses insufficient-data response;
 - LLM budget limit is configured;
