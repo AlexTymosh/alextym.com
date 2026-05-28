@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from collections.abc import AsyncIterator
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 
 from app.api.rate_limit import enforce_escalation_rate_limit
 from app.core.config import Settings, get_settings
@@ -6,6 +10,7 @@ from app.schemas.escalation import EscalationRequest, EscalationResponse
 from app.services.escalation import (
     EscalationConfigurationError,
     EscalationDeliveryError,
+    EscalationNotFoundError,
     EscalationService,
 )
 
@@ -42,3 +47,56 @@ async def escalate(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not connect with Alex. Please try again later.",
         ) from exc
+
+
+@router.get("/escalations/{handoff_id}/stream")
+async def stream_escalation_messages(
+    handoff_id: str,
+    request: Request,
+    last_event_id: Annotated[
+        str | None,
+        Header(alias="Last-Event-ID"),
+    ] = None,
+    service: EscalationService = Depends(get_escalation_service),
+) -> StreamingResponse:
+    try:
+        await service.ensure_stream_available(handoff_id)
+    except EscalationConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Escalation streaming is not configured.",
+        ) from exc
+    except EscalationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Escalation session was not found.",
+        ) from exc
+    except EscalationDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Escalation stream could not be opened.",
+        ) from exc
+
+    async def event_generator() -> AsyncIterator[str]:
+        try:
+            async for event in service.stream_alex_messages(
+                handoff_id,
+                after_message_id=last_event_id,
+            ):
+                if await request.is_disconnected():
+                    break
+                yield event
+        except EscalationDeliveryError:
+            yield EscalationService.sse_event(
+                "error",
+                {"message": "Escalation stream is temporarily unavailable."},
+            )
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
