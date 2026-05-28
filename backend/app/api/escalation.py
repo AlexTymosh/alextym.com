@@ -10,6 +10,7 @@ from app.api.rate_limit import (
 )
 from app.core.config import Settings, get_settings
 from app.schemas.escalation import (
+    EscalationCloseResponse,
     EscalationMessageRequest,
     EscalationMessageResponse,
     EscalationRequest,
@@ -25,7 +26,9 @@ from app.services.escalation import (
 router = APIRouter(tags=["escalation"])
 
 
-def get_escalation_service(settings: Settings = Depends(get_settings)) -> EscalationService:
+def get_escalation_service(
+    settings: Settings = Depends(get_settings),
+) -> EscalationService:
     return EscalationService.from_settings(settings)
 
 
@@ -89,6 +92,33 @@ async def send_escalation_message(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not send this message to Alex. Please try again later.",
+        ) from exc
+
+
+@router.post(
+    "/escalations/{handoff_id}/close",
+    response_model=EscalationCloseResponse,
+)
+async def close_escalation(
+    handoff_id: str,
+    service: EscalationService = Depends(get_escalation_service),
+) -> EscalationCloseResponse:
+    try:
+        return await service.close(handoff_id)
+    except EscalationConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Escalation session storage is not configured.",
+        ) from exc
+    except EscalationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Escalation session was not found.",
+        ) from exc
+    except EscalationDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not close this handoff. Please try again later.",
         ) from exc
 
 

@@ -13,6 +13,7 @@ from app.schemas.escalation import EscalationRequest
 
 ESCALATION_SESSION_STATE_WAITING_FOR_ALEX = "waiting_for_alex"
 ESCALATION_SESSION_STATE_CONNECTED = "connected"
+ESCALATION_SESSION_STATE_CLOSED = "closed"
 ESCALATION_SESSION_KEY_PREFIX = "escalation:session:"
 
 
@@ -45,7 +46,10 @@ class EscalationSessionRecord:
             created_at=str(payload["created_at"]),
             expires_at=str(payload["expires_at"]),
             transcript=[
-                {"role": str(item.get("role", "")), "content": str(item.get("content", ""))}
+                {
+                    "role": str(item.get("role", "")),
+                    "content": str(item.get("content", "")),
+                }
                 for item in transcript
                 if isinstance(item, dict)
             ],
@@ -91,6 +95,9 @@ class EscalationSessionStore(Protocol):
     ) -> EscalationSessionRecord | None:
         pass
 
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+        pass
+
     async def delete(self, handoff_id: str) -> None:
         pass
 
@@ -112,6 +119,9 @@ class MisconfiguredEscalationSessionStore:
         handoff_id: str,
         content: str,
     ) -> EscalationSessionRecord | None:
+        raise EscalationSessionStoreError("Redis session storage is partially configured.")
+
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("Redis session storage is partially configured.")
 
     async def delete(self, handoff_id: str) -> None:
@@ -167,12 +177,12 @@ class UpstashRedisEscalationSessionStore:
         if result is None:
             return None
         if not isinstance(result, str):
-            raise EscalationSessionStoreError("Stored escalation session is not valid JSON text.")
+            raise EscalationSessionStoreError("Stored escalation session is not valid JSON.")
 
         try:
             payload = json.loads(result)
         except json.JSONDecodeError as exc:
-            raise EscalationSessionStoreError("Stored escalation session is invalid JSON.") from exc
+            raise EscalationSessionStoreError("Stored session is invalid JSON.") from exc
 
         if not isinstance(payload, dict):
             raise EscalationSessionStoreError("Stored escalation session payload is invalid.")
@@ -185,7 +195,7 @@ class UpstashRedisEscalationSessionStore:
         content: str,
     ) -> EscalationSessionRecord | None:
         record = await self.get(handoff_id)
-        if record is None:
+        if record is None or record.state == ESCALATION_SESSION_STATE_CLOSED:
             return None
 
         now = datetime.now(UTC).replace(microsecond=0)
@@ -207,16 +217,44 @@ class UpstashRedisEscalationSessionStore:
                 },
             ],
         )
-        result = await self._execute(
-            ["SET", _session_key(handoff_id), _to_json(updated_record), "EX", ttl_seconds]
-        )
-        if result != "OK":
-            raise EscalationSessionStoreError("Redis did not confirm session update.")
+        await self._save(updated_record, ttl_seconds=ttl_seconds)
+        return updated_record
 
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+        record = await self.get(handoff_id)
+        if record is None:
+            return None
+
+        now = datetime.now(UTC).replace(microsecond=0)
+        ttl_seconds = _remaining_ttl_seconds(record.expires_at, now)
+        if ttl_seconds <= 0:
+            await self.delete(handoff_id)
+            return None
+
+        updated_record = replace(record, state=ESCALATION_SESSION_STATE_CLOSED)
+        await self._save(updated_record, ttl_seconds=ttl_seconds)
         return updated_record
 
     async def delete(self, handoff_id: str) -> None:
         await self._execute(["DEL", _session_key(handoff_id)])
+
+    async def _save(
+        self,
+        record: EscalationSessionRecord,
+        *,
+        ttl_seconds: int,
+    ) -> None:
+        result = await self._execute(
+            [
+                "SET",
+                _session_key(record.handoff_id),
+                _to_json(record),
+                "EX",
+                ttl_seconds,
+            ]
+        )
+        if result != "OK":
+            raise EscalationSessionStoreError("Redis did not confirm session update.")
 
     async def _execute(self, command: list[Any]) -> Any:
         return await run_in_threadpool(self._execute_sync, command)
@@ -289,7 +327,7 @@ def _remaining_ttl_seconds(expires_at: str, now: datetime) -> int:
     try:
         expires_at_datetime = datetime.fromisoformat(expires_at)
     except ValueError as exc:
-        raise EscalationSessionStoreError("Stored escalation session expiry is invalid.") from exc
+        raise EscalationSessionStoreError("Stored session expiry is invalid.") from exc
 
     if expires_at_datetime.tzinfo is None:
         expires_at_datetime = expires_at_datetime.replace(tzinfo=UTC)

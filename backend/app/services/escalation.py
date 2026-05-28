@@ -7,12 +7,14 @@ from typing import Any, Protocol
 
 from app.core.config import Settings
 from app.schemas.escalation import (
+    EscalationCloseResponse,
     EscalationMessageRequest,
     EscalationMessageResponse,
     EscalationRequest,
     EscalationResponse,
 )
 from app.services.escalation_sessions import (
+    ESCALATION_SESSION_STATE_CLOSED,
     ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
     EscalationSessionRecord,
     EscalationSessionStore,
@@ -89,8 +91,26 @@ class TelegramEscalationNotifier:
         handoff_id: str | None,
     ) -> None:
         try:
+            if handoff_id:
+                await self._telegram_client.send_message(
+                    _build_telegram_transcript_message(
+                        escalation_request,
+                        handoff_id=handoff_id,
+                    )
+                )
+                await self._telegram_client.send_message(
+                    _build_telegram_control_message(
+                        escalation_request,
+                        handoff_id=handoff_id,
+                    )
+                )
+                return
+
             await self._telegram_client.send_message(
-                _build_telegram_notification(escalation_request, handoff_id=handoff_id)
+                _build_telegram_transcript_message(
+                    escalation_request,
+                    handoff_id=None,
+                )
             )
         except TelegramDeliveryError as exc:
             raise EscalationDeliveryError(
@@ -206,11 +226,25 @@ class EscalationService:
             raise EscalationConfigurationError("Escalation session storage is not configured.")
 
         session_record = await self._get_session(handoff_id)
-        if session_record is None or _is_expired(session_record):
+        if _is_unavailable_session(session_record):
             raise EscalationNotFoundError("Escalation session was not found.")
 
         await self._notifier.notify_user_message(message_request, handoff_id=handoff_id)
         return EscalationMessageResponse()
+
+    async def close(self, handoff_id: str) -> EscalationCloseResponse:
+        if self._session_store is None:
+            raise EscalationConfigurationError("Escalation session storage is not configured.")
+
+        try:
+            session_record = await self._session_store.close(handoff_id)
+        except EscalationSessionStoreError as exc:
+            raise EscalationDeliveryError("Escalation session could not be closed.") from exc
+
+        if session_record is None or _is_expired(session_record):
+            raise EscalationNotFoundError("Escalation session was not found.")
+
+        return EscalationCloseResponse(state=ESCALATION_SESSION_STATE_CLOSED)
 
     async def ensure_stream_available(self, handoff_id: str) -> None:
         if self._session_store is None:
@@ -235,6 +269,9 @@ class EscalationService:
             if initial_record is None or _is_expired(initial_record):
                 yield self.sse_event("closed", {"reason": "session_expired"})
                 return
+            if initial_record.state == ESCALATION_SESSION_STATE_CLOSED:
+                yield self.sse_event("closed", {"reason": "session_closed"})
+                return
             seen_message_ids.update(_message_ids_through(initial_record, after_message_id))
 
         yield self.sse_event("meta", {"handoff_id": handoff_id, "status": "connected"})
@@ -247,6 +284,9 @@ class EscalationService:
             session_record = await self._get_session(handoff_id)
             if session_record is None or _is_expired(session_record):
                 yield self.sse_event("closed", {"reason": "session_expired"})
+                return
+            if session_record.state == ESCALATION_SESSION_STATE_CLOSED:
+                yield self.sse_event("closed", {"reason": "session_closed"})
                 return
 
             for message in session_record.messages:
@@ -298,7 +338,12 @@ class EscalationService:
             await self._session_store.delete(session_record.handoff_id)
 
     @staticmethod
-    def sse_event(event: str, data: dict[str, Any], *, event_id: str | None = None) -> str:
+    def sse_event(
+        event: str,
+        data: dict[str, Any],
+        *,
+        event_id: str | None = None,
+    ) -> str:
         payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
         lines = []
         if event_id:
@@ -307,7 +352,27 @@ class EscalationService:
         return "\n".join(lines) + "\n\n"
 
 
-def _build_telegram_notification(
+def _build_telegram_control_message(
+    escalation_request: EscalationRequest,
+    *,
+    handoff_id: str,
+) -> str:
+    created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    return "\n".join(
+        [
+            "New handoff request from alextym.com",
+            f"Created at: {created_at}",
+            f"Reason: {escalation_request.reason}",
+            f"Handoff ID: {handoff_id}",
+            f"State: {ESCALATION_SESSION_STATE_WAITING_FOR_ALEX}",
+            "",
+            "Reply to this message to answer the website chat.",
+            f"Use /close {handoff_id} to close the handoff.",
+        ]
+    )
+
+
+def _build_telegram_transcript_message(
     escalation_request: EscalationRequest,
     *,
     handoff_id: str | None,
@@ -319,13 +384,12 @@ def _build_telegram_notification(
         transcript_lines.append(f"{role}: {item.content}")
 
     header_lines = [
-        "New handoff request from alextym.com",
+        "Handoff transcript from alextym.com",
         f"Created at: {created_at}",
         f"Reason: {escalation_request.reason}",
     ]
     if handoff_id:
         header_lines.append(f"Handoff ID: {handoff_id}")
-        header_lines.append(f"State: {ESCALATION_SESSION_STATE_WAITING_FOR_ALEX}")
 
     return "\n\n".join(
         [
@@ -347,7 +411,8 @@ def _build_telegram_user_message_notification(
             "New visitor message from alextym.com",
             f"Created at: {created_at}\nHandoff ID: {handoff_id}",
             f"User: {message_request.content}",
-            "Reply to this Telegram message to send your answer back to the website chat.",
+            "Reply to this Telegram message to send your answer back to the chat.",
+            f"Use /close {handoff_id} to close the handoff.",
         ]
     )
 
@@ -368,6 +433,14 @@ def _message_ids_through(
         return set()
 
     return message_ids
+
+
+def _is_unavailable_session(session_record: EscalationSessionRecord | None) -> bool:
+    return (
+        session_record is None
+        or _is_expired(session_record)
+        or session_record.state == ESCALATION_SESSION_STATE_CLOSED
+    )
 
 
 def _is_expired(session_record: EscalationSessionRecord) -> bool:

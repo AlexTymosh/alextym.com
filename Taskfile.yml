@@ -78,7 +78,7 @@ tasks:
     desc: Run backend tests.
     dir: backend
     cmds:
-      - uv run pytest
+      - uv run python -m pytest
 
   rag:ingest:
     desc: Rebuild Qdrant vectors from reviewed public knowledge files.

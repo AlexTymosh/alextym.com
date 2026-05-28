@@ -7,6 +7,7 @@ from app.main import app
 from app.schemas.escalation import EscalationMessageRequest, EscalationRequest
 from app.services.escalation import EscalationDeliveryError, EscalationService
 from app.services.escalation_sessions import (
+    ESCALATION_SESSION_STATE_CLOSED,
     ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
     EscalationSessionRecord,
     EscalationSessionStoreError,
@@ -370,6 +371,77 @@ def test_escalation_message_rate_limit_returns_429() -> None:
     }
 
 
+def test_escalation_close_marks_session_closed() -> None:
+    session_store = FakeEscalationSessionStore(existing_handoff_id="hnd_test")
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=FakeEscalationNotifier(),
+        session_store=session_store,
+    )
+
+    response = client.post("/api/escalations/hnd_test/close")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "state": "closed"}
+    assert session_store.closed_handoff_ids == ["hnd_test"]
+
+
+def test_escalation_close_returns_404_when_session_is_missing() -> None:
+    session_store = FakeEscalationSessionStore(existing_handoff_id=None)
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=FakeEscalationNotifier(),
+        session_store=session_store,
+    )
+
+    response = client.post("/api/escalations/hnd_missing/close")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Escalation session was not found."}
+
+
+def test_escalation_close_returns_503_when_session_store_is_not_configured() -> None:
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=FakeEscalationNotifier(),
+    )
+
+    response = client.post("/api/escalations/hnd_test/close")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Escalation session storage is not configured."}
+
+
+def test_escalation_close_returns_safe_error_when_store_fails() -> None:
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=FakeEscalationNotifier(),
+        session_store=FailingEscalationSessionStore(),
+    )
+
+    response = client.post("/api/escalations/hnd_test/close")
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Could not close this handoff. Please try again later."}
+
+
+def test_escalation_message_returns_404_when_session_is_closed() -> None:
+    notifier = FakeEscalationNotifier()
+    session_store = FakeEscalationSessionStore(
+        existing_handoff_id="hnd_test",
+        existing_state=ESCALATION_SESSION_STATE_CLOSED,
+    )
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=notifier,
+        session_store=session_store,
+    )
+
+    response = client.post(
+        "/api/escalations/hnd_test/messages",
+        json={"content": "Hello", "company_website": ""},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Escalation session was not found."}
+    assert notifier.sent_message_requests == []
+
+
 class FakeEscalationNotifier:
     def __init__(self) -> None:
         self.sent_requests: list[EscalationRequest] = []
@@ -415,11 +487,18 @@ class FailingEscalationNotifier:
 
 
 class FakeEscalationSessionStore:
-    def __init__(self, *, existing_handoff_id: str | None = "hnd_test") -> None:
+    def __init__(
+        self,
+        *,
+        existing_handoff_id: str | None = "hnd_test",
+        existing_state: str = ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+    ) -> None:
         self.created_requests: list[EscalationRequest] = []
         self.created_ttl_seconds: list[int] = []
         self.deleted_handoff_ids: list[str] = []
+        self.closed_handoff_ids: list[str] = []
         self.existing_handoff_id = existing_handoff_id
+        self.existing_state = existing_state
 
     async def create(
         self,
@@ -434,14 +513,20 @@ class FakeEscalationSessionStore:
     async def get(self, handoff_id: str) -> EscalationSessionRecord | None:
         if self.existing_handoff_id is None or handoff_id != self.existing_handoff_id:
             return None
-        return _session_record(handoff_id)
+        return _session_record(handoff_id, state=self.existing_state)
 
     async def append_alex_message(
         self,
         handoff_id: str,
         content: str,
     ) -> EscalationSessionRecord | None:
-        return _session_record(handoff_id)
+        return _session_record(handoff_id, state=self.existing_state)
+
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+        if self.existing_handoff_id is None or handoff_id != self.existing_handoff_id:
+            return None
+        self.closed_handoff_ids.append(handoff_id)
+        return _session_record(handoff_id, state=ESCALATION_SESSION_STATE_CLOSED)
 
     async def delete(self, handoff_id: str) -> None:
         self.deleted_handoff_ids.append(handoff_id)
@@ -466,6 +551,9 @@ class FailingEscalationSessionStore:
     ) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("redis failed")
 
+    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+        raise EscalationSessionStoreError("redis failed")
+
     async def delete(self, handoff_id: str) -> None:
         pass
 
@@ -473,6 +561,8 @@ class FailingEscalationSessionStore:
 def _session_record(
     handoff_id: str,
     escalation_request: EscalationRequest | None = None,
+    *,
+    state: str = ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
 ) -> EscalationSessionRecord:
     transcript = []
     if escalation_request is not None:
@@ -481,7 +571,7 @@ def _session_record(
         ]
     return EscalationSessionRecord(
         handoff_id=handoff_id,
-        state=ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+        state=state,
         created_at="2026-01-01T00:00:00+00:00",
         expires_at="2099-01-01T00:02:00+00:00",
         transcript=transcript,
