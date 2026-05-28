@@ -36,12 +36,20 @@ tasks:
   smoke:
     desc: Check the local backend and frontend dev servers.
     cmds:
-      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/scripts/smoke.ps1" -BackendPort {{.BACKEND_PORT}} -FrontendPort {{.FRONTEND_PORT}}
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass
+        -File "{{.ROOT_DIR}}/scripts/smoke.ps1"
+        -BackendPort {{.BACKEND_PORT}}
+        -FrontendPort {{.FRONTEND_PORT}}
 
   stop:
     desc: Stop local dev servers on the project ports.
     cmds:
-      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/scripts/stop-dev.ps1" -BackendPort {{.BACKEND_PORT}} -FrontendPort {{.FRONTEND_PORT}}
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass
+        -File "{{.ROOT_DIR}}/scripts/stop-dev.ps1"
+        -BackendPort {{.BACKEND_PORT}}
+        -FrontendPort {{.FRONTEND_PORT}}
 
   backend:sync:
     desc: Sync backend dependencies with uv.
@@ -107,13 +115,29 @@ tasks:
     desc: Run the Next.js frontend dev server.
     dir: frontend
     cmds:
-      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/scripts/frontend-dev.ps1" -BackendPort {{.BACKEND_PORT}} -FrontendPort {{.FRONTEND_PORT}}
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass
+        -File "{{.ROOT_DIR}}/scripts/frontend-dev.ps1"
+        -BackendPort {{.BACKEND_PORT}}
+        -FrontendPort {{.FRONTEND_PORT}}
 
   frontend:build:
     desc: Build the frontend.
     dir: frontend
     cmds:
       - npm run build
+
+  frontend:e2e:install:
+    desc: Install Playwright browser binaries for frontend E2E tests.
+    dir: frontend
+    cmds:
+      - npm run e2e:install
+
+  frontend:e2e:
+    desc: Run frontend Playwright E2E tests.
+    dir: frontend
+    cmds:
+      - npm run e2e
 
   docker:build:
     desc: Build the backend Docker image.

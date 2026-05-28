@@ -25,6 +25,8 @@ node_modules/
 out/
 dist/
 build/
+playwright-report/
+test-results/
 
 .DS_Store
 Thumbs.db
