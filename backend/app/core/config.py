@@ -26,6 +26,11 @@ class Settings:
     rate_limiting_enabled: bool
     chat_daily_limit_per_ip: int
     contact_daily_limit_per_ip: int
+    telegram_bot_token: str = ""
+    telegram_owner_chat_id: str = ""
+    escalation_daily_limit_per_ip: int = 3
+    escalation_transcript_max_messages: int = 20
+    escalation_transcript_max_chars: int = 8000
 
 
 def _load_env_file(env_path: Path) -> None:
@@ -120,4 +125,9 @@ def get_settings() -> Settings:
         rate_limiting_enabled=_get_bool("RATE_LIMITING_ENABLED", True),
         chat_daily_limit_per_ip=_get_int("CHAT_DAILY_LIMIT_PER_IP", 50),
         contact_daily_limit_per_ip=_get_int("CONTACT_DAILY_LIMIT_PER_IP", 5),
+        telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
+        telegram_owner_chat_id=os.getenv("TELEGRAM_OWNER_CHAT_ID", ""),
+        escalation_daily_limit_per_ip=_get_int("ESCALATION_DAILY_LIMIT_PER_IP", 3),
+        escalation_transcript_max_messages=_get_int("ESCALATION_TRANSCRIPT_MAX_MESSAGES", 20),
+        escalation_transcript_max_chars=_get_int("ESCALATION_TRANSCRIPT_MAX_CHARS", 8000),
     )
