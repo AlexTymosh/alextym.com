@@ -6,6 +6,11 @@ from app.core.config import Settings, get_settings
 from app.main import app
 from app.schemas.escalation import EscalationRequest
 from app.services.escalation import EscalationDeliveryError, EscalationService
+from app.services.escalation_sessions import (
+    ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+    EscalationSessionRecord,
+    EscalationSessionStoreError,
+)
 from app.services.rate_limit import get_rate_limiter
 
 client = TestClient(app)
@@ -63,7 +68,11 @@ def test_escalation_rejects_oversized_transcript() -> None:
 
 def test_escalation_honeypot_returns_success_without_sending() -> None:
     notifier = FakeEscalationNotifier()
-    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(notifier=notifier)
+    session_store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=notifier,
+        session_store=session_store,
+    )
 
     response = client.post(
         "/api/escalations",
@@ -78,6 +87,7 @@ def test_escalation_honeypot_returns_success_without_sending() -> None:
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
     assert notifier.sent_requests == []
+    assert session_store.created_requests == []
 
 
 def test_escalation_sends_valid_transcript() -> None:
@@ -102,6 +112,84 @@ def test_escalation_sends_valid_transcript() -> None:
     assert len(notifier.sent_requests) == 1
     assert notifier.sent_requests[0].reason == "user_requested_human"
     assert notifier.sent_requests[0].transcript[0].role == "user"
+    assert notifier.sent_handoff_ids == [None]
+
+
+def test_escalation_creates_redis_ttl_session_when_store_is_configured() -> None:
+    notifier = FakeEscalationNotifier()
+    session_store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=notifier,
+        session_store=session_store,
+        session_ttl_seconds=120,
+    )
+
+    response = client.post(
+        "/api/escalations",
+        json={
+            "consent_accepted": True,
+            "reason": "user_requested_human",
+            "transcript": [_message("user", "Can I speak to Alex?")],
+            "company_website": "",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "handoff_id": "hnd_test",
+        "state": ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+        "expires_in_seconds": 120,
+    }
+    assert len(session_store.created_requests) == 1
+    assert session_store.created_ttl_seconds == [120]
+    assert notifier.sent_handoff_ids == ["hnd_test"]
+
+
+def test_escalation_deletes_session_when_telegram_delivery_fails() -> None:
+    session_store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=FailingEscalationNotifier(),
+        session_store=session_store,
+        session_ttl_seconds=120,
+    )
+
+    response = client.post(
+        "/api/escalations",
+        json={
+            "consent_accepted": True,
+            "reason": "user_requested_human",
+            "transcript": [_message("user", "Can I speak to Alex?")],
+            "company_website": "",
+        },
+    )
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Could not connect with Alex. Please try again later."}
+    assert session_store.deleted_handoff_ids == ["hnd_test"]
+
+
+def test_escalation_returns_safe_error_when_session_store_fails() -> None:
+    notifier = FakeEscalationNotifier()
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=notifier,
+        session_store=FailingEscalationSessionStore(),
+        session_ttl_seconds=120,
+    )
+
+    response = client.post(
+        "/api/escalations",
+        json={
+            "consent_accepted": True,
+            "reason": "user_requested_human",
+            "transcript": [_message("user", "Can I speak to Alex?")],
+            "company_website": "",
+        },
+    )
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Could not connect with Alex. Please try again later."}
+    assert notifier.sent_requests == []
 
 
 def test_escalation_returns_503_when_not_configured() -> None:
@@ -165,14 +253,74 @@ def test_escalation_rate_limit_returns_429() -> None:
 class FakeEscalationNotifier:
     def __init__(self) -> None:
         self.sent_requests: list[EscalationRequest] = []
+        self.sent_handoff_ids: list[str | None] = []
 
-    async def notify(self, escalation_request: EscalationRequest) -> None:
+    async def notify(
+        self,
+        escalation_request: EscalationRequest,
+        *,
+        handoff_id: str | None,
+    ) -> None:
         self.sent_requests.append(escalation_request)
+        self.sent_handoff_ids.append(handoff_id)
 
 
 class FailingEscalationNotifier:
-    async def notify(self, escalation_request: EscalationRequest) -> None:
+    async def notify(
+        self,
+        escalation_request: EscalationRequest,
+        *,
+        handoff_id: str | None,
+    ) -> None:
         raise EscalationDeliveryError("provider failed")
+
+
+class FakeEscalationSessionStore:
+    def __init__(self) -> None:
+        self.created_requests: list[EscalationRequest] = []
+        self.created_ttl_seconds: list[int] = []
+        self.deleted_handoff_ids: list[str] = []
+
+    async def create(
+        self,
+        escalation_request: EscalationRequest,
+        *,
+        ttl_seconds: int,
+    ) -> EscalationSessionRecord:
+        self.created_requests.append(escalation_request)
+        self.created_ttl_seconds.append(ttl_seconds)
+        return EscalationSessionRecord(
+            handoff_id="hnd_test",
+            state=ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+            created_at="2026-01-01T00:00:00+00:00",
+            expires_at="2026-01-01T00:02:00+00:00",
+            transcript=[
+                {"role": item.role, "content": item.content}
+                for item in escalation_request.transcript
+            ],
+        )
+
+    async def get(self, handoff_id: str) -> EscalationSessionRecord | None:
+        return None
+
+    async def delete(self, handoff_id: str) -> None:
+        self.deleted_handoff_ids.append(handoff_id)
+
+
+class FailingEscalationSessionStore:
+    async def create(
+        self,
+        escalation_request: EscalationRequest,
+        *,
+        ttl_seconds: int,
+    ) -> EscalationSessionRecord:
+        raise EscalationSessionStoreError("redis failed")
+
+    async def get(self, handoff_id: str) -> EscalationSessionRecord | None:
+        return None
+
+    async def delete(self, handoff_id: str) -> None:
+        pass
 
 
 def _message(role: str, content: str) -> dict[str, str]:
