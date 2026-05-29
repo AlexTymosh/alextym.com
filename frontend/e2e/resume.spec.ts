@@ -140,3 +140,68 @@ test("sorts visible entries by section before date", async ({ page }) => {
     titles.indexOf("Bachelor's Degree in Finance and Credit"),
   );
 });
+
+test("filters additional sections by detail level", async ({ page }) => {
+  await page.goto("/resume");
+
+  const additionalSections = page.getByLabel("Additional CV sections");
+
+  await expect(additionalSections.getByText("Languages")).toBeVisible();
+  await expect(additionalSections.getByText("English")).toBeVisible();
+  await expect(
+    additionalSections.getByText("B1/B2, Intermediate to Upper-Intermediate"),
+  ).toBeVisible();
+  await expect(additionalSections.getByText("Ukrainian")).toBeHidden();
+  await expect(additionalSections.getByText("Russian")).toBeHidden();
+  await expect(additionalSections.getByText("Polish")).toBeHidden();
+  await expect(additionalSections.getByText("References")).toBeHidden();
+
+  await page.getByRole("button", { name: "Detailed" }).click();
+
+  await expect(additionalSections.getByText("Ukrainian")).toBeVisible();
+  await expect(additionalSections.getByText("Russian")).toBeVisible();
+  await expect(additionalSections.getByText("Polish")).toBeVisible();
+  await expect(additionalSections.getByText("References")).toBeVisible();
+  await expect(
+    additionalSections.getByText("Available upon request."),
+  ).toBeVisible();
+});
+
+test("renders evidence and credential links", async ({ page }) => {
+  await page.goto("/resume");
+
+  await expect(
+    page.getByRole("link", { name: "Hydrosphere UK Ltd" }),
+  ).toHaveAttribute("href", "https://share.google/Iy5rrjtBLVp2SRcZY");
+  await expect(
+    page.getByRole("link", { name: "Dobra Praca" }),
+  ).toHaveAttribute("href", "https://share.google/0GyqZkUydoTzwUw0B");
+  await expect(
+    page.getByRole("link", {
+      name: "Master's Degree in Finance, Banking and Insurance",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "/evidence/master-degree-finance-banking-insurance",
+  );
+  await expect(
+    page.getByRole("link", {
+      name: "achieved #1 regional sector ranking by financial results in 2018",
+    }),
+  ).toHaveAttribute("href", "/evidence/dobra-praca-regional-award-2018");
+
+  await page.getByRole("button", { name: "Detailed" }).click();
+  await page.getByRole("button", { name: "Training" }).click();
+
+  await expect(
+    page.getByRole("link", { name: "English Language B2 Level" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", {
+      name: "Intermediate Backend Development with FastAPI",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "https://coursera.org/share/7fde85ddc993a09271f6879c1386476f",
+  );
+});

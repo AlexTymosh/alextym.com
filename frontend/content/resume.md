@@ -35,7 +35,7 @@ section: experience
 startDate: 2024-09
 endDate: 2026-04
 title: Systems Integration & Automation Engineer
-organization: Hydrosphere UK Ltd
+organization: [Hydrosphere UK Ltd](https://share.google/Iy5rrjtBLVp2SRcZY)
 location: United Kingdom
 ```
 
@@ -64,14 +64,14 @@ section: experience
 startDate: 2014-09
 endDate: 2022-09
 title: Founder and Managing Director
-organization: Dobra Praca
+organization: [Dobra Praca](https://share.google/0GyqZkUydoTzwUw0B)
 location: Ukraine
 ```
 
 ### Concise
 
-- Applied Kaizen-style continuous improvement → achieved #1 regional sector
-  ranking by financial results in 2018.
+- Applied Kaizen-style continuous improvement → [achieved #1 regional sector
+  ranking by financial results in 2018](/evidence/dobra-praca-regional-award-2018).
 
 ### Detailed
 
@@ -90,8 +90,9 @@ location: Ukraine
   and bank payment processing, automating partner interactions and saving
   8–10 hours of manual accounting work per week.
 - Maintained a 4.9/5.0 customer rating across 149 reviews.
-- Led the company to win a regional industry award, achieving 1st place in its
-  sector in 2018 (regional population: 1.7M).
+- Led the company to a regional industry award and [achieved #1 regional sector
+  ranking by financial results in 2018](/evidence/dobra-praca-regional-award-2018)
+  (regional population: 1.7M).
 
 ## Zaporizhzhia National University — Concise Education
 
@@ -101,8 +102,8 @@ section: education
 visibleIn: concise
 startDate: 2011-09
 endDate: 2018-01
-title: Master's Degree in Finance, Banking and Insurance
-organization: Zaporizhzhia National University
+title: [Master's Degree in Finance, Banking and Insurance](/evidence/master-degree-finance-banking-insurance)
+organization: [Zaporizhzhia National University](https://en.wikipedia.org/wiki/Zaporizhzhia_National_University)
 location: Ukraine
 ```
 
@@ -122,8 +123,8 @@ section: education
 visibleIn: detailed
 startDate: 2016-09
 endDate: 2018-01
-title: Master's Degree in Finance, Banking and Insurance
-organization: Zaporizhzhia National University
+title: [Master's Degree in Finance, Banking and Insurance](/evidence/master-degree-finance-banking-insurance)
+organization: [Zaporizhzhia National University](https://en.wikipedia.org/wiki/Zaporizhzhia_National_University)
 location: Ukraine
 ```
 
@@ -144,8 +145,8 @@ section: education
 visibleIn: detailed
 startDate: 2011-09
 endDate: 2016-06
-title: Bachelor's Degree in Finance and Credit
-organization: Zaporizhzhia National University
+title: [Bachelor's Degree in Finance and Credit](/evidence/bachelor-degree-finance-credit)
+organization: [Zaporizhzhia National University](https://en.wikipedia.org/wiki/Zaporizhzhia_National_University)
 location: Ukraine
 ```
 
@@ -166,7 +167,7 @@ id: coursera-fastapi-2026
 section: training
 startDate: 2025-12
 endDate: 2026-03
-title: Intermediate Backend Development with FastAPI
+title: [Intermediate Backend Development with FastAPI](https://coursera.org/share/7fde85ddc993a09271f6879c1386476f)
 organization: Coursera / Packt
 ```
 
@@ -183,10 +184,9 @@ organization: Coursera / Packt
 ```yaml
 id: british-council-english-b2-2025-2026
 section: training
-visibleIn: concise
 startDate: 2025-11
 endDate: 2026-03
-title: English Language B2 Level
+title: [English Language B2 Level](https://es-backend-0-0-0.appspot.com.storage.googleapis.com/90bdcf84-f527-4c9e-b9dd-7100c9c863ee/56fa8f5e-13e9-4c97-b666-5b4ae515d0c6.pdf)
 organization: British Council
 ```
 
@@ -206,7 +206,7 @@ section: training
 visibleIn: detailed
 startDate: 2024-03
 endDate: 2024-05
-title: Data Analyst Training
+title: [Data Analyst Training](https://example.org)
 organization: Cambridge Spark
 ```
 
@@ -226,7 +226,7 @@ section: training
 visibleIn: detailed
 startDate: 2024-03
 endDate: 2024-05
-title: English Language B1 Level
+title: [English Language B1 Level](https://es-backend-0-0-0.appspot.com.storage.googleapis.com/90bdcf84-f527-4c9e-b9dd-7100c9c863ee/3cedac3b-f471-4924-84cf-f19eba061761.pdf)
 organization: British Council
 ```
 
@@ -246,7 +246,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-11
 endDate: 2023-11
-title: Data Analysis with Python
+title: [Data Analysis with Python](https://coursera.org/share/9024cf86c44e5bc5211036bccd9ab4c0)
 organization: Coursera / IBM
 ```
 
@@ -266,7 +266,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-09
 endDate: 2023-11
-title: Python for Data Science, AI & Development
+title: [Python for Data Science, AI & Development](https://coursera.org/share/a7436316af6c6bc37a4e6bc986f13f53)
 organization: Coursera / IBM
 ```
 
@@ -286,7 +286,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-10
 endDate: 2023-11
-title: Databases and SQL for Data Science with Python
+title: [Databases and SQL for Data Science with Python](https://coursera.org/share/0672a292b71018993ebfa0073017f007)
 organization: Coursera / IBM
 ```
 
@@ -306,7 +306,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-09
 endDate: 2023-10
-title: Introduction to Data Analytics
+title: [Introduction to Data Analytics](https://coursera.org/share/f4f76a9ffc491165af3d27d93856768a)
 organization: Coursera / IBM
 ```
 
@@ -326,7 +326,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-10
 endDate: 2023-10
-title: Data Visualization and Dashboards with Excel and Cognos
+title: [Data Visualization and Dashboards with Excel and Cognos](https://coursera.org/share/f34bee800b9ab59808ee4276da06516d)
 organization: Coursera / IBM
 ```
 
@@ -346,7 +346,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-10
 endDate: 2023-10
-title: Python Project for Data Science
+title: [Python Project for Data Science](https://coursera.org/share/2c7253087eca2c15e55d0149fa5c2b21)
 organization: Coursera / IBM
 ```
 
@@ -386,7 +386,7 @@ section: training
 visibleIn: detailed
 startDate: 2023-07
 endDate: 2023-09
-title: English Language A2 Level
+title: [English Language A2 Level](/evidence/english-language-a2-level)
 organization: Standguide
 ```
 
@@ -417,3 +417,16 @@ organization: Puzzle English
 ### Detailed
 
 <!-- no bullets -->
+
+# Additional Sections
+
+## Languages
+
+- English: B1/B2, Intermediate to Upper-Intermediate
+- Ukrainian | detailed: Native
+- Russian | detailed: C2, Proficient
+- Polish | detailed: B1, Intermediate
+
+## References
+
+- References | detailed: Available upon request.

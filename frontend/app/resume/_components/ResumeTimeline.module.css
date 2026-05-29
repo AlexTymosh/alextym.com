@@ -32,29 +32,6 @@
   margin: 0;
 }
 
-.introLead {
-  color: var(--text);
-  font-weight: 800;
-}
-
-.introList {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding-left: 20px;
-  color: var(--muted);
-  list-style: disc;
-}
-
-.introList li {
-  padding-left: 4px;
-}
-
-.introList li::marker {
-  color: var(--accent);
-  font-size: 0.9em;
-}
-
 .downloadLink {
   min-height: 38px;
   display: inline-flex;
@@ -158,7 +135,8 @@
   line-height: 1.55;
 }
 
-.timeline {
+.timeline,
+.additionalItems {
   display: grid;
   gap: 10px;
   margin: 0;
@@ -256,6 +234,22 @@
   font-size: 0.9em;
 }
 
+.additionalSections {
+  display: grid;
+  gap: 10px;
+}
+
+.additionalGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.additionalValue {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 @media (max-width: 860px) {
   .header {
     grid-template-columns: 1fr;
@@ -294,12 +288,12 @@
 }
 
 .inlineLink {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  color: inherit;
+  text-decoration: none;
 }
 
 .inlineLink:hover {
-  color: var(--text);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }

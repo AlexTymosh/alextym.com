@@ -17,9 +17,22 @@ export type ResumeEntry = {
   detailed: string[];
 };
 
+export type ResumeAdditionalItem = {
+  label: string;
+  value: string;
+  visibleIn: ResumeDetailLevel[];
+};
+
+export type ResumeAdditionalSection = {
+  id: string;
+  title: string;
+  items: ResumeAdditionalItem[];
+};
+
 export type ResumeData = {
   summary: Record<ResumeDetailLevel, string[]>;
   entries: ResumeEntry[];
+  additionalSections: ResumeAdditionalSection[];
 };
 
 type ResumeMetadata = {
@@ -39,26 +52,20 @@ const SECTION_SORT_ORDER: Record<ResumeSection, number> = {
   training: 2,
 };
 
-const ENTRY_PATTERN = new RegExp(
-  [
-    "(?:^|\\n\\n)## .+\\n\\n```yaml\\n([\\s\\S]*?)\\n```",
-    "\\n\\n### Concise\\n([\\s\\S]*?)",
-    "\\n\\n### Detailed\\n([\\s\\S]*?)(?=\\n\\n## |\\s*$)",
-  ].join(""),
-  "g",
-);
-
-const SUMMARY_PATTERN =
-  /# Summary\n\n## Concise\n([\s\S]*?)\n\n## Detailed\n([\s\S]*?)\n\n# Entries/;
+const YAML_BLOCK_PATTERN = /```yaml\n([\s\S]*?)\n```/;
+const ADDITIONAL_SECTION_PATTERN =
+  /(?:^|\n\n)## ([^\n]+)\n\n([\s\S]*?)(?=\n\n## |\s*$)/g;
 
 export function getResumeData(): ResumeData {
   const markdown = readResumeMarkdown();
   const summary = parseSummary(markdown);
   const entries = parseEntries(markdown);
+  const additionalSections = parseAdditionalSections(markdown);
 
   return {
     summary,
     entries: entries.sort(compareResumeEntries),
+    additionalSections,
   };
 }
 
@@ -74,46 +81,179 @@ function readResumeMarkdown(): string {
     throw new Error("Static resume markdown source was not found.");
   }
 
-  return readFileSync(resumePath, "utf8");
+  return normalizeLineEndings(readFileSync(resumePath, "utf8"));
+}
+
+function normalizeLineEndings(markdown: string): string {
+  return markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
 function parseSummary(markdown: string): ResumeData["summary"] {
-  const match = markdown.match(SUMMARY_PATTERN);
-
-  if (!match) {
-    throw new Error("Resume summary sections are missing or malformed.");
-  }
+  const summaryMarkdown = extractRequiredSection(
+    markdown,
+    "# Summary",
+    "# Entries",
+  );
+  const concise = extractRequiredSection(
+    summaryMarkdown,
+    "## Concise",
+    "## Detailed",
+  );
+  const detailed = extractRequiredSection(summaryMarkdown, "## Detailed");
 
   return {
-    concise: parseParagraphs(match[1]),
-    detailed: parseParagraphs(match[2]),
+    concise: parseParagraphs(concise),
+    detailed: parseParagraphs(detailed),
   };
 }
 
 function parseEntries(markdown: string): ResumeEntry[] {
-  const entriesMarkdown = markdown.split("# Entries")[1];
-
-  if (!entriesMarkdown) {
-    throw new Error("Resume entries section is missing.");
-  }
-
-  const entries = Array.from(entriesMarkdown.matchAll(ENTRY_PATTERN)).map(
-    (match) => {
-      const metadata = parseMetadata(match[1]);
-
-      return {
-        ...metadata,
-        concise: parseBullets(match[2]),
-        detailed: parseBullets(match[3]),
-      };
-    },
+  const entriesMarkdown = extractRequiredSection(
+    markdown,
+    "# Entries",
+    "# Additional Sections",
   );
+  const entryBlocks = splitEntryBlocks(entriesMarkdown);
+  const entries = entryBlocks.map(parseEntryBlock);
 
   if (entries.length === 0) {
     throw new Error("No resume entries were parsed from resume.md.");
   }
 
   return entries;
+}
+
+function splitEntryBlocks(markdown: string): string[] {
+  return markdown
+    .trim()
+    .split(/\n(?=## )/)
+    .map((block) => block.trim())
+    .filter((block) => block.startsWith("## "));
+}
+
+function parseEntryBlock(block: string): ResumeEntry {
+  const yamlMatch = block.match(YAML_BLOCK_PATTERN);
+
+  if (!yamlMatch) {
+    throw new Error("Resume entry metadata block is missing.");
+  }
+
+  const conciseMarkdown = extractRequiredSection(
+    block,
+    "### Concise",
+    "### Detailed",
+  );
+  const detailedMarkdown = extractRequiredSection(block, "### Detailed");
+  const metadata = parseMetadata(yamlMatch[1]);
+
+  return {
+    ...metadata,
+    concise: parseBullets(conciseMarkdown),
+    detailed: parseBullets(detailedMarkdown),
+  };
+}
+
+function parseAdditionalSections(markdown: string): ResumeAdditionalSection[] {
+  const additionalMarkdown = extractOptionalSection(
+    markdown,
+    "# Additional Sections",
+  );
+
+  if (!additionalMarkdown) {
+    return [];
+  }
+
+  return Array.from(
+    additionalMarkdown.matchAll(ADDITIONAL_SECTION_PATTERN),
+  ).map((match) => {
+    const title = match[1].trim();
+
+    return {
+      id: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      title,
+      items: parseAdditionalItems(match[2]),
+    };
+  });
+}
+
+function parseAdditionalItems(markdown: string): ResumeAdditionalItem[] {
+  return markdown
+    .trim()
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .map(parseAdditionalItem);
+}
+
+function parseAdditionalItem(line: string): ResumeAdditionalItem {
+  const separatorIndex = line.indexOf(":");
+
+  if (separatorIndex === -1) {
+    return {
+      label: line,
+      value: "",
+      visibleIn: ["concise", "detailed"],
+    };
+  }
+
+  const rawLabel = line.slice(0, separatorIndex).trim();
+  const { label, visibleIn } = parseAdditionalLabel(rawLabel);
+
+  return {
+    label,
+    value: line.slice(separatorIndex + 1).trim(),
+    visibleIn,
+  };
+}
+
+function parseAdditionalLabel(label: string): {
+  label: string;
+  visibleIn: ResumeDetailLevel[];
+} {
+  const [rawLabel, rawVisibleIn] = label.split("|", 2);
+
+  return {
+    label: rawLabel.trim(),
+    visibleIn: parseVisibleIn(rawVisibleIn),
+  };
+}
+
+function extractRequiredSection(
+  markdown: string,
+  startMarker: string,
+  endMarker?: string,
+): string {
+  const section = extractOptionalSection(markdown, startMarker, endMarker);
+
+  if (!section) {
+    throw new Error(`Resume markdown section is missing: ${startMarker}.`);
+  }
+
+  return section;
+}
+
+function extractOptionalSection(
+  markdown: string,
+  startMarker: string,
+  endMarker?: string,
+): string | null {
+  const startIndex = markdown.indexOf(startMarker);
+
+  if (startIndex === -1) {
+    return null;
+  }
+
+  const contentStart = startIndex + startMarker.length;
+  const endIndex = endMarker
+    ? markdown.indexOf(endMarker, contentStart)
+    : -1;
+
+  if (endMarker && endIndex === -1) {
+    return null;
+  }
+
+  return markdown.slice(contentStart, endIndex === -1 ? undefined : endIndex);
 }
 
 function parseMetadata(block: string): ResumeMetadata {
@@ -155,7 +295,6 @@ function parseSection(value: string | undefined): ResumeSection {
 
   throw new Error(`Unsupported resume section: ${value ?? "missing"}.`);
 }
-
 
 function parseVisibleIn(value: string | undefined): ResumeDetailLevel[] {
   const normalized = optionalText(value);
