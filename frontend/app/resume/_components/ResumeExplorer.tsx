@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type {
+  ResumeAdditionalSection,
   ResumeData,
   ResumeDetailLevel,
   ResumeSection,
@@ -46,6 +47,19 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
       );
     });
   }, [detailLevel, resumeData.entries, selectedSections]);
+
+  const visibleAdditionalSections = useMemo(() => {
+    return resumeData.additionalSections
+      .map((section) => {
+        return {
+          ...section,
+          items: section.items.filter((item) => {
+            return item.visibleIn.includes(detailLevel);
+          }),
+        };
+      })
+      .filter((section) => section.items.length > 0);
+  }, [detailLevel, resumeData.additionalSections]);
 
   return (
     <div className={styles.explorer}>
@@ -110,6 +124,10 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
           Select at least one section to show resume entries.
         </p>
       )}
+
+      {visibleAdditionalSections.length > 0 ? (
+        <AdditionalSections sections={visibleAdditionalSections} />
+      ) : null}
     </div>
   );
 }
@@ -128,6 +146,42 @@ function IntroText() {
         AI-assisted prototyping, then testing, deployment, and support.
       </p>
     </div>
+  );
+}
+
+function AdditionalSections({
+  sections,
+}: Readonly<{
+  sections: ResumeAdditionalSection[];
+}>) {
+  return (
+    <section
+      aria-label="Additional CV sections"
+      className={styles.additionalSections}
+    >
+      {sections.map((section) => (
+        <div className={styles.additionalGroup} key={section.id}>
+          <h2 className={styles.sectionDivider}>
+            <span>{section.title}</span>
+          </h2>
+
+          <div className={styles.additionalItems}>
+            {section.items.map((item) => (
+              <article
+                className={styles.item}
+                key={`${section.id}-${item.label}`}
+              >
+                <small className={styles.period}>{item.label}</small>
+
+                <div className={styles.entryBody}>
+                  <p className={styles.additionalValue}>{item.value}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }
 

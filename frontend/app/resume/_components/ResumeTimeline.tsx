@@ -48,15 +48,8 @@ export function ResumeTimeline({
               </small>
 
               <div className={styles.entryBody}>
-                <h2>{entry.title}</h2>
-
-                {entry.organization || entry.location ? (
-                  <div className={styles.meta}>
-                    {[entry.organization, entry.location]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </div>
-                ) : null}
+                <h2>{renderInlineLinks(entry.title)}</h2>
+                {renderEntryMeta(entry.organization, entry.location)}
 
                 {bullets.length > 0 ? (
                   <ul className={styles.bullets}>
@@ -72,6 +65,28 @@ export function ResumeTimeline({
           </Fragment>
         );
       })}
+    </div>
+  );
+}
+
+function renderEntryMeta(
+  organization: string | undefined,
+  location: string | undefined,
+): ReactNode {
+  const parts = [organization, location].filter(Boolean) as string[];
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={styles.meta}>
+      {parts.map((part, index) => (
+        <Fragment key={`${part}-${index}`}>
+          {index > 0 ? " · " : null}
+          {renderInlineLinks(part)}
+        </Fragment>
+      ))}
     </div>
   );
 }
@@ -95,7 +110,7 @@ function renderInlineLinks(text: string): ReactNode[] {
         className={styles.inlineLink}
         href={href}
         key={`${href}-${matchIndex}`}
-        rel={isExternalLink(href) ? "noreferrer" : undefined}
+        rel={isExternalLink(href) ? "noopener noreferrer" : undefined}
         target={isExternalLink(href) ? "_blank" : undefined}
       >
         {label}
