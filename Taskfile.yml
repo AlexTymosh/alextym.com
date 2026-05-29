@@ -15,11 +15,10 @@ tasks:
       - task --list
 
   ci:
-    desc: Run the checks expected before push or pull request.
+    desc: Run all checks expected before push or pull request.
     cmds:
       - task: backend:check
-      - task: frontend:install
-      - task: frontend:build
+      - task: frontend:check
 
   format:
     desc: Apply backend formatting and safe Ruff fixes.
@@ -61,7 +60,9 @@ tasks:
     desc: Run the FastAPI backend dev server.
     dir: backend
     cmds:
-      - uv run uvicorn app.main:app --reload --host 127.0.0.1 --port {{.BACKEND_PORT}}
+      - >-
+        uv run uvicorn app.main:app --reload --host 127.0.0.1
+        --port {{.BACKEND_PORT}}
 
   backend:lint:
     desc: Run Ruff lint checks.
@@ -95,7 +96,9 @@ tasks:
       UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
       UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
     cmds:
-      - uv run --isolated --env-file .env python -m scripts.ingest_knowledge
+      - >-
+        uv run --isolated --env-file .env
+        python -m scripts.ingest_knowledge
 
   backend:check:
     desc: Run all backend checks.
@@ -106,10 +109,10 @@ tasks:
       - task: backend:test
 
   frontend:install:
-    desc: Install frontend dependencies.
+    desc: Install frontend dependencies from package-lock.json.
     dir: frontend
     cmds:
-      - npm install
+      - npm ci
 
   frontend:dev:
     desc: Run the Next.js frontend dev server.
@@ -120,6 +123,12 @@ tasks:
         -File "{{.ROOT_DIR}}/scripts/frontend-dev.ps1"
         -BackendPort {{.BACKEND_PORT}}
         -FrontendPort {{.FRONTEND_PORT}}
+
+  frontend:lint:
+    desc: Run frontend ESLint checks.
+    dir: frontend
+    cmds:
+      - npm run lint
 
   frontend:build:
     desc: Build the frontend.
@@ -138,6 +147,15 @@ tasks:
     dir: frontend
     cmds:
       - npm run e2e
+
+  frontend:check:
+    desc: Run all frontend checks.
+    cmds:
+      - task: frontend:install
+      - task: frontend:lint
+      - task: frontend:build
+      - task: frontend:e2e:install
+      - task: frontend:e2e
 
   docker:build:
     desc: Build the backend Docker image.
