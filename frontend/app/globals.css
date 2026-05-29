@@ -809,7 +809,7 @@ p {
 }
 
 .resume-panel__header {
-  max-width: 720px;
+  max-width: none;
 }
 
 .resume-download {
