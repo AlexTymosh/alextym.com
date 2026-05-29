@@ -145,8 +145,14 @@ test("filters additional sections by detail level", async ({ page }) => {
   await page.goto("/resume");
 
   const additionalSections = page.getByLabel("Additional CV sections");
+  const languagesHeading = additionalSections.getByRole("heading", {
+    name: "Languages",
+  });
+  const referencesHeading = additionalSections.getByRole("heading", {
+    name: "References",
+  });
 
-  await expect(additionalSections.getByText("Languages")).toBeVisible();
+  await expect(languagesHeading).toBeVisible();
   await expect(additionalSections.getByText("English")).toBeVisible();
   await expect(
     additionalSections.getByText("B1/B2, Intermediate to Upper-Intermediate"),
@@ -154,14 +160,14 @@ test("filters additional sections by detail level", async ({ page }) => {
   await expect(additionalSections.getByText("Ukrainian")).toBeHidden();
   await expect(additionalSections.getByText("Russian")).toBeHidden();
   await expect(additionalSections.getByText("Polish")).toBeHidden();
-  await expect(additionalSections.getByText("References")).toBeHidden();
+  await expect(referencesHeading).toBeHidden();
 
   await page.getByRole("button", { name: "Detailed" }).click();
 
   await expect(additionalSections.getByText("Ukrainian")).toBeVisible();
   await expect(additionalSections.getByText("Russian")).toBeVisible();
   await expect(additionalSections.getByText("Polish")).toBeVisible();
-  await expect(additionalSections.getByText("References")).toBeVisible();
+  await expect(referencesHeading).toBeVisible();
   await expect(
     additionalSections.getByText("Available upon request."),
   ).toBeVisible();
