@@ -95,7 +95,9 @@ test("starts handoff and displays streamed Alex reply", async ({ page }) => {
   await page.getByText("Connect me with Alex").click();
 
   await expect(page.getByText("Alex has been notified")).toBeVisible();
-  await expect(page.getByText("Alex:")).toBeVisible();
+  await expect(page.locator(".message--alex .message__sender")).toHaveText(
+    "Alex",
+  );
   await expect(page.getByText("Thanks, I can see this handoff.")).toBeVisible();
 
   expect(escalationPayload).toMatchObject({

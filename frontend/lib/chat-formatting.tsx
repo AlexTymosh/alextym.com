@@ -44,7 +44,7 @@ export function getRenderableMessageText(
   thinkingLabel: string,
 ): string {
   if (message.text) {
-    return message.role === "alex" ? `Alex:\n\n${message.text}` : message.text;
+    return message.text;
   }
 
   return message.role === "assistant" ? thinkingLabel : "";
@@ -102,3 +102,4 @@ export function renderMessageText(text: string) {
 
   return nodes.length ? nodes : <p>{normalizedText}</p>;
 }
+
