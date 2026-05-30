@@ -26,7 +26,7 @@
   border-radius: 14px;
   background:
     linear-gradient(to top, var(--surface) 0%, transparent 70%),
-    linear-gradient(135deg, rgba(20, 58, 92, 0.42), transparent 55%);
+    linear-gradient(135deg, var(--project-preview-glow), transparent 55%);
 }
 
 .projectPreviewHeading {
@@ -35,7 +35,11 @@
   align-items: center;
   padding: 0 14px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-strong) 72%, #16435a);
+  background: color-mix(
+    in srgb,
+    var(--surface-strong) 72%,
+    var(--project-preview-bar-mix)
+  );
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
@@ -59,7 +63,11 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-strong) 84%, #0f2730);
+  background: color-mix(
+    in srgb,
+    var(--surface-strong) 84%,
+    var(--project-preview-tile-mix)
+  );
 }
 
 .projectPreviewTileTopLeft {
@@ -113,7 +121,6 @@
   display: grid;
   gap: 10px;
 }
-
 
 .portfolioCopy h2 {
   margin: 0;

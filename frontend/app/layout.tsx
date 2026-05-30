@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { SiteNavigation } from "../components/site-navigation";
 import "./globals.css";
 import "./chat-messages.css";
+import "./theme-overrides.css";
 
 export const metadata: Metadata = {
   title: "alextym",
@@ -14,10 +15,16 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  const themeScript =
-    `(()=>{try{document.documentElement.dataset.theme=` +
-    `localStorage.getItem("alextym-theme")||"dark"}catch(e){` +
-    `document.documentElement.dataset.theme="dark"}})();`;
+  const themeScript = `
+(() => {
+  try {
+    const storedTheme = localStorage.getItem("alextym-theme");
+    const theme = storedTheme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+  } catch {
+    document.documentElement.dataset.theme = "dark";
+  }
+})();`;
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -1,0 +1,11 @@
+:root {
+  --project-preview-glow: rgba(20, 58, 92, 0.42);
+  --project-preview-bar-mix: #16435a;
+  --project-preview-tile-mix: #0f2730;
+}
+
+:root[data-theme="light"] {
+  --project-preview-glow: rgba(215, 68, 22, 0.11);
+  --project-preview-bar-mix: #f1d8c9;
+  --project-preview-tile-mix: #efe5da;
+}
