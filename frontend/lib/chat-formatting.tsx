@@ -1,42 +1,20 @@
 import type { ReactNode } from "react";
 import type { HandoffState, Message } from "../types/chat";
 
-export function handoffStatusCopy(
-  state: HandoffState,
-  expiresInSeconds: number | null,
-): string {
-  const expirySuffix = expiresInSeconds
-    ? ` This session stays open for about ${formatDuration(expiresInSeconds)}.`
-    : "";
-
-  if (state === "connected") {
-    return (
-      "Alex has replied in this chat. New messages you send here will go " +
-      `to Alex.${expirySuffix}`
-    );
+export function handoffStatusCopy(state: HandoffState): string | null {
+  if (state === "waiting_for_alex" || state === "connected") {
+    return null;
   }
   if (state === "closed") {
     return (
-      "This handoff session has closed. You can continue with the AI " +
-      "assistant or request a new connection."
+      "This handoff session has closed. New messages go back to " +
+      "the AI assistant."
     );
   }
   if (state === "error") {
     return "The live handoff connection is reconnecting. Keep this page open.";
   }
-  return (
-    "Waiting for Alex. His replies will appear here automatically, and " +
-    `new messages you send here will go to Alex.${expirySuffix}`
-  );
-}
-
-export function formatDuration(totalSeconds: number): string {
-  const minutes = Math.max(1, Math.round(totalSeconds / 60));
-  if (minutes < 60) {
-    return `${minutes} minutes`;
-  }
-  const hours = Math.round(minutes / 60);
-  return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  return null;
 }
 
 export function getRenderableMessageText(

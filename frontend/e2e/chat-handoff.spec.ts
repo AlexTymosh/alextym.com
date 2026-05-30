@@ -94,7 +94,9 @@ test("starts handoff and displays streamed Alex reply", async ({ page }) => {
   await askQuestion(page, "Can you answer this unclear question?");
   await page.getByText("Connect me with Alex").click();
 
-  await expect(page.getByText("Alex has been notified")).toBeVisible();
+  await expect(
+    page.getByText("can review this chat for context"),
+  ).toBeVisible();
   await expect(page.locator(".message--alex .message__sender")).toHaveText(
     "Alex",
   );
@@ -124,7 +126,9 @@ test("sends visitor messages to Alex during an active handoff", async ({
   await page.goto("/chat");
   await askQuestion(page, "Can you answer this unclear question?");
   await page.getByText("Connect me with Alex").click();
-  await expect(page.getByText("Human handoff is active.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "End handoff with Alex" }),
+  ).toBeVisible();
 
   await askQuestion(page, "Could you share more details about the role?");
 
@@ -181,9 +185,11 @@ test("closes handoff and sends later messages back to AI", async ({ page }) => {
   await page.goto("/chat");
   await askQuestion(page, "Can you answer this unclear question?");
   await page.getByText("Connect me with Alex").click();
-  await expect(page.getByText("Human handoff is active.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "End handoff with Alex" }),
+  ).toBeVisible();
 
-  await page.getByText("End handoff").click();
+  await page.getByRole("button", { name: "End handoff with Alex" }).click();
 
   expect(closeCalled).toBe(true);
   await expect(page.getByText("This handoff has been closed.")).toBeVisible();
