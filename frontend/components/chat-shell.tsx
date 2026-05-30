@@ -41,6 +41,11 @@ const DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE =
   "Live handoff is available from 09:00 to 21:00 Europe/London time. " +
   "Please try again during those hours or use the contact form.";
 
+const HANDOFF_NAME_REQUEST_MESSAGE =
+  "Alex has been notified and can review this chat for context.\n\n" +
+  "While Alex is getting ready to answer, could you tell me how I should " +
+  "address you?";
+
 export function ChatShell() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -132,6 +137,13 @@ export function ChatShell() {
   const handoffStatusText = useMemo(() => {
     return handoffId ? handoffStatusCopy(handoffState) : null;
   }, [handoffId, handoffState]);
+
+  const unavailableMessageCopy = useMemo(() => {
+    if (!handoffUnavailableMessage) {
+      return null;
+    }
+    return formatHandoffUnavailableMessage(handoffUnavailableMessage);
+  }, [handoffUnavailableMessage]);
 
   const shouldShowHandoffPrompt = useMemo(() => {
     if (
@@ -439,9 +451,7 @@ export function ChatShell() {
           id: createMessageId("assistant"),
           role: "assistant",
           text: nextHandoffId
-            ? "Alex has been notified and can review this chat for context.\n" +
-              "Keep this page open — any replies from Alex will appear here " +
-              "automatically."
+            ? HANDOFF_NAME_REQUEST_MESSAGE
             : "Alex has been notified and will be able to review this chat " +
               "for context.",
         },
@@ -729,11 +739,25 @@ export function ChatShell() {
           {handoffStatusText}
         </p>
       ) : null}
-      {handoffUnavailableMessage ? (
-        <p className="chat-shell__notice chat-shell__notice--handoff">
-          <span>{handoffUnavailableMessage}</span>{" "}
-          <a href="/contact">Open the contact form</a>.
-        </p>
+      {unavailableMessageCopy ? (
+        <div className="chat-shell__notice chat-shell__notice--handoff">
+          <span>{unavailableMessageCopy.availabilityLine}</span>
+          <br />
+          <span>
+            {unavailableMessageCopy.retryLine}{" "}
+            <a
+              href="/contact"
+              style={{
+                color: "var(--text)",
+                textDecoration: "underline",
+                textUnderlineOffset: "3px",
+              }}
+            >
+              Open the contact form
+            </a>
+            .
+          </span>
+        </div>
       ) : null}
       {warmupStatus === "error" ? (
         <p className="chat-shell__notice">
@@ -779,4 +803,22 @@ export function ChatShell() {
       </form>
     </section>
   );
+}
+
+function formatHandoffUnavailableMessage(message: string): {
+  availabilityLine: string;
+  retryLine: string;
+} {
+  const retryLine = "Please try again during those hours or use the contact form.";
+  const fallbackLine = DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE.replace(
+    ` ${retryLine}`,
+    "",
+  );
+  const trimmedMessage = message.trim() || DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE;
+  const availabilityLine = trimmedMessage.replace(` ${retryLine}`, "").trim();
+
+  return {
+    availabilityLine: availabilityLine || fallbackLine,
+    retryLine,
+  };
 }
