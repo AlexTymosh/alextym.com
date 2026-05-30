@@ -22,6 +22,7 @@ from app.services.escalation import (
     EscalationNotFoundError,
     EscalationService,
 )
+from app.services.handoff_availability import HandoffUnavailableError
 
 router = APIRouter(tags=["escalation"])
 
@@ -44,10 +45,13 @@ async def escalate(
     service: EscalationService = Depends(get_escalation_service),
 ) -> EscalationResponse:
     if not escalation_request.is_honeypot_filled:
+        _ensure_handoff_available(service)
         enforce_escalation_rate_limit(request, settings)
 
     try:
         return await service.submit(escalation_request)
+    except HandoffUnavailableError as exc:
+        raise _handoff_unavailable_http_exception(exc) from exc
     except EscalationConfigurationError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -74,10 +78,13 @@ async def send_escalation_message(
     if message_request.is_honeypot_filled:
         return EscalationMessageResponse()
 
+    _ensure_handoff_available(service)
     enforce_escalation_message_rate_limit(request, settings)
 
     try:
         return await service.submit_user_message(handoff_id, message_request)
+    except HandoffUnavailableError as exc:
+        raise _handoff_unavailable_http_exception(exc) from exc
     except EscalationConfigurationError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -172,4 +179,20 @@ async def stream_escalation_messages(
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+def _ensure_handoff_available(service: EscalationService) -> None:
+    try:
+        service.ensure_handoff_available()
+    except HandoffUnavailableError as exc:
+        raise _handoff_unavailable_http_exception(exc) from exc
+
+
+def _handoff_unavailable_http_exception(
+    exc: HandoffUnavailableError,
+) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=exc.status.to_http_detail(),
     )

@@ -12,6 +12,7 @@ import { useAnimatedLabel } from "../hooks/use-animated-label";
 import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
 import {
   closeEscalationStream,
+  isHandoffUnavailableError,
   normaliseHandoffState,
   parseEscalationStreamMessage,
   submitEscalation,
@@ -36,6 +37,10 @@ import {
 } from "../lib/chat-formatting";
 import type { HandoffState, Message, QuickPrompt } from "../types/chat";
 
+const DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE =
+  "Live handoff is available from 09:00 to 21:00 Europe/London time. " +
+  "Please try again during those hours or use the contact form.";
+
 export function ChatShell() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -44,6 +49,9 @@ export function ChatShell() {
   >("warming");
   const [isThinking, setIsThinking] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [handoffUnavailableMessage, setHandoffUnavailableMessage] = useState<
+    string | null
+  >(null);
   const [isEscalating, setIsEscalating] = useState(false);
   const [isSendingHandoffMessage, setIsSendingHandoffMessage] = useState(false);
   const [isClosingHandoff, setIsClosingHandoff] = useState(false);
@@ -168,7 +176,13 @@ export function ChatShell() {
       return;
     }
     chatBody.scrollTop = chatBody.scrollHeight;
-  }, [handoffState, messages, notice, shouldShowHandoffPrompt]);
+  }, [
+    handoffState,
+    handoffUnavailableMessage,
+    messages,
+    notice,
+    shouldShowHandoffPrompt,
+  ]);
 
   useEffect(() => {
     const textarea = messageInputRef.current;
@@ -192,6 +206,7 @@ export function ChatShell() {
     setMessages([]);
     setIsThinking(false);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
     setIsEscalating(false);
     setIsSendingHandoffMessage(false);
     setIsClosingHandoff(false);
@@ -220,6 +235,7 @@ export function ChatShell() {
     setInput("");
     setIsThinking(true);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
     setDismissedHandoffMessageCount(null);
 
     try {
@@ -267,6 +283,7 @@ export function ChatShell() {
       ]);
       setInput("");
       setNotice(null);
+      setHandoffUnavailableMessage(null);
       setDismissedHandoffMessageCount(null);
       return;
     }
@@ -287,6 +304,7 @@ export function ChatShell() {
     setInput("");
     setIsThinking(true);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
     setDismissedHandoffMessageCount(null);
 
     try {
@@ -298,8 +316,7 @@ export function ChatShell() {
           streamedText += token;
           updateAssistantMessage(assistantId, { text: streamedText });
         },
-        onSources: (sources) =>
-          updateAssistantMessage(assistantId, { sources }),
+        onSources: (sources) => updateAssistantMessage(assistantId, { sources }),
         onDone: (done) =>
           updateAssistantMessage(assistantId, {
             confidence: done.confidence,
@@ -367,6 +384,7 @@ export function ChatShell() {
 
     setIsSendingHandoffMessage(true);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
 
     try {
       await submitEscalationMessage(handoffId, messageText);
@@ -376,7 +394,11 @@ export function ChatShell() {
       ]);
       setInput("");
       setDismissedHandoffMessageCount(null);
-    } catch {
+    } catch (error) {
+      if (isHandoffUnavailableError(error)) {
+        showHandoffUnavailableMessage(error.message);
+        return;
+      }
       setNotice(
         "Could not send this message to Alex right now. Please try again later.",
       );
@@ -392,6 +414,7 @@ export function ChatShell() {
 
     setIsEscalating(true);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
 
     try {
       const response = await submitEscalation(
@@ -423,7 +446,12 @@ export function ChatShell() {
               "for context.",
         },
       ]);
-    } catch {
+    } catch (error) {
+      if (isHandoffUnavailableError(error)) {
+        showHandoffUnavailableMessage(error.message);
+        setDismissedHandoffMessageCount(messages.length);
+        return;
+      }
       setNotice(
         "Could not connect with Alex right now. Please try again later.",
       );
@@ -439,6 +467,7 @@ export function ChatShell() {
 
     setIsClosingHandoff(true);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
 
     try {
       await submitEscalationClose(handoffId);
@@ -464,6 +493,12 @@ export function ChatShell() {
   function continueWithAi() {
     setDismissedHandoffMessageCount(messages.length);
     setNotice(null);
+    setHandoffUnavailableMessage(null);
+  }
+
+  function showHandoffUnavailableMessage(message: string) {
+    setHandoffUnavailableMessage(message || DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE);
+    setNotice(null);
   }
 
   function openEscalationStream(nextHandoffId: string) {
@@ -476,6 +511,7 @@ export function ChatShell() {
 
     eventSource.addEventListener("meta", () => {
       setNotice(null);
+      setHandoffUnavailableMessage(null);
       setHandoffState((currentState) =>
         currentState === "connected" ? "connected" : "waiting_for_alex",
       );
@@ -498,6 +534,7 @@ export function ChatShell() {
       ]);
       setHandoffState("connected");
       setNotice(null);
+      setHandoffUnavailableMessage(null);
     });
 
     eventSource.addEventListener("closed", () => {
@@ -692,6 +729,12 @@ export function ChatShell() {
           {handoffStatusText}
         </p>
       ) : null}
+      {handoffUnavailableMessage ? (
+        <p className="chat-shell__notice chat-shell__notice--handoff">
+          <span>{handoffUnavailableMessage}</span>{" "}
+          <a href="/contact">Open the contact form</a>.
+        </p>
+      ) : null}
       {warmupStatus === "error" ? (
         <p className="chat-shell__notice">
           Backend warm-up is unavailable in this environment. The assistant may
@@ -737,4 +780,3 @@ export function ChatShell() {
     </section>
   );
 }
-

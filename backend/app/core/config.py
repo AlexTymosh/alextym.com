@@ -35,6 +35,10 @@ class Settings:
     upstash_redis_rest_url: str = ""
     upstash_redis_rest_token: str = ""
     escalation_session_ttl_seconds: int = 7200
+    handoff_availability_enabled: bool = True
+    handoff_availability_timezone: str = "Europe/London"
+    handoff_availability_start: str = "09:00"
+    handoff_availability_end: str = "21:00"
 
 
 def _load_env_file(env_path: Path) -> None:
@@ -114,7 +118,10 @@ def get_settings() -> Settings:
         frontend_origin=os.getenv("FRONTEND_ORIGIN", "http://localhost:3000"),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         openai_model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
-        openai_embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+        openai_embedding_model=os.getenv(
+            "OPENAI_EMBEDDING_MODEL",
+            "text-embedding-3-small",
+        ),
         openai_embedding_dimensions=_get_int("OPENAI_EMBEDDING_DIMENSIONS", 1536),
         openai_max_output_tokens=_get_int("OPENAI_MAX_OUTPUT_TOKENS", 600),
         openai_reasoning_effort=os.getenv("OPENAI_REASONING_EFFORT", "low"),
@@ -134,8 +141,30 @@ def get_settings() -> Settings:
         telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", ""),
         telegram_webhook_url=os.getenv("TELEGRAM_WEBHOOK_URL", ""),
         escalation_daily_limit_per_ip=_get_int("ESCALATION_DAILY_LIMIT_PER_IP", 3),
-        escalation_message_daily_limit_per_ip=_get_int("ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP", 30),
+        escalation_message_daily_limit_per_ip=_get_int(
+            "ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP",
+            30,
+        ),
         upstash_redis_rest_url=os.getenv("UPSTASH_REDIS_REST_URL", ""),
         upstash_redis_rest_token=os.getenv("UPSTASH_REDIS_REST_TOKEN", ""),
-        escalation_session_ttl_seconds=_get_int("ESCALATION_SESSION_TTL_SECONDS", 7200),
+        escalation_session_ttl_seconds=_get_int(
+            "ESCALATION_SESSION_TTL_SECONDS",
+            7200,
+        ),
+        handoff_availability_enabled=_get_bool(
+            "HANDOFF_AVAILABILITY_ENABLED",
+            True,
+        ),
+        handoff_availability_timezone=os.getenv(
+            "HANDOFF_AVAILABILITY_TIMEZONE",
+            "Europe/London",
+        ),
+        handoff_availability_start=os.getenv(
+            "HANDOFF_AVAILABILITY_START",
+            "09:00",
+        ),
+        handoff_availability_end=os.getenv(
+            "HANDOFF_AVAILABILITY_END",
+            "21:00",
+        ),
     )
