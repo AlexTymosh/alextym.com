@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import {
   ESCALATION_CONSENT_COPY,
   quickPrompts,
@@ -50,12 +50,11 @@ export function ChatShell() {
   const [escalationSent, setEscalationSent] = useState(false);
   const [handoffId, setHandoffId] = useState<string | null>(null);
   const [handoffState, setHandoffState] = useState<HandoffState>("idle");
-  const [handoffExpiresInSeconds, setHandoffExpiresInSeconds] = useState<
-    number | null
-  >(null);
   const [dismissedHandoffMessageCount, setDismissedHandoffMessageCount] =
     useState<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const chatBodyRef = useRef<HTMLDivElement | null>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const escalationEventSourceRef = useRef<EventSource | null>(null);
   const seenEscalationMessageIdsRef = useRef<Set<string>>(new Set());
 
@@ -122,6 +121,10 @@ export function ChatShell() {
     return "Ask my assistant anything...";
   }, [handoffId, handoffState]);
 
+  const handoffStatusText = useMemo(() => {
+    return handoffId ? handoffStatusCopy(handoffState) : null;
+  }, [handoffId, handoffState]);
+
   const shouldShowHandoffPrompt = useMemo(() => {
     if (
       isThinking ||
@@ -159,6 +162,27 @@ export function ChatShell() {
     messages,
   ]);
 
+  useEffect(() => {
+    const chatBody = chatBodyRef.current;
+    if (!chatBody) {
+      return;
+    }
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }, [handoffState, messages, notice, shouldShowHandoffPrompt]);
+
+  useEffect(() => {
+    const textarea = messageInputRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const maxHeight = 132;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [input]);
+
   function resetChat() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -174,7 +198,6 @@ export function ChatShell() {
     setEscalationSent(false);
     setHandoffId(null);
     setHandoffState("idle");
-    setHandoffExpiresInSeconds(null);
     setDismissedHandoffMessageCount(null);
   }
 
@@ -380,7 +403,6 @@ export function ChatShell() {
       setEscalationSent(true);
       setDismissedHandoffMessageCount(messages.length);
       setHandoffId(nextHandoffId);
-      setHandoffExpiresInSeconds(response.expires_in_seconds ?? null);
       setHandoffState(nextHandoffId ? nextState : "idle");
 
       if (nextHandoffId) {
@@ -394,13 +416,11 @@ export function ChatShell() {
           id: createMessageId("assistant"),
           role: "assistant",
           text: nextHandoffId
-            ? "Alex has been notified and can review this chat for context. " +
+            ? "Alex has been notified and can review this chat for context.\n" +
               "Keep this page open — any replies from Alex will appear here " +
-              "automatically. You can continue with the AI assistant while " +
-              "you wait."
+              "automatically."
             : "Alex has been notified and will be able to review this chat " +
-              "for context. You can continue with the AI assistant while " +
-              "you wait.",
+              "for context.",
         },
       ]);
     } catch {
@@ -510,6 +530,15 @@ export function ChatShell() {
     void sendMessage(input);
   }
 
+  function handleInputKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    void sendMessage(input);
+  }
+
   return (
     <section className="chat-shell" aria-label="AI digital assistant">
       <div className="chat-shell__header">
@@ -533,7 +562,14 @@ export function ChatShell() {
         </button>
       </div>
 
-      <div className="chat-shell__body">
+      <div
+        ref={chatBodyRef}
+        className={
+          messages.length === 0
+            ? "chat-shell__body chat-shell__body--empty"
+            : "chat-shell__body"
+        }
+      >
         {messages.length === 0 ? (
           <div className="chat-shell__empty">
             <div className="assistant-orb" aria-hidden="true">
@@ -601,7 +637,7 @@ export function ChatShell() {
 
       {shouldShowHandoffPrompt ? (
         <div
-          className="message message--assistant"
+          className="message message--assistant handoff-prompt"
           role="region"
           aria-label="Connect with Alex"
         >
@@ -641,36 +677,19 @@ export function ChatShell() {
       ) : null}
 
       {isHumanHandoffActive(handoffId, handoffState) ? (
-        <div
-          className="message message--assistant"
-          role="region"
-          aria-label="Active handoff"
+        <button
+          type="button"
+          className="handoff-toolbar"
+          onClick={() => void closeHandoff()}
+          disabled={isClosingHandoff}
         >
-          <div className="message__content">
-            <p>
-              <strong>Human handoff is active.</strong>
-            </p>
-            <p>Messages you send now go to Alex, not to the AI assistant.</p>
-          </div>
-          <div className="prompt-list" aria-label="Active handoff actions">
-            <button
-              type="button"
-              className="prompt-button"
-              onClick={() => void closeHandoff()}
-              disabled={isClosingHandoff}
-            >
-              <span className="prompt-button__icon" aria-hidden="true">
-                {">"}
-              </span>
-              <span>{isClosingHandoff ? "Closing..." : "End handoff"}</span>
-            </button>
-          </div>
-        </div>
+          {isClosingHandoff ? "Closing..." : "End handoff with Alex"}
+        </button>
       ) : null}
 
-      {handoffId ? (
-        <p className="chat-shell__notice">
-          {handoffStatusCopy(handoffState, handoffExpiresInSeconds)}
+      {handoffStatusText ? (
+        <p className="chat-shell__notice chat-shell__notice--handoff">
+          {handoffStatusText}
         </p>
       ) : null}
       {warmupStatus === "error" ? (
@@ -685,12 +704,15 @@ export function ChatShell() {
         <label className="sr-only" htmlFor="chat-message">
           Ask Alex&apos;s AI assistant
         </label>
-        <input
+        <textarea
+          ref={messageInputRef}
           id="chat-message"
           value={input}
           onChange={(event) => setInput(event.target.value)}
+          onKeyDown={handleInputKeyDown}
           placeholder={inputPlaceholder}
           maxLength={2000}
+          rows={1}
           disabled={
             isThinking ||
             isEscalating ||

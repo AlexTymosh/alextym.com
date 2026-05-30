@@ -21,3 +21,152 @@
 .message--alex .message__content {
   color: var(--text);
 }
+
+.chat-shell {
+  height: min(1000px, calc(100vh - 130px));
+  min-height: min(805px, calc(100vh - 130px));
+}
+
+.chat-shell__body {
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.chat-shell__body--empty {
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-shell__empty {
+  margin: auto;
+}
+
+.message-list {
+  align-self: stretch;
+  margin-top: auto;
+}
+
+.handoff-prompt {
+  width: fit-content;
+  max-width: min(60%, 410px);
+  margin: 0 0 14px 26px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-left: 3px solid color-mix(in srgb, var(--accent) 58%, var(--border));
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, var(--accent-soft), transparent 94%),
+    color-mix(in srgb, var(--surface-strong) 88%, var(--surface));
+  color: var(--muted);
+}
+
+.handoff-prompt .message__content {
+  gap: 5px;
+}
+
+.handoff-prompt .message__content strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.handoff-prompt .message__content p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.handoff-prompt .prompt-list {
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.handoff-prompt .prompt-button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border));
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  font-size: 13px;
+}
+
+.handoff-prompt .prompt-button__icon {
+  width: 18px;
+}
+
+.handoff-toolbar {
+  width: fit-content;
+  max-width: calc(100% - 36px);
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  justify-content: center;
+  margin: 0 18px 10px auto;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-strong));
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.handoff-toolbar:hover:not(:disabled) {
+  background: var(--accent);
+  color: white;
+}
+
+.chat-shell__notice--handoff {
+  color: var(--muted-strong);
+}
+
+
+.chat-shell__form {
+  align-items: end;
+}
+
+.chat-shell__form button {
+  min-height: 44px;
+  align-self: end;
+}
+
+.chat-shell__form textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 132px;
+  padding: 11px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  outline: none;
+  resize: none;
+  overflow-y: hidden;
+  line-height: 1.35;
+}
+
+.chat-shell__form textarea::placeholder {
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .chat-shell {
+    height: calc(100vh - 138px);
+    min-height: 520px;
+  }
+
+  .handoff-prompt {
+    max-width: calc(100% - 36px);
+    margin: 0 18px 12px;
+  }
+
+  .handoff-toolbar {
+    max-width: calc(100% - 28px);
+    margin-right: 14px;
+  }
+}
