@@ -98,16 +98,17 @@ class TelegramEscalationNotifier:
         try:
             if handoff_id:
                 await self._telegram_client.send_message(
-                    _build_telegram_transcript_message(
-                        escalation_request,
-                        handoff_id=handoff_id,
-                    )
-                )
-                await self._telegram_client.send_message(
                     _build_telegram_control_message(
                         escalation_request,
                         handoff_id=handoff_id,
                     )
+                )
+                await self._telegram_client.send_text_document(
+                    _build_telegram_transcript_message(
+                        escalation_request,
+                        handoff_id=handoff_id,
+                    ),
+                    filename=_build_telegram_transcript_filename(handoff_id),
                 )
                 return
 
@@ -381,18 +382,34 @@ def _build_telegram_control_message(
     handoff_id: str,
 ) -> str:
     created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
-    return "\n".join(
+    last_user_message = _last_user_message(escalation_request)
+    lines = [
+        "New handoff request from alextym.com",
+        f"Created at: {created_at}",
+        f"Reason: {escalation_request.reason}",
+        f"Handoff ID: {handoff_id}",
+        f"State: {ESCALATION_SESSION_STATE_WAITING_FOR_ALEX}",
+        f"Messages: {len(escalation_request.transcript)}",
+    ]
+
+    if last_user_message:
+        lines.extend(
+            [
+                "",
+                "Last user message:",
+                _clip_control_text(last_user_message),
+            ]
+        )
+
+    lines.extend(
         [
-            "New handoff request from alextym.com",
-            f"Created at: {created_at}",
-            f"Reason: {escalation_request.reason}",
-            f"Handoff ID: {handoff_id}",
-            f"State: {ESCALATION_SESSION_STATE_WAITING_FOR_ALEX}",
             "",
             "Reply to this message to answer the website chat.",
+            "The full transcript is attached as a text file.",
             f"Use /close {handoff_id} to close the handoff.",
         ]
     )
+    return "\n".join(lines)
 
 
 def _build_telegram_transcript_message(
@@ -423,6 +440,10 @@ def _build_telegram_transcript_message(
     )
 
 
+def _build_telegram_transcript_filename(handoff_id: str) -> str:
+    return f"handoff-transcript-{handoff_id}.txt"
+
+
 def _build_telegram_user_message_notification(
     message_request: EscalationMessageRequest,
     *,
@@ -438,6 +459,20 @@ def _build_telegram_user_message_notification(
             f"Use /close {handoff_id} to close the handoff.",
         ]
     )
+
+
+def _last_user_message(escalation_request: EscalationRequest) -> str:
+    for item in reversed(escalation_request.transcript):
+        if item.role == "user":
+            return item.content
+    return ""
+
+
+def _clip_control_text(text: str, max_chars: int = 500) -> str:
+    compact_text = " ".join(text.split())
+    if len(compact_text) <= max_chars:
+        return compact_text
+    return compact_text[: max_chars - 1].rstrip() + "…"
 
 
 def _message_ids_through(
