@@ -571,12 +571,11 @@ export function ChatShell() {
             {messages.map((message, index) => (
               <div
                 key={message.id || `${message.role}-${index}`}
-                className={
-                  `message message--${
-                    message.role === "alex" ? "assistant" : message.role
-                  }`
-                }
+                className={`message message--${message.role}`}
               >
+                {message.role === "alex" ? (
+                  <div className="message__sender">Alex</div>
+                ) : null}
                 <div className="message__content">
                   {renderMessageText(
                     getRenderableMessageText(message, thinkingLabel),
