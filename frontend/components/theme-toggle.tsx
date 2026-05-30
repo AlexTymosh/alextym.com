@@ -1,21 +1,49 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "dark" | "light";
 
 const storageKey = "alextym-theme";
 const themeChangeEvent = "alextym-theme-change";
 
-function readTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "dark";
+function normalizeTheme(value: string | null | undefined): Theme | null {
+  if (value === "light" || value === "dark") {
+    return value;
   }
 
-  return localStorage.getItem(storageKey) === "light" ? "light" : "dark";
+  return null;
+}
+
+function readStoredTheme(): Theme | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return normalizeTheme(window.localStorage.getItem(storageKey));
+  } catch {
+    return null;
+  }
+}
+
+function readDocumentTheme(): Theme | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return normalizeTheme(document.documentElement.dataset.theme);
+}
+
+function readTheme(): Theme {
+  return readStoredTheme() ?? readDocumentTheme() ?? "dark";
 }
 
 function subscribeToThemeChanges(callback: () => void) {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
   window.addEventListener("storage", callback);
   window.addEventListener(themeChangeEvent, callback);
 
@@ -27,19 +55,26 @@ function subscribeToThemeChanges(callback: () => void) {
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  localStorage.setItem(storageKey, theme);
+
+  try {
+    window.localStorage.setItem(storageKey, theme);
+  } catch {
+    // The DOM theme still changes if storage is unavailable.
+  }
+
   window.dispatchEvent(new Event(themeChangeEvent));
 }
 
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribeToThemeChanges, readTheme, () => "dark");
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+  const theme = useSyncExternalStore(
+    subscribeToThemeChanges,
+    readTheme,
+    () => "dark",
+  );
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
+
     applyTheme(nextTheme);
   }
 
