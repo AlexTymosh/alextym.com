@@ -21,6 +21,11 @@ from app.services.escalation_sessions import (
     EscalationSessionStoreError,
     build_escalation_session_store,
 )
+from app.services.handoff_availability import (
+    AlwaysAvailableHandoffAvailabilityChecker,
+    HandoffAvailabilityChecker,
+    build_handoff_availability_checker,
+)
 from app.services.telegram import TelegramBotClient, TelegramDeliveryError
 
 
@@ -145,12 +150,16 @@ class EscalationService:
         session_ttl_seconds: int = 7200,
         stream_poll_interval_seconds: float = 1.0,
         stream_heartbeat_interval_seconds: float = 15.0,
+        availability_checker: HandoffAvailabilityChecker | None = None,
     ) -> None:
         self._notifier = notifier
         self._session_store = session_store
         self._session_ttl_seconds = session_ttl_seconds
         self._stream_poll_interval_seconds = stream_poll_interval_seconds
         self._stream_heartbeat_interval_seconds = stream_heartbeat_interval_seconds
+        self._availability_checker = (
+            availability_checker or AlwaysAvailableHandoffAvailabilityChecker()
+        )
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "EscalationService":
@@ -162,6 +171,7 @@ class EscalationService:
         has_partial_config = any(configured_values)
 
         session_store = build_escalation_session_store(settings)
+        availability_checker = build_handoff_availability_checker(settings)
 
         if is_configured:
             return cls(
@@ -173,6 +183,7 @@ class EscalationService:
                 ),
                 session_store=session_store,
                 session_ttl_seconds=settings.escalation_session_ttl_seconds,
+                availability_checker=availability_checker,
             )
 
         if settings.environment in {"local", "test"} and not has_partial_config:
@@ -180,13 +191,23 @@ class EscalationService:
                 notifier=NoopEscalationNotifier(),
                 session_store=session_store,
                 session_ttl_seconds=settings.escalation_session_ttl_seconds,
+                availability_checker=availability_checker,
             )
 
-        return cls(notifier=None, session_store=session_store)
+        return cls(
+            notifier=None,
+            session_store=session_store,
+            availability_checker=availability_checker,
+        )
+
+    def ensure_handoff_available(self) -> None:
+        self._availability_checker.ensure_available()
 
     async def submit(self, escalation_request: EscalationRequest) -> EscalationResponse:
         if escalation_request.is_honeypot_filled:
             return EscalationResponse()
+
+        self.ensure_handoff_available()
 
         if self._notifier is None:
             raise EscalationConfigurationError("Escalation notifications are not configured.")
@@ -219,6 +240,8 @@ class EscalationService:
     ) -> EscalationMessageResponse:
         if message_request.is_honeypot_filled:
             return EscalationMessageResponse()
+
+        self.ensure_handoff_available()
 
         if self._notifier is None:
             raise EscalationConfigurationError("Escalation notifications are not configured.")

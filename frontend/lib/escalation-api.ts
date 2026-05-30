@@ -8,6 +8,39 @@ import type {
 } from "../types/chat";
 import { createMessageId } from "./chat-state";
 
+export class EscalationApiError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  readonly contactPath: string | null;
+
+  constructor({
+    status,
+    message,
+    code = null,
+    contactPath = null,
+  }: {
+    status: number;
+    message: string;
+    code?: string | null;
+    contactPath?: string | null;
+  }) {
+    super(message);
+    this.name = "EscalationApiError";
+    this.status = status;
+    this.code = code;
+    this.contactPath = contactPath;
+  }
+}
+
+export function isHandoffUnavailableError(
+  error: unknown,
+): error is EscalationApiError {
+  return (
+    error instanceof EscalationApiError &&
+    error.code === "handoff_outside_hours"
+  );
+}
+
 export async function submitEscalation(
   transcript: EscalationTranscriptMessage[],
 ): Promise<EscalationResponse> {
@@ -26,7 +59,10 @@ export async function submitEscalation(
   });
 
   if (!response.ok) {
-    throw new Error("Escalation request unavailable.");
+    throw await buildEscalationApiError(
+      response,
+      "Escalation request unavailable.",
+    );
   }
 
   return (await response.json()) as EscalationResponse;
@@ -52,7 +88,10 @@ export async function submitEscalationMessage(
   );
 
   if (!response.ok) {
-    throw new Error("Escalation message request unavailable.");
+    throw await buildEscalationApiError(
+      response,
+      "Escalation message request unavailable.",
+    );
   }
 
   return (await response.json()) as EscalationMessageResponse;
@@ -72,7 +111,10 @@ export async function submitEscalationClose(
   );
 
   if (!response.ok) {
-    throw new Error("Escalation close request unavailable.");
+    throw await buildEscalationApiError(
+      response,
+      "Escalation close request unavailable.",
+    );
   }
 
   return (await response.json()) as EscalationCloseResponse;
@@ -95,19 +137,12 @@ export function parseEscalationStreamMessage(
     return null;
   }
 
-  const id = typeof payload.id === "string" && payload.id
-    ? payload.id
-    : createMessageId("alex");
+  const id =
+    typeof payload.id === "string" && payload.id
+      ? payload.id
+      : createMessageId("alex");
 
   return { id, content };
-}
-
-function safeParseJson(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
 }
 
 export function normaliseHandoffState(
@@ -127,4 +162,50 @@ export function closeEscalationStream(eventSourceRef: {
 }): void {
   eventSourceRef.current?.close();
   eventSourceRef.current = null;
+}
+
+async function buildEscalationApiError(
+  response: Response,
+  fallbackMessage: string,
+): Promise<EscalationApiError> {
+  const payload = await safeReadJson(response);
+  const detail = asRecord(payload?.detail);
+  const message = getString(detail?.message) || getString(payload?.detail);
+
+  return new EscalationApiError({
+    status: response.status,
+    message: message || fallbackMessage,
+    code: getString(detail?.code),
+    contactPath: getString(detail?.contact_path),
+  });
+}
+
+async function safeReadJson(
+  response: Response,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const payload = (await response.json()) as unknown;
+    return asRecord(payload);
+  } catch {
+    return null;
+  }
+}
+
+function safeParseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function getString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
