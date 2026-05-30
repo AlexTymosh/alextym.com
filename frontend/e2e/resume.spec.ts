@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 test("renders the resume and switches detail level", async ({ page }) => {
   await page.goto("/resume");
@@ -59,6 +60,59 @@ test("returns a generated PDF for the active CV filters", async ({ page }) => {
 
   const body = await response.body();
   expect(body.subarray(0, 4).toString()).toBe("%PDF");
+});
+
+test("generates a concise PDF with selected sections only", async ({
+  page,
+}) => {
+  const pdfText = await getGeneratedPdfText(
+    page,
+    "/resume/download?detail=concise&sections=experience,education",
+  );
+
+  expect(pdfText).toContain("OLEKSII");
+  expect(pdfText).toContain("SKILLS");
+  expect(pdfText).toContain("WORK EXPERIENCE");
+  expect(pdfText).toContain("EDUCATION");
+  expect(pdfText).toContain("LANGUAGES");
+  expect(pdfText).toContain("Systems Integration");
+  expect(pdfText).toContain("Master's Degree in Finance");
+  expect(pdfText).not.toContain("TRAINING");
+  expect(pdfText).not.toContain("REFERENCES");
+  expect(pdfText).not.toContain("Intermediate Backend Development");
+  expect(pdfText).not.toContain("Ukrainian");
+});
+
+test("generates a detailed PDF with all selected sections", async ({
+  page,
+}) => {
+  const pdfText = await getGeneratedPdfText(
+    page,
+    "/resume/download?detail=detailed&sections=experience,education,training",
+  );
+
+  expect(pdfText).toContain("WORK EXPERIENCE");
+  expect(pdfText).toContain("EDUCATION");
+  expect(pdfText).toContain("TRAINING");
+  expect(pdfText).toContain("REFERENCES");
+  expect(pdfText).toContain("Bachelor's Degree in Finance and Credit");
+  expect(pdfText).toContain("Intermediate Backend Development with FastAPI");
+  expect(pdfText).toContain("Ukrainian");
+  expect(pdfText).toContain("Available upon request.");
+});
+
+test("omits disabled resume sections from generated PDF", async ({ page }) => {
+  const pdfText = await getGeneratedPdfText(
+    page,
+    "/resume/download?detail=detailed&sections=training",
+  );
+
+  expect(pdfText).toContain("TRAINING");
+  expect(pdfText).toContain("Intermediate Backend Development with FastAPI");
+  expect(pdfText).not.toContain("WORK EXPERIENCE");
+  expect(pdfText).not.toContain("EDUCATION");
+  expect(pdfText).not.toContain("Hydrosphere UK Ltd");
+  expect(pdfText).not.toContain("Zaporizhzhia National University");
 });
 
 test("shows experience and education by default", async ({ page }) => {
@@ -251,3 +305,12 @@ test("renders evidence and credential links", async ({ page }) => {
     "https://coursera.org/share/7fde85ddc993a09271f6879c1386476f",
   );
 });
+
+async function getGeneratedPdfText(page: Page, url: string): Promise<string> {
+  const response = await page.request.get(url);
+
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toContain("application/pdf");
+
+  return (await response.body()).toString();
+}
