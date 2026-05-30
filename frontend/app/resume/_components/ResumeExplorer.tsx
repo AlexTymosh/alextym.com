@@ -27,11 +27,7 @@ const SECTION_BUTTONS: { id: ResumeSection; label: string }[] = [
 ];
 
 const DEFAULT_SECTIONS: ResumeSection[] = ["experience", "education"];
-
-const DOWNLOAD_LINKS: Record<ResumeDetailLevel, string> = {
-  concise: "/resume/alex-tymoshenko-cv-concise.pdf",
-  detailed: "/resume/alex-tymoshenko-cv-detailed.pdf",
-};
+const DOWNLOAD_FILE_NAME = "Alex_alextym.com.pdf";
 
 export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
   const [detailLevel, setDetailLevel] =
@@ -61,6 +57,8 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
       .filter((section) => section.items.length > 0);
   }, [detailLevel, resumeData.additionalSections]);
 
+  const downloadHref = getDownloadHref(detailLevel, selectedSections);
+
   return (
     <div className={styles.explorer}>
       <header className={styles.header}>
@@ -70,8 +68,8 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
 
         <a
           className={styles.downloadLink}
-          download
-          href={DOWNLOAD_LINKS[detailLevel]}
+          download={DOWNLOAD_FILE_NAME}
+          href={downloadHref}
         >
           Download {detailLevel === "concise" ? "concise" : "detailed"} CV
         </a>
@@ -198,6 +196,18 @@ function ControlGroup({
       <div className={styles.segmentedControl}>{children}</div>
     </div>
   );
+}
+
+function getDownloadHref(
+  detailLevel: ResumeDetailLevel,
+  selectedSections: ResumeSection[],
+): string {
+  const params = new URLSearchParams({
+    detail: detailLevel,
+    sections: selectedSections.join(","),
+  });
+
+  return `/resume/download?${params.toString()}`;
 }
 
 function getEntryVisibleIn(entry: {

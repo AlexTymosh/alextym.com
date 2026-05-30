@@ -18,7 +18,47 @@ test("renders the resume and switches detail level", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /detailed CV/i }),
-  ).toHaveAttribute("href", "/resume/alex-tymoshenko-cv-detailed.pdf");
+  ).toHaveAttribute(
+    "href",
+    "/resume/download?detail=detailed&sections=experience%2Ceducation",
+  );
+});
+
+test("updates the CV download link from active filters", async ({ page }) => {
+  await page.goto("/resume");
+
+  const downloadLink = page.getByRole("link", { name: /download concise cv/i });
+
+  await expect(downloadLink).toHaveAttribute(
+    "href",
+    "/resume/download?detail=concise&sections=experience%2Ceducation",
+  );
+  await expect(downloadLink).toHaveAttribute(
+    "download",
+    "Alex_alextym.com.pdf",
+  );
+
+  await page.getByRole("button", { name: "Training" }).click();
+
+  await expect(downloadLink).toHaveAttribute(
+    "href",
+    "/resume/download?detail=concise&sections=experience%2Ceducation%2Ctraining",
+  );
+});
+
+test("returns a generated PDF for the active CV filters", async ({ page }) => {
+  const response = await page.request.get(
+    "/resume/download?detail=concise&sections=experience,education",
+  );
+
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toContain("application/pdf");
+  expect(response.headers()["content-disposition"]).toContain(
+    "Alex_alextym.com.pdf",
+  );
+
+  const body = await response.body();
+  expect(body.subarray(0, 4).toString()).toBe("%PDF");
 });
 
 test("shows experience and education by default", async ({ page }) => {
