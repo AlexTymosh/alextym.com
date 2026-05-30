@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 Confidence = Literal["low", "medium", "high"]
 ChatHistoryRole = Literal["user", "assistant"]
+HandoffReason = Literal["insufficient_data", "private_data"]
 
 MAX_CHAT_HISTORY_ITEMS = 10
 MAX_CHAT_HISTORY_TOTAL_CHARS = 6000
@@ -34,11 +35,15 @@ class ChatRequest(BaseModel):
         max_length=2000,
         examples=["Tell me about Alex's recent projects"],
     )
-    session_id: str | None = Field(default=None, max_length=100, examples=["optional-session-id"])
+    session_id: str | None = Field(
+        default=None,
+        max_length=100,
+        examples=["optional-session-id"],
+    )
     history: list[ChatHistoryMessage] = Field(
         default_factory=list,
         max_length=MAX_CHAT_HISTORY_ITEMS,
-        description="Optional short prior conversation context. It is not a source of facts.",
+        description=("Optional short prior conversation context. It is not a source of facts."),
     )
 
     @field_validator("message", mode="before")
@@ -80,10 +85,24 @@ class ChatSource(BaseModel):
 class ChatResponse(BaseModel):
     answer: str = Field(
         examples=[
-            "I do not have enough reliable information in Alex's public knowledge base to answer "
-            "that accurately."
+            "I do not have enough reliable information in Alex's public knowledge "
+            "base to answer that accurately."
         ]
     )
     sources: list[ChatSource] = Field(default_factory=list)
     confidence: Confidence = Field(examples=["low"])
     not_enough_data: bool = Field(examples=[True])
+    handoff_suggested: bool = Field(
+        default=False,
+        description=(
+            "Whether the frontend should offer an explicit human handoff prompt. "
+            "This is a UI signal only; it must not trigger side effects without "
+            "user consent."
+        ),
+        examples=[True],
+    )
+    handoff_reason: HandoffReason | None = Field(
+        default=None,
+        description="Reason for suggesting human handoff, when applicable.",
+        examples=["insufficient_data"],
+    )

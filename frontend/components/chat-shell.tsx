@@ -12,6 +12,8 @@ type HandoffState =
   | "closed"
   | "error";
 
+type HandoffReason = "insufficient_data" | "private_data";
+
 type ChatSource = {
   title: string;
   section?: string | null;
@@ -23,6 +25,8 @@ type ChatResponse = {
   sources: ChatSource[];
   confidence: Confidence;
   not_enough_data: boolean;
+  handoff_suggested?: boolean;
+  handoff_reason?: HandoffReason | null;
 };
 
 type ChatHistoryMessage = {
@@ -65,6 +69,8 @@ type Message = {
   sources?: ChatSource[];
   confidence?: Confidence;
   notEnoughData?: boolean;
+  handoffSuggested?: boolean;
+  handoffReason?: HandoffReason | null;
 };
 
 type QuickPrompt = {
@@ -386,9 +392,8 @@ export function ChatShell() {
       .find((message) => message.role === "user" && message.text.trim());
 
     return Boolean(
-      latestAssistantMessage?.notEnoughData ||
-        (latestAssistantMessage &&
-          isHandoffInvitationText(latestAssistantMessage.text)) ||
+      (latestAssistantMessage &&
+        shouldAssistantSuggestHandoff(latestAssistantMessage)) ||
         (latestUserMessage && isHandoffRequestText(latestUserMessage.text)),
     );
   }, [
@@ -523,6 +528,8 @@ export function ChatShell() {
           updateAssistantMessage(assistantId, {
             confidence: done.confidence,
             notEnoughData: done.not_enough_data,
+            handoffSuggested: done.handoff_suggested,
+            handoffReason: done.handoff_reason ?? null,
           }),
       });
     } catch (error) {
@@ -542,6 +549,8 @@ export function ChatShell() {
             sources: fallbackResponse.sources,
             confidence: fallbackResponse.confidence,
             notEnoughData: fallbackResponse.not_enough_data,
+            handoffSuggested: fallbackResponse.handoff_suggested,
+            handoffReason: fallbackResponse.handoff_reason ?? null,
           });
           setNotice(
             "Streaming was unavailable, so the JSON fallback was used.",
@@ -1033,7 +1042,12 @@ async function streamChatResponse({
   signal: AbortSignal;
   onToken: (token: string) => void;
   onSources: (sources: ChatSource[]) => void;
-  onDone: (done: { confidence: Confidence; not_enough_data: boolean }) => void;
+  onDone: (done: {
+    confidence: Confidence;
+    not_enough_data: boolean;
+    handoff_suggested?: boolean;
+    handoff_reason?: HandoffReason | null;
+  }) => void;
 }) {
   const response = await fetch("/api/chat/stream", {
     method: "POST",
@@ -1197,6 +1211,8 @@ function handleSseEvent(
     onDone: (done: {
       confidence: Confidence;
       not_enough_data: boolean;
+      handoff_suggested?: boolean;
+      handoff_reason?: HandoffReason | null;
     }) => void;
   },
 ) {
@@ -1220,10 +1236,14 @@ function handleSseEvent(
     const payload = JSON.parse(sseEvent.data) as {
       confidence?: Confidence;
       not_enough_data?: boolean;
+      handoff_suggested?: boolean;
+      handoff_reason?: HandoffReason | null;
     };
     handlers.onDone({
       confidence: payload.confidence || "low",
       not_enough_data: payload.not_enough_data ?? true,
+      handoff_suggested: payload.handoff_suggested,
+      handoff_reason: payload.handoff_reason ?? null,
     });
     return;
   }
@@ -1417,6 +1437,14 @@ function getRenderableMessageText(
   }
 
   return message.role === "assistant" ? thinkingLabel : "";
+}
+
+function shouldAssistantSuggestHandoff(message: Message): boolean {
+  if (typeof message.handoffSuggested === "boolean") {
+    return message.handoffSuggested;
+  }
+
+  return Boolean(message.notEnoughData || isHandoffInvitationText(message.text));
 }
 
 function isHandoffInvitationText(text: string): boolean {

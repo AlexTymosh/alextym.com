@@ -14,14 +14,14 @@ from app.rag.retriever import Retriever
 from app.schemas.chat import ChatHistoryMessage, ChatRequest, ChatResponse
 
 INSUFFICIENT_DATA_ANSWER = (
-    "I do not have enough reliable information in Alex's public knowledge base to answer that "
-    "accurately."
+    "I do not have enough reliable information in Alex's public knowledge base "
+    "to answer that accurately."
 )
 
 PROMPT_INJECTION_ANSWER = (
-    "I can't help reveal or override hidden instructions, system prompts, or system "
-    "configuration. I can answer professional questions about Alex when reliable public knowledge "
-    "is available."
+    "I can't help reveal or override hidden instructions, system prompts, or "
+    "system configuration. I can answer professional questions about Alex when "
+    "reliable public knowledge is available."
 )
 
 PROMPT_INJECTION_PATTERNS = (
@@ -45,31 +45,32 @@ PROMPT_INJECTION_PATTERNS = (
 )
 
 GREETING_ANSWER = (
-    "Hi, I'm Alex's digital assistant. You can ask me about Alex's backend work, "
-    "RAG projects, automation, professional experience, or general software topics."
+    "Hi, I'm Alex's digital assistant. You can ask me about Alex's backend "
+    "work, RAG projects, automation, professional experience, or general "
+    "software topics."
 )
 
 HELP_ANSWER = (
     "I can help in two ways:\n"
-    "- For questions about Alex, I use Alex's public knowledge base and show sources when "
-    "available.\n"
-    "- For general software or technology questions, I can answer like a normal AI chat without "
-    "claiming unsupported facts about Alex."
+    "- For questions about Alex, I use Alex's public knowledge base and show "
+    "sources when available.\n"
+    "- For general software or technology questions, I can answer like a normal "
+    "AI chat without claiming unsupported facts about Alex."
 )
 
 GENERAL_CHAT_UNAVAILABLE_ANSWER = (
-    "I can answer general questions, but the AI model is temporarily unavailable. Please try "
-    "again later."
+    "I can answer general questions, but the AI model is temporarily unavailable. "
+    "Please try again later."
 )
 
 PRIVATE_DATA_ANSWER = (
-    "I can't provide private personal information. I can answer questions about Alex's public "
-    "professional profile, skills, projects, and experience."
+    "I can't provide private personal information. I can answer questions about "
+    "Alex's public professional profile, skills, projects, and experience."
 )
 
 SCOPE_BOUNDARY_ANSWER = (
-    "I'm focused on Alex's professional profile. I can help with Alex's experience, projects, "
-    "skills, or general software topics."
+    "I'm focused on Alex's professional profile. I can help with Alex's "
+    "experience, projects, skills, or general software topics."
 )
 
 GREETING_PATTERNS = (
@@ -232,6 +233,7 @@ class ChatService:
                 sources=[],
                 confidence="low",
                 not_enough_data=True,
+                handoff_suggested=False,
             )
 
         if self._is_private_data_request(request.message):
@@ -240,6 +242,8 @@ class ChatService:
                 sources=[],
                 confidence="low",
                 not_enough_data=True,
+                handoff_suggested=True,
+                handoff_reason="private_data",
             )
 
         if self._is_greeting(request.message):
@@ -276,12 +280,7 @@ class ChatService:
         try:
             chunks = self._retriever.retrieve(resolution.retrieval_query)
         except (ProviderConfigurationError, ProviderRequestError):
-            return ChatResponse(
-                answer=INSUFFICIENT_DATA_ANSWER,
-                sources=[],
-                confidence="low",
-                not_enough_data=True,
-            )
+            return self._insufficient_data_response()
 
         if chunks:
             prompt = self._prompt_builder.build(
@@ -304,12 +303,7 @@ class ChatService:
                 not_enough_data=False,
             )
 
-        return ChatResponse(
-            answer=INSUFFICIENT_DATA_ANSWER,
-            sources=[],
-            confidence="low",
-            not_enough_data=True,
-        )
+        return self._insufficient_data_response()
 
     async def stream_answer(self, request: ChatRequest) -> AsyncIterator[str]:
         request_id = str(uuid.uuid4())
@@ -331,6 +325,8 @@ class ChatService:
                 "request_id": request_id,
                 "confidence": response.confidence,
                 "not_enough_data": response.not_enough_data,
+                "handoff_suggested": response.handoff_suggested,
+                "handoff_reason": response.handoff_reason,
             },
         )
 
@@ -352,7 +348,8 @@ class ChatService:
     @staticmethod
     def _is_private_data_request(message: str) -> bool:
         normalized_message = _normalize_message(message)
-        if not any(term in normalized_message for term in ALEX_TERMS + SECOND_PERSON_TERMS):
+        person_terms = ALEX_TERMS + SECOND_PERSON_TERMS
+        if not any(term in normalized_message for term in person_terms):
             return False
         return any(pattern in normalized_message for pattern in PRIVATE_DATA_PATTERNS)
 
@@ -396,7 +393,8 @@ class ChatService:
                     conversational_context=conversational_context,
                     is_out_of_scope_subject=True,
                 )
-            if subject == "alex" or _history_has_alex_assistant_context(request.history):
+            has_alex_context = _history_has_alex_assistant_context(request.history)
+            if subject == "alex" or has_alex_context:
                 return QuestionResolution(
                     is_alex_specific=True,
                     retrieval_query=_rewrite_alex_retrieval_query(request.message),
@@ -466,6 +464,17 @@ class ChatService:
             sources=[],
             confidence=confidence,
             not_enough_data=False,
+        )
+
+    @staticmethod
+    def _insufficient_data_response() -> ChatResponse:
+        return ChatResponse(
+            answer=INSUFFICIENT_DATA_ANSWER,
+            sources=[],
+            confidence="low",
+            not_enough_data=True,
+            handoff_suggested=True,
+            handoff_reason="insufficient_data",
         )
 
     @staticmethod
