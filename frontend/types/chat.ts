@@ -9,7 +9,11 @@ export type HandoffState =
   | "closed"
   | "error";
 
-export type HandoffReason = "insufficient_data" | "private_data";
+export type HandoffReason =
+  | "insufficient_data"
+  | "private_data"
+  | "language_unsupported"
+  | "user_requested_human";
 
 export type ChatSource = {
   title: string;

@@ -12,6 +12,7 @@ from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import Retriever
 from app.schemas.chat import ChatHistoryMessage, ChatRequest, ChatResponse
+from app.services.intent_classifier import IntentDecision, LLMIntentClassifier
 
 INSUFFICIENT_DATA_ANSWER = (
     "I do not have enough reliable information in Alex's public knowledge base "
@@ -22,6 +23,41 @@ PROMPT_INJECTION_ANSWER = (
     "I can't help reveal or override hidden instructions, system prompts, or "
     "system configuration. I can answer professional questions about Alex when "
     "reliable public knowledge is available."
+)
+
+UNSUPPORTED_LANGUAGE_ANSWER = (
+    "Извините, Алекс настроил меня на общение только на английском языке. "
+    "Алекс может говорить по-русски, по-украински, по-польски. "
+    "Хотите, чтобы я соединил вас с Алексом и вы поговорили с ним лично?"
+)
+
+OUT_OF_SCOPE_ANSWER = (
+    "I’m here to answer questions about Alex’s profile, projects, skills, CV, "
+    "availability, or contact options. For general topics, please use a regular AI chat."
+)
+
+HANDOFF_REQUEST_ANSWER = (
+    "I can help connect you with Alex. Please use the handoff prompt below to confirm."
+)
+
+PRIVATE_DATA_ANSWER = (
+    "I can't provide private personal information. I can answer questions about "
+    "Alex's public professional profile, skills, projects, and experience."
+)
+
+GREETING_ANSWER = (
+    "Hi, I'm Alex's digital assistant. Ask me about Alex's experience, projects, "
+    "skills, CV, availability, or how to contact him."
+)
+
+HELP_ANSWER = (
+    "Ask me about Alex's professional experience, projects, skills, CV, availability, "
+    "or contact options. I don't answer general non-Alex questions."
+)
+
+ASSISTANT_INTRO_ANSWER = (
+    "I'm Alex's digital assistant. I answer short, source-based questions about "
+    "Alex's public professional profile, projects, skills, CV, and availability."
 )
 
 PROMPT_INJECTION_PATTERNS = (
@@ -44,45 +80,12 @@ PROMPT_INJECTION_PATTERNS = (
     "answer without context",
 )
 
-GREETING_ANSWER = (
-    "Hi, I'm Alex's digital assistant. You can ask me about Alex's backend "
-    "work, RAG projects, automation, professional experience, or general "
-    "software topics."
-)
-
-HELP_ANSWER = (
-    "I can help in two ways:\n"
-    "- For questions about Alex, I use Alex's public knowledge base and show "
-    "sources when available.\n"
-    "- For general software or technology questions, I can answer like a normal "
-    "AI chat without claiming unsupported facts about Alex."
-)
-
-GENERAL_CHAT_UNAVAILABLE_ANSWER = (
-    "I can answer general questions, but the AI model is temporarily unavailable. "
-    "Please try again later."
-)
-
-PRIVATE_DATA_ANSWER = (
-    "I can't provide private personal information. I can answer questions about "
-    "Alex's public professional profile, skills, projects, and experience."
-)
-
-SCOPE_BOUNDARY_ANSWER = (
-    "I'm focused on Alex's professional profile. I can help with Alex's "
-    "experience, projects, skills, or general software topics."
-)
-
 GREETING_PATTERNS = (
     "hi",
     "hello",
     "hey",
     "how are you",
-    "привет",
-    "здравствуйте",
-    "добрый день",
-    "добрый вечер",
-    "как дела",
+    "how do you do",
 )
 
 HELP_PATTERNS = (
@@ -90,9 +93,14 @@ HELP_PATTERNS = (
     "what can you do",
     "what can i ask",
     "how can you help",
-    "что ты умеешь",
-    "чем ты можешь помочь",
-    "что можно спросить",
+)
+
+ASSISTANT_INTRO_PATTERNS = (
+    "introduce yourself",
+    "who are you",
+    "what are you",
+    "tell me about yourself",
+    "tell me about your configuration",
 )
 
 PRIVATE_DATA_PATTERNS = (
@@ -107,16 +115,6 @@ PRIVATE_DATA_PATTERNS = (
     "manager",
     "friend",
     "family",
-    "телефон",
-    "личный email",
-    "личный имейл",
-    "адрес",
-    "здоровье",
-    "медицин",
-    "коллег",
-    "руковод",
-    "друз",
-    "семь",
 )
 
 ALEX_TERMS = (
@@ -125,6 +123,7 @@ ALEX_TERMS = (
     "tymosh",
     "tymoshenko",
     "алекс",
+    "алексом",
     "тимош",
     "тимошенко",
 )
@@ -133,6 +132,10 @@ ALEX_PROFILE_TERMS = (
     "experience",
     "skill",
     "skills",
+    "hard skill",
+    "hard skills",
+    "soft skill",
+    "soft skills",
     "project",
     "projects",
     "resume",
@@ -149,34 +152,25 @@ ALEX_PROFILE_TERMS = (
     "github",
     "linkedin",
     "contact",
-    "опыт",
-    "навык",
-    "проект",
-    "резюме",
-    "образован",
-    "работ",
-    "карьер",
-    "профил",
-    "саммари",
-    "интро",
-    "портфолио",
-    "гитхаб",
-    "линкедин",
-    "контакт",
+    "availability",
+    "available",
+    "start",
+    "hire",
+    "role",
+    "stack",
+    "python",
+    "fastapi",
+    "automation",
+    "rag",
+    "qdrant",
+    "backend",
+    "api",
 )
 
 SECOND_PERSON_TERMS = (
     "you",
     "your",
     "yours",
-    "ты",
-    "твой",
-    "твоя",
-    "твои",
-    "вы",
-    "ваш",
-    "ваша",
-    "ваши",
 )
 
 FOLLOW_UP_PRONOUN_TERMS = (
@@ -196,8 +190,100 @@ FOLLOW_UP_PROFILE_TERMS = (
     "projects",
     "skill",
     "skills",
+    "soft",
+    "hard",
     "tell",
     "work",
+    "availability",
+    "available",
+    "start",
+    "hire",
+    "stack",
+)
+
+SHORT_CONTINUATION_PATTERNS = (
+    "so tell me",
+    "tell me",
+    "tell me more",
+    "more",
+    "continue",
+    "go on",
+    "ok tell me",
+    "then tell me",
+    "what about that",
+    "and",
+)
+
+HANDOFF_REQUEST_PATTERNS = (
+    "connect",
+    "connect me",
+    "connect me with alex",
+    "connect me to alex",
+    "speak with alex",
+    "talk to alex",
+    "talk with alex",
+    "chat with alex",
+    "i want to speak with alex",
+    "i would like to speak with alex",
+    "i'd like to speak with alex",
+    "i confirm i'd like to speak with alex",
+    "i confirm i would like to speak with alex",
+    "give me alex",
+    "get me alex",
+    "hire alex",
+    "hire him",
+    "i want to hire alex",
+    "i'd like to hire him",
+    "i would like to hire him",
+    "offer him",
+    "offer alex",
+    "best offer",
+    "tell him im ready",
+    "tell him i'm ready",
+    "соедини меня",
+    "соедините меня",
+    "соедини меня с алексом",
+    "соедините меня с алексом",
+    "хочу поговорить с алексом",
+    "хочу поговорити з алексом",
+    "хочу зв'язатися з алексом",
+    "хочу связаться с алексом",
+    "поговорить с алексом",
+)
+
+HANDOFF_CONFIRMATION_PATTERNS = (
+    "yes",
+    "yeah",
+    "yep",
+    "sure",
+    "ok",
+    "okay",
+    "confirm",
+    "i confirm",
+    "yes please",
+    "please do",
+    "да",
+    "так",
+    "ок",
+    "окей",
+    "добре",
+    "пожалуйста",
+    "будь ласка",
+)
+
+CONTACT_OR_AVAILABILITY_TERMS = (
+    "contact",
+    "connect",
+    "speak",
+    "talk",
+    "chat",
+    "hire",
+    "offer",
+    "availability",
+    "available",
+    "start",
+    "start date",
+    "new job",
 )
 
 KNOWN_THIRD_PARTY_SUBJECTS = ("elon musk",)
@@ -217,6 +303,7 @@ class ChatService:
         retriever: Retriever | None = None,
         llm_client: LLMClient | None = None,
         prompt_builder: PromptBuilder | None = None,
+        intent_classifier: LLMIntentClassifier | None = None,
     ) -> None:
         self._retriever = retriever or get_configured_retriever()
         self._llm_client = (
@@ -225,6 +312,7 @@ class ChatService:
             else (get_configured_llm_client() if retriever is None else None)
         )
         self._prompt_builder = prompt_builder or PromptBuilder()
+        self._intent_classifier = intent_classifier
 
     def answer(self, request: ChatRequest) -> ChatResponse:
         if self._looks_like_prompt_injection(request.message):
@@ -234,6 +322,19 @@ class ChatService:
                 confidence="low",
                 not_enough_data=True,
                 handoff_suggested=False,
+            )
+
+        if _is_handoff_request(request.message) or _is_handoff_confirmation_after_prompt(request):
+            return self._handoff_request_response()
+
+        if _is_unsupported_language(request.message):
+            return ChatResponse(
+                answer=UNSUPPORTED_LANGUAGE_ANSWER,
+                sources=[],
+                confidence="medium",
+                not_enough_data=False,
+                handoff_suggested=True,
+                handoff_reason="language_unsupported",
             )
 
         if self._is_private_data_request(request.message):
@@ -262,48 +363,27 @@ class ChatService:
                 not_enough_data=False,
             )
 
-        resolution = self._resolve_question(request)
-        if resolution.is_out_of_scope_subject:
+        if self._is_assistant_intro_request(request.message):
             return ChatResponse(
-                answer=SCOPE_BOUNDARY_ANSWER,
+                answer=ASSISTANT_INTRO_ANSWER,
                 sources=[],
                 confidence="medium",
                 not_enough_data=False,
             )
 
-        if not resolution.is_alex_specific:
-            return self._answer_general_chat(
-                request.message,
-                conversational_context=resolution.conversational_context,
-            )
+        resolution = self._resolve_question(request)
+        if resolution.is_alex_specific:
+            return self._answer_alex_question(request, resolution)
+        if resolution.is_out_of_scope_subject:
+            return self._out_of_scope_response()
 
-        try:
-            chunks = self._retriever.retrieve(resolution.retrieval_query)
-        except (ProviderConfigurationError, ProviderRequestError):
-            return self._insufficient_data_response()
+        llm_decision = self._classify_ambiguous_intent(request)
+        if llm_decision is not None:
+            routed_response = self._route_intent_decision(request, llm_decision, resolution)
+            if routed_response is not None:
+                return routed_response
 
-        if chunks:
-            prompt = self._prompt_builder.build(
-                question=request.message,
-                chunks=chunks,
-                conversational_context=resolution.conversational_context,
-            )
-            answer = self._answer_from_prompt(prompt, chunks)
-            return ChatResponse(
-                answer=answer,
-                sources=[
-                    {
-                        "title": chunk.metadata.source,
-                        "section": chunk.metadata.section,
-                        "confidence": chunk.metadata.source_confidence,
-                    }
-                    for chunk in chunks
-                ],
-                confidence="medium",
-                not_enough_data=False,
-            )
-
-        return self._insufficient_data_response()
+        return self._out_of_scope_response()
 
     async def stream_answer(self, request: ChatRequest) -> AsyncIterator[str]:
         request_id = str(uuid.uuid4())
@@ -330,6 +410,108 @@ class ChatService:
             },
         )
 
+    def _answer_alex_question(
+        self,
+        request: ChatRequest,
+        resolution: QuestionResolution,
+    ) -> ChatResponse:
+        try:
+            chunks = self._retriever.retrieve(resolution.retrieval_query)
+        except (ProviderConfigurationError, ProviderRequestError):
+            return self._insufficient_data_response()
+
+        if chunks:
+            prompt = self._prompt_builder.build(
+                question=request.message,
+                chunks=chunks,
+                conversational_context=resolution.conversational_context,
+            )
+            answer = self._answer_from_prompt(prompt, chunks)
+            should_offer_handoff = _is_contact_or_availability_question(request.message)
+            return ChatResponse(
+                answer=answer,
+                sources=[
+                    {
+                        "title": chunk.metadata.source,
+                        "section": chunk.metadata.section,
+                        "confidence": chunk.metadata.source_confidence,
+                    }
+                    for chunk in chunks
+                ],
+                confidence="medium",
+                not_enough_data=False,
+                handoff_suggested=should_offer_handoff,
+                handoff_reason="user_requested_human" if should_offer_handoff else None,
+            )
+
+        return self._insufficient_data_response()
+
+    def _classify_ambiguous_intent(self, request: ChatRequest) -> IntentDecision | None:
+        classifier = self._intent_classifier
+        if classifier is None:
+            if self._llm_client is None:
+                return None
+            classifier = LLMIntentClassifier(self._llm_client)
+
+        return classifier.classify(message=request.message, history=request.history)
+
+    def _route_intent_decision(
+        self,
+        request: ChatRequest,
+        decision: IntentDecision,
+        base_resolution: QuestionResolution,
+    ) -> ChatResponse | None:
+        if decision.intent == "alex_profile_question":
+            retrieval_query = decision.rewritten_query or _rewrite_alex_retrieval_query(
+                request.message
+            )
+            return self._answer_alex_question(
+                request,
+                QuestionResolution(
+                    is_alex_specific=True,
+                    retrieval_query=retrieval_query,
+                    conversational_context=base_resolution.conversational_context,
+                ),
+            )
+        if decision.intent == "handoff_request":
+            return self._handoff_request_response()
+        if decision.intent == "language_unsupported":
+            return ChatResponse(
+                answer=UNSUPPORTED_LANGUAGE_ANSWER,
+                sources=[],
+                confidence="medium",
+                not_enough_data=False,
+                handoff_suggested=True,
+                handoff_reason="language_unsupported",
+            )
+        if decision.intent == "greeting":
+            return ChatResponse(
+                answer=GREETING_ANSWER, sources=[], confidence="medium", not_enough_data=False
+            )
+        if decision.intent == "help":
+            return ChatResponse(
+                answer=HELP_ANSWER, sources=[], confidence="medium", not_enough_data=False
+            )
+        if decision.intent == "assistant_intro":
+            return ChatResponse(
+                answer=ASSISTANT_INTRO_ANSWER,
+                sources=[],
+                confidence="medium",
+                not_enough_data=False,
+            )
+        if decision.intent == "private_data":
+            return ChatResponse(
+                answer=PRIVATE_DATA_ANSWER,
+                sources=[],
+                confidence="low",
+                not_enough_data=True,
+                handoff_suggested=True,
+                handoff_reason="private_data",
+            )
+        if decision.intent == "general_out_of_scope":
+            return self._out_of_scope_response()
+        return None
+
     @staticmethod
     def _looks_like_prompt_injection(message: str) -> bool:
         normalized_message = " ".join(message.lower().split())
@@ -344,6 +526,11 @@ class ChatService:
     def _is_help_request(message: str) -> bool:
         normalized_message = _normalize_message(message)
         return any(pattern in normalized_message for pattern in HELP_PATTERNS)
+
+    @staticmethod
+    def _is_assistant_intro_request(message: str) -> bool:
+        normalized_message = _normalize_message(message)
+        return any(pattern in normalized_message for pattern in ASSISTANT_INTRO_PATTERNS)
 
     @staticmethod
     def _is_private_data_request(message: str) -> bool:
@@ -384,8 +571,18 @@ class ChatService:
                 conversational_context=conversational_context,
             )
 
+        subject = _last_explicit_user_subject(request.history)
+        has_alex_context = _history_mentions_alex(request.history)
+        has_strong_alex_context = _history_has_strong_alex_context(request.history)
+
+        if _looks_like_short_continuation(normalized_message) and has_alex_context:
+            return QuestionResolution(
+                is_alex_specific=True,
+                retrieval_query="Continue answering about Alex's professional profile based on the previous Alex-related question.",
+                conversational_context=conversational_context,
+            )
+
         if _is_follow_up_profile_question(normalized_message):
-            subject = _last_explicit_user_subject(request.history)
             if subject == "third_party":
                 return QuestionResolution(
                     is_alex_specific=False,
@@ -393,13 +590,19 @@ class ChatService:
                     conversational_context=conversational_context,
                     is_out_of_scope_subject=True,
                 )
-            has_alex_context = _history_has_alex_assistant_context(request.history)
-            if subject == "alex" or has_alex_context:
+            if subject == "alex" or has_strong_alex_context:
                 return QuestionResolution(
                     is_alex_specific=True,
                     retrieval_query=_rewrite_alex_retrieval_query(request.message),
                     conversational_context=conversational_context,
                 )
+
+        if _looks_like_short_profile_follow_up(normalized_message) and has_alex_context:
+            return QuestionResolution(
+                is_alex_specific=True,
+                retrieval_query=_rewrite_alex_retrieval_query(request.message),
+                conversational_context=conversational_context,
+            )
 
         return QuestionResolution(
             is_alex_specific=False,
@@ -433,39 +636,6 @@ class ChatService:
         except (ProviderConfigurationError, ProviderRequestError):
             return self._extractive_answer(chunks, prompt.context)
 
-    def _answer_general_chat(
-        self,
-        message: str,
-        *,
-        conversational_context: str = "",
-    ) -> ChatResponse:
-        if self._llm_client is None:
-            return ChatResponse(
-                answer=GENERAL_CHAT_UNAVAILABLE_ANSWER,
-                sources=[],
-                confidence="low",
-                not_enough_data=False,
-            )
-
-        prompt = self._prompt_builder.build_general_chat(
-            question=message,
-            conversational_context=conversational_context,
-        )
-        try:
-            answer = self._llm_client.answer(prompt)
-        except (ProviderConfigurationError, ProviderRequestError):
-            answer = GENERAL_CHAT_UNAVAILABLE_ANSWER
-            confidence = "low"
-        else:
-            confidence = "medium"
-
-        return ChatResponse(
-            answer=answer,
-            sources=[],
-            confidence=confidence,
-            not_enough_data=False,
-        )
-
     @staticmethod
     def _insufficient_data_response() -> ChatResponse:
         return ChatResponse(
@@ -475,6 +645,27 @@ class ChatService:
             not_enough_data=True,
             handoff_suggested=True,
             handoff_reason="insufficient_data",
+        )
+
+    @staticmethod
+    def _out_of_scope_response() -> ChatResponse:
+        return ChatResponse(
+            answer=OUT_OF_SCOPE_ANSWER,
+            sources=[],
+            confidence="medium",
+            not_enough_data=False,
+            handoff_suggested=False,
+        )
+
+    @staticmethod
+    def _handoff_request_response() -> ChatResponse:
+        return ChatResponse(
+            answer=HANDOFF_REQUEST_ANSWER,
+            sources=[],
+            confidence="medium",
+            not_enough_data=False,
+            handoff_suggested=True,
+            handoff_reason="user_requested_human",
         )
 
     @staticmethod
@@ -490,7 +681,7 @@ class ChatService:
         return f"event: {event}\ndata: {payload}\n\n"
 
 
-def _first_sentence(text: str, max_length: int = 360) -> str:
+def _first_sentence(text: str, max_length: int = 220) -> str:
     normalized_text = " ".join(text.split())
     if not normalized_text:
         return ""
@@ -511,7 +702,7 @@ def _first_sentence(text: str, max_length: int = 360) -> str:
 
 
 def _normalize_message(message: str) -> str:
-    return " ".join(message.casefold().strip(" \t\r\n.,!?;:\u2026").split())
+    return " ".join(message.casefold().strip(" \t\r\n.,!?;:`'\"\u2026").split())
 
 
 def _format_conversation_context(history: list[ChatHistoryMessage]) -> str:
@@ -522,6 +713,46 @@ def _format_conversation_context(history: list[ChatHistoryMessage]) -> str:
             content = content[:497].rstrip() + "..."
         lines.append(f"{item.role}: {content}")
     return "\n".join(lines)
+
+
+def _is_unsupported_language(message: str) -> bool:
+    letters = [character for character in message if character.isalpha()]
+    if not letters:
+        return False
+
+    unsupported_letters = [
+        character for character in letters if not ("a" <= character.casefold() <= "z")
+    ]
+    return bool(unsupported_letters)
+
+
+def _is_handoff_request(message: str) -> bool:
+    normalized_message = _normalize_message(message)
+    return any(pattern in normalized_message for pattern in HANDOFF_REQUEST_PATTERNS)
+
+
+def _is_handoff_confirmation_after_prompt(request: ChatRequest) -> bool:
+    normalized_message = _normalize_message(request.message)
+    if normalized_message not in HANDOFF_CONFIRMATION_PATTERNS:
+        return False
+
+    for item in reversed(request.history):
+        if item.role != "assistant":
+            continue
+        normalized_content = _normalize_message(item.content)
+        return (
+            "connect" in normalized_content
+            or "handoff" in normalized_content
+            or "соединил" in normalized_content
+            or "поговорили с ним лично" in normalized_content
+        )
+
+    return False
+
+
+def _is_contact_or_availability_question(message: str) -> bool:
+    normalized_message = _normalize_message(message)
+    return any(term in normalized_message for term in CONTACT_OR_AVAILABILITY_TERMS)
 
 
 def _is_direct_third_party_subject(normalized_message: str) -> bool:
@@ -537,6 +768,18 @@ def _is_follow_up_profile_question(normalized_message: str) -> bool:
     return bool(tokens.intersection(FOLLOW_UP_PROFILE_TERMS))
 
 
+def _looks_like_short_profile_follow_up(normalized_message: str) -> bool:
+    if not normalized_message:
+        return False
+    if len(normalized_message.split()) > 5:
+        return False
+    return any(term in normalized_message for term in FOLLOW_UP_PROFILE_TERMS)
+
+
+def _looks_like_short_continuation(normalized_message: str) -> bool:
+    return normalized_message in SHORT_CONTINUATION_PATTERNS
+
+
 def _last_explicit_user_subject(history: list[ChatHistoryMessage]) -> str | None:
     for item in reversed(history):
         if item.role != "user":
@@ -549,13 +792,57 @@ def _last_explicit_user_subject(history: list[ChatHistoryMessage]) -> str | None
     return None
 
 
-def _history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> bool:
+def _history_mentions_alex(history: list[ChatHistoryMessage]) -> bool:
     for item in reversed(history):
-        if item.role != "assistant":
-            continue
         normalized_content = _normalize_message(item.content)
-        if "alex's digital assistant" in normalized_content:
+        if any(term in normalized_content for term in ALEX_TERMS):
             return True
+        if item.role == "assistant" and (
+            "alex's digital assistant" in normalized_content
+            or "alex builds" in normalized_content
+            or "alex has" in normalized_content
+            or "alexs profile" in normalized_content
+            or "alex's profile" in normalized_content
+        ):
+            return True
+    return False
+
+
+def _history_has_strong_alex_context(history: list[ChatHistoryMessage]) -> bool:
+    for item in reversed(history):
+        normalized_content = _normalize_message(item.content)
+        if any(term in normalized_content for term in ALEX_TERMS) and (
+            "alex's digital assistant" in normalized_content
+            or "alex has" in normalized_content
+            or "alex builds" in normalized_content
+            or "алекс настроил" in normalized_content
+            or "соединил вас с алексом" in normalized_content
+            or "поговорили с ним лично" in normalized_content
+        ):
+            return True
+        if item.role == "user" and any(term in normalized_content for term in ALEX_TERMS):
+            return True
+    return False
+
+
+def _last_user_was_alex_profile_context(history: list[ChatHistoryMessage]) -> bool:
+    prior_history: list[ChatHistoryMessage] = []
+    for item in history:
+        if item.role == "user":
+            normalized_content = _normalize_message(item.content)
+            if _is_direct_third_party_subject(normalized_content):
+                return False
+            if any(term in normalized_content for term in ALEX_TERMS):
+                return True
+            if _is_follow_up_profile_question(normalized_content) and _history_mentions_alex(
+                prior_history
+            ):
+                return True
+            if _looks_like_short_profile_follow_up(normalized_content) and _history_mentions_alex(
+                prior_history
+            ):
+                return True
+        prior_history.append(item)
     return False
 
 
@@ -565,6 +852,16 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         return "Tell me about Alex's professional background, experience, skills, and projects."
     if normalized_message == "what does he do":
         return "What does Alex do professionally?"
+    if "soft" in normalized_message and "skill" in normalized_message:
+        return "Tell me about Alex's soft skills, working style, collaboration, communication, and problem-solving."
+    if "hard" in normalized_message and "skill" in normalized_message:
+        return "Tell me about Alex's hard skills, technical stack, tools, and software engineering capabilities."
+    if (
+        "his" in normalized_message
+        and "work" in normalized_message
+        and "experience" in normalized_message
+    ):
+        return "Tell me about Alex's work experience."
     if "your" in normalized_message and "project" in normalized_message:
         return "Tell me about Alex's professional projects and software work."
     if _is_follow_up_profile_question(normalized_message):

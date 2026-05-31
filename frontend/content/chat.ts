@@ -146,16 +146,30 @@ export const ESCALATION_CONSENT_COPY =
   "understand the context. No email or phone number will be shared unless you " +
   "type it yourself.";
 
+export const HANDOFF_CONFIRMATION_PATTERNS = [
+  /^\s*(yes|yeah|yep|sure|ok|okay|confirm|i confirm|yes please|please do)\s*[.!?]*\s*$/i,
+  /^\s*(да|так|ок|окей|добре|пожалуйста|будь ласка)\s*[.!?]*\s*$/i,
+] as const;
+
 export const HANDOFF_REQUEST_PATTERNS = [
+  /^\s*connect\s*[.!?]*\s*$/i,
+  /^\s*connect\s+me\s*[.!?]*\s*$/i,
   /\bconnect\s+(me\s+)?(with|to)\s+alex\b/i,
   /\bcan\s+you\s+connect\s+me\s+(with|to)\s+alex\b/i,
+  /\bgive\s+me\s+alex\b/i,
+  /\bget\s+me\s+alex\b/i,
+  /\bi\s+confirm\s+i('?d| would)\s+like\s+to\s+(talk|speak|chat)\s+(to|with)\s+alex\b/i,
   new RegExp(
-    String.raw`\bi\s+(want|would\s+like|need)\s+(to\s+)?` +
+    String.raw`\bi\s+(want|would\s+like|need|'d\s+like)\s+(to\s+)?` +
       String.raw`(talk|speak|chat)\s+(to|with)\s+alex\b`,
     "i",
   ),
   /\b(talk|speak|chat)\s+(to|with)\s+alex\b/i,
   /\bcan\s+alex\s+(contact|call|message|email|reach)\s+me\b/i,
+  /\bi('?d| would)\s+like\s+to\s+hire\s+(alex|him)\b/i,
+  /\bi\s+(want|need)\s+to\s+hire\s+(alex|him)\b/i,
+  /\b(best|great|strong)\s+offer\s+(for\s+)?(alex|him)\b/i,
+  /\btell\s+(alex|him)\s+i\b/i,
   new RegExp(
     String.raw`\bget\s+alex\s+(to\s+)?` +
       String.raw`(contact|call|message|email|reply\s+to)\s+me\b`,
@@ -198,5 +212,13 @@ export const HANDOFF_REQUEST_PATTERNS = [
     "i",
   ),
   /^\s*(human|person|real\s+person|agent|representative|operator)\s*[.!?]*\s*$/i,
+  /\bсоедини\s+меня\b/i,
+  /\bсоедините\s+меня\b/i,
+  /\bсоедини\s+меня\s+с\s+алексом\b/i,
+  /\bсоедините\s+меня\s+с\s+алексом\b/i,
+  /\bпоговорить\s+с\s+алексом\b/i,
+  /\bхочу\s+поговорить\s+с\s+алексом\b/i,
+  /\bхочу\s+связаться\s+с\s+алексом\b/i,
+  /\bхочу\s+поговорити\s+з\s+алексом\b/i,
+  /\bхочу\s+зв'язатися\s+з\s+алексом\b/i,
 ] as const;
-
