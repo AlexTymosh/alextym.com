@@ -4,7 +4,12 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 Confidence = Literal["low", "medium", "high"]
 ChatHistoryRole = Literal["user", "assistant"]
-HandoffReason = Literal["insufficient_data", "private_data"]
+HandoffReason = Literal[
+    "insufficient_data",
+    "private_data",
+    "language_unsupported",
+    "user_requested_human",
+]
 
 MAX_CHAT_HISTORY_ITEMS = 10
 MAX_CHAT_HISTORY_TOTAL_CHARS = 6000

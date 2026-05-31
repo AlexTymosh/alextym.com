@@ -5,9 +5,13 @@ from app.api.chat import get_chat_service
 from app.core.config import Settings, get_settings
 from app.main import app
 from app.rag.retriever import EmptyRetriever
-from app.services.chat import INSUFFICIENT_DATA_ANSWER
-from app.services.chat import ChatService
-
+from app.services.chat import (
+    HANDOFF_REQUEST_ANSWER,
+    INSUFFICIENT_DATA_ANSWER,
+    OUT_OF_SCOPE_ANSWER,
+    UNSUPPORTED_LANGUAGE_ANSWER,
+    ChatService,
+)
 
 client = TestClient(app)
 
@@ -88,6 +92,97 @@ def test_chat_handles_greeting_without_insufficient_data() -> None:
     assert body["handoff_reason"] is None
     assert body["sources"] == []
     assert "Alex's digital assistant" in body["answer"]
+
+
+def test_chat_handles_how_do_you_do_as_greeting() -> None:
+    response = client.post("/api/chat", json={"message": "how do you do?"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["not_enough_data"] is False
+    assert "Alex's digital assistant" in body["answer"]
+
+
+def test_chat_handles_intro_request_without_retrieval() -> None:
+    response = client.post("/api/chat", json={"message": "Introduce yourself"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is False
+    assert body["sources"] == []
+    assert "Alex's digital assistant" in body["answer"]
+
+
+def test_chat_blocks_non_english_and_suggests_handoff() -> None:
+    response = client.post("/api/chat", json={"message": "Расскажи про Алекса"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == UNSUPPORTED_LANGUAGE_ANSWER
+    assert body["sources"] == []
+    assert body["confidence"] == "medium"
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "language_unsupported"
+
+
+def test_chat_accepts_non_english_handoff_request_before_language_guard() -> None:
+    response = client.post("/api/chat", json={"message": "соедини меня с алексом"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == HANDOFF_REQUEST_ANSWER
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "user_requested_human"
+
+
+def test_chat_accepts_confirmation_after_language_handoff_prompt() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "да",
+            "history": [
+                {"role": "user", "content": "Как дела?"},
+                {"role": "assistant", "content": UNSUPPORTED_LANGUAGE_ANSWER},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == HANDOFF_REQUEST_ANSWER
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "user_requested_human"
+
+
+def test_chat_blocks_general_non_alex_question() -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "Tell me how I can take pills"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == OUT_OF_SCOPE_ANSWER
+    assert body["sources"] == []
+    assert body["confidence"] == "medium"
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is False
+    assert body["handoff_reason"] is None
+
+
+def test_chat_suggests_handoff_for_direct_hire_intent() -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "I'd like to hire him. Tell him I have the best offer."},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == HANDOFF_REQUEST_ANSWER
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "user_requested_human"
 
 
 def test_chat_suggests_handoff_for_private_data_request() -> None:

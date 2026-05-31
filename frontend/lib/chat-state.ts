@@ -5,6 +5,7 @@ import {
   ESCALATION_TRANSCRIPT_ITEM_MAX_CHARS,
   ESCALATION_TRANSCRIPT_LIMIT,
   ESCALATION_TRANSCRIPT_TOTAL_MAX_CHARS,
+  HANDOFF_CONFIRMATION_PATTERNS,
   HANDOFF_REQUEST_PATTERNS,
   SCRIPTED_RESPONSE_DELAY_MS,
 } from "../content/chat";
@@ -142,13 +143,34 @@ export function shouldAssistantSuggestHandoff(message: Message): boolean {
   return Boolean(message.notEnoughData || isHandoffInvitationText(message.text));
 }
 
+export function hasPendingHandoffSuggestion(messages: Message[]): boolean {
+  const latestAssistantMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant" && message.text.trim());
+
+  return Boolean(
+    latestAssistantMessage && shouldAssistantSuggestHandoff(latestAssistantMessage),
+  );
+}
+
 export function isHandoffInvitationText(text: string): boolean {
   const normalizedText = text.toLowerCase();
   return (
     normalizedText.includes("would you like me to connect him directly") ||
+    normalizedText.includes("would you like to connect with alex") ||
     normalizedText.includes("connect with alex") ||
-    normalizedText.includes("connect me with alex")
+    normalizedText.includes("connect me with alex") ||
+    normalizedText.includes("handoff prompt below") ||
+    normalizedText.includes("offer a handoff") ||
+    normalizedText.includes("website can offer a connection") ||
+    normalizedText.includes("соединил вас с алексом") ||
+    normalizedText.includes("поговорили с ним лично")
   );
+}
+
+export function isHandoffConfirmationText(text: string): boolean {
+  const compactText = text.replace(/\s+/g, " ").trim();
+  return HANDOFF_CONFIRMATION_PATTERNS.some((pattern) => pattern.test(compactText));
 }
 
 export function isHandoffRequestText(text: string): boolean {

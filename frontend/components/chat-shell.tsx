@@ -24,7 +24,9 @@ import {
   buildEscalationTranscript,
   chooseScriptedResponse,
   createMessageId,
+  hasPendingHandoffSuggestion,
   isAbortError,
+  isHandoffConfirmationText,
   isHandoffRequestText,
   isHumanHandoffActive,
   shouldAssistantSuggestHandoff,
@@ -209,6 +211,19 @@ export function ChatShell() {
       textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [input]);
 
+  useEffect(() => {
+    if (isThinking || isEscalating || isSendingHandoffMessage || isClosingHandoff) {
+      return;
+    }
+    focusMessageInputSoon();
+  }, [handoffState, isClosingHandoff, isEscalating, isSendingHandoffMessage, isThinking]);
+
+  function focusMessageInputSoon() {
+    window.setTimeout(() => {
+      messageInputRef.current?.focus();
+    }, 0);
+  }
+
   function resetChat() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -226,6 +241,7 @@ export function ChatShell() {
     setHandoffId(null);
     setHandoffState("idle");
     setDismissedHandoffMessageCount(null);
+    focusMessageInputSoon();
   }
 
   async function sendScriptedResponse(prompt: QuickPrompt) {
@@ -269,6 +285,7 @@ export function ChatShell() {
         abortControllerRef.current = null;
       }
       setIsThinking(false);
+      focusMessageInputSoon();
     }
   }
 
@@ -286,6 +303,24 @@ export function ChatShell() {
       return;
     }
 
+    if (
+      hasPendingHandoffSuggestion(messages) &&
+      isHandoffConfirmationText(trimmedInput)
+    ) {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        { id: createMessageId("user"), role: "user", text: trimmedInput },
+      ]);
+      setInput("");
+      setNotice(null);
+      setHandoffUnavailableMessage(null);
+      setDismissedHandoffMessageCount(null);
+      focusMessageInputSoon();
+      return;
+    }
+
     if (isHandoffRequestText(trimmedInput)) {
       abortControllerRef.current?.abort();
       abortControllerRef.current = null;
@@ -297,6 +332,7 @@ export function ChatShell() {
       setNotice(null);
       setHandoffUnavailableMessage(null);
       setDismissedHandoffMessageCount(null);
+      focusMessageInputSoon();
       return;
     }
 
@@ -378,6 +414,7 @@ export function ChatShell() {
         abortControllerRef.current = null;
       }
       setIsThinking(false);
+      focusMessageInputSoon();
     }
   }
 
@@ -416,6 +453,7 @@ export function ChatShell() {
       );
     } finally {
       setIsSendingHandoffMessage(false);
+      focusMessageInputSoon();
     }
   }
 
@@ -467,6 +505,7 @@ export function ChatShell() {
       );
     } finally {
       setIsEscalating(false);
+      focusMessageInputSoon();
     }
   }
 
@@ -497,6 +536,7 @@ export function ChatShell() {
       setNotice("Could not close this handoff right now. Please try again later.");
     } finally {
       setIsClosingHandoff(false);
+      focusMessageInputSoon();
     }
   }
 
@@ -504,6 +544,7 @@ export function ChatShell() {
     setDismissedHandoffMessageCount(messages.length);
     setNotice(null);
     setHandoffUnavailableMessage(null);
+    focusMessageInputSoon();
   }
 
   function showHandoffUnavailableMessage(message: string) {
