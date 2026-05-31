@@ -9,6 +9,7 @@ from app.services.chat import (
     HANDOFF_REQUEST_ANSWER,
     INSUFFICIENT_DATA_ANSWER,
     OUT_OF_SCOPE_ANSWER,
+    SOCIAL_ACKNOWLEDGEMENT_ANSWER,
     UNSUPPORTED_LANGUAGE_ANSWER,
     ChatService,
 )
@@ -114,6 +115,29 @@ def test_chat_handles_intro_request_without_retrieval() -> None:
     assert "Alex's digital assistant" in body["answer"]
 
 
+def test_chat_handles_social_acknowledgement_without_out_of_scope() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "cool",
+            "history": [
+                {"role": "user", "content": "Tell me about Alex"},
+                {
+                    "role": "assistant",
+                    "content": "Alex has automation experience.",
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == SOCIAL_ACKNOWLEDGEMENT_ANSWER
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is False
+    assert body["sources"] == []
+
+
 def test_chat_blocks_non_english_and_suggests_handoff() -> None:
     response = client.post("/api/chat", json={"message": "Расскажи про Алекса"})
 
@@ -128,7 +152,7 @@ def test_chat_blocks_non_english_and_suggests_handoff() -> None:
 
 
 def test_chat_accepts_non_english_handoff_request_before_language_guard() -> None:
-    response = client.post("/api/chat", json={"message": "соедини меня с алексом"})
+    response = client.post("/api/chat", json={"message": "соедини меня"})
 
     assert response.status_code == 200
     body = response.json()
