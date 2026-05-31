@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { ContactForm } from "../../components/contact-form";
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description:
+    "Contact Alex Tymoshenko for software development, automation, " +
+    "API integration, Python, FastAPI, or business process automation " +
+    "opportunities.",
+  alternates: {
+    canonical: "/contact",
+  },
+};
 
 const socialLinks = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/alex-tim-tech/" },
