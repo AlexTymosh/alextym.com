@@ -264,12 +264,12 @@ def _chunk_from_point(point: Any) -> KnowledgeChunk:
             confidence=str(payload.get("confidence") or "self-reported"),
             source_confidence=_source_confidence(payload.get("source_confidence")),
             tags=tuple(str(tag) for tag in payload.get("tags", []) or []),
-            extra=_extra_from_payload(payload),
+            extra=_extra_from_payload(payload, point=point),
         ),
     )
 
 
-def _extra_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _extra_from_payload(payload: dict[str, Any], *, point: Any) -> dict[str, Any]:
     extra_keys = {
         "source_file",
         "parent_id",
@@ -281,11 +281,15 @@ def _extra_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "vector_inputs",
         "retrieval",
     }
-    return {
+    extra = {
         key: value
         for key, value in payload.items()
         if key in extra_keys and value not in (None, "", [], {})
     }
+    score = getattr(point, "score", None)
+    if isinstance(score, (int, float)):
+        extra["retrieval_score"] = float(score)
+    return extra
 
 
 def _text_or_default(value: object, default: str) -> str:

@@ -5,7 +5,7 @@ from app.llm.client import EmbeddingClient
 from app.llm.openai_client import OpenAIEmbeddingClient
 from app.rag.models import KnowledgeChunk, RetrievalFilter
 from app.rag.qdrant_store import QdrantKnowledgeStore
-from app.rag.query_router import route_query
+from app.rag.query_router import QueryRoute, route_query
 
 QUERY_EXPANSIONS = (
     (
@@ -103,7 +103,8 @@ class QdrantRetriever:
             score_threshold=self._score_threshold,
             payload_filter=payload_filter,
         )
-        return _filter_sections_for_query(normalized_query, chunks)
+        filtered_chunks = _filter_sections_for_query(normalized_query, chunks)
+        return _rerank_chunks(filtered_chunks, route=route)
 
 
 def _search_store(
@@ -160,3 +161,51 @@ def _filter_sections_for_query(
 
     filtered_chunks = [chunk for chunk in chunks if chunk.metadata.topic not in LINK_SECTION_NAMES]
     return filtered_chunks or chunks
+
+
+def _rerank_chunks(
+    chunks: list[KnowledgeChunk],
+    *,
+    route: QueryRoute,
+) -> list[KnowledgeChunk]:
+    if not chunks:
+        return []
+
+    scored_chunks = [
+        (_heuristic_score(chunk, route=route), index, chunk) for index, chunk in enumerate(chunks)
+    ]
+    scored_chunks.sort(key=lambda item: (-item[0], item[1]))
+    return [chunk for _score, _index, chunk in scored_chunks]
+
+
+def _heuristic_score(chunk: KnowledgeChunk, *, route: QueryRoute) -> float:
+    score = _dense_score(chunk)
+    score += _topic_bonus(chunk, route)
+    score += _tag_bonus(chunk, route)
+    score += _section_bonus(chunk, route)
+    return score
+
+
+def _dense_score(chunk: KnowledgeChunk) -> float:
+    value = chunk.metadata.extra.get("retrieval_score")
+    return float(value) if isinstance(value, (int, float)) else 0.0
+
+
+def _topic_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if chunk.metadata.topic in route.topic_hints:
+        return 2.0
+    return 0.0
+
+
+def _tag_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if not route.tag_hints:
+        return 0.0
+
+    matching_tags = set(chunk.metadata.tags).intersection(route.tag_hints)
+    return 0.4 * len(matching_tags)
+
+
+def _section_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if chunk.metadata.section in route.section_hints:
+        return 0.25
+    return 0.0

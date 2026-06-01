@@ -78,6 +78,7 @@ def test_qdrant_store_maps_structured_payload_back_to_chunk() -> None:
         search_points=[
             SimpleNamespace(
                 id="point-1",
+                score=0.87,
                 payload={
                     "chunk_id": "resume:hard-skills:rag",
                     "content": "- Alex uses Python.",
@@ -108,6 +109,7 @@ def test_qdrant_store_maps_structured_payload_back_to_chunk() -> None:
     assert chunks[0].metadata.source == "Hard Skills"
     assert chunks[0].metadata.extra["source_file"] == "resume.generated.chunks.json"
     assert chunks[0].metadata.extra["parent_id"] == "resume:hard-skills"
+    assert chunks[0].metadata.extra["retrieval_score"] == 0.87
 
 
 class FakeQdrantClient:
