@@ -3,6 +3,7 @@ import inspect
 from app.core.config import Settings
 from app.llm.client import EmbeddingClient
 from app.llm.openai_client import OpenAIEmbeddingClient
+from app.rag.keyword_scoring import build_keyword_terms, keyword_score_chunk
 from app.rag.models import KnowledgeChunk, RetrievalFilter
 from app.rag.qdrant_store import QdrantKnowledgeStore
 from app.rag.query_router import QueryRoute, route_query
@@ -104,7 +105,7 @@ class QdrantRetriever:
             payload_filter=payload_filter,
         )
         filtered_chunks = _filter_sections_for_query(normalized_query, chunks)
-        return _rerank_chunks(filtered_chunks, route=route)
+        return _rerank_chunks(filtered_chunks, query=normalized_query, route=route)
 
 
 def _search_store(
@@ -166,23 +167,40 @@ def _filter_sections_for_query(
 def _rerank_chunks(
     chunks: list[KnowledgeChunk],
     *,
+    query: str,
     route: QueryRoute,
 ) -> list[KnowledgeChunk]:
     if not chunks:
         return []
 
+    keyword_terms = build_keyword_terms(query, route=route)
     scored_chunks = [
-        (_heuristic_score(chunk, route=route), index, chunk) for index, chunk in enumerate(chunks)
+        (
+            _heuristic_score(
+                chunk,
+                route=route,
+                keyword_terms=keyword_terms,
+            ),
+            index,
+            chunk,
+        )
+        for index, chunk in enumerate(chunks)
     ]
     scored_chunks.sort(key=lambda item: (-item[0], item[1]))
     return [chunk for _score, _index, chunk in scored_chunks]
 
 
-def _heuristic_score(chunk: KnowledgeChunk, *, route: QueryRoute) -> float:
+def _heuristic_score(
+    chunk: KnowledgeChunk,
+    *,
+    route: QueryRoute,
+    keyword_terms: frozenset[str],
+) -> float:
     score = _dense_score(chunk)
     score += _topic_bonus(chunk, route)
     score += _tag_bonus(chunk, route)
     score += _section_bonus(chunk, route)
+    score += keyword_score_chunk(chunk, query_terms=keyword_terms)
     return score
 
 
