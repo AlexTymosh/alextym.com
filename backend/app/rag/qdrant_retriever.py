@@ -1,7 +1,9 @@
+import inspect
+
 from app.core.config import Settings
 from app.llm.client import EmbeddingClient
 from app.llm.openai_client import OpenAIEmbeddingClient
-from app.rag.models import KnowledgeChunk
+from app.rag.models import KnowledgeChunk, RetrievalFilter
 from app.rag.qdrant_store import QdrantKnowledgeStore
 from app.rag.query_router import route_query
 
@@ -92,13 +94,48 @@ class QdrantRetriever:
         effective_limit = limit or self._default_limit
         route = route_query(normalized_query)
         routed_query = route.retrieval_text(normalized_query)
+        payload_filter = route.payload_filter()
         query_embedding = self._embedding_client.embed_text(_expand_query(routed_query))
-        chunks = self._store.search(
+        chunks = _search_store(
+            store=self._store,
             embedding=query_embedding,
             limit=effective_limit,
             score_threshold=self._score_threshold,
+            payload_filter=payload_filter,
         )
         return _filter_sections_for_query(normalized_query, chunks)
+
+
+def _search_store(
+    *,
+    store: QdrantKnowledgeStore,
+    embedding: list[float],
+    limit: int,
+    score_threshold: float,
+    payload_filter: RetrievalFilter | None,
+) -> list[KnowledgeChunk]:
+    if _store_accepts_payload_filter(store):
+        return store.search(
+            embedding=embedding,
+            limit=limit,
+            score_threshold=score_threshold,
+            payload_filter=payload_filter,
+        )
+
+    return store.search(
+        embedding=embedding,
+        limit=limit,
+        score_threshold=score_threshold,
+    )
+
+
+def _store_accepts_payload_filter(store: object) -> bool:
+    try:
+        signature = inspect.signature(store.search)  # type: ignore[attr-defined]
+    except (TypeError, ValueError):
+        return True
+
+    return "payload_filter" in signature.parameters
 
 
 def _expand_query(query: str) -> str:

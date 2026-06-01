@@ -6,7 +6,7 @@ from qdrant_client import QdrantClient, models
 
 from app.core.config import Settings
 from app.llm.client import ProviderConfigurationError, ProviderRequestError
-from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
 from app.schemas.chat import Confidence
 
 
@@ -150,6 +150,7 @@ class QdrantKnowledgeStore:
         embedding: list[float],
         limit: int,
         score_threshold: float,
+        payload_filter: RetrievalFilter | None = None,
     ) -> list[KnowledgeChunk]:
         if not embedding:
             return []
@@ -158,6 +159,7 @@ class QdrantKnowledgeStore:
             query_response = self._client.query_points(
                 collection_name=self._collection_name,
                 query=embedding,
+                query_filter=_build_query_filter(payload_filter),
                 limit=limit,
                 score_threshold=score_threshold,
                 with_payload=True,
@@ -167,6 +169,48 @@ class QdrantKnowledgeStore:
 
         points = getattr(query_response, "points", query_response)
         return [_chunk_from_point(point) for point in points]
+
+
+def _build_query_filter(
+    payload_filter: RetrievalFilter | None,
+) -> models.Filter | None:
+    if payload_filter is None:
+        return None
+
+    must: list[models.FieldCondition] = []
+    should: list[models.FieldCondition] = []
+
+    if payload_filter.visibility:
+        must.append(
+            models.FieldCondition(
+                key="visibility",
+                match=models.MatchValue(value=payload_filter.visibility),
+            )
+        )
+
+    should.extend(_match_any_conditions("topic", payload_filter.topic_any))
+    should.extend(_match_any_conditions("tags", payload_filter.tag_any))
+    should.extend(_match_any_conditions("section", payload_filter.section_any))
+
+    if not must and not should:
+        return None
+
+    return models.Filter(must=must or None, should=should or None)
+
+
+def _match_any_conditions(
+    field_name: str,
+    values: tuple[str, ...],
+) -> list[models.FieldCondition]:
+    if not values:
+        return []
+
+    return [
+        models.FieldCondition(
+            key=field_name,
+            match=models.MatchAny(any=list(values)),
+        )
+    ]
 
 
 def _point_id(chunk: KnowledgeChunk) -> str:

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from app.rag.models import RetrievalFilter
+
 QueryIntent = Literal[
     "hard_skills",
     "soft_skills",
@@ -31,6 +33,18 @@ class QueryRoute:
             return query
 
         return " ".join([query, "retrieval hints:", *hints])
+
+    def payload_filter(self) -> RetrievalFilter | None:
+        if self.intent in {"contact", "out_of_scope", "general_profile"}:
+            return None
+        if not (self.topic_hints or self.tag_hints or self.section_hints):
+            return None
+
+        return RetrievalFilter(
+            topic_any=self.topic_hints,
+            tag_any=self.tag_hints,
+            section_any=self.section_hints,
+        )
 
 
 ROUTING_RULES: tuple[tuple[QueryIntent, tuple[str, ...], QueryRoute], ...] = (

@@ -9,6 +9,8 @@ def test_query_router_routes_hard_skills() -> None:
     assert "python" in route.tag_hints
     assert route.should_offer_handoff is False
     assert "hard-skills" in route.retrieval_text("skills")
+    assert route.payload_filter() is not None
+    assert route.payload_filter().topic_any == ("hard-skills",)
 
 
 def test_query_router_routes_soft_skills() -> None:
@@ -17,6 +19,7 @@ def test_query_router_routes_soft_skills() -> None:
     assert route.intent == "soft_skills"
     assert route.topic_hints == ("soft-skills-working-style",)
     assert "working-style" in route.tag_hints
+    assert route.payload_filter() is not None
 
 
 def test_query_router_routes_right_to_work_with_handoff() -> None:
@@ -26,6 +29,7 @@ def test_query_router_routes_right_to_work_with_handoff() -> None:
     assert route.topic_hints == ("right-to-work-uk-location",)
     assert "share-code" in route.tag_hints
     assert route.should_offer_handoff is True
+    assert route.payload_filter() is not None
 
 
 def test_query_router_routes_availability_with_handoff() -> None:
@@ -35,6 +39,7 @@ def test_query_router_routes_availability_with_handoff() -> None:
     assert route.topic_hints == ("availability-start-date",)
     assert "start-date" in route.tag_hints
     assert route.should_offer_handoff is True
+    assert route.payload_filter() is not None
 
 
 def test_query_router_routes_projects() -> None:
@@ -44,6 +49,7 @@ def test_query_router_routes_projects() -> None:
     assert "project-ai-portfolio-rag-chat" in route.topic_hints
     assert "project-gdpr-aware-saas-automation-platform" in route.topic_hints
     assert "rag" in route.tag_hints
+    assert route.payload_filter() is not None
 
 
 def test_query_router_routes_education() -> None:
@@ -52,6 +58,7 @@ def test_query_router_routes_education() -> None:
     assert route.intent == "education"
     assert "education" in route.section_hints
     assert "training" in route.section_hints
+    assert route.payload_filter() is not None
 
 
 def test_query_router_routes_experience() -> None:
@@ -60,6 +67,7 @@ def test_query_router_routes_experience() -> None:
     assert route.intent == "experience"
     assert "erp" in route.tag_hints
     assert "experience" in route.section_hints
+    assert route.payload_filter() is not None
 
 
 def test_query_router_routes_out_of_scope_subjects() -> None:
@@ -68,6 +76,7 @@ def test_query_router_routes_out_of_scope_subjects() -> None:
     assert route.intent == "out_of_scope"
     assert route.topic_hints == ()
     assert route.tag_hints == ()
+    assert route.payload_filter() is None
 
 
 def test_query_router_returns_general_profile_for_broad_profile_query() -> None:
@@ -75,3 +84,4 @@ def test_query_router_returns_general_profile_for_broad_profile_query() -> None:
 
     assert route.intent == "general_profile"
     assert "profile" in route.tag_hints
+    assert route.payload_filter() is None

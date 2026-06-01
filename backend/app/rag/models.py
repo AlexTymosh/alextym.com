@@ -5,6 +5,18 @@ from app.schemas.chat import Confidence
 
 
 @dataclass(frozen=True)
+class RetrievalFilter:
+    visibility: str = "public"
+    topic_any: tuple[str, ...] = ()
+    tag_any: tuple[str, ...] = ()
+    section_any: tuple[str, ...] = ()
+
+    @property
+    def has_selectors(self) -> bool:
+        return bool(self.topic_any or self.tag_any or self.section_any)
+
+
+@dataclass(frozen=True)
 class ChunkMetadata:
     source: str
     section: str
