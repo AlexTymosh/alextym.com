@@ -7,7 +7,12 @@ from qdrant_client import QdrantClient, models
 from app.core.config import Settings
 from app.llm.client import ProviderConfigurationError, ProviderRequestError
 from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
+from app.rag.vector_config import DenseVectorName, NAMED_DENSE_VECTOR_NAMES
+from app.rag.vector_config import VectorMode, normalise_query_vector_name
+from app.rag.vector_config import normalise_vector_mode
 from app.schemas.chat import Confidence
+
+NamedEmbeddings = dict[DenseVectorName, list[float]]
 
 
 class QdrantKnowledgeStore:
@@ -17,6 +22,8 @@ class QdrantKnowledgeStore:
         url: str,
         api_key: str,
         collection_name: str,
+        vector_mode: str = "single",
+        query_vector_name: str = "body_dense",
         client: Any | None = None,
     ) -> None:
         if not url and client is None:
@@ -26,6 +33,8 @@ class QdrantKnowledgeStore:
 
         self._client = client or QdrantClient(url=url, api_key=api_key or None)
         self._collection_name = collection_name
+        self._vector_mode = normalise_vector_mode(vector_mode)
+        self._query_vector_name = normalise_query_vector_name(query_vector_name)
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "QdrantKnowledgeStore":
@@ -33,6 +42,8 @@ class QdrantKnowledgeStore:
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key,
             collection_name=settings.qdrant_collection,
+            vector_mode=settings.qdrant_vector_mode,
+            query_vector_name=settings.qdrant_query_vector_name,
         )
 
     def ensure_collection(self, *, vector_size: int) -> None:
@@ -46,9 +57,9 @@ class QdrantKnowledgeStore:
             if not collection_exists:
                 self._client.create_collection(
                     collection_name=self._collection_name,
-                    vectors_config=models.VectorParams(
-                        size=vector_size,
-                        distance=models.Distance.COSINE,
+                    vectors_config=_vectors_config(
+                        vector_size=vector_size,
+                        vector_mode=self._vector_mode,
                     ),
                 )
             self._ensure_payload_indexes()
@@ -86,6 +97,11 @@ class QdrantKnowledgeStore:
         source_files: Iterable[str],
         vector_size: int,
     ) -> None:
+        if self._vector_mode == "named":
+            raise ProviderConfigurationError(
+                "Single-vector ingestion cannot target a named-vector collection. "
+                "Use replace_source_named_vector_chunks instead."
+            )
         if len(chunks) != len(embeddings):
             raise ValueError("Chunks and embeddings must have the same length.")
 
@@ -93,6 +109,25 @@ class QdrantKnowledgeStore:
         self.delete_sources(source_files)
         if chunks:
             self.upsert_chunks(chunks=chunks, embeddings=embeddings)
+
+    def replace_source_named_vector_chunks(
+        self,
+        *,
+        chunks: list[KnowledgeChunk],
+        named_embeddings: list[NamedEmbeddings],
+        source_files: Iterable[str],
+        vector_size: int,
+    ) -> None:
+        if len(chunks) != len(named_embeddings):
+            raise ValueError("Chunks and named embeddings must have the same length.")
+
+        self.ensure_collection(vector_size=vector_size)
+        self.delete_sources(source_files)
+        if chunks:
+            self.upsert_named_vector_chunks(
+                chunks=chunks,
+                named_embeddings=named_embeddings,
+            )
 
     def delete_sources(self, source_files: Iterable[str]) -> None:
         for source_file in source_files:
@@ -144,6 +179,31 @@ class QdrantKnowledgeStore:
         except Exception as exc:
             raise ProviderRequestError(f"Qdrant upsert failed: {exc}") from exc
 
+    def upsert_named_vector_chunks(
+        self,
+        *,
+        chunks: list[KnowledgeChunk],
+        named_embeddings: list[NamedEmbeddings],
+    ) -> None:
+        if len(chunks) != len(named_embeddings):
+            raise ValueError("Chunks and named embeddings must have the same length.")
+        if not chunks:
+            return
+
+        points = [
+            models.PointStruct(
+                id=_point_id(chunk),
+                vector=dict(named_embedding),
+                payload=_payload_from_chunk(chunk),
+            )
+            for chunk, named_embedding in zip(chunks, named_embeddings, strict=True)
+        ]
+
+        try:
+            self._client.upsert(collection_name=self._collection_name, points=points)
+        except Exception as exc:
+            raise ProviderRequestError(f"Qdrant upsert failed: {exc}") from exc
+
     def search(
         self,
         *,
@@ -155,20 +215,39 @@ class QdrantKnowledgeStore:
         if not embedding:
             return []
 
+        query_kwargs: dict[str, Any] = {
+            "collection_name": self._collection_name,
+            "query": embedding,
+            "query_filter": _build_query_filter(payload_filter),
+            "limit": limit,
+            "score_threshold": score_threshold,
+            "with_payload": True,
+        }
+        if self._vector_mode == "named":
+            query_kwargs["using"] = self._query_vector_name
+
         try:
-            query_response = self._client.query_points(
-                collection_name=self._collection_name,
-                query=embedding,
-                query_filter=_build_query_filter(payload_filter),
-                limit=limit,
-                score_threshold=score_threshold,
-                with_payload=True,
-            )
+            query_response = self._client.query_points(**query_kwargs)
         except Exception as exc:
             raise ProviderRequestError(f"Qdrant search failed: {exc}") from exc
 
         points = getattr(query_response, "points", query_response)
         return [_chunk_from_point(point) for point in points]
+
+
+def _vectors_config(
+    *,
+    vector_size: int,
+    vector_mode: VectorMode,
+) -> models.VectorParams | dict[str, models.VectorParams]:
+    vector_params = models.VectorParams(
+        size=vector_size,
+        distance=models.Distance.COSINE,
+    )
+    if vector_mode == "single":
+        return vector_params
+
+    return {vector_name: vector_params for vector_name in NAMED_DENSE_VECTOR_NAMES}
 
 
 def _build_query_filter(
