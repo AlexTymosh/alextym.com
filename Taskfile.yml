@@ -168,6 +168,22 @@ tasks:
         --comparison "../.tmp/evals/generated-rag-comparison.md"
         --allow-failures
 
+  rag:eval:retrieval:
+    desc: Compare generated-RAG retrieval quality before and after changes.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --env-file .env python -m scripts.run_retrieval_evals
+        --cases evals/retrieval_eval_cases_generated_rag.json
+        --suite rag_retrieval_quality
+        --before "../.tmp/evals/retrieval-rag-before.json"
+        --after "../.tmp/evals/retrieval-rag-after.json"
+        --comparison "../.tmp/evals/retrieval-rag-comparison.md"
+        --allow-failures
+
   rag:eval:compare:
     desc: Compare two eval JSON reports and write a Markdown table.
     dir: backend
