@@ -46,6 +46,10 @@ type ResumeMetadata = {
   location?: string;
 };
 
+type ExtractSectionOptions = {
+  requireEndMarker?: boolean;
+};
+
 const SECTION_SORT_ORDER: Record<ResumeSection, number> = {
   experience: 0,
   education: 1,
@@ -55,12 +59,18 @@ const SECTION_SORT_ORDER: Record<ResumeSection, number> = {
 const YAML_BLOCK_PATTERN = /```yaml\n([\s\S]*?)\n```/;
 const ADDITIONAL_SECTION_PATTERN =
   /(?:^|\n\n)## ([^\n]+)\n\n([\s\S]*?)(?=\n\n## |\s*$)/g;
+const SUMMARY_RAG_MARKER = "## RAG";
+const ENTRY_RAG_MARKER = "### RAG";
 
 export function getResumeData(): ResumeData {
-  const markdown = readResumeMarkdown();
-  const summary = parseSummary(markdown);
-  const entries = parseEntries(markdown);
-  const additionalSections = parseAdditionalSections(markdown);
+  return getResumeDataFromMarkdown(readResumeMarkdown());
+}
+
+export function getResumeDataFromMarkdown(markdown: string): ResumeData {
+  const normalizedMarkdown = normalizeLineEndings(markdown);
+  const summary = parseSummary(normalizedMarkdown);
+  const entries = parseEntries(normalizedMarkdown);
+  const additionalSections = parseAdditionalSections(normalizedMarkdown);
 
   return {
     summary,
@@ -81,7 +91,7 @@ function readResumeMarkdown(): string {
     throw new Error("Static resume markdown source was not found.");
   }
 
-  return normalizeLineEndings(readFileSync(resumePath, "utf8"));
+  return readFileSync(resumePath, "utf8");
 }
 
 function normalizeLineEndings(markdown: string): string {
@@ -99,7 +109,12 @@ function parseSummary(markdown: string): ResumeData["summary"] {
     "## Concise",
     "## Detailed",
   );
-  const detailed = extractRequiredSection(summaryMarkdown, "## Detailed");
+  const detailed = extractRequiredSection(
+    summaryMarkdown,
+    "## Detailed",
+    SUMMARY_RAG_MARKER,
+    { requireEndMarker: false },
+  );
 
   return {
     concise: parseParagraphs(concise),
@@ -143,7 +158,12 @@ function parseEntryBlock(block: string): ResumeEntry {
     "### Concise",
     "### Detailed",
   );
-  const detailedMarkdown = extractRequiredSection(block, "### Detailed");
+  const detailedMarkdown = extractRequiredSection(
+    block,
+    "### Detailed",
+    ENTRY_RAG_MARKER,
+    { requireEndMarker: false },
+  );
   const metadata = parseMetadata(yamlMatch[1]);
 
   return {
@@ -223,8 +243,14 @@ function extractRequiredSection(
   markdown: string,
   startMarker: string,
   endMarker?: string,
+  options?: ExtractSectionOptions,
 ): string {
-  const section = extractOptionalSection(markdown, startMarker, endMarker);
+  const section = extractOptionalSection(
+    markdown,
+    startMarker,
+    endMarker,
+    options,
+  );
 
   if (!section) {
     throw new Error(`Resume markdown section is missing: ${startMarker}.`);
@@ -237,6 +263,7 @@ function extractOptionalSection(
   markdown: string,
   startMarker: string,
   endMarker?: string,
+  options?: ExtractSectionOptions,
 ): string | null {
   const startIndex = markdown.indexOf(startMarker);
 
@@ -244,12 +271,13 @@ function extractOptionalSection(
     return null;
   }
 
+  const requireEndMarker = options?.requireEndMarker ?? Boolean(endMarker);
   const contentStart = startIndex + startMarker.length;
   const endIndex = endMarker
     ? markdown.indexOf(endMarker, contentStart)
     : -1;
 
-  if (endMarker && endIndex === -1) {
+  if (endMarker && endIndex === -1 && requireEndMarker) {
     return null;
   }
 

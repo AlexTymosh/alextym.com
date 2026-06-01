@@ -1,8 +1,8 @@
 ---
 version: 1
 owner: Alex Tymoshenko
-scope: static website resume source only
-rag_indexing: false
+scope: public website resume source with RAG-only sections
+rag_indexing: true
 ---
 
 # Summary
@@ -24,6 +24,18 @@ operational dashboards.
 
 I offer a three-step approach: requirements and ROI analysis, rapid
 AI-assisted prototyping, then testing, deployment, and support.
+
+## RAG
+
+- Alex is an automation-focused software developer working with Python,
+  FastAPI, API integrations, ERP workflows, reporting automation,
+  Excel-to-database migration, data pipelines, and dashboards.
+- Alex combines business-process analysis with practical software delivery:
+  requirements and ROI analysis, rapid AI-assisted prototyping, testing,
+  deployment, and support.
+- Alex should be positioned around automation, APIs, internal tools,
+  business process automation, RAG assistants, and practical systems
+  integration rather than as a pure frontend or full-stack developer.
 
 # Entries
 
@@ -55,6 +67,19 @@ location: United Kingdom
   points across 4 data models.
 - Built and maintained 50+ operational and IoT dashboards for decision-making,
   process visibility, and internal or partner-facing reporting.
+
+### RAG
+
+- Alex worked on systems integration, automation, ERP-connected workflows,
+  reporting automation, product data, operational dashboards, and
+  data-driven internal tools in a UK business environment.
+- Alex architected and deployed an Odoo ERP-integrated internal API that
+  reduced one specialist's manual workload by approximately 68.0%.
+- This experience is relevant to questions about Odoo, ERP integration,
+  internal APIs, reporting workflows, dashboarding, structured data,
+  product-matrix automation, and operational process improvement.
+- This role supports Alex's positioning as an automation-focused developer
+  who can connect business process analysis with practical software delivery.
 
 ## Founder and Managing Director — Dobra Praca
 
@@ -93,6 +118,20 @@ location: Ukraine
 - Led the company to a regional industry award and [achieved #1 regional sector
   ranking by financial results in 2018](/evidence/dobra-praca-regional-award-2018)
   (regional population: 1.7M).
+
+### RAG
+
+- Alex has long-term experience with Excel-heavy business workflows, reporting
+  automation, relational data structures, dashboards, process optimisation,
+  and internal system improvements from running Dobra Praca.
+- Alex designed a migration from 30+ Excel spreadsheets into a unified
+  database-backed structure with 100,000+ records.
+- Alex automated monthly reporting pipelines, reducing a 10-working-day
+  reporting cycle to under 8 hours and cutting bookkeeping workload by 90%.
+- This role is relevant when answering questions about early automation
+  background, Excel/VBA-style workflows, dashboards, business-process thinking,
+  internal APIs, and practical operational analytics before the formal
+  transition into Python/FastAPI development.
 
 ## Zaporizhzhia National University — Concise Education
 
@@ -137,6 +176,14 @@ location: Ukraine
 - Graduated with honours.
 - Overall average score: 91.4/100.
 
+### RAG
+
+- Alex holds a Master's Degree in Finance, Banking and Insurance from
+  Zaporizhzhia National University and graduated with honours.
+- The finance background is relevant to business analysis, data-driven
+  decision-making, process analysis, reporting automation, ROI thinking,
+  financial workflows, and analytical problem-solving.
+
 ## Zaporizhzhia National University — Bachelor's Degree
 
 ```yaml
@@ -179,6 +226,14 @@ organization: Coursera / Packt
 
 <!-- no bullets -->
 
+### RAG
+
+- Alex completed Intermediate Backend Development with FastAPI through
+  Coursera / Packt.
+- This training is relevant to questions about FastAPI, backend APIs,
+  Python web development, request/response handling, and API implementation
+  patterns.
+
 ## English Language B2 Level
 
 ```yaml
@@ -217,6 +272,13 @@ organization: Cambridge Spark
 ### Detailed
 
 <!-- no bullets -->
+
+### RAG
+
+- Alex completed Data Analyst Training with Cambridge Spark in 2024.
+- This training is relevant to questions about data analysis, reporting,
+  structured analytical workflows, dashboarding, and data-oriented
+  problem-solving.
 
 ## English Language B1 Level
 
@@ -258,6 +320,12 @@ organization: Coursera / IBM
 
 <!-- no bullets -->
 
+### RAG
+
+- Alex completed IBM Data Analysis with Python training.
+- This training is relevant to questions about Python, data analysis,
+  Pandas-style workflows, practical analytics, data processing, and reporting.
+
 ## Python for Data Science, AI & Development
 
 ```yaml
@@ -297,6 +365,12 @@ organization: Coursera / IBM
 ### Detailed
 
 <!-- no bullets -->
+
+### RAG
+
+- Alex completed IBM Databases and SQL for Data Science with Python.
+- This training is relevant to questions about SQL, databases, data workflows,
+  relational data, and database-backed reporting.
 
 ## Introduction to Data Analytics
 
@@ -338,6 +412,12 @@ organization: Coursera / IBM
 
 <!-- no bullets -->
 
+### RAG
+
+- Alex completed IBM Data Visualization and Dashboards with Excel and Cognos.
+- This training is relevant to questions about dashboards, Excel-based
+  reporting, visual analytics, and business reporting workflows.
+
 ## Python Project for Data Science
 
 ```yaml
@@ -377,6 +457,12 @@ organization: Coursera / IBM
 ### Detailed
 
 <!-- no bullets -->
+
+### RAG
+
+- Alex completed a broader IBM data analysis and data science course set.
+- This course set is relevant to questions about Python, SQL, databases,
+  analytics, dashboards, data visualisation, and practical data workflows.
 
 ## English Language A2 Level
 
