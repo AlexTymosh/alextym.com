@@ -5,6 +5,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,7 @@ class ComparisonSummary:
 
 
 def load_report(path: Path) -> dict[str, CaseReport]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = _load_report_payload(path)
     results = payload.get("results")
     if not isinstance(results, list):
         raise ValueError(f"{path} does not contain a 'results' list.")
@@ -53,12 +54,20 @@ def load_report(path: Path) -> dict[str, CaseReport]:
     return report
 
 
+def load_report_metadata(path: Path) -> dict[str, Any]:
+    payload = _load_report_payload(path)
+    metadata = payload.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
+
+
 def build_markdown(
     *,
     before_path: Path,
     after_path: Path,
     before: dict[str, CaseReport],
     after: dict[str, CaseReport],
+    before_metadata: dict[str, Any] | None = None,
+    after_metadata: dict[str, Any] | None = None,
 ) -> str:
     summary = compare_summary(before=before, after=after)
     lines = [
@@ -66,6 +75,26 @@ def build_markdown(
         "",
         f"- Before: `{before_path.as_posix()}`",
         f"- After: `{after_path.as_posix()}`",
+        "",
+        "## Report metadata",
+        "",
+        "| Field | Before | After |",
+        "|---|---|---|",
+        _metadata_row(
+            "Generated at local",
+            before_metadata,
+            after_metadata,
+            "generated_at_local",
+        ),
+        _metadata_row(
+            "Generated at UTC",
+            before_metadata,
+            after_metadata,
+            "generated_at_utc",
+        ),
+        _metadata_row("Suite", before_metadata, after_metadata, "suite"),
+        _metadata_row("Mode", before_metadata, after_metadata, "mode"),
+        _metadata_row("Cases path", before_metadata, after_metadata, "cases_path"),
         "",
         "## Summary",
         "",
@@ -180,6 +209,8 @@ def main(argv: list[str] | None = None) -> int:
         after_path=args.after,
         before=before,
         after=after,
+        before_metadata=load_report_metadata(args.before),
+        after_metadata=load_report_metadata(args.after),
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -197,6 +228,13 @@ def main(argv: list[str] | None = None) -> int:
     return 0 if summary.regressed == 0 else 1
 
 
+def _load_report_payload(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} must contain a JSON object.")
+    return payload
+
+
 def _format_failures(raw_failures: object) -> tuple[str, ...]:
     if not isinstance(raw_failures, list):
         return ()
@@ -208,6 +246,26 @@ def _format_failures(raw_failures: object) -> tuple[str, ...]:
         detail = str(failure.get("detail") or "")
         failures.append(f"{check}: {detail}" if detail else check)
     return tuple(failures)
+
+
+def _metadata_row(
+    label: str,
+    before_metadata: dict[str, Any] | None,
+    after_metadata: dict[str, Any] | None,
+    key: str,
+) -> str:
+    before_value = _metadata_value(before_metadata, key)
+    after_value = _metadata_value(after_metadata, key)
+    return f"| {label} | `{_escape(before_value)}` | `{_escape(after_value)}` |"
+
+
+def _metadata_value(metadata: dict[str, Any] | None, key: str) -> str:
+    if not metadata:
+        return "—"
+    value = metadata.get(key)
+    if value in (None, ""):
+        return "—"
+    return str(value)
 
 
 def _summary_row(label: str, before: int, after: int) -> str:

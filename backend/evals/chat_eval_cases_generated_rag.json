@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "description": "Focused live eval suite for generated structured RAG chunks. Run before and after generated JSON ingestion to compare quality.",
+  "cases": [
+    {
+      "id": "generated_rag_hard_skills",
+      "suite": "rag_generated_quality",
+      "category": "skills",
+      "message": "What are Alex's hard skills?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_any": [
+          "Python",
+          "FastAPI",
+          "SQL",
+          "API",
+          "automation"
+        ],
+        "must_not_include": [
+          "regular AI chat",
+          "medical advice",
+          "London Tube"
+        ],
+        "max_words": 150
+      }
+    },
+    {
+      "id": "generated_rag_soft_skills",
+      "suite": "rag_generated_quality",
+      "category": "skills",
+      "message": "What are Alex's soft skills?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_any": [
+          "problem-solving",
+          "communication",
+          "collaboration",
+          "adaptable",
+          "feedback"
+        ],
+        "must_not_include": [
+          "regular AI chat",
+          "medical advice"
+        ],
+        "max_words": 150
+      }
+    },
+    {
+      "id": "generated_rag_share_code_handoff",
+      "suite": "rag_generated_quality",
+      "category": "right_to_work",
+      "message": "Can Alex provide a share code?",
+      "expected": {
+        "not_enough_data": false,
+        "handoff_suggested": true,
+        "handoff_reason": "user_requested_human",
+        "sources": "empty",
+        "must_include_any": [
+          "connect",
+          "handoff prompt"
+        ],
+        "must_not_include": [
+          "regular AI chat"
+        ],
+        "max_words": 70
+      }
+    },
+    {
+      "id": "generated_rag_right_to_work",
+      "suite": "rag_generated_quality",
+      "category": "right_to_work",
+      "message": "Does Alex have the right to work in the UK?",
+      "expected": {
+        "handoff_suggested": true,
+        "sources": "any",
+        "must_include_any": [
+          "right to work",
+          "work in the United Kingdom",
+          "connect",
+          "share code"
+        ],
+        "must_not_include": [
+          "regular AI chat",
+          "not configured"
+        ],
+        "max_words": 130
+      }
+    },
+    {
+      "id": "generated_rag_portfolio_project",
+      "suite": "rag_generated_quality",
+      "category": "projects",
+      "message": "Tell me about Alex's RAG portfolio project.",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_any": [
+          "RAG",
+          "Qdrant",
+          "FastAPI",
+          "Next.js",
+          "portfolio",
+          "AI assistant"
+        ],
+        "must_not_include": [
+          "regular AI chat",
+          "medical advice"
+        ],
+        "max_words": 160
+      }
+    },
+    {
+      "id": "generated_rag_ai_assisted_workflow",
+      "suite": "rag_generated_quality",
+      "category": "working_style",
+      "message": "How does Alex use AI-assisted development?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_any": [
+          "human-in-the-loop",
+          "human review",
+          "testing",
+          "validation",
+          "Codex",
+          "AI-assisted"
+        ],
+        "must_not_include": [
+          "regular AI chat"
+        ],
+        "max_words": 160
+      }
+    },
+    {
+      "id": "generated_rag_start_date_handoff",
+      "suite": "rag_generated_quality",
+      "category": "availability",
+      "message": "When can Alex start a new job?",
+      "expected": {
+        "handoff_suggested": true,
+        "sources": "any",
+        "must_include_any": [
+          "calendar",
+          "availability",
+          "connect",
+          "Alex"
+        ],
+        "must_not_include": [
+          "regular AI chat",
+          "definitive start date"
+        ],
+        "max_words": 130
+      }
+    }
+  ]
+}

@@ -8,6 +8,15 @@ from app.rag.qdrant_retriever import QdrantRetriever
 from app.rag.qdrant_store import QdrantKnowledgeStore
 from scripts.ingest_knowledge import ingest_public_knowledge
 
+EXPECTED_QDRANT_INDEX_FIELDS = [
+    ("source", "keyword"),
+    ("source_file", "keyword"),
+    ("section", "keyword"),
+    ("topic", "keyword"),
+    ("visibility", "keyword"),
+    ("tags", "keyword"),
+]
+
 
 def test_openai_embedding_client_embeds_texts_with_configured_dimensions() -> None:
     fake_embeddings = FakeOpenAIEmbeddings()
@@ -75,14 +84,25 @@ def test_qdrant_store_replaces_source_chunks() -> None:
         "collection_exists",
         "create_collection",
         "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "delete",
         "delete",
         "upsert",
+    ]
+    assert fake_qdrant.indexed_fields == EXPECTED_QDRANT_INDEX_FIELDS
+    assert fake_qdrant.deleted_filters == [
+        ("source_file", "resume.md"),
+        ("source", "resume.md"),
     ]
     assert fake_qdrant.upserted_points[0].payload["chunk_id"] == "chunk-1"
     assert fake_qdrant.upserted_points[0].payload["source"] == "resume.md"
 
 
-def test_qdrant_store_ensures_source_payload_index_for_existing_collection() -> None:
+def test_qdrant_store_ensures_payload_indexes_for_existing_collection() -> None:
     fake_qdrant = FakeQdrantClient(collection_exists=True)
     store = QdrantKnowledgeStore(
         url="",
@@ -93,8 +113,16 @@ def test_qdrant_store_ensures_source_payload_index_for_existing_collection() -> 
 
     store.ensure_collection(vector_size=2)
 
-    assert fake_qdrant.operations == ["collection_exists", "create_payload_index"]
-    assert fake_qdrant.indexed_fields == [("source", "keyword")]
+    assert fake_qdrant.operations == [
+        "collection_exists",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+        "create_payload_index",
+    ]
+    assert fake_qdrant.indexed_fields == EXPECTED_QDRANT_INDEX_FIELDS
 
 
 def test_qdrant_store_search_maps_payload_to_chunks() -> None:
@@ -137,7 +165,11 @@ def test_qdrant_retriever_filters_link_sections_for_professional_queries() -> No
         store=FakeSearchStore(
             [
                 _chunk("links", "GitHub profile.", section="Links"),
-                _chunk("backend", "Alex uses FastAPI.", section="Python and Backend Development"),
+                _chunk(
+                    "backend",
+                    "Alex uses FastAPI.",
+                    section="Python and Backend Development",
+                ),
             ]
         ),
         default_limit=6,
@@ -155,7 +187,11 @@ def test_qdrant_retriever_keeps_link_sections_for_link_queries() -> None:
         store=FakeSearchStore(
             [
                 _chunk("links", "GitHub profile.", section="Links"),
-                _chunk("backend", "Alex uses FastAPI.", section="Python and Backend Development"),
+                _chunk(
+                    "backend",
+                    "Alex uses FastAPI.",
+                    section="Python and Backend Development",
+                ),
             ]
         ),
         default_limit=6,
@@ -177,7 +213,9 @@ def test_qdrant_retriever_expands_short_sql_queries() -> None:
         store=FakeSearchStore(
             [
                 _chunk(
-                    "database", "Alex has SQL experience.", section="Python and Backend Development"
+                    "database",
+                    "Alex has SQL experience.",
+                    section="Python and Backend Development",
                 )
             ]
         ),
@@ -271,6 +309,7 @@ class FakeQdrantClient:
         self.operations: list[str] = []
         self.upserted_points: list[object] = []
         self.indexed_fields: list[tuple[str, object]] = []
+        self.deleted_filters: list[tuple[str, object]] = []
         self._search_points = search_points or []
         self._collection_exists = collection_exists
 
@@ -293,6 +332,9 @@ class FakeQdrantClient:
 
     def delete(self, **kwargs: object) -> None:
         self.operations.append("delete")
+        filter_conditions = kwargs["points_selector"].filter.must
+        condition = filter_conditions[0]
+        self.deleted_filters.append((condition.key, condition.match.value))
 
     def upsert(self, *, collection_name: str, points: list[object]) -> None:
         self.operations.append("upsert")

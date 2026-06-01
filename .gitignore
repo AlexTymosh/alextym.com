@@ -19,6 +19,7 @@ uv-cache/
 
 backend/knowledge/biography_public.md
 backend/knowledge/projects.md
+backend/knowledge/resume.generated.chunks.json
 
 node_modules/
 .next/

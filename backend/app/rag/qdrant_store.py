@@ -53,13 +53,24 @@ class QdrantKnowledgeStore:
                 )
             self._ensure_payload_indexes()
         except Exception as exc:
-            raise ProviderRequestError("Qdrant collection setup failed.") from exc
+            raise ProviderRequestError(f"Qdrant collection setup failed: {exc}") from exc
 
     def _ensure_payload_indexes(self) -> None:
+        for field_name in (
+            "source",
+            "source_file",
+            "section",
+            "topic",
+            "visibility",
+            "tags",
+        ):
+            self._ensure_payload_index(field_name)
+
+    def _ensure_payload_index(self, field_name: str) -> None:
         try:
             self._client.create_payload_index(
                 collection_name=self._collection_name,
-                field_name="source",
+                field_name=field_name,
                 field_schema=models.PayloadSchemaType.KEYWORD,
             )
         except Exception as exc:
@@ -84,25 +95,36 @@ class QdrantKnowledgeStore:
             self.upsert_chunks(chunks=chunks, embeddings=embeddings)
 
     def delete_sources(self, source_files: Iterable[str]) -> None:
-        try:
-            for source_file in source_files:
-                self._client.delete(
-                    collection_name=self._collection_name,
-                    points_selector=models.FilterSelector(
-                        filter=models.Filter(
-                            must=[
-                                models.FieldCondition(
-                                    key="source",
-                                    match=models.MatchValue(value=source_file),
-                                )
-                            ]
-                        )
-                    ),
-                )
-        except Exception as exc:
-            raise ProviderRequestError("Qdrant source cleanup failed.") from exc
+        for source_file in source_files:
+            self._delete_by_payload_field(field_name="source_file", value=source_file)
+            self._delete_by_payload_field(field_name="source", value=source_file)
 
-    def upsert_chunks(self, *, chunks: list[KnowledgeChunk], embeddings: list[list[float]]) -> None:
+    def _delete_by_payload_field(self, *, field_name: str, value: str) -> None:
+        try:
+            self._client.delete(
+                collection_name=self._collection_name,
+                points_selector=models.FilterSelector(
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key=field_name,
+                                match=models.MatchValue(value=value),
+                            )
+                        ]
+                    ),
+                ),
+            )
+        except Exception as exc:
+            raise ProviderRequestError(
+                f"Qdrant source cleanup failed for {field_name}={value!r}: {exc}"
+            ) from exc
+
+    def upsert_chunks(
+        self,
+        *,
+        chunks: list[KnowledgeChunk],
+        embeddings: list[list[float]],
+    ) -> None:
         if len(chunks) != len(embeddings):
             raise ValueError("Chunks and embeddings must have the same length.")
         if not chunks:
@@ -120,7 +142,7 @@ class QdrantKnowledgeStore:
         try:
             self._client.upsert(collection_name=self._collection_name, points=points)
         except Exception as exc:
-            raise ProviderRequestError("Qdrant upsert failed.") from exc
+            raise ProviderRequestError(f"Qdrant upsert failed: {exc}") from exc
 
     def search(
         self,
@@ -141,7 +163,7 @@ class QdrantKnowledgeStore:
                 with_payload=True,
             )
         except Exception as exc:
-            raise ProviderRequestError("Qdrant search failed.") from exc
+            raise ProviderRequestError(f"Qdrant search failed: {exc}") from exc
 
         points = getattr(query_response, "points", query_response)
         return [_chunk_from_point(point) for point in points]
@@ -152,10 +174,13 @@ def _point_id(chunk: KnowledgeChunk) -> str:
 
 
 def _payload_from_chunk(chunk: KnowledgeChunk) -> dict[str, Any]:
-    return {
+    extra = chunk.metadata.extra
+    source_file = _text_or_default(extra.get("source_file"), chunk.metadata.source)
+    payload: dict[str, Any] = {
         "chunk_id": chunk.id,
         "content": chunk.content,
         "source": chunk.metadata.source,
+        "source_file": source_file,
         "section": chunk.metadata.section,
         "topic": chunk.metadata.topic,
         "visibility": chunk.metadata.visibility,
@@ -163,6 +188,23 @@ def _payload_from_chunk(chunk: KnowledgeChunk) -> dict[str, Any]:
         "source_confidence": chunk.metadata.source_confidence,
         "tags": list(chunk.metadata.tags),
     }
+
+    optional_payload = {
+        "parent_id": extra.get("parent_id"),
+        "schema_version": extra.get("schema_version"),
+        "source_details": extra.get("source"),
+        "rag_payload": extra.get("payload"),
+        "answer_facts": extra.get("answer_facts"),
+        "retrieval_hints": extra.get("retrieval_hints"),
+        "vector_inputs": extra.get("vector_inputs"),
+        "retrieval": extra.get("retrieval"),
+    }
+
+    for key, value in optional_payload.items():
+        if value not in (None, "", [], {}):
+            payload[key] = value
+
+    return payload
 
 
 def _chunk_from_point(point: Any) -> KnowledgeChunk:
@@ -178,8 +220,32 @@ def _chunk_from_point(point: Any) -> KnowledgeChunk:
             confidence=str(payload.get("confidence") or "self-reported"),
             source_confidence=_source_confidence(payload.get("source_confidence")),
             tags=tuple(str(tag) for tag in payload.get("tags", []) or []),
+            extra=_extra_from_payload(payload),
         ),
     )
+
+
+def _extra_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    extra_keys = {
+        "source_file",
+        "parent_id",
+        "schema_version",
+        "source_details",
+        "rag_payload",
+        "answer_facts",
+        "retrieval_hints",
+        "vector_inputs",
+        "retrieval",
+    }
+    return {
+        key: value
+        for key, value in payload.items()
+        if key in extra_keys and value not in (None, "", [], {})
+    }
+
+
+def _text_or_default(value: object, default: str) -> str:
+    return value.strip() if isinstance(value, str) and value.strip() else default
 
 
 def _source_confidence(value: object) -> Confidence:
