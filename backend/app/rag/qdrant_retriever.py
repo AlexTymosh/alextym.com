@@ -3,6 +3,7 @@ from app.llm.client import EmbeddingClient
 from app.llm.openai_client import OpenAIEmbeddingClient
 from app.rag.models import KnowledgeChunk
 from app.rag.qdrant_store import QdrantKnowledgeStore
+from app.rag.query_router import route_query
 
 QUERY_EXPANSIONS = (
     (
@@ -33,7 +34,16 @@ QUERY_EXPANSIONS = (
         "projects repositories portfolio FastAPI RAG automation backend templates",
     ),
     (
-        ("experience", "skills", "worked", "used", "опыт", "работал", "умеет", "навык"),
+        (
+            "experience",
+            "skills",
+            "worked",
+            "used",
+            "опыт",
+            "работал",
+            "умеет",
+            "навык",
+        ),
         "experience skills practical work used implemented built",
     ),
 )
@@ -80,7 +90,9 @@ class QdrantRetriever:
             return []
 
         effective_limit = limit or self._default_limit
-        query_embedding = self._embedding_client.embed_text(_expand_query(normalized_query))
+        route = route_query(normalized_query)
+        routed_query = route.retrieval_text(normalized_query)
+        query_embedding = self._embedding_client.embed_text(_expand_query(routed_query))
         chunks = self._store.search(
             embedding=query_embedding,
             limit=effective_limit,
@@ -101,7 +113,10 @@ def _expand_query(query: str) -> str:
     return " ".join([query, *expansions])
 
 
-def _filter_sections_for_query(query: str, chunks: list[KnowledgeChunk]) -> list[KnowledgeChunk]:
+def _filter_sections_for_query(
+    query: str,
+    chunks: list[KnowledgeChunk],
+) -> list[KnowledgeChunk]:
     query_terms = set(query.lower().replace("/", " ").replace("-", " ").split())
     if query_terms & LINK_QUERY_TERMS:
         return chunks
