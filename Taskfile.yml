@@ -89,6 +89,15 @@ tasks:
     cmds:
       - uv run python -m pytest
 
+  rag:extract-resume:
+    desc: Build generated RAG sources from the canonical resume markdown.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - uv run python -m scripts.extract_resume_rag_source
+
   rag:ingest:
     desc: Rebuild Qdrant vectors from reviewed public knowledge files.
     dir: backend

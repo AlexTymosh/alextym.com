@@ -97,30 +97,36 @@ function parseEntries(source, options) {
   return splitEntryBlocks(entriesMarkdown).map((block) => {
     const metadataBlock = block.match(/```yaml\n([\s\S]*?)\n```/)?.[1];
 
-    if (!metadataBlock) {
-      throw new Error("Resume entry metadata block is missing.");
-    }
+      if (!metadataBlock) {
+        throw new Error("Resume entry metadata block is missing.");
+      }
 
-    const conciseMarkdown = extractRequiredSection(
-      block,
-      "### Concise",
-      "### Detailed",
-    );
-    const detailedMarkdown = options.ignoreRagSections
-      ? extractRequiredSection(
-          block,
-          "### Detailed",
-          ENTRY_RAG_MARKER,
-          { requireEndMarker: false },
-        )
-      : extractRequiredSection(block, "### Detailed");
+      const conciseMarkdown = extractRequiredSection(
+        block,
+        "### Concise",
+        "### Detailed",
+      );
+      const detailedMarkdown = options.ignoreRagSections
+        ? extractRequiredSection(
+            block,
+            "### Detailed",
+            ENTRY_RAG_MARKER,
+            { requireEndMarker: false },
+          )
+        : extractRequiredSection(block, "### Detailed");
+      const { website, ...metadata } = parseMetadata(metadataBlock);
 
-    return {
-      ...parseMetadata(metadataBlock),
-      concise: parseBullets(conciseMarkdown),
-      detailed: parseBullets(detailedMarkdown),
-    };
-  });
+      if (!website) {
+        return null;
+      }
+
+      return {
+        ...metadata,
+        concise: parseBullets(conciseMarkdown),
+        detailed: parseBullets(detailedMarkdown),
+      };
+    })
+    .filter((entry) => entry !== null);
 }
 
 function splitEntryBlocks(source) {
@@ -243,6 +249,7 @@ function parseMetadata(block) {
     id: requireText(data.id, "id"),
     section: parseSection(data.section),
     visibleIn: parseVisibleIn(data.visibleIn),
+    website: parseWebsiteVisibility(data.website),
     startDate: requireText(data.startDate, "startDate"),
     endDate: parseEndDate(data.endDate),
     title: requireText(data.title, "title"),
@@ -282,6 +289,22 @@ function parseVisibleIn(value) {
   }
 
   return levels.length > 0 ? levels : ["concise", "detailed"];
+}
+
+function parseWebsiteVisibility(value) {
+  const normalized = optionalText(value)?.toLowerCase();
+
+  if (!normalized) {
+    return true;
+  }
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+
+  throw new Error(`Unsupported resume website visibility: ${value}.`);
 }
 
 function parseEndDate(value) {
@@ -435,6 +458,29 @@ title: Sample Entry
 
 - ${RAG_ONLY_SENTINEL} entry.
 
+## Hidden RAG Only Entry
+
+\`\`\`yaml
+id: hidden-rag-only-entry
+section: experience
+website: false
+startDate: 2025-01
+endDate: present
+title: Hidden RAG Only Entry
+\`\`\`
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+- ${RAG_ONLY_SENTINEL} hidden entry.
+
 # Additional Sections
 
 ## Languages
@@ -449,6 +495,8 @@ title: Sample Entry
   assertNoRagLeak(detailed);
   assert.match(concise, /Visible concise bullet/);
   assert.match(detailed, /Visible detailed bullet/);
+  assert.doesNotMatch(concise, /Hidden RAG Only Entry/);
+  assert.doesNotMatch(detailed, /Hidden RAG Only Entry/);
 }
 
 function assertNoRagLeak(text) {

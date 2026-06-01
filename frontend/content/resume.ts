@@ -39,6 +39,7 @@ type ResumeMetadata = {
   id: string;
   section: ResumeSection;
   visibleIn: ResumeDetailLevel[];
+  website: boolean;
   startDate: string;
   endDate: string | null;
   title: string;
@@ -129,7 +130,7 @@ function parseEntries(markdown: string): ResumeEntry[] {
     "# Additional Sections",
   );
   const entryBlocks = splitEntryBlocks(entriesMarkdown);
-  const entries = entryBlocks.map(parseEntryBlock);
+  const entries = entryBlocks.map(parseEntryBlock).filter(isResumeEntry);
 
   if (entries.length === 0) {
     throw new Error("No resume entries were parsed from resume.md.");
@@ -146,7 +147,7 @@ function splitEntryBlocks(markdown: string): string[] {
     .filter((block) => block.startsWith("## "));
 }
 
-function parseEntryBlock(block: string): ResumeEntry {
+function parseEntryBlock(block: string): ResumeEntry | null {
   const yamlMatch = block.match(YAML_BLOCK_PATTERN);
 
   if (!yamlMatch) {
@@ -164,13 +165,21 @@ function parseEntryBlock(block: string): ResumeEntry {
     ENTRY_RAG_MARKER,
     { requireEndMarker: false },
   );
-  const metadata = parseMetadata(yamlMatch[1]);
+  const { website, ...metadata } = parseMetadata(yamlMatch[1]);
+
+  if (!website) {
+    return null;
+  }
 
   return {
     ...metadata,
     concise: parseBullets(conciseMarkdown),
     detailed: parseBullets(detailedMarkdown),
   };
+}
+
+function isResumeEntry(entry: ResumeEntry | null): entry is ResumeEntry {
+  return entry !== null;
 }
 
 function parseAdditionalSections(markdown: string): ResumeAdditionalSection[] {
@@ -302,6 +311,7 @@ function parseMetadata(block: string): ResumeMetadata {
     id: requireText(data.id, "id"),
     section,
     visibleIn: parseVisibleIn(data.visibleIn),
+    website: parseWebsiteVisibility(data.website),
     startDate: requireText(data.startDate, "startDate"),
     endDate: parseEndDate(data.endDate),
     title: requireText(data.title, "title"),
@@ -349,6 +359,22 @@ function parseVisibleIn(value: string | undefined): ResumeDetailLevel[] {
   }
 
   return levels as ResumeDetailLevel[];
+}
+
+function parseWebsiteVisibility(value: string | undefined): boolean {
+  const normalized = optionalText(value)?.toLowerCase();
+
+  if (!normalized) {
+    return true;
+  }
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+
+  throw new Error(`Unsupported resume website visibility: ${value}.`);
 }
 
 function parseEndDate(value: string | undefined): string | null {
