@@ -6,6 +6,7 @@ import re
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +56,13 @@ def evaluate_response(case: dict[str, Any], response: dict[str, Any]) -> EvalRes
 
     answer_equals = expected.get("answer_equals")
     if isinstance(answer_equals, str) and answer != answer_equals:
-        failures.append(_failure(case, "answer_equals", f"Expected exact answer: {answer_equals}"))
+        failures.append(
+            _failure(
+                case,
+                "answer_equals",
+                f"Expected exact answer: {answer_equals}",
+            )
+        )
 
     for phrase in _string_list(expected.get("must_include_all")):
         if phrase.casefold() not in answer_lower:
@@ -160,8 +167,13 @@ def print_report(results: list[EvalResult]) -> None:
             print(f"  - {failure.check}: {failure.detail}")
 
 
-def results_to_dict(results: list[EvalResult]) -> dict[str, Any]:
+def results_to_dict(
+    results: list[EvalResult],
+    *,
+    metadata: dict[str, object] | None = None,
+) -> dict[str, Any]:
     return {
+        "metadata": _report_metadata(metadata),
         "total": len(results),
         "passed": sum(1 for result in results if result.passed),
         "failed": sum(1 for result in results if not result.passed),
@@ -208,7 +220,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.report_json:
         args.report_json.parent.mkdir(parents=True, exist_ok=True)
         args.report_json.write_text(
-            json.dumps(results_to_dict(results), indent=2, ensure_ascii=False) + "\n",
+            json.dumps(
+                results_to_dict(
+                    results,
+                    metadata={
+                        "suite": args.suite,
+                        "mode": args.mode,
+                        "cases_path": args.cases.as_posix(),
+                        "report_path": args.report_json.as_posix(),
+                    },
+                ),
+                indent=2,
+                ensure_ascii=False,
+            )
+            + "\n",
             encoding="utf-8",
         )
 
@@ -279,6 +304,16 @@ def _check_sources(
         failures.append(_failure(case, "sources", "Expected no sources."))
     elif source_expectation == "non_empty" and not sources:
         failures.append(_failure(case, "sources", "Expected at least one source."))
+
+
+def _report_metadata(metadata: dict[str, object] | None) -> dict[str, object]:
+    local_now = datetime.now().astimezone()
+    utc_now = local_now.astimezone(UTC)
+    return {
+        "generated_at_local": local_now.isoformat(timespec="seconds"),
+        "generated_at_utc": utc_now.isoformat(timespec="seconds"),
+        **(metadata or {}),
+    }
 
 
 def _string_list(value: object) -> list[str]:

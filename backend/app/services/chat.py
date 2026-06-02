@@ -182,6 +182,15 @@ ALEX_PROFILE_TERMS = (
     "qdrant",
     "backend",
     "api",
+    "right to work",
+    "work authorisation",
+    "work authorization",
+    "share code",
+    "uk location",
+    "based in the uk",
+    "visa",
+    "employment eligibility",
+    "work permit",
 )
 
 SECOND_PERSON_TERMS = (
@@ -251,6 +260,9 @@ HANDOFF_REQUEST_PATTERNS = (
     "offer him",
     "offer alex",
     "best offer",
+    "share code",
+    "right to work share code",
+    "uk share code",
     "соедини меня",
     "соедините меня",
     "хочу поговорить с алексом",
@@ -293,6 +305,16 @@ CONTACT_OR_AVAILABILITY_TERMS = (
     "start",
     "start date",
     "new job",
+    "right to work",
+    "work authorisation",
+    "work authorization",
+    "share code",
+    "uk work",
+    "uk location",
+    "based in the uk",
+    "visa",
+    "employment eligibility",
+    "work permit",
 )
 
 KNOWN_THIRD_PARTY_SUBJECTS = ("elon musk",)

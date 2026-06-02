@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "description": "Focused retrieval-level eval suite for generated structured RAG chunks. Run it before and after retrieval changes to inspect retrieved topics/tags.",
+  "cases": [
+    {
+      "id": "retrieval_generated_hard_skills",
+      "suite": "rag_retrieval_quality",
+      "category": "skills",
+      "query": "What are Alex's hard skills?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_topic_any": [
+          "hard-skills"
+        ],
+        "must_include_topic_any": [
+          "hard-skills"
+        ],
+        "must_include_tag_any": [
+          "hard-skills",
+          "python",
+          "fastapi"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_soft_skills",
+      "suite": "rag_retrieval_quality",
+      "category": "skills",
+      "query": "What are Alex's soft skills?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_topic_any": [
+          "soft-skills-working-style"
+        ],
+        "must_include_topic_any": [
+          "soft-skills-working-style"
+        ],
+        "must_include_tag_any": [
+          "soft-skills",
+          "working-style"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_share_code",
+      "suite": "rag_retrieval_quality",
+      "category": "right_to_work",
+      "query": "Can Alex provide a share code?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "must_include_topic_any": [
+          "right-to-work-uk-location"
+        ],
+        "must_include_tag_any": [
+          "share-code",
+          "right-to-work"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_right_to_work",
+      "suite": "rag_retrieval_quality",
+      "category": "right_to_work",
+      "query": "Does Alex have the right to work in the UK?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_topic_any": [
+          "right-to-work-uk-location"
+        ],
+        "must_include_topic_any": [
+          "right-to-work-uk-location"
+        ],
+        "must_include_tag_any": [
+          "right-to-work",
+          "work-authorisation"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_rag_portfolio_project",
+      "suite": "rag_retrieval_quality",
+      "category": "projects",
+      "query": "Tell me about Alex's RAG portfolio project.",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "must_include_topic_any": [
+          "project-ai-portfolio-rag-chat"
+        ],
+        "must_include_tag_any": [
+          "project",
+          "rag",
+          "qdrant"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_saas_project",
+      "suite": "rag_retrieval_quality",
+      "category": "projects",
+      "query": "Tell me about Alex's GDPR-aware SaaS project.",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "must_include_topic_any": [
+          "project-gdpr-aware-saas-automation-platform"
+        ],
+        "must_include_tag_any": [
+          "saas",
+          "gdpr",
+          "fastapi"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_ai_assisted_workflow",
+      "suite": "rag_retrieval_quality",
+      "category": "working_style",
+      "query": "How does Alex use AI-assisted development?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "must_include_topic_any": [
+          "ai-assisted-development-workflow"
+        ],
+        "must_include_tag_any": [
+          "ai-assisted-development",
+          "human-in-the-loop",
+          "validation"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_generated_start_date",
+      "suite": "rag_retrieval_quality",
+      "category": "availability",
+      "query": "When can Alex start a new job?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "must_include_topic_any": [
+          "availability-start-date"
+        ],
+        "must_include_tag_any": [
+          "availability",
+          "start-date",
+          "contact"
+        ]
+      }
+    }
+  ]
+}

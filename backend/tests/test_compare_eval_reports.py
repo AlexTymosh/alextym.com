@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.compare_eval_reports import build_markdown, load_report
+from scripts.compare_eval_reports import build_markdown
+from scripts.compare_eval_reports import load_report
+from scripts.compare_eval_reports import load_report_metadata
 
 
 def test_load_report_reads_case_results(tmp_path: Path) -> None:
@@ -11,6 +13,10 @@ def test_load_report_reads_case_results(tmp_path: Path) -> None:
     report_path.write_text(
         json.dumps(
             {
+                "metadata": {
+                    "generated_at_local": "2026-06-01T12:00:00+01:00",
+                    "suite": "contract",
+                },
                 "results": [
                     {
                         "case_id": "case-1",
@@ -24,17 +30,19 @@ def test_load_report_reads_case_results(tmp_path: Path) -> None:
                             }
                         ],
                     }
-                ]
+                ],
             }
         ),
         encoding="utf-8",
     )
 
     report = load_report(report_path)
+    metadata = load_report_metadata(report_path)
 
     assert report["case-1"].category == "handoff"
     assert report["case-1"].passed is False
     assert report["case-1"].failures == ("handoff_suggested: Expected True, got False.",)
+    assert metadata["generated_at_local"] == "2026-06-01T12:00:00+01:00"
 
 
 def test_build_markdown_marks_fixed_and_regressed_cases(tmp_path: Path) -> None:
@@ -61,8 +69,21 @@ def test_build_markdown_marks_fixed_and_regressed_cases(tmp_path: Path) -> None:
         after_path=after_path,
         before=before,
         after=after,
+        before_metadata={
+            "generated_at_local": "2026-06-01T12:00:00+01:00",
+            "suite": "contract",
+            "mode": "isolated",
+        },
+        after_metadata={
+            "generated_at_local": "2026-06-01T12:05:00+01:00",
+            "suite": "contract",
+            "mode": "isolated",
+        },
     )
 
+    assert "## Report metadata" in markdown
+    assert "2026-06-01T12:00:00+01:00" in markdown
+    assert "2026-06-01T12:05:00+01:00" in markdown
     assert "| Passed | 3 | 3 | 0 |" in markdown
     assert "| ✅ Fixed | 1 |" in markdown
     assert "| 🔴 Regressed | 1 |" in markdown

@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.run_chat_evals import evaluate_response, load_eval_cases, run_cases
+from scripts.run_chat_evals import evaluate_response
+from scripts.run_chat_evals import load_eval_cases
+from scripts.run_chat_evals import results_to_dict
+from scripts.run_chat_evals import run_cases
 
 
 def test_evaluate_response_passes_matching_expectations() -> None:
@@ -110,6 +113,40 @@ def test_bundled_eval_cases_are_schema_valid() -> None:
 
     assert len(cases) >= 25
     assert all(case["id"] for case in cases)
+
+
+def test_results_to_dict_adds_timestamp_metadata() -> None:
+    case = {
+        "id": "case-4",
+        "suite": "contract",
+        "category": "greeting",
+        "message": "Hi",
+        "expected": {"not_enough_data": False},
+    }
+    response = {
+        "answer": "Assistant ready.",
+        "sources": [],
+        "confidence": "medium",
+        "not_enough_data": False,
+        "handoff_suggested": False,
+        "handoff_reason": None,
+    }
+
+    result = evaluate_response(case, response)
+    payload = results_to_dict(
+        [result],
+        metadata={
+            "suite": "contract",
+            "mode": "isolated",
+            "cases_path": "evals/chat_eval_cases.json",
+        },
+    )
+
+    assert payload["metadata"]["suite"] == "contract"
+    assert payload["metadata"]["mode"] == "isolated"
+    assert payload["metadata"]["generated_at_local"]
+    assert payload["metadata"]["generated_at_utc"]
+    assert payload["results"][0]["case_id"] == "case-4"
 
 
 def test_run_cases_uses_request_callable() -> None:

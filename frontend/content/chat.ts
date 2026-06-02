@@ -96,27 +96,36 @@ Would you like a summary of the most relevant achievements?`,
   {
     label: "When is Alex ready to start work?",
     responses: [
-      `Alex is currently freelancing, so he should usually be available relatively quickly.
+      `I do not have access to Alex's live calendar, so I cannot 
+confirm an exact start date here.
 
-I do not have access to his calendar, so the exact start date should be confirmed with him directly.
-
-Would you like me to connect him directly?
-
-Your details will not be passed to him at this stage, and he will not see your phone number or email unless you choose to share them.`,
-      `Alex is doing freelance work, so his availability is likely to be relatively flexible.
-
-I cannot check his calendar, so the safest answer is to ask him directly about the exact start date.
+For availability, notice period, interview scheduling, or start-date 
+confirmation, the safest route is to connect with Alex directly.
 
 Would you like me to connect him directly?
 
-Your contact details will not be shared with him at this stage unless you decide to provide them.`,
-      `Alex should be able to discuss availability fairly quickly because he is currently freelancing.
+Your details will not be passed to him at this stage, and he will not 
+see your phone number or email unless you choose to share them.`,
+      `I cannot check Alex's calendar or confirm a precise start date 
+from this chat.
 
-I am not connected to his calendar, so I cannot confirm an exact start date here.
+If you need a reliable answer about availability or scheduling, I can 
+offer a direct handoff to Alex.
 
 Would you like me to connect him directly?
 
-He will not receive your phone number or email from this chat unless you choose to share those details.`,
+Your contact details will not be shared with him unless you decide to 
+type them yourself.`,
+      `Alex's exact availability should be confirmed with him directly 
+because I do not have access to his live calendar.
+
+For a start date, notice period, interview timing, or hiring discussion, 
+I can help you connect with Alex.
+
+Would you like me to connect him directly?
+
+He will not receive your phone number or email from this chat unless you 
+choose to share those details.`,
     ],
   },
 ];
@@ -170,6 +179,9 @@ export const HANDOFF_REQUEST_PATTERNS = [
   /\bi\s+(want|need)\s+to\s+hire\s+(alex|him)\b/i,
   /\b(best|great|strong)\s+offer\s+(for\s+)?(alex|him)\b/i,
   /\btell\s+(alex|him)\s+i\b/i,
+  /\bshare\s+code\b/i,
+  /\bright-to-work\s+share\s+code\b/i,
+  /\buk\s+share\s+code\b/i,
   new RegExp(
     String.raw`\bget\s+alex\s+(to\s+)?` +
       String.raw`(contact|call|message|email|reply\s+to)\s+me\b`,

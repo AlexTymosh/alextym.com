@@ -39,6 +39,8 @@ class Settings:
     handoff_availability_timezone: str = "Europe/London"
     handoff_availability_start: str = "09:00"
     handoff_availability_end: str = "21:00"
+    qdrant_vector_mode: str = "single"
+    qdrant_query_vector_name: str = "body_dense"
 
 
 def _load_env_file(env_path: Path) -> None:
@@ -108,6 +110,11 @@ def _get_float(name: str, default: float) -> float:
         return default
 
 
+def _get_vector_mode() -> str:
+    raw_value = os.getenv("QDRANT_VECTOR_MODE", "single").strip().lower()
+    return raw_value if raw_value in {"single", "named"} else "single"
+
+
 @lru_cache
 def get_settings() -> Settings:
     _load_local_env_file()
@@ -166,5 +173,10 @@ def get_settings() -> Settings:
         handoff_availability_end=os.getenv(
             "HANDOFF_AVAILABILITY_END",
             "21:00",
+        ),
+        qdrant_vector_mode=_get_vector_mode(),
+        qdrant_query_vector_name=os.getenv(
+            "QDRANT_QUERY_VECTOR_NAME",
+            "body_dense",
         ),
     )

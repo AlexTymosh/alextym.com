@@ -39,11 +39,16 @@ type ResumeMetadata = {
   id: string;
   section: ResumeSection;
   visibleIn: ResumeDetailLevel[];
+  website: boolean;
   startDate: string;
   endDate: string | null;
   title: string;
   organization?: string;
   location?: string;
+};
+
+type ExtractSectionOptions = {
+  requireEndMarker?: boolean;
 };
 
 const SECTION_SORT_ORDER: Record<ResumeSection, number> = {
@@ -55,12 +60,18 @@ const SECTION_SORT_ORDER: Record<ResumeSection, number> = {
 const YAML_BLOCK_PATTERN = /```yaml\n([\s\S]*?)\n```/;
 const ADDITIONAL_SECTION_PATTERN =
   /(?:^|\n\n)## ([^\n]+)\n\n([\s\S]*?)(?=\n\n## |\s*$)/g;
+const SUMMARY_RAG_MARKER = "## RAG";
+const ENTRY_RAG_MARKER = "### RAG";
 
 export function getResumeData(): ResumeData {
-  const markdown = readResumeMarkdown();
-  const summary = parseSummary(markdown);
-  const entries = parseEntries(markdown);
-  const additionalSections = parseAdditionalSections(markdown);
+  return getResumeDataFromMarkdown(readResumeMarkdown());
+}
+
+export function getResumeDataFromMarkdown(markdown: string): ResumeData {
+  const normalizedMarkdown = normalizeLineEndings(markdown);
+  const summary = parseSummary(normalizedMarkdown);
+  const entries = parseEntries(normalizedMarkdown);
+  const additionalSections = parseAdditionalSections(normalizedMarkdown);
 
   return {
     summary,
@@ -81,7 +92,7 @@ function readResumeMarkdown(): string {
     throw new Error("Static resume markdown source was not found.");
   }
 
-  return normalizeLineEndings(readFileSync(resumePath, "utf8"));
+  return readFileSync(resumePath, "utf8");
 }
 
 function normalizeLineEndings(markdown: string): string {
@@ -99,7 +110,12 @@ function parseSummary(markdown: string): ResumeData["summary"] {
     "## Concise",
     "## Detailed",
   );
-  const detailed = extractRequiredSection(summaryMarkdown, "## Detailed");
+  const detailed = extractRequiredSection(
+    summaryMarkdown,
+    "## Detailed",
+    SUMMARY_RAG_MARKER,
+    { requireEndMarker: false },
+  );
 
   return {
     concise: parseParagraphs(concise),
@@ -114,7 +130,7 @@ function parseEntries(markdown: string): ResumeEntry[] {
     "# Additional Sections",
   );
   const entryBlocks = splitEntryBlocks(entriesMarkdown);
-  const entries = entryBlocks.map(parseEntryBlock);
+  const entries = entryBlocks.map(parseEntryBlock).filter(isResumeEntry);
 
   if (entries.length === 0) {
     throw new Error("No resume entries were parsed from resume.md.");
@@ -131,7 +147,7 @@ function splitEntryBlocks(markdown: string): string[] {
     .filter((block) => block.startsWith("## "));
 }
 
-function parseEntryBlock(block: string): ResumeEntry {
+function parseEntryBlock(block: string): ResumeEntry | null {
   const yamlMatch = block.match(YAML_BLOCK_PATTERN);
 
   if (!yamlMatch) {
@@ -143,14 +159,27 @@ function parseEntryBlock(block: string): ResumeEntry {
     "### Concise",
     "### Detailed",
   );
-  const detailedMarkdown = extractRequiredSection(block, "### Detailed");
-  const metadata = parseMetadata(yamlMatch[1]);
+  const detailedMarkdown = extractRequiredSection(
+    block,
+    "### Detailed",
+    ENTRY_RAG_MARKER,
+    { requireEndMarker: false },
+  );
+  const { website, ...metadata } = parseMetadata(yamlMatch[1]);
+
+  if (!website) {
+    return null;
+  }
 
   return {
     ...metadata,
     concise: parseBullets(conciseMarkdown),
     detailed: parseBullets(detailedMarkdown),
   };
+}
+
+function isResumeEntry(entry: ResumeEntry | null): entry is ResumeEntry {
+  return entry !== null;
 }
 
 function parseAdditionalSections(markdown: string): ResumeAdditionalSection[] {
@@ -223,8 +252,14 @@ function extractRequiredSection(
   markdown: string,
   startMarker: string,
   endMarker?: string,
+  options?: ExtractSectionOptions,
 ): string {
-  const section = extractOptionalSection(markdown, startMarker, endMarker);
+  const section = extractOptionalSection(
+    markdown,
+    startMarker,
+    endMarker,
+    options,
+  );
 
   if (!section) {
     throw new Error(`Resume markdown section is missing: ${startMarker}.`);
@@ -237,6 +272,7 @@ function extractOptionalSection(
   markdown: string,
   startMarker: string,
   endMarker?: string,
+  options?: ExtractSectionOptions,
 ): string | null {
   const startIndex = markdown.indexOf(startMarker);
 
@@ -244,12 +280,13 @@ function extractOptionalSection(
     return null;
   }
 
+  const requireEndMarker = options?.requireEndMarker ?? Boolean(endMarker);
   const contentStart = startIndex + startMarker.length;
   const endIndex = endMarker
     ? markdown.indexOf(endMarker, contentStart)
     : -1;
 
-  if (endMarker && endIndex === -1) {
+  if (endMarker && endIndex === -1 && requireEndMarker) {
     return null;
   }
 
@@ -274,6 +311,7 @@ function parseMetadata(block: string): ResumeMetadata {
     id: requireText(data.id, "id"),
     section,
     visibleIn: parseVisibleIn(data.visibleIn),
+    website: parseWebsiteVisibility(data.website),
     startDate: requireText(data.startDate, "startDate"),
     endDate: parseEndDate(data.endDate),
     title: requireText(data.title, "title"),
@@ -321,6 +359,22 @@ function parseVisibleIn(value: string | undefined): ResumeDetailLevel[] {
   }
 
   return levels as ResumeDetailLevel[];
+}
+
+function parseWebsiteVisibility(value: string | undefined): boolean {
+  const normalized = optionalText(value)?.toLowerCase();
+
+  if (!normalized) {
+    return true;
+  }
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+
+  throw new Error(`Unsupported resume website visibility: ${value}.`);
 }
 
 function parseEndDate(value: string | undefined): string | null {

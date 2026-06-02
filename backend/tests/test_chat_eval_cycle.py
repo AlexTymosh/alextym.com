@@ -67,8 +67,12 @@ def test_run_eval_cycle_creates_initial_after_without_comparison(
         comparison_path=comparison,
     )
 
+    payload = json.loads(after.read_text(encoding="utf-8"))
+
     assert exit_code == 0
-    assert after.exists()
+    assert payload["metadata"]["suite"] == "contract"
+    assert payload["metadata"]["mode"] == "isolated"
+    assert payload["metadata"]["generated_at_local"]
     assert not before.exists()
     assert not comparison.exists()
 
@@ -84,6 +88,12 @@ def test_run_eval_cycle_rotates_previous_after_and_writes_comparison(
     after.write_text(
         json.dumps(
             {
+                "metadata": {
+                    "generated_at_local": "2026-06-01T12:00:00+01:00",
+                    "generated_at_utc": "2026-06-01T11:00:00+00:00",
+                    "suite": "contract",
+                    "mode": "isolated",
+                },
                 "results": [
                     {
                         "case_id": "case-1",
@@ -97,7 +107,7 @@ def test_run_eval_cycle_rotates_previous_after_and_writes_comparison(
                             }
                         ],
                     }
-                ]
+                ],
             }
         ),
         encoding="utf-8",
@@ -114,11 +124,42 @@ def test_run_eval_cycle_rotates_previous_after_and_writes_comparison(
         comparison_path=comparison,
     )
 
+    comparison_text = comparison.read_text(encoding="utf-8")
+
     assert exit_code == 0
     assert before.exists()
     assert after.exists()
     assert comparison.exists()
-    assert "✅ fixed" in comparison.read_text(encoding="utf-8")
+    assert "✅ fixed" in comparison_text
+    assert "## Report metadata" in comparison_text
+    assert "2026-06-01T12:00:00+01:00" in comparison_text
+
+
+def test_run_eval_cycle_can_allow_failures_for_baseline_measurement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cases_path = _cases_file(tmp_path)
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    comparison = tmp_path / "comparison.md"
+
+    _patch_failed_eval(monkeypatch)
+
+    exit_code = run_eval_cycle(
+        cases_path=cases_path,
+        suite="contract",
+        mode="isolated",
+        before_path=before,
+        after_path=after,
+        comparison_path=comparison,
+        allow_failures=True,
+    )
+
+    assert exit_code == 0
+    assert after.exists()
+    assert not before.exists()
+    assert not comparison.exists()
 
 
 def _cases_file(tmp_path: Path) -> Path:
@@ -152,6 +193,28 @@ def _patch_successful_eval(monkeypatch: pytest.MonkeyPatch) -> None:
         def request_chat(payload: dict[str, object]) -> dict[str, object]:
             return {
                 "answer": "Assistant ready.",
+                "sources": [],
+                "confidence": "medium",
+                "not_enough_data": False,
+                "handoff_suggested": False,
+                "handoff_reason": None,
+            }
+
+        return request_chat
+
+    monkeypatch.setattr(
+        "scripts.run_chat_eval_cycle.make_in_process_requester",
+        fake_requester,
+    )
+
+
+def _patch_failed_eval(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_requester(*, mode: str):
+        assert mode == "isolated"
+
+        def request_chat(payload: dict[str, object]) -> dict[str, object]:
+            return {
+                "answer": "No matching answer.",
                 "sources": [],
                 "confidence": "medium",
                 "not_enough_data": False,

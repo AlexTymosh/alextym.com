@@ -1,8 +1,12 @@
+import inspect
+
 from app.core.config import Settings
 from app.llm.client import EmbeddingClient
 from app.llm.openai_client import OpenAIEmbeddingClient
-from app.rag.models import KnowledgeChunk
+from app.rag.keyword_scoring import build_keyword_terms, keyword_score_chunk
+from app.rag.models import KnowledgeChunk, RetrievalFilter
 from app.rag.qdrant_store import QdrantKnowledgeStore
+from app.rag.query_router import QueryRoute, route_query
 
 QUERY_EXPANSIONS = (
     (
@@ -33,7 +37,16 @@ QUERY_EXPANSIONS = (
         "projects repositories portfolio FastAPI RAG automation backend templates",
     ),
     (
-        ("experience", "skills", "worked", "used", "опыт", "работал", "умеет", "навык"),
+        (
+            "experience",
+            "skills",
+            "worked",
+            "used",
+            "опыт",
+            "работал",
+            "умеет",
+            "навык",
+        ),
         "experience skills practical work used implemented built",
     ),
 )
@@ -80,13 +93,51 @@ class QdrantRetriever:
             return []
 
         effective_limit = limit or self._default_limit
-        query_embedding = self._embedding_client.embed_text(_expand_query(normalized_query))
-        chunks = self._store.search(
+        route = route_query(normalized_query)
+        routed_query = route.retrieval_text(normalized_query)
+        payload_filter = route.payload_filter()
+        query_embedding = self._embedding_client.embed_text(_expand_query(routed_query))
+        chunks = _search_store(
+            store=self._store,
             embedding=query_embedding,
             limit=effective_limit,
             score_threshold=self._score_threshold,
+            payload_filter=payload_filter,
         )
-        return _filter_sections_for_query(normalized_query, chunks)
+        filtered_chunks = _filter_sections_for_query(normalized_query, chunks)
+        return _rerank_chunks(filtered_chunks, query=normalized_query, route=route)
+
+
+def _search_store(
+    *,
+    store: QdrantKnowledgeStore,
+    embedding: list[float],
+    limit: int,
+    score_threshold: float,
+    payload_filter: RetrievalFilter | None,
+) -> list[KnowledgeChunk]:
+    if _store_accepts_payload_filter(store):
+        return store.search(
+            embedding=embedding,
+            limit=limit,
+            score_threshold=score_threshold,
+            payload_filter=payload_filter,
+        )
+
+    return store.search(
+        embedding=embedding,
+        limit=limit,
+        score_threshold=score_threshold,
+    )
+
+
+def _store_accepts_payload_filter(store: object) -> bool:
+    try:
+        signature = inspect.signature(store.search)  # type: ignore[attr-defined]
+    except (TypeError, ValueError):
+        return True
+
+    return "payload_filter" in signature.parameters
 
 
 def _expand_query(query: str) -> str:
@@ -101,10 +152,78 @@ def _expand_query(query: str) -> str:
     return " ".join([query, *expansions])
 
 
-def _filter_sections_for_query(query: str, chunks: list[KnowledgeChunk]) -> list[KnowledgeChunk]:
+def _filter_sections_for_query(
+    query: str,
+    chunks: list[KnowledgeChunk],
+) -> list[KnowledgeChunk]:
     query_terms = set(query.lower().replace("/", " ").replace("-", " ").split())
     if query_terms & LINK_QUERY_TERMS:
         return chunks
 
     filtered_chunks = [chunk for chunk in chunks if chunk.metadata.topic not in LINK_SECTION_NAMES]
     return filtered_chunks or chunks
+
+
+def _rerank_chunks(
+    chunks: list[KnowledgeChunk],
+    *,
+    query: str,
+    route: QueryRoute,
+) -> list[KnowledgeChunk]:
+    if not chunks:
+        return []
+
+    keyword_terms = build_keyword_terms(query, route=route)
+    scored_chunks = [
+        (
+            _heuristic_score(
+                chunk,
+                route=route,
+                keyword_terms=keyword_terms,
+            ),
+            index,
+            chunk,
+        )
+        for index, chunk in enumerate(chunks)
+    ]
+    scored_chunks.sort(key=lambda item: (-item[0], item[1]))
+    return [chunk for _score, _index, chunk in scored_chunks]
+
+
+def _heuristic_score(
+    chunk: KnowledgeChunk,
+    *,
+    route: QueryRoute,
+    keyword_terms: frozenset[str],
+) -> float:
+    score = _dense_score(chunk)
+    score += _topic_bonus(chunk, route)
+    score += _tag_bonus(chunk, route)
+    score += _section_bonus(chunk, route)
+    score += keyword_score_chunk(chunk, query_terms=keyword_terms)
+    return score
+
+
+def _dense_score(chunk: KnowledgeChunk) -> float:
+    value = chunk.metadata.extra.get("retrieval_score")
+    return float(value) if isinstance(value, (int, float)) else 0.0
+
+
+def _topic_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if chunk.metadata.topic in route.topic_hints:
+        return 2.0
+    return 0.0
+
+
+def _tag_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if not route.tag_hints:
+        return 0.0
+
+    matching_tags = set(chunk.metadata.tags).intersection(route.tag_hints)
+    return 0.4 * len(matching_tags)
+
+
+def _section_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if chunk.metadata.section in route.section_hints:
+        return 0.25
+    return 0.0

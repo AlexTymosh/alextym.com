@@ -89,6 +89,15 @@ tasks:
     cmds:
       - uv run python -m pytest
 
+  rag:extract-resume:
+    desc: Build generated RAG sources from the canonical resume markdown.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - uv run python -m scripts.extract_resume_rag_source
+
   rag:ingest:
     desc: Rebuild Qdrant vectors from reviewed public knowledge files.
     dir: backend
@@ -99,6 +108,18 @@ tasks:
       - >-
         uv run --isolated --env-file .env
         python -m scripts.ingest_knowledge
+
+  rag:ingest:generated:
+    desc: Rebuild Qdrant vectors from generated structured resume chunks.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - uv run python -m scripts.extract_resume_rag_source
+      - >-
+        uv run --isolated --env-file .env
+        python -m scripts.ingest_generated_resume_chunks
 
   rag:eval:free:
     desc: Run free deterministic eval cycle without OpenAI/Qdrant.
@@ -129,6 +150,39 @@ tasks:
         --before "../.tmp/evals/rag-before.json"
         --after "../.tmp/evals/rag-after.json"
         --comparison "../.tmp/evals/rag-comparison.md"
+
+  rag:eval:generated:
+    desc: Compare structured generated-RAG quality before and after ingestion.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --env-file .env python -m scripts.run_chat_eval_cycle
+        --cases evals/chat_eval_cases_generated_rag.json
+        --suite rag_generated_quality
+        --mode live
+        --before "../.tmp/evals/generated-rag-before.json"
+        --after "../.tmp/evals/generated-rag-after.json"
+        --comparison "../.tmp/evals/generated-rag-comparison.md"
+        --allow-failures
+
+  rag:eval:retrieval:
+    desc: Compare generated-RAG retrieval quality before and after changes.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --env-file .env python -m scripts.run_retrieval_evals
+        --cases evals/retrieval_eval_cases_generated_rag.json
+        --suite rag_retrieval_quality
+        --before "../.tmp/evals/retrieval-rag-before.json"
+        --after "../.tmp/evals/retrieval-rag-after.json"
+        --comparison "../.tmp/evals/retrieval-rag-comparison.md"
+        --allow-failures
 
   rag:eval:compare:
     desc: Compare two eval JSON reports and write a Markdown table.
