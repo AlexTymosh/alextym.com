@@ -1,10 +1,10 @@
 # Deployment
 
-## Deployment Goal
+## Deployment goal
 
-Deploy `alextym` using low-cost infrastructure while keeping the architecture portable.
+Deploy `alextym.com` using low-cost infrastructure while keeping the architecture portable.
 
-Current production target:
+Current deployment target:
 
 ```text
 Frontend: Vercel Free/Hobby
@@ -12,9 +12,13 @@ Backend: Render Free
 Vector DB: Qdrant Cloud Free
 DNS/Registrar: Cloudflare
 Email delivery: Resend
-Telegram handoff: Telegram Bot API + Upstash Redis TTL + SSE
+Telegram handoff: Telegram Bot API
+Temporary handoff state: Upstash Redis TTL
+Rate limiting: Upstash Redis when configured, in-memory fallback when unavailable
 Keep-alive: UptimeRobot or cron-job.org
 ```
+
+The source code confirms the Vercel rewrite to the Render backend. DNS provider, hosting tier, Qdrant tier, and keep-alive service are deployment choices outside the application code and must be verified in provider dashboards.
 
 ---
 
@@ -32,19 +36,6 @@ Registrar / DNS provider:
 Cloudflare
 ```
 
-Important rule:
-
-```text
-Vercel DNS records must be DNS Only / grey cloud.
-Do not proxy Vercel records through Cloudflare orange cloud unless there is a specific reason.
-```
-
-Reason:
-
-- Vercel manages its own SSL and edge network;
-- Cloudflare proxy in front of Vercel can create SSL, redirect, cache, and debugging problems;
-- Vercel should own frontend routing and TLS.
-
 Expected DNS setup:
 
 ```text
@@ -52,11 +43,23 @@ alextym.com      -> Vercel
 www.alextym.com  -> Vercel / redirect to apex
 ```
 
-Use exact DNS values shown by the Vercel dashboard. Do not hardcode DNS values from examples.
+Recommended Cloudflare mode for Vercel records:
+
+```text
+DNS Only / grey cloud
+```
+
+Reason:
+
+- Vercel manages its own SSL and edge routing;
+- proxying Vercel through Cloudflare can create SSL, redirect, cache, and debugging issues;
+- Vercel should own frontend routing and TLS unless there is a deliberate reason to proxy.
+
+Use exact DNS values shown by the Vercel dashboard. Do not hardcode example DNS values.
 
 ---
 
-## Frontend Deployment
+## Frontend deployment
 
 Platform:
 
@@ -70,28 +73,73 @@ Frontend root:
 frontend/
 ```
 
-Required checks after deploy:
+Frontend checks after deploy:
 
 ```text
 /
-/resume
-/chat
-/contact
-/api/health/live via rewrite
-/api/health/ready via rewrite
-/api/warmup via rewrite
+ /resume
+ /chat
+ /contact
+ /resume/download?detail=concise&sections=experience,education
+ /api/health/live via rewrite
+ /api/health/ready via rewrite
+ /api/warmup via rewrite
 ```
 
-Frontend code should call local `/api/*` paths. The frontend must not call provider APIs directly.
+Frontend code should call local `/api/*` paths. It must not call OpenAI, Qdrant, Resend, Telegram, or Redis directly.
 
 ---
 
-## Backend Deployment
+## Vercel rewrites
 
-Current platform:
+File:
 
 ```text
-Render Free
+frontend/vercel.json
+```
+
+Current production rewrite target:
+
+```text
+https://alextym-backend.onrender.com/api/:path*
+```
+
+Actual shape:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://alextym-backend.onrender.com/api/:path*"
+    }
+  ]
+}
+```
+
+Benefits:
+
+- frontend code does not need to know the backend host;
+- production URLs stay clean;
+- CORS complexity is reduced;
+- backend hosting can be changed by updating the rewrite destination.
+
+Fallback option:
+
+```text
+api.alextym.com + strict backend CORS configuration
+```
+
+Use this only if Vercel rewrites create timeout, buffering, or SSE instability.
+
+---
+
+## Backend deployment
+
+Current backend platform:
+
+```text
+Render
 ```
 
 Backend root / build context:
@@ -111,7 +159,7 @@ backend/pyproject.toml
 backend/uv.lock
 ```
 
-The backend must not rely on local persistent storage.
+The backend must not rely on local persistent storage for production state.
 
 Do not store important production state in:
 
@@ -122,99 +170,51 @@ Do not store important production state in:
 - generated embeddings on local disk;
 - Telegram handoff sessions.
 
-Reason: free hosting local filesystems are not suitable for important durable state. Temporary handoff state is externalised to Upstash Redis TTL.
+Reason: free / low-cost hosting filesystems are not suitable for important durable state. Temporary handoff state is externalised to Upstash Redis TTL when configured.
 
 ---
 
-## Vercel Rewrites
-
-Frontend should call local `/api/*` paths.
-
-Vercel should proxy those requests to the backend.
-
-File:
-
-```text
-frontend/vercel.json
-```
-
-Current production rewrite target:
-
-```text
-https://alextym-backend.onrender.com/api/:path*
-```
-
-Example shape:
-
-```json
-{
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://YOUR-BACKEND-HOST/api/:path*"
-    }
-  ]
-}
-```
-
-Benefits:
-
-- frontend code does not know backend host;
-- easier migration from Render to Railway/Fly.io/another backend host;
-- fewer CORS issues;
-- cleaner production URLs.
-
-Fallback:
-
-```text
-api.alextym.com + strict CORS
-```
-
-Use fallback if Vercel rewrites cause timeout, buffering, or unstable SSE streaming.
-
----
-
-## Render Free Cold-Start Risk
+## Render Free cold-start risk
 
 Render Free can spin down after inactivity.
 
 Risk:
 
 ```text
-User opens chat
--> Vercel rewrite waits for backend
--> Render backend cold-starts
--> response is delayed
--> request may timeout or UX becomes bad
+visitor opens chat
+  -> frontend calls /api/warmup
+  -> Vercel rewrite waits for backend
+  -> Render backend cold-starts
+  -> first response is delayed
 ```
 
 Mitigations:
 
-1. Keep-alive monitor:
+1. External keep-alive monitor:
    - UptimeRobot or cron-job.org;
-   - ping backend `/api/health/live`;
+   - ping `/api/health/live`;
    - interval: 5-15 minutes;
-   - schedule may be limited to expected working hours.
+   - optionally limit to expected usage hours.
 
 2. Frontend warm-up:
-   - when chat page loads, call `/api/warmup`;
-   - do not block the UI;
-   - show a small warm-up state.
+   - `/chat` calls `/api/warmup` on load;
+   - the UI shows a warm-up status;
+   - the assistant can still try to respond if warm-up fails.
 
-3. Lightweight Docker image:
-   - use `python:3.12-slim-bookworm`;
-   - avoid heavy ML libraries;
-   - keep startup fast;
-   - externalise vector DB.
+3. Lightweight backend image:
+   - `python:3.12-slim-bookworm`;
+   - no heavy local ML libraries;
+   - external Qdrant vector store;
+   - no local embedding store.
 
 4. Migration fallback:
-   - move backend to a paid Render plan or another host if cold-start behaviour becomes unacceptable.
+   - move backend to a paid Render plan or another host if cold starts become unacceptable.
 
 ---
 
-## Docker Requirements
+## Dockerfile
 
-Minimal backend Dockerfile pattern:
+The current backend Dockerfile uses:
 
 ```dockerfile
 FROM python:3.12-slim-bookworm
@@ -244,9 +244,9 @@ Do not add system packages unless required.
 
 ---
 
-## Environment Variables
+## Backend environment variables
 
-Backend variables:
+Backend variables currently supported by code:
 
 ```text
 APP_NAME
@@ -263,6 +263,8 @@ OPENAI_REASONING_EFFORT
 QDRANT_URL
 QDRANT_API_KEY
 QDRANT_COLLECTION
+QDRANT_VECTOR_MODE
+QDRANT_QUERY_VECTOR_NAME
 
 RAG_TOP_K
 RAG_SCORE_THRESHOLD
@@ -280,6 +282,11 @@ UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
 ESCALATION_SESSION_TTL_SECONDS
 
+HANDOFF_AVAILABILITY_ENABLED
+HANDOFF_AVAILABILITY_TIMEZONE
+HANDOFF_AVAILABILITY_START
+HANDOFF_AVAILABILITY_END
+
 RATE_LIMITING_ENABLED
 CHAT_DAILY_LIMIT_PER_IP
 CONTACT_DAILY_LIMIT_PER_IP
@@ -287,33 +294,85 @@ ESCALATION_DAILY_LIMIT_PER_IP
 ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP
 ```
 
-Starting limits:
+Default values in code include:
 
 ```text
+OPENAI_MODEL=gpt-5-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSIONS=1536
+OPENAI_MAX_OUTPUT_TOKENS=600
+OPENAI_REASONING_EFFORT=low
+
+QDRANT_COLLECTION=alex_public_knowledge
+QDRANT_VECTOR_MODE=single
+QDRANT_QUERY_VECTOR_NAME=body_dense
+
+RAG_TOP_K=6
+RAG_SCORE_THRESHOLD=0.4
+
+RATE_LIMITING_ENABLED=true
 CHAT_DAILY_LIMIT_PER_IP=50
 CONTACT_DAILY_LIMIT_PER_IP=5
-ESCALATION_DAILY_LIMIT_PER_IP=10
-ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP=50
+ESCALATION_DAILY_LIMIT_PER_IP=3
+ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP=30
 ESCALATION_SESSION_TTL_SECONDS=7200
+
+HANDOFF_AVAILABILITY_ENABLED=true
+HANDOFF_AVAILABILITY_TIMEZONE=Europe/London
+HANDOFF_AVAILABILITY_START=09:00
+HANDOFF_AVAILABILITY_END=21:00
 ```
 
-Notes:
-
-- transcript and message size limits are enforced by backend schema constants, not runtime env variables;
-- do not add `ESCALATION_TRANSCRIPT_MAX_MESSAGES` or `ESCALATION_TRANSCRIPT_MAX_CHARS` to production env;
-- `ESCALATION_SESSION_TTL_SECONDS` controls only temporary live handoff session lifetime.
+The committed `.env.example` may intentionally use different starting values for some public limits, for example a higher handoff limit. Production values should be set deliberately in the hosting dashboard.
 
 Rules:
 
 - never commit real `.env`;
 - keep `.env.example` current;
-- store secrets in the hosting provider dashboard;
-- do not expose backend secrets through Next.js public variables;
+- store secrets in the backend hosting provider dashboard;
+- do not expose backend secrets through frontend variables;
 - do not use `NEXT_PUBLIC_*` for Telegram, Redis, Resend, OpenAI, or Qdrant secrets.
 
 ---
 
-## Resend Setup
+## Health and warm-up endpoints
+
+Current endpoints:
+
+```text
+GET /api/health/live
+GET /api/health/ready
+GET /api/warmup
+```
+
+Current behaviour:
+
+- `/api/health/live` returns `{"status":"alive"}`;
+- `/api/health/ready` returns configuration presence statuses, not real provider connectivity checks;
+- `/api/warmup` returns lightweight app/environment readiness metadata;
+- none of these endpoints call OpenAI, Qdrant, Resend, Telegram, or Redis.
+
+Current readiness fields:
+
+```text
+status
+app
+environment
+vector_db
+llm_config
+contact_email
+```
+
+Current configuration status values:
+
+```text
+configured
+not_configured
+```
+
+---
+
+## Resend setup
 
 Backend variables:
 
@@ -325,16 +384,16 @@ CONTACT_FROM_EMAIL
 
 Rules:
 
-- `CONTACT_FROM_EMAIL` must use a verified Resend domain or subdomain;
-- frontend must not receive the Resend API key;
-- sender address must belong to the verified sending domain;
-- submitter email may be used as `reply_to`, not as the sender address.
+- `CONTACT_FROM_EMAIL` must use a verified Resend sender/domain/subdomain;
+- the frontend must never receive `RESEND_API_KEY`;
+- the sender address must belong to the verified sending domain;
+- the submitter email is used as `reply_to`, not as the sender.
 
-Smoke test:
+Contact smoke test:
 
 ```powershell
 $body = @{
-  name = "Alex Test"
+  name = "Test User"
   email = "test@example.com"
   message = "Contact form smoke test."
   company_website = ""
@@ -349,27 +408,25 @@ Invoke-RestMethod `
 
 ---
 
-## Telegram Live Handoff Setup
+## Telegram live handoff setup
 
-Current stage:
+The visitor stays on `/chat`.
 
-```text
-Live Telegram handoff bridge.
-```
-
-The visitor stays on `/chat`. After explicit consent:
+After explicit consent:
 
 ```text
 frontend sends the current transcript to POST /api/escalations
--> backend stores a temporary handoff session in Upstash Redis TTL
--> backend sends a Telegram notification with a Handoff ID
--> frontend opens GET /api/escalations/{handoff_id}/stream
--> Alex replies in Telegram by replying to a handoff message
--> Telegram sends the reply to POST /api/telegram/webhook
--> backend stores Alex's reply in Redis TTL
--> SSE streams Alex's reply back to the browser
--> visitor messages during handoff go to POST /api/escalations/{handoff_id}/messages
--> backend forwards those messages to Telegram
+  -> backend checks availability, honeypot, rate limit, consent, and size limits
+  -> backend stores a temporary handoff session in Upstash Redis TTL when configured
+  -> backend sends a Telegram control message and transcript
+  -> frontend opens GET /api/escalations/{handoff_id}/stream
+  -> owner replies in Telegram by replying to a handoff message
+  -> Telegram sends the update to POST /api/telegram/webhook
+  -> backend validates secret token and owner chat id
+  -> backend stores the owner reply in Redis TTL
+  -> browser receives the owner reply through SSE
+  -> visitor messages during handoff go to POST /api/escalations/{handoff_id}/messages
+  -> backend forwards visitor messages to Telegram
 ```
 
 Required variables:
@@ -379,6 +436,7 @@ TELEGRAM_BOT_TOKEN
 TELEGRAM_OWNER_CHAT_ID
 TELEGRAM_WEBHOOK_SECRET
 TELEGRAM_WEBHOOK_URL
+
 UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
 ESCALATION_SESSION_TTL_SECONDS
@@ -386,7 +444,7 @@ ESCALATION_DAILY_LIMIT_PER_IP
 ESCALATION_MESSAGE_DAILY_LIMIT_PER_IP
 ```
 
-Setup details:
+Detailed setup:
 
 ```text
 docs/telegram-handoff-setup.md
@@ -396,7 +454,60 @@ The Telegram bot token and Upstash token are backend-only secrets.
 
 ---
 
-## Production Smoke Checklist
+## Qdrant setup
+
+Required variables:
+
+```text
+QDRANT_URL
+QDRANT_API_KEY
+QDRANT_COLLECTION
+```
+
+Optional vector-mode variables:
+
+```text
+QDRANT_VECTOR_MODE=single
+QDRANT_QUERY_VECTOR_NAME=body_dense
+```
+
+Supported vector modes:
+
+```text
+single
+named
+```
+
+Named dense vectors supported by code:
+
+```text
+title_dense
+body_dense
+summary_dense
+```
+
+Current query vector name default:
+
+```text
+body_dense
+```
+
+Run generated RAG extraction and ingestion:
+
+```bash
+task rag:extract-resume
+task rag:ingest:generated
+```
+
+Legacy markdown ingestion also exists:
+
+```bash
+task rag:ingest
+```
+
+---
+
+## Production smoke checklist
 
 Run after every deployment that touches frontend routing, backend API, provider configuration, or environment variables.
 
@@ -408,95 +519,90 @@ Invoke-RestMethod "https://alextym.com/api/health/ready"
 Invoke-RestMethod "https://alextym.com/api/warmup"
 ```
 
-Expected readiness:
+Expected readiness shape:
 
 ```text
 status: ready
-vector_db: configured
-llm_config: configured
-contact_email: configured
+app: ready
+environment: <environment>
+vector_db: configured | not_configured
+llm_config: configured | not_configured
+contact_email: configured | not_configured
 ```
 
 ### Browser checks
 
 ```text
 /
-/resume
-/chat
-/contact
+ /resume
+ /chat
+ /contact
 ```
 
 ### Functional checks
 
-- ask one AI chat question;
-- trigger the handoff prompt and verify that Telegram receives a notification;
+- ask one AI/RAG chat question;
+- verify quick prompts return scripted frontend responses;
+- trigger the handoff prompt and verify Telegram receives a control message and transcript;
 - confirm the Telegram notification contains a `Handoff ID`;
-- reply in Telegram to the handoff message and verify that the reply appears in `/chat`;
-- send a new message from `/chat` while handoff is active and verify that it appears in Telegram;
-- wait for or simulate a closed/expired handoff and verify safe UI behaviour;
+- reply in Telegram and verify the reply appears in `/chat`;
+- send a new visitor message from `/chat` while handoff is active and verify it arrives in Telegram;
+- close the handoff from the UI and verify new messages return to AI mode;
 - submit a contact form smoke test;
 - check Render logs for unexpected 5xx errors;
 - check Resend logs if contact delivery fails;
 - check Telegram delivery and webhook logs if escalation fails.
 
-### Manual handoff checks
-
-1. Open `/chat`.
-2. Ask for a human handoff or use an answer that offers a handoff.
-3. Click `Connect me with Alex`.
-4. Verify that Telegram receives the handoff transcript and `Handoff ID`.
-5. Reply in Telegram to the handoff notification.
-6. Verify that the reply appears in the website chat.
-7. Send another visitor message from the website chat.
-8. Verify that the message arrives in Telegram.
-9. Keep the tab open long enough to ensure SSE stays connected or reconnects safely.
-
 ---
 
-## Migration Path
+## Migration path
 
 Backend hosting must be replaceable.
 
-Migration from Render to Railway/Fly.io/another backend host should require only:
+Migration from Render to another backend host should require only:
 
 - deploy the same Docker image;
-- copy environment variables;
+- copy backend environment variables;
 - verify `/api/health/live`;
 - verify `/api/health/ready`;
 - verify `/api/warmup`;
+- verify `/api/chat` and `/api/chat/stream`;
+- verify `/api/contact`;
 - verify `/api/escalations`;
 - verify `/api/escalations/{handoff_id}/stream`;
+- verify `/api/escalations/{handoff_id}/messages`;
+- verify `/api/escalations/{handoff_id}/close`;
 - verify `/api/telegram/webhook`;
 - update `frontend/vercel.json` rewrite destination;
 - redeploy frontend;
 - test chat, contact form, and Telegram live handoff.
 
-No frontend code changes should be required.
+No frontend code changes should be required if the `/api/*` contract remains stable.
 
 ---
 
-## Deployment Checklist
+## Deployment checklist
 
 Cloudflare:
 
 - [ ] Use Cloudflare DNS.
-- [ ] Keep Vercel records DNS Only.
-- [ ] Do not enable orange cloud for Vercel records unless intentionally tested.
+- [ ] Keep Vercel records DNS Only unless intentionally testing proxy mode.
+- [ ] Verify apex and `www` behaviour.
 
 Vercel:
 
 - [ ] Connect GitHub repository.
 - [ ] Use `frontend/` as project root.
 - [ ] Add custom domain.
-- [ ] Verify `/`, `/resume`, `/contact`.
-- [ ] Verify `/chat`.
+- [ ] Verify `/`, `/resume`, `/chat`, `/contact`.
+- [ ] Verify `/resume/download`.
 - [ ] Verify `/api/*` rewrites.
-- [ ] Verify SSE through rewrite with live handoff.
+- [ ] Verify SSE through rewrite for chat and live handoff.
 
 Render:
 
 - [ ] Deploy backend Docker image from `backend/`.
-- [ ] Configure env variables.
+- [ ] Configure backend environment variables.
 - [ ] Verify `/api/health/live`.
 - [ ] Verify `/api/health/ready`.
 - [ ] Verify `/api/warmup`.
@@ -511,10 +617,10 @@ UptimeRobot / cron-job.org:
 
 Qdrant:
 
-- [ ] Create free cluster.
+- [ ] Create Qdrant Cloud collection or use configured collection.
 - [ ] Configure API key.
 - [ ] Set `QDRANT_URL`, `QDRANT_API_KEY`, and `QDRANT_COLLECTION`.
-- [ ] Run ingestion.
+- [ ] Run extraction and ingestion.
 - [ ] Test retrieval.
 
 Resend:
@@ -528,6 +634,7 @@ Resend:
 Telegram / Upstash:
 
 - [ ] Create Telegram bot.
+- [ ] Start a private chat with the bot.
 - [ ] Get `TELEGRAM_OWNER_CHAT_ID`.
 - [ ] Set `TELEGRAM_BOT_TOKEN`.
 - [ ] Set `TELEGRAM_OWNER_CHAT_ID`.
@@ -537,12 +644,13 @@ Telegram / Upstash:
 - [ ] Set `UPSTASH_REDIS_REST_URL`.
 - [ ] Set `UPSTASH_REDIS_REST_TOKEN`.
 - [ ] Set `ESCALATION_SESSION_TTL_SECONDS`.
-- [ ] Register Telegram webhook with the same secret.
+- [ ] Register Telegram webhook with the same secret token.
 - [ ] Verify `getWebhookInfo`.
 - [ ] Smoke test full live handoff.
 
 OpenAI:
 
 - [ ] Set project budget/alerts in OpenAI dashboard.
+- [ ] Set `OPENAI_API_KEY`.
 - [ ] Keep application rate limits enabled.
 - [ ] Verify chat still works after deployment.

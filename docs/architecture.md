@@ -2,192 +2,358 @@
 
 ## Purpose
 
-This project is `alextym`, a personal AI portfolio website for Alex.
+This project is `alextym.com`, a portfolio website built as a small AI-powered web product.
 
-The website should demonstrate:
+The website demonstrates:
 
-- a modern frontend;
-- a FastAPI backend;
+- a Next.js / React frontend;
+- a Python FastAPI backend;
 - a RAG-based AI assistant;
-- streaming chat UX;
-- privacy-aware handling of personal biography data;
-- deployable architecture.
+- hybrid chat UX with scripted quick prompts, AI/RAG answers, and human handoff;
+- streaming responses through Server-Sent Events;
+- an interactive resume page with filtered PDF generation;
+- a Telegram-based bridge between the visitor and the site owner;
+- privacy-aware handling of public professional profile data;
+- deployable low-cost architecture.
 
-The site is not just a static portfolio. The main product feature is an AI assistant that answers employer-facing questions about Alex's professional background, projects, skills, and experience.
+The site is not only a static portfolio. The main product feature is a hybrid assistant that answers employer-facing questions about the site owner's public professional profile and can escalate to a human when direct contact or confirmation is needed.
 
 ---
 
-## Product Scope
+## Product scope
 
-Required pages:
+Implemented public routes:
 
 ```text
-/          -> home page
-/resume    -> web resume + CV download
-/chat      -> AI chat
-/contact   -> contact form + GitHub/LinkedIn links
+/          -> home page / product overview
+/resume    -> interactive resume + dynamic CV download
+/chat      -> AI/RAG chat + human handoff
+/contact   -> contact form
 ```
 
-Navigation:
+Main navigation currently includes:
 
 ```text
 Home
 Resume
 Chat
+Contact
 ```
 
-`/contact` remains a public page and is linked from the Connect block, but it is not shown in the top pill menu.
-
-The home page must be a simple standalone page. The AI chat must live on the separate `/chat` page.
-
----
-
-## Chat Page Intro
-
-Use this intro text:
+The canonical public routes are also used by `sitemap.xml`:
 
 ```text
-Hi, I'm Alex's digital assistant.
-This AI is augmented by my work and experiences.
-Ask me about my RAG projects or AI automation workflows.
-```
-
-Quick prompts:
-
-```text
-Give me your 30-second intro.
-Tell me about your recent projects.
-Tell me about your RAG work
+/
+ /resume
+ /chat
+ /contact
 ```
 
 ---
 
-## Technology Stack
+## Frontend application
 
-### Frontend
+Frontend stack:
 
 ```text
 Next.js
+React
 TypeScript
 Tailwind CSS
-shadcn/ui
-next-themes
-Framer Motion only if needed
+CSS Modules
+Node.js / npm toolchain
+Playwright for E2E checks
+ESLint
 ```
 
-Hosting:
+Important clarification:
 
 ```text
-Vercel Free/Hobby
+Node.js is used for the Next.js frontend toolchain.
+The backend is not a Node.js / Express service.
+The backend is a separate Python FastAPI application.
 ```
 
-### Backend
+The home page includes:
+
+- product overview blocks;
+- connect/contact entry points;
+- embedded YouTube demo through `youtube-nocookie.com`;
+- SEO/SMM metadata inherited from the Next.js metadata configuration.
+
+The resume page includes:
+
+- detail level switch: `Concise` / `Detailed`;
+- section filter: `Experience`, `Education`, `Training`;
+- dynamic PDF download route: `/resume/download?detail=...&sections=...`.
+
+---
+
+## Chat UX
+
+The chat is implemented as a hybrid communication layer.
+
+### Empty chat state
+
+The current UI starts with an assistant intro, a short explanation, and quick-prompt buttons.
+
+Quick prompt labels currently implemented in the frontend:
 
 ```text
+Give me your 1-minute intro.
+Give me a short overview of his work experience.
+When is Alex ready to start work?
+```
+
+These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint.
+
+### Typed message flow
+
+Typed messages follow this path:
+
+```text
+Visitor types a message
+  -> frontend checks whether an active handoff session exists
+  -> if handoff is active, message goes to the handoff message endpoint
+  -> otherwise frontend checks local handoff request / confirmation patterns
+  -> if not handled locally, frontend calls POST /api/chat/stream
+  -> if streaming fails before any text arrives, frontend falls back to POST /api/chat
+```
+
+The frontend sends only a short conversation history for follow-up and pronoun handling. This history is not treated as a source of factual claims.
+
+---
+
+## Backend stack
+
+Backend stack:
+
+```text
+Python
 FastAPI
 Pydantic
 Uvicorn
-HTTPX
+OpenAI Python SDK
 Qdrant client
-OpenAI/OpenRouter client
+Resend SDK
+Upstash Redis REST API through HTTP calls
 ```
 
-Initial hosting:
+Backend entry point:
 
 ```text
-Koyeb Free
+backend/app/main.py
 ```
 
-Fallback hosting:
+Registered API routers under `/api`:
 
 ```text
-Railway
-Render
-Fly.io
+health
+chat
+contact
+escalation
+telegram
 ```
 
-### Vector Database
-
-Initial choice:
+Current backend layering:
 
 ```text
-Qdrant Cloud Free
+backend/app/api/        -> FastAPI routers and HTTP-level error mapping
+backend/app/schemas/    -> Pydantic request/response models and validation limits
+backend/app/services/   -> business workflows: chat, contact, escalation, health, Telegram, rate limiting
+backend/app/rag/        -> chunking, generated RAG source extraction, retrieval, Qdrant store, prompt building
+backend/app/llm/        -> OpenAI Responses API and embeddings clients
+backend/app/core/       -> configuration
 ```
 
-Do not store vectors inside the backend container.
+Keep routers thin. Most orchestration belongs in services, and RAG-specific logic belongs in `backend/app/rag/`.
 
 ---
 
-## High-Level Architecture
+## High-level architecture
 
-```text
-Browser
-  -> Vercel frontend
-  -> /api/* via Vercel rewrites
-  -> FastAPI backend on Koyeb
-  -> Qdrant Cloud for retrieval
-  -> LLM provider for response generation
-  -> streamed response back to browser
+```mermaid
+flowchart LR
+    Browser["Browser"] --> Frontend["Next.js frontend<br/>Vercel"]
+    Frontend --> ApiRewrite["API rewrite layer<br/>frontend /api routes"]
+    ApiRewrite --> Backend["FastAPI backend<br/>Render"]
+
+    Backend --> OpenAIChat["OpenAI Responses API"]
+    Backend --> OpenAIEmbed["OpenAI embeddings"]
+    Backend --> VectorDB["Qdrant Cloud<br/>vector search"]
+    Backend --> Redis["Upstash Redis<br/>rate limits / handoff sessions / TTL"]
+    Backend --> Email["Resend email"]
+    Backend --> TelegramBot["Telegram Bot API"]
+
+    TelegramBot --> Owner["Owner / developer"]
+    Owner --> TelegramBot
+    TelegramBot --> Backend
+
+    Backend --> ApiRewrite
+    ApiRewrite --> Browser
 ```
 
----
+The frontend proxies `/api/...` requests to the backend through `frontend/vercel.json`.
 
-## Backend Layering
-
-Keep FastAPI routers thin.
-
-Recommended backend structure:
+Current production rewrite target:
 
 ```text
-backend/app/api/
-backend/app/schemas/
-backend/app/services/
-backend/app/rag/
-backend/app/llm/
-backend/app/core/
-```
-
-Responsibilities:
-
-```text
-api/       -> route definitions only
-schemas/   -> Pydantic request/response models
-services/  -> application orchestration
-rag/       -> chunking, retrieval, prompt building, guardrails
-llm/       -> LLM provider client
-core/      -> config, logging, shared infrastructure
-```
-
-Chat flow:
-
-```text
-router
-  -> ChatService
-  -> Retriever
-  -> PromptBuilder
-  -> LLMClient
-  -> structured response or SSE stream
+https://alextym-backend.onrender.com/api/:path*
 ```
 
 ---
 
-## RAG Instead of Fine-Tuning
+## Backend API surface
 
-Use RAG, not fine-tuning.
+Implemented backend endpoints:
 
-Reasoning:
+```text
+GET  /api/health/live
+GET  /api/health/ready
+GET  /api/warmup
 
-- the knowledge base is small and personal;
-- updates should be easy;
-- the assistant must stay grounded in source documents;
-- fine-tuning is unnecessary for MVP;
-- RAG is easier to explain as a portfolio project.
+POST /api/chat
+POST /api/chat/stream
+
+POST /api/contact
+
+POST /api/escalations
+POST /api/escalations/{handoff_id}/messages
+GET  /api/escalations/{handoff_id}/stream
+POST /api/escalations/{handoff_id}/close
+
+POST /api/telegram/webhook
+```
 
 ---
 
-## MVP Non-Goals
+## Chat and RAG flow
 
-Do not add these in MVP:
+```text
+POST /api/chat or POST /api/chat/stream
+  -> ChatRequest validation
+  -> daily rate limit
+  -> prompt-injection phrase checks
+  -> explicit handoff request check
+  -> unsupported-language check
+  -> private-data request check
+  -> greeting/help/assistant-intro/social acknowledgement shortcut checks
+  -> question resolution
+  -> retrieval query rewrite when needed
+  -> Qdrant retrieval
+  -> prompt building with separated system/context/question
+  -> OpenAI Responses API answer
+  -> structured ChatResponse or SSE events
+```
+
+If no useful chunks are retrieved or provider calls fail, the chat returns an insufficient-data response instead of exposing provider errors or fabricating an answer.
+
+The current runtime RAG path is:
+
+```text
+query routing
+  -> query expansion
+  -> OpenAI query embedding
+  -> Qdrant dense vector search
+  -> payload filters
+  -> score threshold
+  -> section filtering
+  -> heuristic reranking
+  -> keyword scoring
+  -> prompt context with compressed answer facts where available
+```
+
+---
+
+## Human handoff architecture
+
+```mermaid
+sequenceDiagram
+    participant V as Visitor
+    participant UI as Next.js chat UI
+    participant API as FastAPI backend
+    participant R as Upstash Redis
+    participant TG as Telegram Bot API
+    participant O as Owner
+
+    V->>UI: asks for contact / confirms handoff
+    UI->>API: POST /api/escalations with transcript
+    API->>API: validate consent, honeypot, availability, rate limit
+    API->>R: create temporary handoff session with TTL
+    API->>TG: send control message + transcript
+    UI->>API: GET /api/escalations/{handoff_id}/stream
+    O->>TG: reply to handoff message
+    TG->>API: POST /api/telegram/webhook
+    API->>API: validate webhook secret and owner chat id
+    API->>R: store owner reply in temporary session
+    API-->>UI: SSE message
+    UI-->>V: display owner reply
+```
+
+A visitor can send follow-up messages during an active handoff:
+
+```text
+browser
+  -> POST /api/escalations/{handoff_id}/messages
+  -> backend validates active session
+  -> backend forwards the visitor message to Telegram
+```
+
+A visitor can close the active handoff:
+
+```text
+browser
+  -> POST /api/escalations/{handoff_id}/close
+  -> backend marks the session as closed
+  -> new visitor messages return to normal AI chat flow
+```
+
+Current handoff states:
+
+```text
+idle
+waiting_for_alex
+connected
+closed
+error
+```
+
+Live handoff availability is configurable by environment variables:
+
+```text
+HANDOFF_AVAILABILITY_ENABLED
+HANDOFF_AVAILABILITY_TIMEZONE
+HANDOFF_AVAILABILITY_START
+HANDOFF_AVAILABILITY_END
+```
+
+Current defaults:
+
+```text
+Europe/London
+09:00
+21:00
+```
+
+---
+
+## RAG instead of fine-tuning
+
+This project uses RAG, not fine-tuning.
+
+Reasons:
+
+- the knowledge base is small and profile-specific;
+- updates should be simple;
+- facts must remain grounded in reviewed public source content;
+- RAG is easier to test with retrieval and answer evals;
+- fine-tuning is unnecessary for this portfolio/product scope.
+
+---
+
+## Current non-goals
+
+These are intentionally out of scope for the current implementation:
 
 - user accounts;
 - authentication;
@@ -196,24 +362,31 @@ Do not add these in MVP:
 - blog;
 - Keycloak;
 - SaaS-style multi-tenancy;
+- paid tiers;
+- local ChromaDB inside the backend container;
 - fine-tuning;
-- paid tiers unless needed;
-- local ChromaDB inside the backend container.
+- long-term chat history storage.
+
+The project does have temporary handoff session storage through Upstash Redis TTL. This is not intended as a durable chat-history database.
 
 ---
 
-## MVP Definition of Done
+## Current implementation checklist
 
-MVP is ready when:
+The current architecture is consistent when:
 
-- `/` shows the home page;
-- `/chat` shows the AI chat;
-- `/resume` shows resume content and CV download;
-- `/contact` shows a contact form;
-- FastAPI backend is deployed;
-- chat endpoint works;
-- streaming endpoint works or has JSON fallback;
-- Qdrant is used as external vector DB;
-- private biography is not committed;
-- the assistant does not invent facts when context is insufficient;
-- deployment docs are accurate enough to reproduce setup.
+- `/` renders the home page;
+- `/resume` renders the interactive resume;
+- `/resume/download` generates a PDF from selected filters;
+- `/chat` loads the assistant and calls `/api/warmup`;
+- quick prompts return scripted responses;
+- typed questions use `/api/chat/stream`;
+- `/api/chat` works as JSON fallback;
+- `/api/contact` validates and sends through Resend;
+- `/api/escalations` sends the transcript to Telegram after explicit consent;
+- `/api/escalations/{handoff_id}/stream` streams owner replies back to the browser;
+- `/api/escalations/{handoff_id}/messages` forwards visitor handoff messages to Telegram;
+- `/api/escalations/{handoff_id}/close` closes the handoff session;
+- `/api/telegram/webhook` validates Telegram secret token and owner chat id;
+- Qdrant is used as an external vector store;
+- public knowledge stays separated from private drafts and secrets.

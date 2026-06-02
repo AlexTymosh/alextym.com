@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the backend API contract for `alextym`.
+This document defines the backend API contract for `alextym.com`.
 
 Backend framework:
 
@@ -16,24 +16,41 @@ Base path:
 /api
 ```
 
+The FastAPI app registers routers for:
+
+```text
+health
+chat
+contact
+escalation
+telegram
+```
+
 ---
 
-## Endpoints
-
-Required endpoints:
+## Implemented endpoints
 
 ```text
 GET  /api/health/live
 GET  /api/health/ready
 GET  /api/warmup
+
 POST /api/chat
 POST /api/chat/stream
+
 POST /api/contact
+
+POST /api/escalations
+POST /api/escalations/{handoff_id}/messages
+GET  /api/escalations/{handoff_id}/stream
+POST /api/escalations/{handoff_id}/close
+
+POST /api/telegram/webhook
 ```
 
 ---
 
-## Health: Live
+## Health: live
 
 Endpoint:
 
@@ -45,14 +62,15 @@ Purpose:
 
 - cheap liveness check;
 - keep-alive ping target;
-- Koyeb healthcheck target;
-- frontend warm-up target.
+- deployment smoke test.
 
-Must not call:
+Does not call:
 
 - OpenAI;
 - Qdrant;
 - Resend;
+- Telegram;
+- Redis / Upstash;
 - other external APIs.
 
 Response:
@@ -65,7 +83,7 @@ Response:
 
 ---
 
-## Health: Ready
+## Health: ready
 
 Endpoint:
 
@@ -75,42 +93,35 @@ GET /api/health/ready
 
 Purpose:
 
-- readiness check;
+- configuration readiness check;
 - deploy smoke test;
 - manual debugging.
 
-May check:
+Current behaviour:
 
-- required env variables;
-- Qdrant connection;
-- LLM API key presence;
-- contact provider configuration.
+- checks whether required configuration values are present;
+- does not perform live Qdrant/OpenAI/Resend network calls;
+- currently returns HTTP 200 with configuration status fields.
 
-Should not run expensive LLM generation.
-
-Example response:
+Response shape:
 
 ```json
 {
   "status": "ready",
-  "vector_db": "connected",
-  "llm_config": "present",
+  "app": "ready",
+  "environment": "local",
+  "vector_db": "configured",
+  "llm_config": "configured",
   "contact_email": "configured"
 }
 ```
 
-If not ready:
+Possible field values for provider configuration fields:
 
-```json
-{
-  "status": "not_ready",
-  "vector_db": "unavailable",
-  "llm_config": "missing",
-  "contact_email": "configured"
-}
+```text
+configured
+not_configured
 ```
-
-Use HTTP 503 for not-ready state.
 
 ---
 
@@ -125,28 +136,30 @@ GET /api/warmup
 Purpose:
 
 - lightweight backend warm-up;
-- initialise clients/config;
-- reduce first chat latency.
+- reduce first chat latency on free / low-cost hosting;
+- give frontend a small readiness signal before chat interaction.
 
-This endpoint is required for MVP and must be implemented.
-
-Must not:
+This endpoint must not:
 
 - generate LLM responses;
-- perform expensive operations;
+- call Qdrant;
+- call Resend;
+- call Telegram;
 - mutate data.
 
-Example response:
+Response shape:
 
 ```json
 {
-  "status": "warmed"
+  "status": "warmed",
+  "app": "ready",
+  "environment": "local"
 }
 ```
 
 ---
 
-## Chat JSON Fallback
+## Chat JSON fallback
 
 Endpoint:
 
@@ -157,14 +170,14 @@ POST /api/chat
 Purpose:
 
 - non-streaming chat response;
-- fallback if SSE is unstable;
+- frontend fallback if SSE fails before receiving text;
 - simpler testing.
 
 Request:
 
 ```json
 {
-  "message": "Tell me about Alex's recent projects",
+  "message": "Tell me about the owner's recent projects",
   "session_id": "optional-session-id",
   "history": [
     {
@@ -173,7 +186,7 @@ Request:
     },
     {
       "role": "assistant",
-      "content": "Hi, I'm Alex's digital assistant."
+      "content": "Hi, I'm the owner's digital assistant."
     }
   ]
 }
@@ -191,48 +204,45 @@ history item count: max 10
 history total content: max 6000 characters
 ```
 
-`history` is used only for conversational context, such as pronoun resolution and follow-up
-understanding. It is not a source of factual claims about Alex.
+`history` is used only for conversational context, such as pronoun resolution and follow-up understanding. It is not a source of factual claims.
 
 Response:
 
 ```json
 {
-  "answer": "Alex has worked on...",
+  "answer": "According to the public knowledge base...",
   "sources": [
     {
-      "title": "resume.md",
-      "section": "Summary",
+      "title": "Summary",
+      "section": "summary",
       "confidence": "medium"
     }
   ],
   "confidence": "medium",
-  "not_enough_data": false
+  "not_enough_data": false,
+  "handoff_suggested": false,
+  "handoff_reason": null
 }
 ```
 
-Insufficient-data response:
+Insufficient-data response shape:
 
 ```json
 {
   "answer": "I do not have enough reliable information in Alex's public knowledge base to answer that accurately.",
   "sources": [],
   "confidence": "low",
-  "not_enough_data": true
+  "not_enough_data": true,
+  "handoff_suggested": true,
+  "handoff_reason": "insufficient_data"
 }
 ```
 
-General non-Alex questions may return a normal assistant answer with empty `sources` and
-`not_enough_data=false`. Factual questions about Alex must use retrieved public knowledge and
-include source metadata when context is found.
-
-Questions about unrelated third-party people should not trigger Alex RAG. The assistant should
-return a short scope-boundary response and stay focused on Alex's professional profile and general
-software topics.
+Out-of-scope questions return a scope-boundary answer rather than a general AI answer. The assistant is focused on the public professional profile, projects, skills, CV, availability, and contact options.
 
 ---
 
-## Chat Streaming
+## Chat streaming
 
 Endpoint:
 
@@ -242,9 +252,9 @@ POST /api/chat/stream
 
 Purpose:
 
-- primary endpoint for chat UI;
+- primary endpoint for typed chat messages;
 - Server-Sent Events response;
-- display answer progressively.
+- progressive answer display in the frontend.
 
 Content type:
 
@@ -256,29 +266,26 @@ Request:
 
 ```json
 {
-  "message": "Give me your 30-second intro.",
+  "message": "Give me your 1-minute intro.",
   "session_id": "optional-session-id",
   "history": []
 }
 ```
 
-Suggested SSE events:
+Current SSE events:
 
 ```text
 event: meta
-data: {"request_id":"...", "status":"started"}
+data: {"request_id":"...","status":"started"}
 
 event: token
-data: {"text":"Alex"}
-
-event: token
-data: {"text":" has"}
+data: {"text":"..."}
 
 event: sources
-data: {"sources":[{"title":"resume.md","section":"Summary","confidence":"medium"}]}
+data: {"sources":[{"title":"Summary","section":"summary","confidence":"medium"}]}
 
 event: done
-data: {"confidence":"medium","not_enough_data":false}
+data: {"request_id":"...","confidence":"medium","not_enough_data":false,"handoff_suggested":false,"handoff_reason":null}
 ```
 
 Error event:
@@ -291,9 +298,10 @@ data: {"message":"Something went wrong. Please try again later."}
 Requirements:
 
 - handle client disconnects;
-- do not log full prompts;
 - return safe errors;
-- support timeout-aware execution.
+- do not expose provider errors;
+- do not expose prompts or secrets;
+- keep the event format stable for the frontend.
 
 ---
 
@@ -307,10 +315,10 @@ POST /api/contact
 
 Purpose:
 
-- receive messages from contact form;
+- receive messages from the contact form;
 - validate data;
-- block simple spam;
-- send notification email.
+- block simple spam with a honeypot field;
+- send notification email through Resend.
 
 Request:
 
@@ -327,27 +335,24 @@ Validation:
 
 ```text
 name: required, 1-120 characters
-email: required, valid email
+email: required, 3-254 characters, simple email pattern
 message: required, 1-4000 characters
-company_website: optional honeypot field
+company_website: optional honeypot field, max 200 characters
 ```
 
 Honeypot rule:
 
 ```text
-If company_website is filled, treat as spam.
-Return generic success to avoid helping bots.
+If company_website is filled, return generic success and do not send through the normal email path.
 ```
 
-Response:
+Success response:
 
 ```json
 {
   "status": "ok"
 }
 ```
-
-Do not expose provider errors directly to the user.
 
 Provider requirements:
 
@@ -357,8 +362,7 @@ CONTACT_TARGET_EMAIL
 CONTACT_FROM_EMAIL
 ```
 
-`CONTACT_FROM_EMAIL` must be a Resend-verified sender address. The user-provided email is used
-as `reply_to`, not as the sender.
+`CONTACT_FROM_EMAIL` must be a Resend-verified sender address. The user-provided email is used as `reply_to`, not as the sender.
 
 Provider failure response:
 
@@ -368,11 +372,267 @@ Provider failure response:
 }
 ```
 
-Use HTTP 502 for provider delivery failures and HTTP 503 when the contact form is not configured.
+HTTP status codes:
+
+```text
+503 -> contact form is not configured
+502 -> provider delivery failure
+```
 
 ---
 
-## Error Handling
+## Escalation: create handoff session
+
+Endpoint:
+
+```text
+POST /api/escalations
+```
+
+Purpose:
+
+- create a human handoff request after explicit visitor consent;
+- send transcript/context to the configured Telegram owner chat;
+- create a temporary Redis TTL session when Upstash Redis is configured.
+
+Request:
+
+```json
+{
+  "consent_accepted": true,
+  "reason": "user_requested_human",
+  "transcript": [
+    {
+      "role": "user",
+      "content": "Can I speak to the owner?"
+    },
+    {
+      "role": "assistant",
+      "content": "Would you like to connect with the owner?"
+    }
+  ],
+  "company_website": ""
+}
+```
+
+Validation:
+
+```text
+consent_accepted: must be true
+reason: required, 1-100 characters
+transcript: required, 1-20 messages
+transcript item role: user or assistant
+transcript item content: 1-2000 characters
+transcript total content: max 8000 characters
+company_website: optional honeypot field, max 200 characters
+```
+
+Success response with Redis session storage configured:
+
+```json
+{
+  "status": "ok",
+  "handoff_id": "hnd_...",
+  "state": "waiting_for_alex",
+  "expires_in_seconds": 7200
+}
+```
+
+Success response in notification-only mode:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+HTTP status codes:
+
+```text
+403 -> handoff unavailable outside configured working hours
+503 -> escalation is not configured
+502 -> Telegram delivery or session storage failure
+```
+
+---
+
+## Escalation: visitor message during active handoff
+
+Endpoint:
+
+```text
+POST /api/escalations/{handoff_id}/messages
+```
+
+Purpose:
+
+- send a visitor follow-up message to Telegram during an active handoff session.
+
+Request:
+
+```json
+{
+  "content": "I would like to discuss a Python automation role.",
+  "company_website": ""
+}
+```
+
+Validation:
+
+```text
+content: required, 1-2000 characters
+company_website: optional honeypot field, max 200 characters
+```
+
+Success response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+HTTP status codes:
+
+```text
+403 -> handoff unavailable
+404 -> escalation session was not found
+503 -> escalation messaging or session storage is not configured
+502 -> Telegram delivery failure
+```
+
+---
+
+## Escalation: stream owner messages
+
+Endpoint:
+
+```text
+GET /api/escalations/{handoff_id}/stream
+```
+
+Purpose:
+
+- open an SSE stream from backend to browser;
+- deliver owner replies that arrive through Telegram webhook.
+
+Content type:
+
+```text
+text/event-stream
+```
+
+Current SSE events:
+
+```text
+event: meta
+data: {"handoff_id":"hnd_...","status":"connected"}
+
+event: message
+data: {"id":"...","role":"alex","content":"...","created_at":"..."}
+
+event: closed
+data: {"reason":"session_expired"}
+
+event: closed
+data: {"reason":"session_closed"}
+
+: heartbeat
+```
+
+The frontend tracks seen message ids to avoid duplicate rendering.
+
+HTTP status codes:
+
+```text
+404 -> escalation session was not found
+503 -> escalation streaming is not configured
+502 -> escalation stream could not be opened
+```
+
+---
+
+## Escalation: close handoff session
+
+Endpoint:
+
+```text
+POST /api/escalations/{handoff_id}/close
+```
+
+Purpose:
+
+- close an active handoff session;
+- move the UI back to normal AI chat mode for new messages.
+
+Success response:
+
+```json
+{
+  "status": "ok",
+  "state": "closed"
+}
+```
+
+HTTP status codes:
+
+```text
+404 -> escalation session was not found
+503 -> escalation session storage is not configured
+502 -> could not close this handoff
+```
+
+---
+
+## Telegram webhook
+
+Endpoint:
+
+```text
+POST /api/telegram/webhook
+```
+
+Purpose:
+
+- receive Telegram updates;
+- validate webhook secret token;
+- accept replies only from the configured owner chat id;
+- store owner replies in the temporary handoff session.
+
+Required header:
+
+```text
+X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_WEBHOOK_SECRET>
+```
+
+Success response shape:
+
+```json
+{
+  "status": "ok",
+  "handoff_id": "hnd_..."
+}
+```
+
+Ignored update response shape:
+
+```json
+{
+  "status": "ignored"
+}
+```
+
+HTTP status codes:
+
+```text
+403 -> invalid Telegram webhook secret
+503 -> Telegram webhook is not configured
+502 -> Telegram reply could not be processed
+```
+
+---
+
+## Error handling
 
 Use structured errors.
 
@@ -384,47 +644,79 @@ Minimum format:
 }
 ```
 
-Prefer stable, predictable error responses.
-
 Do not return:
 
 - stack traces;
 - secrets;
 - provider raw errors;
 - full prompts;
-- internal environment values.
+- internal environment values;
+- private source content.
 
 ---
 
-## Rate Limiting
+## Rate limiting
 
-Implemented before public launch:
+Implemented scopes:
 
 ```text
-/api/chat
-/api/chat/stream
-/api/contact
+chat
+contact
+escalation
+escalation_message
 ```
 
-Starting limits:
+Applied to endpoints:
 
 ```text
-chat: up to 50 messages per IP per day
-contact: 5 messages per IP per day
-max input length: 2000 chars
-max output tokens: configured by model client
+POST /api/chat
+POST /api/chat/stream
+POST /api/contact
+POST /api/escalations
+POST /api/escalations/{handoff_id}/messages
 ```
 
-Implementation note:
+Current code defaults:
 
 ```text
-The MVP limiter is process-local and resets on restart.
-Move to shared storage if the backend runs multiple instances or needs stronger abuse protection.
+chat: 50 requests per IP per day
+contact: 5 requests per IP per day
+escalation: 3 requests per IP per day
+escalation_message: 30 requests per IP per day
+```
+
+The committed `.env.example` may set different starting values for production-like local configuration.
+
+Implementation:
+
+```text
+If Upstash Redis REST URL and token are configured:
+  -> Redis-backed daily rate limiting is used.
+
+If one Upstash value is missing:
+  -> Redis limiter is treated as misconfigured and the API layer falls back to in-memory rate limiting.
+
+If both Upstash values are empty:
+  -> in-memory process-local limiter is used.
+```
+
+Rate-limit failure response:
+
+```json
+{
+  "detail": "Daily request limit reached. Please try again later."
+}
+```
+
+HTTP status:
+
+```text
+429
 ```
 
 ---
 
-## Testing Requirements
+## Testing requirements
 
 Backend tests should cover:
 
@@ -435,6 +727,24 @@ Backend tests should cover:
 - too long chat message;
 - insufficient-data response;
 - prompt injection attempt;
+- unsupported-language handling;
 - invalid contact email;
 - contact honeypot;
-- streaming endpoint basic event format.
+- streaming endpoint event format;
+- escalation consent validation;
+- escalation honeypot;
+- active handoff message forwarding;
+- missing handoff session;
+- Telegram webhook secret validation;
+- Telegram ignored update behaviour.
+
+Frontend E2E checks should cover:
+
+- navigation;
+- theme toggle;
+- resume filters;
+- dynamic resume download route;
+- chat quick prompts;
+- typed chat stream/fallback behaviour;
+- handoff prompt;
+- closing a handoff session.
