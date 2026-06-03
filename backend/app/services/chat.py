@@ -12,7 +12,7 @@ from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import Retriever
-from app.schemas.chat import ChatHistoryMessage, ChatRequest, ChatResponse
+from app.schemas.chat import ChatHistoryMessage, ChatRequest, ChatResponse, Confidence
 
 INSUFFICIENT_DATA_ANSWER = (
     "Sorry, I'm not sure I understood.\nCould you clarify, or should I connect you with Alex?"
@@ -45,11 +45,11 @@ HANDOFF_REQUEST_ANSWER = (
     "I can help connect you with Alex. Please use the handoff prompt below to confirm."
 )
 
-SERVICE_REQUEST_ANSWER = (
-    "Alex may be able to help with software, automation, API, website, or "
-    "internal-tool projects.\n"
-    "Could you briefly describe what you want to build, or would you prefer "
-    "me to connect you with Alex?"
+PUBLIC_BOUNDARY_WEAKNESSES_ANSWER = (
+    "Thank you for the deeper interest. Alex prefers to discuss development "
+    "areas directly in a professional conversation.\n"
+    "This public assistant is limited to verified public profile information.\n"
+    "Would you like me to connect you with Alex?"
 )
 
 SOCIAL_ACKNOWLEDGEMENT_ANSWER = "You're welcome.\nHow can I help you next?"
@@ -172,6 +172,12 @@ ALEX_PROFILE_TERMS = (
     "hard skills",
     "soft skill",
     "soft skills",
+    "strength",
+    "strengths",
+    "strong side",
+    "strong sides",
+    "advantage",
+    "different",
     "project",
     "projects",
     "resume",
@@ -207,6 +213,9 @@ ALEX_PROFILE_TERMS = (
     "program",
     "internal tool",
     "chatbot",
+    "collaboration",
+    "service",
+    "services",
     "integration",
     "right to work",
     "work authorisation",
@@ -225,7 +234,10 @@ SERVICE_REQUEST_TERMS = (
     "make a website",
     "need a website",
     "need a program",
+    "need a tool",
+    "need an internal tool",
     "need software",
+    "build a tool",
     "build software",
     "create software",
     "build an app",
@@ -234,9 +246,26 @@ SERVICE_REQUEST_TERMS = (
     "automate my",
     "automate our",
     "api integration",
+    "integrate api",
     "internal tool",
+    "business automation",
     "rag chatbot",
     "ai assistant",
+    "can alex build",
+    "can he build",
+)
+
+WEAKNESS_REQUEST_TERMS = (
+    "weakness",
+    "weaknesses",
+    "weak point",
+    "weak points",
+    "development area",
+    "development areas",
+    "areas to improve",
+    "limitations",
+    "what should alex improve",
+    "what should he improve",
 )
 
 SECOND_PERSON_TERMS = (
@@ -271,6 +300,16 @@ FOLLOW_UP_PROFILE_TERMS = (
     "start",
     "hire",
     "stack",
+    "service",
+    "services",
+    "website",
+    "software",
+    "automation",
+    "strength",
+    "strengths",
+    "different",
+    "weakness",
+    "weaknesses",
 )
 
 SHORT_CONTINUATION_PATTERNS = (
@@ -457,7 +496,9 @@ class ChatService:
             conversational_context=resolution.conversational_context,
         )
         answer = self._answer_from_prompt(prompt, chunks)
-        should_offer_handoff = _is_contact_or_availability_question(request.message)
+        response_confidence = _confidence_from_chunks(chunks, request.message)
+        should_offer_handoff = _should_offer_handoff_after_answer(request.message)
+        handoff_reason = _handoff_reason_after_answer(request.message)
         if should_offer_handoff and not _answer_mentions_handoff(answer):
             answer = answer.rstrip() + "\n\nWould you like to connect with Alex?"
 
@@ -471,12 +512,12 @@ class ChatService:
                 }
                 for chunk in chunks
             ],
-            confidence="medium",
+            confidence=response_confidence,
             not_enough_data=False,
             handoff_suggested=should_offer_handoff,
-            handoff_reason="user_requested_human" if should_offer_handoff else None,
+            handoff_reason=handoff_reason,
             language_unsupported=False,
-            user_requested_human=should_offer_handoff,
+            user_requested_human=False,
         )
 
     async def stream_answer(self, request: ChatRequest) -> AsyncIterator[str]:
@@ -566,6 +607,19 @@ class ChatService:
                 ),
             )
 
+        if _is_weakness_request(message, request.history):
+            return ChatPolicyResult(
+                intent="public_boundary_weaknesses",
+                response=ChatResponse(
+                    answer=PUBLIC_BOUNDARY_WEAKNESSES_ANSWER,
+                    sources=[],
+                    confidence="high",
+                    not_enough_data=False,
+                    handoff_suggested=True,
+                    handoff_reason="public_boundary",
+                ),
+            )
+
         if self._is_greeting(message):
             return ChatPolicyResult(
                 intent="greeting",
@@ -607,20 +661,6 @@ class ChatService:
                     sources=[],
                     confidence="high",
                     not_enough_data=False,
-                ),
-            )
-
-        if _is_service_request(message):
-            return ChatPolicyResult(
-                intent="service_request",
-                response=ChatResponse(
-                    answer=SERVICE_REQUEST_ANSWER,
-                    sources=[],
-                    confidence="medium",
-                    not_enough_data=False,
-                    handoff_suggested=True,
-                    handoff_reason="user_requested_human",
-                    user_requested_human=True,
                 ),
             )
 
@@ -683,6 +723,13 @@ class ChatService:
             return QuestionResolution(
                 is_alex_specific=True,
                 retrieval_query=_rewrite_alex_retrieval_query(request.message),
+                conversational_context=conversational_context,
+            )
+
+        if _is_service_request(request.message):
+            return QuestionResolution(
+                is_alex_specific=True,
+                retrieval_query=_services_retrieval_query(),
                 conversational_context=conversational_context,
             )
 
@@ -852,6 +899,79 @@ class ChatService:
         return f"event: {event}\ndata: {payload}\n\n"
 
 
+def _confidence_from_chunks(chunks: list[KnowledgeChunk], query: str) -> Confidence:
+    if not chunks:
+        return "low"
+
+    scores = sorted(
+        (score for chunk in chunks if (score := _retrieval_score(chunk)) is not None),
+        reverse=True,
+    )
+    top_score = scores[0] if scores else None
+    score_gap = scores[0] - scores[1] if len(scores) > 1 else 0.0
+    source_rank = max(_source_confidence_rank(chunk) for chunk in chunks)
+    answer_fact_count = sum(_answer_fact_count(chunk) for chunk in chunks[:3])
+    exact_match = _has_exact_metadata_match(query, chunks[:3])
+
+    if top_score is None:
+        if exact_match and source_rank >= 2:
+            return "high"
+        if answer_fact_count >= 2 or source_rank >= 2:
+            return "medium"
+        return "low"
+
+    if top_score >= 0.78 and (score_gap >= 0.05 or exact_match):
+        return "high"
+    if top_score >= 0.72 and answer_fact_count >= 2 and source_rank >= 2:
+        return "high"
+    if top_score >= 0.55 or exact_match or answer_fact_count >= 2:
+        return "medium"
+    return "low"
+
+
+def _retrieval_score(chunk: KnowledgeChunk) -> float | None:
+    value = chunk.metadata.extra.get("retrieval_score")
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _source_confidence_rank(chunk: KnowledgeChunk) -> int:
+    return {"low": 1, "medium": 2, "high": 3}.get(
+        chunk.metadata.source_confidence,
+        2,
+    )
+
+
+def _answer_fact_count(chunk: KnowledgeChunk) -> int:
+    value = chunk.metadata.extra.get("answer_facts")
+    if not isinstance(value, list):
+        return 0
+    return sum(1 for item in value if isinstance(item, str) and item.strip())
+
+
+def _has_exact_metadata_match(query: str, chunks: list[KnowledgeChunk]) -> bool:
+    query_terms = _confidence_terms(query)
+    if not query_terms:
+        return False
+
+    for chunk in chunks:
+        metadata_terms = _confidence_terms(
+            " ".join(
+                [
+                    chunk.metadata.section,
+                    chunk.metadata.topic,
+                    " ".join(chunk.metadata.tags),
+                ]
+            )
+        )
+        if query_terms.intersection(metadata_terms):
+            return True
+    return False
+
+
+def _confidence_terms(value: str) -> set[str]:
+    return {term for term in re.findall(r"[a-z0-9]+", value.casefold()) if len(term) > 3}
+
+
 def _first_sentence(text: str, max_length: int = 220) -> str:
     normalized_text = " ".join(text.split())
     if not normalized_text:
@@ -943,6 +1063,24 @@ def _looks_like_non_english_latin(normalized_message: str) -> bool:
     return marker_count >= 2 and english_anchor_count < 2
 
 
+def _is_weakness_request(
+    message: str,
+    history: list[ChatHistoryMessage],
+) -> bool:
+    normalized_message = _normalize_message(message)
+    if not any(term in normalized_message for term in WEAKNESS_REQUEST_TERMS):
+        return False
+    if _is_direct_third_party_subject(normalized_message):
+        return False
+    if any(term in normalized_message for term in ALEX_TERMS):
+        return True
+    if any(term in normalized_message for term in SECOND_PERSON_TERMS):
+        return True
+    if any(term in normalized_message for term in FOLLOW_UP_PRONOUN_TERMS):
+        return _history_has_alex_assistant_context(history)
+    return False
+
+
 def _is_service_request(message: str) -> bool:
     normalized_message = _normalize_message(message)
     return any(term in normalized_message for term in SERVICE_REQUEST_TERMS)
@@ -976,6 +1114,18 @@ def _is_handoff_confirmation_after_prompt(request: ChatRequest) -> bool:
 def _is_contact_or_availability_question(message: str) -> bool:
     normalized_message = _normalize_message(message)
     return any(term in normalized_message for term in CONTACT_OR_AVAILABILITY_TERMS)
+
+
+def _should_offer_handoff_after_answer(message: str) -> bool:
+    return _is_contact_or_availability_question(message) or _is_service_request(message)
+
+
+def _handoff_reason_after_answer(message: str) -> str | None:
+    if _is_service_request(message):
+        return "service_enquiry"
+    if _is_contact_or_availability_question(message):
+        return "user_requested_human"
+    return None
 
 
 def _answer_mentions_handoff(answer: str) -> bool:
@@ -1053,6 +1203,14 @@ def _history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> bo
     return False
 
 
+def _services_retrieval_query() -> str:
+    return (
+        "Tell me about Alex's software services, automation projects, "
+        "websites, API integrations, internal tools, RAG chatbots, and "
+        "collaboration options."
+    )
+
+
 def _rewrite_alex_retrieval_query(message: str) -> str:
     normalized_message = _normalize_message(message)
     if normalized_message == "tell me about him":
@@ -1071,10 +1229,12 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
             "Tell me about Alex's hard skills, technical stack, tools, "
             "and software engineering capabilities."
         )
-    if "service" in normalized_message or "website" in normalized_message:
+    if any(term in normalized_message for term in ("service", "website", "software")):
+        return _services_retrieval_query()
+    if "strength" in normalized_message or "different" in normalized_message:
         return (
-            "Tell me about Alex's software services, automation projects, "
-            "websites, API integrations, and collaboration options."
+            "Tell me about Alex's professional strengths, working style, "
+            "automation-first thinking, and collaboration approach."
         )
     if "your" in normalized_message and "project" in normalized_message:
         return "Tell me about Alex's professional projects and software work."

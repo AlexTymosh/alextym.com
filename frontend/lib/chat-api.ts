@@ -201,7 +201,10 @@ function parseHandoffReason(value: unknown): HandoffReason | null {
     value === "insufficient_data" ||
     value === "private_data" ||
     value === "language_unsupported" ||
-    value === "user_requested_human"
+    value === "user_requested_human" ||
+    value === "availability_or_contact" ||
+    value === "service_enquiry" ||
+    value === "public_boundary"
   ) {
     return value;
   }
