@@ -72,6 +72,65 @@ He also works with AI-assisted development and RAG-based systems, using AI tools
 - Worked with documentation-driven development using README files, AGENTS.md, SESSION_NOTES.md, implementation plans, and structured review prompts.
 - Used structured engineering workflows with task decomposition, iterative delivery, code review, testing, and CI-oriented quality checks.
 
+## Software Services and Collaboration
+
+Alex may be a fit for small or medium-sized businesses that need practical software, automation, API, website, internal-tool, reporting, or RAG/chatbot solutions.
+
+He is best positioned for projects where the main value comes from understanding business processes, simplifying manual work, connecting existing systems, and turning fragmented workflows into maintainable software-supported processes.
+
+Relevant service areas include:
+
+- Business websites and portfolio-style sites with contact flows, SEO/SMM metadata, structured content, and AI/RAG assistant features where useful.
+- Internal tools for operations, reporting, dashboards, data checks, and workflow visibility.
+- API integrations between business systems, ERP/CRM platforms, spreadsheets, databases, and external services.
+- Automation of repetitive administrative, reporting, pricing, accounting-support, and data-preparation tasks.
+- Excel-to-database migration, spreadsheet process replacement, structured data workflows, and lightweight backend services.
+- RAG-based chatbots and knowledge-base assistants for public profile, recruitment, customer support, internal documentation, or FAQ-style use cases.
+- AI-assisted prototypes and MVP-style tools with human review, test coverage, implementation boundaries, and clear documentation.
+
+The strongest fit is a practical project with a clear business workflow, visible manual workload, fragmented data, or a need to connect tools through APIs.
+
+## Typical Project Types
+
+Examples of projects that match Alex's public profile:
+
+- A small company needs a cleaner website with a contact flow, public profile, SEO metadata, and an optional AI assistant.
+- A business wants to replace manual Excel-based reporting with a database-backed workflow and dashboard.
+- A team needs an internal tool that connects existing systems through APIs and reduces copy-paste work.
+- A company wants a RAG assistant over reviewed public or internal documents, with clear boundaries and no-hallucination behaviour.
+- An operations team needs a lightweight backend service for data validation, workflow automation, or reporting preparation.
+- A founder or manager wants to test an automation or internal SaaS idea as a small MVP before investing in a larger system.
+
+## Service Fit and Boundaries
+
+Alex's public profile is strongest for business-process automation, internal tools, API integrations, practical websites, reporting workflows, and knowledge-base assistants.
+
+He should not be presented as a specialist in every software category. This public assistant should not claim that Alex can safely deliver highly regulated, safety-critical, medical, financial-advice, legal-advice, high-scale enterprise, or cybersecurity-critical systems without a proper professional team, domain review, and project-specific validation.
+
+For uncertain project scope, the assistant should ask for a short description of the business problem and offer direct contact.
+
+## Professional Strengths
+
+Alex's strongest professional qualities are:
+
+- Automation-first thinking: he looks for repeatable manual work, bottlenecks, fragmented spreadsheets, and process gaps that can be turned into structured workflows.
+- Business-process understanding: his finance, management, and company-building background helps him connect technical decisions with operational value.
+- Data and reporting mindset: he has practical experience with reporting automation, Excel-to-database migration, dashboards, and structured data workflows.
+- API and integration focus: he is interested in connecting ERP/CRM systems, internal tools, databases, spreadsheets, and external services.
+- Analytical problem-solving: he tends to decompose unclear business problems into smaller technical and operational steps.
+- AI-assisted development discipline: he uses AI as an accelerator while keeping human review, testing, architectural control, and implementation boundaries.
+- Practical communication: he prefers clear requirements, direct feedback, documentation, and visible criteria for whether a solution works.
+
+## Public Boundary: Development Areas
+
+This public profile does not list Alex's private development areas or personal weaknesses.
+
+If a visitor asks about weaknesses, weak points, limitations, or development areas, the assistant should not invent a public list. The preferred answer is that Alex is aware of his development areas and prefers to discuss them directly in a professional conversation.
+
+A suitable public response is:
+
+Thank you for the deeper interest. Alex prefers to discuss development areas directly in a professional conversation. This public assistant is limited to verified public profile information. Would you like me to connect you with Alex?
+
 ## Working Style
 
 - Problem-solving: Alex is comfortable working with unclear, manual, or fragmented business processes, decomposing them into smaller tasks, and turning them into structured workflows or software-supported processes.
@@ -100,13 +159,13 @@ Alex worked on systems integration, automation, reporting workflows, ERP-connect
 
 Key automation work included:
 
-- Architected and deployed an ERP-integrated internal API that reduced one specialist’s manual workload by approximately 68%, from 37.5 hours per week to around 12 hours per week.
+- Architected and deployed an ERP-integrated internal API that reduced one specialist's manual workload by approximately 68%, from 37.5 hours per week to around 12 hours per week.
 - Automated statutory/government reporting workflows by transforming ERP-based processes and implementing API-supported, paperless workflows, eliminating approximately 99% of the previous manual work.
 - Designed and automated product matrix generation for approximately 800 templates, creating more than 7,000 product variants and controlling over 21,000 pricing points across 4 data models.
 - Reduced manual input errors and streamlined pricing operations through structured data models and automated generation workflows.
 - Built and maintained 50+ operational and IoT dashboards, analysing data to support decision-making and improve visibility for internal teams and external partners.
 
-This role strengthened Alex’s practical experience in Python-oriented automation, ERP/API integration, reporting automation, dashboarding, structured data workflows, and business process optimisation.
+This role strengthened Alex's practical experience in Python-oriented automation, ERP/API integration, reporting automation, dashboarding, structured data workflows, and business process optimisation.
 
 ### UK Relocation and Professional Development
 
@@ -140,24 +199,23 @@ Key automation and systems work included:
 - Generated and validated hundreds of data-driven business hypotheses over 8 years to improve conversion, customer retention, operational efficiency, and customer communication.
 - Built, rebuilt, and maintained 100+ business dashboards to support operational and strategic decision-making.
 - Designed and implemented lightweight internal API integrations for insurance workflows and bank payment processing.
-- Automated partner interactions and saved approximately 8–10 hours of manual accounting work per week.
+- Automated partner interactions and saved approximately 8-10 hours of manual accounting work per week.
 - Built and maintained the company website dobrapraca.org.ua as an e-commerce-style platform based on Bitrix/Bitrix24, supporting online customer acquisition, service presentation, and operational workflows.
 
-Under Alex’s leadership, Dobra Praca achieved 1st place in its regional sector in the 2018 National Business Rating of Ukraine, based on financial performance indicators for Zaporizhzhia region, with a regional population of approximately 1.7 million. Supporting records are available on LinkedIn.
-
+Under Alex's leadership, Dobra Praca achieved 1st place in its regional sector in the 2018 National Business Rating of Ukraine, based on financial performance indicators for Zaporizhzhia region, with a regional population of approximately 1.7 million. Supporting records are available on LinkedIn.
 
 ## Education
 
 ### Formal Education
 
 Zaporizhzhia National University, Ukraine
-Bachelor’s Degree and Master’s Degree in Finance, specialising in Banking and Insurance
+Bachelor's Degree and Master's Degree in Finance, specialising in Banking and Insurance
 September 2011 – January 2018
 
-- Graduated with honours at both Bachelor’s and Master’s levels.
+- Graduated with honours at both Bachelor's and Master's levels.
 - Average score: 91.4/100.
-- Studied on a state-funded university place awarded through competitive admission; tuition was covered by the Ukrainian state throughout both Bachelor’s and Master’s studies.
-- The education strengthened Alex’s understanding of financial analysis, banking, insurance, risk assessment, business processes, and data-driven decision-making.
+- Studied on a state-funded university place awarded through competitive admission; tuition was covered by the Ukrainian state throughout both Bachelor's and Master's studies.
+- The education strengthened Alex's understanding of financial analysis, banking, insurance, risk assessment, business processes, and data-driven decision-making.
 
 University reference: https://en.wikipedia.org/wiki/Zaporizhzhia_National_University
 
@@ -212,7 +270,7 @@ Contact details are available upon request.
 
 Alex can provide professional references from his UK workplace experience and from international business partners he worked with during his time as Founder and Managing Director of Dobra Praca.
 
-Potential references may include UK-based workplace contacts and former business partners from Poland, the Czech Republic, Kazakhstan, and other countries involved in Dobra Praca’s LTD.
+Potential references may include UK-based workplace contacts and former business partners from Poland, the Czech Republic, Kazakhstan, and other countries involved in Dobra Praca's LTD.
 
 Contact information is not included in this public profile for privacy reasons and can be shared directly when appropriate.
 
