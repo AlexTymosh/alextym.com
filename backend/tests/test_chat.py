@@ -4,11 +4,13 @@ from fastapi.testclient import TestClient
 from app.api.chat import get_chat_service
 from app.core.config import Settings, get_settings
 from app.main import app
-from app.rag.retriever import EmptyRetriever
+from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.retriever import EmptyRetriever, InMemoryRetriever
 from app.services.chat import (
     HANDOFF_REQUEST_ANSWER,
     INSUFFICIENT_DATA_ANSWER,
     OUT_OF_SCOPE_ANSWER,
+    PUBLIC_BOUNDARY_WEAKNESSES_ANSWER,
     SOCIAL_ACKNOWLEDGEMENT_ANSWER,
     UNSUPPORTED_LANGUAGE_ANSWER,
     UNSUPPORTED_NON_ENGLISH_ANSWER,
@@ -252,7 +254,29 @@ def test_chat_suggests_handoff_for_direct_hire_intent() -> None:
     assert body["user_requested_human"] is True
 
 
-def test_chat_suggests_handoff_for_service_request() -> None:
+def test_chat_routes_service_request_through_rag_when_context_exists() -> None:
+    app.dependency_overrides[get_chat_service] = lambda: ChatService(
+        retriever=InMemoryRetriever(
+            [
+                KnowledgeChunk(
+                    id="services",
+                    content=(
+                        "Alex can help with business websites, internal "
+                        "tools, API integrations, automation workflows, "
+                        "and RAG chatbot projects."
+                    ),
+                    metadata=ChunkMetadata(
+                        source="resume.md",
+                        section="Software Services and Collaboration",
+                        topic="software-services-and-collaboration",
+                        source_confidence="high",
+                        tags=("services", "website", "automation", "api"),
+                    ),
+                )
+            ]
+        )
+    )
+
     response = client.post(
         "/api/chat",
         json={"message": "I need a website for my business"},
@@ -260,10 +284,27 @@ def test_chat_suggests_handoff_for_service_request() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert "what you want to build" in body["answer"]
+    assert "business websites" in body["answer"]
+    assert body["confidence"] == "high"
     assert body["handoff_suggested"] is True
-    assert body["handoff_reason"] == "user_requested_human"
-    assert body["user_requested_human"] is True
+    assert body["handoff_reason"] == "service_enquiry"
+    assert body["user_requested_human"] is False
+
+
+def test_chat_uses_public_boundary_for_weakness_questions() -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "What are Alex's weaknesses?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == PUBLIC_BOUNDARY_WEAKNESSES_ANSWER
+    assert body["confidence"] == "high"
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "public_boundary"
+    assert body["user_requested_human"] is False
 
 
 def test_chat_suggests_handoff_for_private_data_request() -> None:

@@ -13,7 +13,10 @@ export type HandoffReason =
   | "insufficient_data"
   | "private_data"
   | "language_unsupported"
-  | "user_requested_human";
+  | "user_requested_human"
+  | "availability_or_contact"
+  | "service_enquiry"
+  | "public_boundary";
 
 export type ChatSource = {
   title: string;

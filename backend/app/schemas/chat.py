@@ -9,6 +9,9 @@ HandoffReason = Literal[
     "private_data",
     "language_unsupported",
     "user_requested_human",
+    "availability_or_contact",
+    "service_enquiry",
+    "public_boundary",
 ]
 
 MAX_CHAT_HISTORY_ITEMS = 10
