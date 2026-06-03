@@ -16,6 +16,8 @@ type ChatStreamDone = {
   not_enough_data: boolean;
   handoff_suggested?: boolean;
   handoff_reason?: HandoffReason | null;
+  language_unsupported?: boolean;
+  user_requested_human?: boolean;
 };
 
 type StreamChatResponseOptions = {
@@ -163,6 +165,14 @@ function handleSseEvent(
           ? parsedPayload.handoff_suggested
           : undefined,
       handoff_reason: handoffReason,
+      language_unsupported:
+        typeof parsedPayload.language_unsupported === "boolean"
+          ? parsedPayload.language_unsupported
+          : undefined,
+      user_requested_human:
+        typeof parsedPayload.user_requested_human === "boolean"
+          ? parsedPayload.user_requested_human
+          : undefined,
     });
   }
 }
@@ -187,7 +197,12 @@ function parseConfidence(value: unknown): Confidence {
 }
 
 function parseHandoffReason(value: unknown): HandoffReason | null {
-  if (value === "insufficient_data" || value === "private_data") {
+  if (
+    value === "insufficient_data" ||
+    value === "private_data" ||
+    value === "language_unsupported" ||
+    value === "user_requested_human"
+  ) {
     return value;
   }
   return null;
