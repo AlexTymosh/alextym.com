@@ -13,6 +13,10 @@ from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import Retriever
 from app.schemas.chat import ChatHistoryMessage, ChatRequest, ChatResponse, Confidence
+from app.services.chat_safety import (
+    is_prompt_injection_attempt,
+    is_unsafe_chat_output,
+)
 
 INSUFFICIENT_DATA_ANSWER = (
     "Sorry, I'm not sure I understood.\nCould you clarify, or should I connect you with Alex?"
@@ -496,6 +500,9 @@ class ChatService:
             conversational_context=resolution.conversational_context,
         )
         answer = self._answer_from_prompt(prompt, chunks)
+        if is_unsafe_chat_output(answer):
+            return self._prompt_injection_response()
+
         response_confidence = _confidence_from_chunks(chunks, request.message)
         should_offer_handoff = _should_offer_handoff_after_answer(request.message)
         handoff_reason = _handoff_reason_after_answer(request.message)
@@ -553,13 +560,7 @@ class ChatService:
         if self._looks_like_prompt_injection(message):
             return ChatPolicyResult(
                 intent="prompt_injection",
-                response=ChatResponse(
-                    answer=PROMPT_INJECTION_ANSWER,
-                    sources=[],
-                    confidence="low",
-                    not_enough_data=True,
-                    handoff_suggested=False,
-                ),
+                response=self._prompt_injection_response(),
             )
 
         if _is_handoff_request(message):
@@ -668,8 +669,17 @@ class ChatService:
 
     @staticmethod
     def _looks_like_prompt_injection(message: str) -> bool:
-        normalized_message = _normalize_message(message)
-        return any(pattern in normalized_message for pattern in PROMPT_INJECTION_PATTERNS)
+        return is_prompt_injection_attempt(message)
+
+    @staticmethod
+    def _prompt_injection_response() -> ChatResponse:
+        return ChatResponse(
+            answer=PROMPT_INJECTION_ANSWER,
+            sources=[],
+            confidence="low",
+            not_enough_data=True,
+            handoff_suggested=False,
+        )
 
     @staticmethod
     def _is_greeting(message: str) -> bool:
