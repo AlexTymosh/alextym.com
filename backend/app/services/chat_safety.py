@@ -128,6 +128,7 @@ UNSAFE_OUTPUT_PATTERNS = (
     "hidden policy",
     "internal rules",
     "private context",
+    "retrieved context",
     "retrieved public knowledge context",
     "secret key",
     "system prompt",

@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import Protocol
 
 from app.rag.prompt_builder import PromptBundle
@@ -22,3 +23,6 @@ class EmbeddingClient(Protocol):
 class LLMClient(Protocol):
     def answer(self, prompt: PromptBundle) -> str:
         """Generate a final answer from a grounded prompt."""
+
+    def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
+        """Generate a final answer incrementally as text chunks."""

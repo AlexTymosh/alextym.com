@@ -2,7 +2,7 @@ import asyncio
 import json
 import re
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -72,6 +72,8 @@ HELP_ANSWER = (
 )
 
 ASSISTANT_INTRO_ANSWER = "I'm Alex's AI assistant.\nHow can I help you?"
+
+STREAM_GUARD_BUFFER_CHARS = 160
 
 PROMPT_INJECTION_PATTERNS = (
     "ignore previous instructions",
@@ -462,6 +464,15 @@ class ChatPolicyResult:
     response: ChatResponse
 
 
+@dataclass(frozen=True)
+class RagAnswerContext:
+    prompt: PromptBundle
+    chunks: list[KnowledgeChunk]
+    confidence: Confidence
+    handoff_suggested: bool
+    handoff_reason: str | None
+
+
 class ChatService:
     def __init__(
         self,
@@ -478,35 +489,221 @@ class ChatService:
         self._prompt_builder = prompt_builder or PromptBuilder()
 
     def answer(self, request: ChatRequest) -> ChatResponse:
+        prepared_answer = self._prepare_answer(request)
+        if isinstance(prepared_answer, ChatPolicyResult):
+            return prepared_answer.response
+
+        answer = self._answer_from_prompt(
+            prepared_answer.prompt,
+            prepared_answer.chunks,
+        )
+        if is_unsafe_chat_output(answer):
+            return self._prompt_injection_response()
+        return self._rag_response(answer=answer, context=prepared_answer)
+
+    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[str]:
+        request_id = str(uuid.uuid4())
+        yield self._sse_event("meta", {"request_id": request_id, "status": "started"})
+
+        prepared_answer = self._prepare_answer(request)
+        if isinstance(prepared_answer, ChatPolicyResult):
+            async for event in self._stream_response_payload(
+                request_id=request_id,
+                response=prepared_answer.response,
+            ):
+                yield event
+            return
+
+        async for event in self._stream_rag_answer(
+            request_id=request_id,
+            context=prepared_answer,
+        ):
+            yield event
+
+    def _prepare_answer(
+        self,
+        request: ChatRequest,
+    ) -> ChatPolicyResult | RagAnswerContext:
         policy_result = self._apply_pre_rag_policy(request)
         if policy_result is not None:
-            return policy_result.response
+            return policy_result
 
         resolution = self._resolve_question(request)
         if resolution.is_out_of_scope_subject or not resolution.is_alex_specific:
-            return self._out_of_scope_response()
+            return ChatPolicyResult(
+                intent="out_of_scope",
+                response=self._out_of_scope_response(),
+            )
 
         try:
             chunks = self._retriever.retrieve(resolution.retrieval_query)
         except (ProviderConfigurationError, ProviderRequestError):
-            return self._insufficient_data_response()
+            return ChatPolicyResult(
+                intent="insufficient_data",
+                response=self._insufficient_data_response(),
+            )
 
         if not chunks:
-            return self._insufficient_data_response()
+            return ChatPolicyResult(
+                intent="insufficient_data",
+                response=self._insufficient_data_response(),
+            )
 
         prompt = self._prompt_builder.build(
             question=request.message,
             chunks=chunks,
             conversational_context=resolution.conversational_context,
         )
-        answer = self._answer_from_prompt(prompt, chunks)
-        if is_unsafe_chat_output(answer):
-            return self._prompt_injection_response()
+        return RagAnswerContext(
+            prompt=prompt,
+            chunks=chunks,
+            confidence=_confidence_from_chunks(chunks, request.message),
+            handoff_suggested=_should_offer_handoff_after_answer(request.message),
+            handoff_reason=_handoff_reason_after_answer(request.message),
+        )
 
-        response_confidence = _confidence_from_chunks(chunks, request.message)
-        should_offer_handoff = _should_offer_handoff_after_answer(request.message)
-        handoff_reason = _handoff_reason_after_answer(request.message)
-        if should_offer_handoff and not _answer_mentions_handoff(answer):
+    async def _stream_rag_answer(
+        self,
+        *,
+        request_id: str,
+        context: RagAnswerContext,
+    ) -> AsyncIterator[str]:
+        if self._llm_client is None:
+            response = self._rag_response(
+                answer=self._extractive_answer(context.chunks, context.prompt.context),
+                context=context,
+            )
+            async for event in self._stream_response_payload(
+                request_id=request_id,
+                response=response,
+            ):
+                yield event
+            return
+
+        streamed_answer = ""
+        pending_output = ""
+        emitted_any_token = False
+        try:
+            token_stream = _llm_token_stream(self._llm_client, context.prompt)
+        except (ProviderConfigurationError, ProviderRequestError):
+            token_stream = None
+
+        if token_stream is None:
+            answer = self._answer_from_prompt(context.prompt, context.chunks)
+            response = (
+                self._prompt_injection_response()
+                if is_unsafe_chat_output(answer)
+                else self._rag_response(answer=answer, context=context)
+            )
+            async for event in self._stream_response_payload(
+                request_id=request_id,
+                response=response,
+            ):
+                yield event
+            return
+
+        try:
+            for token in token_stream:
+                if not token:
+                    continue
+                streamed_answer += token
+                pending_output += token
+
+                if is_unsafe_chat_output(streamed_answer):
+                    response = self._prompt_injection_response()
+                    if emitted_any_token:
+                        yield self._sse_event(
+                            "error",
+                            {"message": "Unsafe generated output was blocked."},
+                        )
+                        yield self._done_event(
+                            request_id=request_id,
+                            response=response,
+                        )
+                    else:
+                        async for event in self._stream_response_payload(
+                            request_id=request_id,
+                            response=response,
+                        ):
+                            yield event
+                    return
+
+                if len(pending_output) > STREAM_GUARD_BUFFER_CHARS:
+                    safe_output = pending_output[:-STREAM_GUARD_BUFFER_CHARS]
+                    pending_output = pending_output[-STREAM_GUARD_BUFFER_CHARS:]
+                    if safe_output:
+                        emitted_any_token = True
+                        yield self._sse_event("token", {"text": safe_output})
+                        await asyncio.sleep(0)
+        except (ProviderConfigurationError, ProviderRequestError):
+            response = self._rag_response(
+                answer=self._extractive_answer(context.chunks, context.prompt.context),
+                context=context,
+            )
+            async for event in self._stream_response_payload(
+                request_id=request_id,
+                response=response,
+            ):
+                yield event
+            return
+
+        if not streamed_answer.strip():
+            response = self._rag_response(
+                answer=self._extractive_answer(context.chunks, context.prompt.context),
+                context=context,
+            )
+            async for event in self._stream_response_payload(
+                request_id=request_id,
+                response=response,
+            ):
+                yield event
+            return
+
+        if is_unsafe_chat_output(streamed_answer):
+            response = self._prompt_injection_response()
+            if emitted_any_token:
+                yield self._sse_event(
+                    "error",
+                    {"message": "Unsafe generated output was blocked."},
+                )
+                yield self._done_event(
+                    request_id=request_id,
+                    response=response,
+                )
+            else:
+                async for event in self._stream_response_payload(
+                    request_id=request_id,
+                    response=response,
+                ):
+                    yield event
+            return
+
+        if pending_output:
+            yield self._sse_event("token", {"text": pending_output})
+
+        response = self._rag_response(answer=streamed_answer, context=context)
+        yield self._sources_event(response)
+        yield self._done_event(request_id=request_id, response=response)
+
+    async def _stream_response_payload(
+        self,
+        *,
+        request_id: str,
+        response: ChatResponse,
+    ) -> AsyncIterator[str]:
+        for token in self._tokenize(response.answer):
+            yield self._sse_event("token", {"text": token})
+            await asyncio.sleep(0)
+        yield self._sources_event(response)
+        yield self._done_event(request_id=request_id, response=response)
+
+    def _rag_response(
+        self,
+        *,
+        answer: str,
+        context: RagAnswerContext,
+    ) -> ChatResponse:
+        if context.handoff_suggested and not _answer_mentions_handoff(answer):
             answer = answer.rstrip() + "\n\nWould you like to connect with Alex?"
 
         return ChatResponse(
@@ -517,31 +714,24 @@ class ChatService:
                     "section": chunk.metadata.section,
                     "confidence": chunk.metadata.source_confidence,
                 }
-                for chunk in chunks
+                for chunk in context.chunks
             ],
-            confidence=response_confidence,
+            confidence=context.confidence,
             not_enough_data=False,
-            handoff_suggested=should_offer_handoff,
-            handoff_reason=handoff_reason,
+            handoff_suggested=context.handoff_suggested,
+            handoff_reason=context.handoff_reason,
             language_unsupported=False,
             user_requested_human=False,
         )
 
-    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[str]:
-        request_id = str(uuid.uuid4())
-        response = self.answer(request)
-
-        yield self._sse_event("meta", {"request_id": request_id, "status": "started"})
-
-        for token in self._tokenize(response.answer):
-            yield self._sse_event("token", {"text": token})
-            await asyncio.sleep(0)
-
-        yield self._sse_event(
+    def _sources_event(self, response: ChatResponse) -> str:
+        return self._sse_event(
             "sources",
             {"sources": [source.model_dump() for source in response.sources]},
         )
-        yield self._sse_event(
+
+    def _done_event(self, *, request_id: str, response: ChatResponse) -> str:
+        return self._sse_event(
             "done",
             {
                 "request_id": request_id,
@@ -909,6 +1099,16 @@ class ChatService:
         return f"event: {event}\ndata: {payload}\n\n"
 
 
+def _llm_token_stream(
+    client: LLMClient,
+    prompt: PromptBundle,
+) -> Iterator[str] | None:
+    stream_answer = getattr(client, "stream_answer", None)
+    if not callable(stream_answer):
+        return None
+    return stream_answer(prompt)
+
+
 def _confidence_from_chunks(chunks: list[KnowledgeChunk], query: str) -> Confidence:
     if not chunks:
         return "low"
@@ -1223,7 +1423,7 @@ def _services_retrieval_query() -> str:
 
 def _rewrite_alex_retrieval_query(message: str) -> str:
     normalized_message = _normalize_message(message)
-    if normalized_message == "tell me about him":
+    if normalized_message in {"tell me about alex", "tell me about him"}:
         return "Tell me about Alex's professional background, experience, skills, and projects."
     if normalized_message == "what does he do":
         return "What does Alex do professionally?"
