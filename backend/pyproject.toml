@@ -9,7 +9,7 @@ description = "FastAPI backend for alextym."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115,<1.0",
-    "openai>=2.0,<3.0",
+    "openai>=2.40.0,<3.0",
     "qdrant-client>=1.16,<2.0",
     "resend>=2.0,<3.0",
     "tzdata>=2025.2",
