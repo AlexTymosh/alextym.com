@@ -90,8 +90,8 @@ class ChatSource(BaseModel):
 class ChatResponse(BaseModel):
     answer: str = Field(
         examples=[
-            "I do not have enough reliable information in Alex's public knowledge "
-            "base to answer that accurately."
+            "Sorry, I'm not sure I understood. Could you clarify, "
+            "or should I connect you with Alex?"
         ]
     )
     sources: list[ChatSource] = Field(default_factory=list)
@@ -110,4 +110,14 @@ class ChatResponse(BaseModel):
         default=None,
         description="Reason for suggesting human handoff, when applicable.",
         examples=["insufficient_data"],
+    )
+    language_unsupported: bool = Field(
+        default=False,
+        description="Whether the request language is outside the public chat scope.",
+        examples=[False],
+    )
+    user_requested_human: bool = Field(
+        default=False,
+        description="Whether the user explicitly asked for a human handoff.",
+        examples=[False],
     )

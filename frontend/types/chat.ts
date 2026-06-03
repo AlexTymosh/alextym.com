@@ -28,6 +28,8 @@ export type ChatResponse = {
   not_enough_data: boolean;
   handoff_suggested?: boolean;
   handoff_reason?: HandoffReason | null;
+  language_unsupported?: boolean;
+  user_requested_human?: boolean;
 };
 
 export type ChatHistoryMessage = {
@@ -72,6 +74,8 @@ export type Message = {
   notEnoughData?: boolean;
   handoffSuggested?: boolean;
   handoffReason?: HandoffReason | null;
+  languageUnsupported?: boolean;
+  userRequestedHuman?: boolean;
 };
 
 export type QuickPrompt = {

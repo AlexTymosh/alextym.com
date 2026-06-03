@@ -171,7 +171,8 @@ def test_chat_service_answers_greetings_without_rag() -> None:
 
     assert response.not_enough_data is False
     assert response.sources == []
-    assert "Alex's digital assistant" in response.answer
+    assert response.answer == "Hi.\nI'm Alex's AI assistant.\nHow can I help you?"
+    assert response.confidence == "high"
 
 
 def test_chat_service_answers_help_without_rag() -> None:
@@ -181,8 +182,11 @@ def test_chat_service_answers_help_without_rag() -> None:
 
     assert response.not_enough_data is False
     assert response.sources == []
-    assert "Alex's professional experience" in response.answer
-    assert "don't answer general non-Alex questions" in response.answer
+    assert (
+        response.answer == "You can ask about Alex's experience, projects, software "
+        "services, availability, or contact options."
+    )
+    assert response.confidence == "high"
 
 
 def test_chat_service_blocks_general_questions_without_retrieval() -> None:
