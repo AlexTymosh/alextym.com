@@ -3,7 +3,7 @@
 > Documentation is available in English and Russian: [Русская версия](README.ru.md).
 
 <p align="center">
-  <em>A portfolio website built as a small AI-powered web product: interactive resume, RAG chat, SEO setup, video demo, contact flow, and human handoff via Telegram.</em>
+  <em>A portfolio website built as a small AI-powered web product: interactive resume, RAG chat, real SSE streaming, SEO setup, video demo, contact flow, and human handoff via Telegram.</em>
 </p>
 
 <p align="center">
@@ -21,11 +21,8 @@
   <a href="https://vercel.com/"><img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" /></a>
   <a href="https://render.com/"><img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=000000" /></a>
   <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" /></a>
-  <a href="https://upstash.com/">
-  <img alt="Upstash Redis" src="https://img.shields.io/badge/Upstash_Redis-00E9A3?style=for-the-badge&logo=redis&logoColor=white" /></a>
+  <a href="https://upstash.com/"><img alt="Upstash Redis" src="https://img.shields.io/badge/Upstash_Redis-00E9A3?style=for-the-badge&logo=redis&logoColor=white" /></a>
   <a href="https://core.telegram.org/bots/api"><img src="https://img.shields.io/badge/Telegram_Bot_API-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" /></a>
-  
-  
 </p>
 
 ---
@@ -63,19 +60,20 @@ File: `docs/assets/resume-filter-demo.gif`
 
 **alextym.com** is a portfolio website built as an **AI-powered web product**.
 
-The website includes an AI chat, an interactive resume, a contact form, a YouTube demo, and a **human handoff** mechanism: if the AI cannot answer reliably or the visitor asks for direct contact, the chat offers to switch to the website owner. In this scenario, the Telegram webhook passes the active session with the conversation history, and the chat state switches between the AI assistant and a human.
+The website includes an AI chat, an interactive resume, a contact form, a YouTube demo, and a **human handoff** mechanism. The chat can answer questions about the website owner’s public professional profile, projects, technical skills, availability, and possible software-services collaboration. For RAG-backed answers, the backend streams OpenAI Responses API output through Server-Sent Events, while the frontend renders incoming text through a controlled typewriter buffer.
 
 The RAG pipeline uses Qdrant + OpenAI embeddings. To improve answer quality, the following approaches are used together:
-- dense vector search
-- structured generated chunks
-- metadata filters
-- query routing
-- query expansion
-- heuristic reranking
-- keyword scoring
-- configurable named dense vectors
-- parent-child-style metadata.
+
+- dense vector search;
+- structured generated chunks;
+- metadata filters;
+- query routing and query expansion;
+- heuristic reranking and keyword scoring;
+- configurable named dense vectors;
+- parent-child-style metadata;
 - `keywords_sparse` as a keyword channel for retrieval hints / scoring. This is not a full Qdrant sparse-vector index, but a practical pseudo-sparse layer on top of metadata and keyword scoring for small documents.
+
+The chat also includes a deterministic policy layer before RAG: greetings, unsupported-language handling, private-data boundaries, prompt-injection checks, weakness/development-area boundaries, and handoff requests are handled before retrieval or LLM generation.
 
 ---
 
@@ -83,15 +81,15 @@ The RAG pipeline uses Qdrant + OpenAI embeddings. To improve answer quality, the
 
 | Category | Technologies |
 |---|---|
-| **Frontend** | Next.js, React, TypeScript, Tailwind CSS, CSS Modules, responsive layout |
+| **Frontend** | Next.js, React, TypeScript, Tailwind CSS, CSS Modules, responsive layout, typewriter stream rendering |
 | **Frontend tooling** | Node.js, npm, ESLint, Playwright |
-| **Backend** | Python, FastAPI, Pydantic, Uvicorn |
+| **Backend** | Python, FastAPI, Pydantic, Uvicorn, Server-Sent Events |
 | **State / rate limiting** | Upstash Redis, in-memory fallback |
-| **AI / LLM** | OpenAI Responses API, OpenAI embeddings, configurable reasoning effort |
+| **AI / LLM** | OpenAI Responses API, OpenAI streaming, OpenAI embeddings, configurable reasoning effort |
 | **Vector DB / RAG** | Qdrant, dense vectors, configurable named dense vectors, structured chunks, metadata filters |
 | **Retrieval methods** | query routing, query expansion, score thresholding, keyword scoring, heuristic reranking, source metadata, parent-child-style metadata |
-| **Contact / handoff** | Resend, Telegram Bot API, Telegram webhook, Server-Sent Events, handoff sessions, TTL |
-| **Safety / abuse protection** | prompt-injection checks, private-data boundary, scope routing, rate limiting, honeypot fields, no-hallucination policy |
+| **Contact / handoff** | Resend, Telegram Bot API, Telegram webhook, SSE handoff stream, handoff sessions, TTL |
+| **Safety / abuse protection** | prompt-injection checks, output guard, private-data boundary, scope routing, rate limiting, honeypot fields, no-hallucination policy |
 | **SEO / SMM** | metadata, canonical URLs, OpenGraph, Twitter card, JSON-LD, sitemap.xml, robots.txt, favicon, preview indexing control |
 | **Dev workflow** | Taskfile, uv, Ruff, Pytest, Docker |
 | **Deployment** | Vercel frontend, Render backend, Cloudflare DNS, Qdrant Cloud |
@@ -104,19 +102,20 @@ The RAG pipeline uses Qdrant + OpenAI embeddings. To improve answer quality, the
 
 ### 🤖 AI RAG Chatbot
 
-- The chat is implemented as a **hybrid chat interface**: a scripted bot for quick scenarios, AI/RAG for answers based on the public knowledge base, and human handoff for switching to the website owner. This combination provides fast answers, a structured AI flow, fallback logic, and escalation instead of trying to force AI to answer everything.
-- The AI assistant answers questions about the public professional profile of the website owner.
-- The chat supports streaming answers through Server-Sent Events.
-- If streaming is unavailable, a JSON fallback endpoint is used.
-- The response is returned in a structured format: `answer`, `sources`, `confidence`, `not_enough_data`, `handoff_suggested`, `handoff_reason`.
-- A short conversation history is used for follow-up questions and pronoun resolution, but it is not treated as a source of facts.
-- The AI assistant is configured to minimise hallucinations and, when data is insufficient, should honestly state that there is not enough information and suggest human handoff to clarify the question.
+- The chat is implemented as a **hybrid chat interface**: scripted responses for fast scenarios, deterministic policy handling for safety/scope cases, AI/RAG for public-knowledge answers, and human handoff for switching to the website owner.
+- The AI assistant answers questions about the website owner’s public professional profile, projects, skills, CV, availability, and possible software services such as websites, automation, API integrations, internal tools, and RAG/chatbot systems.
+- RAG-backed answers stream through `POST /api/chat/stream` using Server-Sent Events and OpenAI Responses API streaming.
+- The frontend does not display incoming chunks immediately; it buffers SSE tokens and renders them gradually through a typewriter-style UI layer.
+- If streaming is unavailable before text is received, the frontend falls back to the JSON endpoint `POST /api/chat`.
+- The response includes structured metadata: `answer`, `sources`, `confidence`, `not_enough_data`, `handoff_suggested`, `handoff_reason`, `language_unsupported`, and `user_requested_human`.
+- A short conversation history is used for follow-up questions and pronoun resolution, but it is not treated as a source of factual claims.
+- If context is insufficient, the assistant should return a clarification-style response instead of inventing facts.
 
 ### 🔁 Bridge between the visitor and the website owner
 
 The chat works not only as an AI bot, but also as a **bridge / handoff layer** between the visitor and the website owner.
 
-If a question requires direct contact, clarification of availability, a hiring/collaboration discussion, or if the AI cannot provide a reliable answer, the assistant should offer to connect the website owner. If the visitor agrees:
+If a question requires direct contact, clarification of availability, a hiring/collaboration discussion, or if the AI cannot provide a reliable answer, the assistant can offer to connect the website owner. If the visitor agrees:
 
 - the current chat history is sent to the website owner as context;
 - the backend creates a handoff session with TTL;
@@ -133,9 +132,7 @@ The website has a separate resume page with an interactive filter:
 
 - detail level switch: `Concise` / `Detailed`;
 - section filter: `Experience`, `Education`, `Training`;
-- dynamic CV download link: the PDF is generated based on the selected detail level and selected sections.
-
-This is stronger than a regular PDF: an employer can quickly view the short version and then open a more detailed one.
+- dynamic CV download link based on the selected detail level and sections.
 
 ### ▶️ Embedded YouTube demo
 
@@ -145,7 +142,7 @@ The home page includes an embedded YouTube player through `youtube-nocookie.com`
 
 - The contact form is validated on the backend.
 - Email delivery is handled through Resend.
-- There is a `company_website` honeypot field against simple bots: if the honeypot is filled in, the backend does not process the request through the normal path used for a real message.
+- There is a `company_website` honeypot field against simple bots.
 
 ### 🔎 SEO / SMM readiness
 
@@ -160,14 +157,13 @@ The website is configured as a public page that can be indexed and shown to recr
 - `sitemap.xml` for public routes;
 - `robots.txt` with indexing disallowed for `/api/`;
 - preview deployments can be excluded from indexing;
-- favicon and OpenGraph image are connected as part of the public presentation of the website.
+- favicon and OpenGraph image are connected as part of the public presentation.
 
-> This is not “magical SEO”, but basic technical preparation of the website for correct indexing and social previews. 
-> If you fork this project, do not forget to adjust SEO optimisation for your own needs.
+> This is not “magical SEO”, but basic technical preparation for correct indexing and social previews.
 
 ### 📊 Lighthouse / frontend quality snapshot
 
-Manual Lighthouse measurements can be used as additional confirmation of frontend quality. 
+Manual Lighthouse measurements can be used as additional confirmation of frontend quality.
 Screenshots are available at:
 
 `docs/assets/lighthouse-summary.png`
@@ -181,30 +177,23 @@ The current JSON reports for the home page show good results for an MVP:
 | Navigation | Desktop `/` | 100 | 96 | 100 | 100 | Good desktop result; the report shows no noticeable blocking issues. |
 | Navigation | Mobile `/` | 98 | 96 | 100 | 100 | Good mobile result; LCP remains in the green zone. |
 
-Metrics from JSON reports at the time of publication:
-
-| Device | FCP | LCP | TBT | CLS | Speed Index |
-|---|---:|---:|---:|---:|---:|
-| Desktop navigation | 0.7 s | 0.7 s | 0 ms | 0 | 0.7 s |
-| Mobile navigation | 1.6 s | 2.3 s | 50 ms | 0 | 1.6 s |
-
-> The website can be improved further — there are minor accessibility issues with accent/button contrast to bring Accessibility closer to 100 (P4 priority).
+> The website can be improved further — there are minor accessibility issues with accent/button contrast to bring Accessibility closer to 100.
 
 ### 🛡️ Safety / privacy / abuse protection
 
 The project implements a basic protection layer:
 
-- prompt-injection pattern checks;
+- deterministic pre-RAG policy handling for prompt-injection attempts, private-data requests, unsupported languages, direct handoff requests, and public-boundary weakness/development-area questions;
 - blocking disclosure of hidden/system/developer instructions;
 - blocking “dump knowledge base” requests and attempts to answer without context;
-- scope routing: the chat answers only questions about the public professional profile of the website owner;
-- private-data boundary: phone numbers, personal email, home address, and private details are not stored and are not disclosed;
-- no-hallucination policy: if context is insufficient, an insufficient-data response is returned;
+- output guard for unsafe generated content, including hidden prompts, retrieved context markers, internal rules, and secret-like values;
+- scope routing: the chat answers questions about the public professional profile, projects, services, availability, and contact/collaboration options of the website owner;
+- private-data boundary: phone numbers, personal email, home address, and private details are not disclosed;
+- no-hallucination policy: if context is insufficient, an insufficient-data / clarification response is returned;
 - rate limiting for chat, contact, escalation, and handoff messages;
 - honeypot fields for contact and escalation flows;
 - Telegram webhook is protected by a secret token;
 - preview deployments can be excluded from indexing.
-
 
 ### 🧪 Quality controls
 
@@ -217,7 +206,7 @@ The project implements a basic protection layer:
 - `task ci` for local verification before push / PR.
 - Dockerfile for backend portability.
 - Separate eval scripts for checking the quality of AI/RAG answers.
-- There is a deterministic eval mode without OpenAI/Qdrant and a live eval mode with real RAG.
+- Deterministic eval mode without OpenAI/Qdrant and live eval mode with real RAG.
 - Eval reports can be compared in before/after format to see regressions/fixes after changes to knowledge, prompt, or retrieval logic.
 
 ---
@@ -228,7 +217,9 @@ The chat is built as a hybrid communication layer:
 
 ```text
 scripted responses
-  -> quick answers for typical recruiter-facing scenarios
+  -> quick answers for typical scenarios
+policy responses
+  -> deterministic safety, language, handoff, privacy and boundary handling
 AI/RAG responses
   -> answers based on the public knowledge base with sources/confidence metadata
 human handoff
@@ -247,18 +238,17 @@ flowchart TD
     E --> F["Visitor sees quick prompts and input field"]
     F --> G{"User action"}
     G -- "clicks suggested prompt" --> H["Scripted quick-response path"]
-    G -- "types custom question" --> I["Message validation and hard-script checks"]
-    H --> J{"Can answer without AI?"}
+    G -- "types custom question" --> I["Message validation and pre-RAG policy checks"]
+    H --> J{"Can answer without RAG?"}
     I --> J
     J -- "yes" --> K["Return scripted or rule-based answer"]
-    J -- "no" --> L{"Need to connect developer?"}
-    L -- "no" --> M["POST /api/chat/stream"]
-    M --> N["Safety, scope and RAG retrieval"]
-    N --> O["LLM answer with sources and metadata"]
-    O --> P["SSE tokens, sources, confidence and handoff flags"]
-    L -- "yes" --> Q["Show human handoff prompt"]
-    P --> R{"Need to connect developer?"}
-    R -- "yes" --> Q
+    J -- "no" --> M["POST /api/chat/stream"]
+    M --> N["Scope, safety and RAG retrieval"]
+    N --> O["OpenAI Responses API streaming"]
+    O --> P["SSE token events"]
+    P --> P2["Frontend typewriter renderer"]
+    P2 --> R{"Need to connect Owner?"}
+    R -- "yes" --> Q["Show human handoff prompt"]
     R -- "no" --> S["Continue AI chat"]
     Q --> T{"Visitor confirms handoff?"}
     T -- "no" --> S
@@ -281,9 +271,9 @@ Visitor opens /chat
   -> chat status becomes Ready
 ```
 
-`/api/warmup` depends on backend idle time: it is useful after an idle period / cold start on free or low-cost hosting, where the backend may go to sleep. If the backend is already active, this step should not be treated as a separate user-facing feature — it is a technical warm-up.
+`/api/warmup` depends on backend idle time: it is useful after an idle period / cold start on free or low-cost hosting, where the backend may go to sleep.
 
-> To minimise costs, the backend of this project is deployed on Render Free Tier. The free tier puts the service to sleep after inactivity. For user convenience, it is recommended to configure a cron-job or uptime monitor with a regular call to the health/warmup endpoint every 10–15 minutes. 
+> To minimise costs, the backend of this project is deployed on Render Free Tier. The free tier can put the service to sleep after inactivity. For user convenience, it is recommended to configure a cron-job or uptime monitor with a regular call to the health/warmup endpoint every 10–15 minutes.
 
 ### 2. Regular AI/RAG flow
 
@@ -291,7 +281,7 @@ Visitor opens /chat
 Visitor sends a message
   -> frontend sends POST /api/chat/stream
   -> backend validates message and short history
-  -> backend applies safety / scope checks
+  -> backend applies deterministic pre-RAG policy checks
   -> backend decides whether RAG is needed
   -> retrieval query is built or rewritten
   -> query is routed by intent and metadata hints
@@ -301,8 +291,10 @@ Visitor sends a message
   -> weak matches are filtered by score threshold
   -> chunks are reranked with dense score + topic/tag/section bonuses + keyword score
   -> prompt is built with separated system instructions and retrieved context
-  -> LLM generates answer
-  -> answer streams back to browser via SSE tokens
+  -> OpenAI Responses API streams output text deltas
+  -> backend applies delayed output guard while streaming
+  -> SSE token events are returned to the browser
+  -> frontend buffers and gradually renders tokens through a typewriter renderer
   -> sources / confidence / not_enough_data / handoff metadata are returned
 ```
 
@@ -312,10 +304,8 @@ Visitor sends a message
 If SSE stream fails before text is received
   -> frontend calls POST /api/chat
   -> backend returns normal JSON answer
-  -> user still receives a response
+  -> frontend still renders the answer for the user
 ```
-
-This is an important production-style element: the interface does not depend only on the streaming channel.
 
 ### 4. Human handoff flow
 
@@ -345,8 +335,6 @@ sequenceDiagram
 
 By default, live handoff is limited to the working window `09:00–21:00 Europe/London`. Outside this window, the visitor is offered to try later or use the contact form.
 
-After a handoff suggestion, the user is not required to switch to the developer: they can decline and continue the regular AI/chat flow. In an active handoff session, the user can also close the connection with the developer and return to the regular chat.
-
 Working hours can be changed in `.env`.
 
 ---
@@ -373,7 +361,8 @@ flowchart TD
     O --> P[Heuristic reranking]
     P --> Q[Compressed retrieved context]
     Q --> R[PromptBuilder]
-    R --> S[LLM answer with sources]
+    R --> S[OpenAI Responses API]
+    S --> T[Streaming answer with sources]
 ```
 
 ### RAG approaches used
@@ -389,15 +378,16 @@ flowchart TD
 | **Pseudo-sparse keyword channel** | Generated chunks include `keywords_sparse`; it is used as keyword text / retrieval hints / scoring layer, but not as a full Qdrant sparse vector index. |
 | **Parent-child-style metadata** | Generated chunks store `parent_id`, and retrieval metadata includes `parent_child`; this creates a structure for linking a chunk with its parent entity. |
 | **Metadata / payload filters** | Fields such as `source`, `source_file`, `section`, `topic`, `visibility`, `tags` are used; retrieval can filter by topic/tag/section hints. |
-| **Query routing** | A question is classified by intent: skills, projects, availability, right_to_work, experience, education, contact, etc. |
-| **Query rewriting / subject resolution** | Short follow-up questions and pronouns are rewritten into standalone Alex-focused retrieval queries. |
-| **Query expansion** | For topics such as FastAPI, SQL, RAG, projects, and experience, additional retrieval terms are added. |
+| **Query routing** | A question is classified by intent: skills, projects, services, availability, right_to_work, experience, education, contact, strengths, public_boundary, etc. |
+| **Query rewriting / subject resolution** | Short follow-up questions and pronouns are rewritten into standalone Owner-focused retrieval queries. |
+| **Query expansion** | For topics such as FastAPI, SQL, RAG, projects, services, strengths, and experience, additional retrieval terms are added. |
 | **Score thresholding** | Weak vector matches are discarded through `RAG_SCORE_THRESHOLD`. |
 | **Heuristic reranking** | After Qdrant search, chunks are sorted using dense score, topic bonus, tag bonus, section bonus, and keyword score. |
 | **Keyword scoring** | Additional lexical scoring uses query terms, tags, answer facts, retrieval hints, and `keywords_sparse`. |
 | **Context compression** | The prompt receives primarily `answer_facts`, not the entire source document. |
 | **Prompt separation** | System instructions, retrieved context, conversation context, and user question are separated. Retrieved context is treated as data, not as instructions. |
 | **No-hallucination policy** | If retrieved context is insufficient, an insufficient-data response is returned instead of a fabricated answer. |
+| **Confidence scoring** | Successful RAG answers use heuristic confidence based on retrieval score, score gap, source confidence, metadata match, and answer facts. |
 | **Source metadata in responses** | The response returns sources with `title`, `section`, `confidence`. |
 | **Eval scripts** | There are scripts for contract/live evals, generated RAG evals, retrieval evals, and before/after comparison. |
 
@@ -415,7 +405,7 @@ flowchart LR
     Frontend --> ApiRewrite["API rewrite layer<br/>frontend /api routes"]
     ApiRewrite --> Backend["FastAPI backend<br/>Render"]
 
-    Backend --> OpenAIChat["OpenAI Responses API"]
+    Backend --> OpenAIChat["OpenAI Responses API<br/>chat + streaming"]
     Backend --> OpenAIEmbed["OpenAI embeddings"]
     Backend --> VectorDB["Qdrant Cloud<br/>vector search"]
     Backend --> Redis["Upstash Redis<br/>rate limits / handoff sessions / TTL"]
@@ -440,7 +430,7 @@ flowchart LR
 | `GET` | `/api/health/ready` | configuration readiness check |
 | `GET` | `/api/warmup` | lightweight backend warm-up before chat |
 | `POST` | `/api/chat` | JSON fallback for chat |
-| `POST` | `/api/chat/stream` | streaming chat through SSE |
+| `POST` | `/api/chat/stream` | SSE chat stream for policy and RAG-backed answers |
 | `POST` | `/api/contact` | contact form |
 | `POST` | `/api/escalations` | handoff session creation |
 | `POST` | `/api/escalations/{handoff_id}/messages` | visitor message in an active handoff session |

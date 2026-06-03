@@ -4,13 +4,16 @@ from fastapi.testclient import TestClient
 from app.api.chat import get_chat_service
 from app.core.config import Settings, get_settings
 from app.main import app
-from app.rag.retriever import EmptyRetriever
+from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.retriever import EmptyRetriever, InMemoryRetriever
 from app.services.chat import (
     HANDOFF_REQUEST_ANSWER,
     INSUFFICIENT_DATA_ANSWER,
     OUT_OF_SCOPE_ANSWER,
+    PUBLIC_BOUNDARY_WEAKNESSES_ANSWER,
     SOCIAL_ACKNOWLEDGEMENT_ANSWER,
     UNSUPPORTED_LANGUAGE_ANSWER,
+    UNSUPPORTED_NON_ENGLISH_ANSWER,
     ChatService,
 )
 
@@ -66,7 +69,7 @@ def test_chat_rejects_invalid_history_role() -> None:
     assert response.status_code == 422
 
 
-def test_chat_returns_insufficient_data_response() -> None:
+def test_chat_returns_clarification_response_for_insufficient_data() -> None:
     response = client.post(
         "/api/chat",
         json={"message": "Tell me about Alex's recent projects"},
@@ -80,6 +83,8 @@ def test_chat_returns_insufficient_data_response() -> None:
         "not_enough_data": True,
         "handoff_suggested": True,
         "handoff_reason": "insufficient_data",
+        "language_unsupported": False,
+        "user_requested_human": False,
     }
 
 
@@ -88,20 +93,23 @@ def test_chat_handles_greeting_without_insufficient_data() -> None:
 
     assert response.status_code == 200
     body = response.json()
+    assert body["answer"] == "Hi.\nI'm Alex's AI assistant.\nHow can I help you?"
+    assert body["confidence"] == "high"
     assert body["not_enough_data"] is False
     assert body["handoff_suggested"] is False
     assert body["handoff_reason"] is None
+    assert body["language_unsupported"] is False
+    assert body["user_requested_human"] is False
     assert body["sources"] == []
-    assert "Alex's digital assistant" in body["answer"]
 
 
-def test_chat_handles_how_do_you_do_as_greeting() -> None:
-    response = client.post("/api/chat", json={"message": "how do you do?"})
+def test_chat_handles_good_afternoon_as_greeting() -> None:
+    response = client.post("/api/chat", json={"message": "Good afternoon"})
 
     assert response.status_code == 200
     body = response.json()
     assert body["not_enough_data"] is False
-    assert "Alex's digital assistant" in body["answer"]
+    assert body["answer"] == "Hi.\nI'm Alex's AI assistant.\nHow can I help you?"
 
 
 def test_chat_handles_intro_request_without_retrieval() -> None:
@@ -112,14 +120,14 @@ def test_chat_handles_intro_request_without_retrieval() -> None:
     assert body["not_enough_data"] is False
     assert body["handoff_suggested"] is False
     assert body["sources"] == []
-    assert "Alex's digital assistant" in body["answer"]
+    assert "Alex's AI assistant" in body["answer"]
 
 
 def test_chat_handles_social_acknowledgement_without_out_of_scope() -> None:
     response = client.post(
         "/api/chat",
         json={
-            "message": "cool",
+            "message": "Many thanks.",
             "history": [
                 {"role": "user", "content": "Tell me about Alex"},
                 {
@@ -135,10 +143,12 @@ def test_chat_handles_social_acknowledgement_without_out_of_scope() -> None:
     assert body["answer"] == SOCIAL_ACKNOWLEDGEMENT_ANSWER
     assert body["not_enough_data"] is False
     assert body["handoff_suggested"] is False
+    assert body["language_unsupported"] is False
+    assert body["user_requested_human"] is False
     assert body["sources"] == []
 
 
-def test_chat_blocks_non_english_and_suggests_handoff() -> None:
+def test_chat_blocks_cyrillic_language_without_handoff() -> None:
     response = client.post("/api/chat", json={"message": "Расскажи про Алекса"})
 
     assert response.status_code == 200
@@ -147,8 +157,37 @@ def test_chat_blocks_non_english_and_suggests_handoff() -> None:
     assert body["sources"] == []
     assert body["confidence"] == "medium"
     assert body["not_enough_data"] is False
-    assert body["handoff_suggested"] is True
+    assert body["handoff_suggested"] is False
     assert body["handoff_reason"] == "language_unsupported"
+    assert body["language_unsupported"] is True
+    assert body["user_requested_human"] is False
+
+
+def test_chat_blocks_likely_non_english_latin_language() -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "Hola, puede Alex ayudar con automatización?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == UNSUPPORTED_NON_ENGLISH_ANSWER
+    assert body["handoff_suggested"] is False
+    assert body["handoff_reason"] == "language_unsupported"
+    assert body["language_unsupported"] is True
+
+
+def test_chat_does_not_block_foreign_brand_name_in_english() -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "Can Alex work with Müller GmbH systems?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["language_unsupported"] is False
+    assert body["handoff_reason"] == "insufficient_data"
 
 
 def test_chat_accepts_non_english_handoff_request_before_language_guard() -> None:
@@ -159,16 +198,18 @@ def test_chat_accepts_non_english_handoff_request_before_language_guard() -> Non
     assert body["answer"] == HANDOFF_REQUEST_ANSWER
     assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "user_requested_human"
+    assert body["language_unsupported"] is False
+    assert body["user_requested_human"] is True
 
 
-def test_chat_accepts_confirmation_after_language_handoff_prompt() -> None:
+def test_chat_accepts_confirmation_after_handoff_prompt() -> None:
     response = client.post(
         "/api/chat",
         json={
-            "message": "да",
+            "message": "yes",
             "history": [
-                {"role": "user", "content": "Как дела?"},
-                {"role": "assistant", "content": UNSUPPORTED_LANGUAGE_ANSWER},
+                {"role": "user", "content": "Can I contact Alex?"},
+                {"role": "assistant", "content": HANDOFF_REQUEST_ANSWER},
             ],
         },
     )
@@ -178,6 +219,7 @@ def test_chat_accepts_confirmation_after_language_handoff_prompt() -> None:
     assert body["answer"] == HANDOFF_REQUEST_ANSWER
     assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "user_requested_human"
+    assert body["user_requested_human"] is True
 
 
 def test_chat_blocks_general_non_alex_question() -> None:
@@ -194,6 +236,8 @@ def test_chat_blocks_general_non_alex_question() -> None:
     assert body["not_enough_data"] is False
     assert body["handoff_suggested"] is False
     assert body["handoff_reason"] is None
+    assert body["language_unsupported"] is False
+    assert body["user_requested_human"] is False
 
 
 def test_chat_suggests_handoff_for_direct_hire_intent() -> None:
@@ -207,6 +251,60 @@ def test_chat_suggests_handoff_for_direct_hire_intent() -> None:
     assert body["answer"] == HANDOFF_REQUEST_ANSWER
     assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "user_requested_human"
+    assert body["user_requested_human"] is True
+
+
+def test_chat_routes_service_request_through_rag_when_context_exists() -> None:
+    app.dependency_overrides[get_chat_service] = lambda: ChatService(
+        retriever=InMemoryRetriever(
+            [
+                KnowledgeChunk(
+                    id="services",
+                    content=(
+                        "Alex can help with business websites, internal "
+                        "tools, API integrations, automation workflows, "
+                        "and RAG chatbot projects."
+                    ),
+                    metadata=ChunkMetadata(
+                        source="resume.md",
+                        section="Software Services and Collaboration",
+                        topic="software-services-and-collaboration",
+                        source_confidence="high",
+                        tags=("services", "website", "automation", "api"),
+                    ),
+                )
+            ]
+        )
+    )
+
+    response = client.post(
+        "/api/chat",
+        json={"message": "I need a website for my business"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "business websites" in body["answer"]
+    assert body["confidence"] == "high"
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "service_enquiry"
+    assert body["user_requested_human"] is False
+
+
+def test_chat_uses_public_boundary_for_weakness_questions() -> None:
+    response = client.post(
+        "/api/chat",
+        json={"message": "What are Alex's weaknesses?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == PUBLIC_BOUNDARY_WEAKNESSES_ANSWER
+    assert body["confidence"] == "high"
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "public_boundary"
+    assert body["user_requested_human"] is False
 
 
 def test_chat_suggests_handoff_for_private_data_request() -> None:
@@ -220,6 +318,7 @@ def test_chat_suggests_handoff_for_private_data_request() -> None:
     assert body["not_enough_data"] is True
     assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "private_data"
+    assert body["user_requested_human"] is False
 
 
 def test_chat_does_not_suggest_handoff_for_prompt_injection_attempt() -> None:
@@ -230,13 +329,15 @@ def test_chat_does_not_suggest_handoff_for_prompt_injection_attempt() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert "can't help reveal" in body["answer"]
-    assert "system prompt" in body["answer"]
+    assert "can't help with hidden instructions" in body["answer"]
+    assert "system prompts" in body["answer"]
     assert body["sources"] == []
     assert body["confidence"] == "low"
     assert body["not_enough_data"] is True
     assert body["handoff_suggested"] is False
     assert body["handoff_reason"] is None
+    assert body["language_unsupported"] is False
+    assert body["user_requested_human"] is False
 
 
 def test_chat_stream_returns_sse_events() -> None:
@@ -259,6 +360,8 @@ def test_chat_stream_returns_sse_events() -> None:
     assert '"not_enough_data":true' in stream_text
     assert '"handoff_suggested":true' in stream_text
     assert '"handoff_reason":"insufficient_data"' in stream_text
+    assert '"language_unsupported":false' in stream_text
+    assert '"user_requested_human":false' in stream_text
 
 
 def test_chat_rate_limit_returns_429() -> None:

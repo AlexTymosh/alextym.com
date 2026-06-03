@@ -14,13 +14,13 @@
   },
   "dependencies": {
     "next": "^16.2.6",
-    "react": "^19.2.6",
+    "react": "^19.2.7",
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "@types/node": "^20.17.0",
-    "@types/react": "^19.2.15",
+    "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.4",

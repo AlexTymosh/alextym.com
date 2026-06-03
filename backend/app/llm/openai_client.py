@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import Any
 
 from openai import OpenAI
@@ -91,16 +92,8 @@ class OpenAIResponsesClient:
         )
 
     def answer(self, prompt: PromptBundle) -> str:
-        request_options: dict[str, Any] = {
-            "model": self._model,
-            "input": prompt.as_messages(),
-            "max_output_tokens": self._max_output_tokens,
-        }
-        if self._reasoning_effort and self._reasoning_effort != "disabled":
-            request_options["reasoning"] = {"effort": self._reasoning_effort}
-
         try:
-            response = self._client.responses.create(**request_options)
+            response = self._client.responses.create(**self._request_options(prompt))
         except Exception as exc:
             raise ProviderRequestError("OpenAI response request failed.") from exc
 
@@ -108,6 +101,33 @@ class OpenAIResponsesClient:
         if not answer:
             raise ProviderRequestError("OpenAI response did not contain text.")
         return answer
+
+    def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
+        request_options = self._request_options(prompt)
+        request_options["stream"] = True
+
+        try:
+            stream = self._client.responses.create(**request_options)
+        except Exception as exc:
+            raise ProviderRequestError("OpenAI streaming request failed.") from exc
+
+        try:
+            for event in stream:
+                delta = _extract_stream_delta(event)
+                if delta:
+                    yield delta
+        except Exception as exc:
+            raise ProviderRequestError("OpenAI streaming response failed.") from exc
+
+    def _request_options(self, prompt: PromptBundle) -> dict[str, Any]:
+        request_options: dict[str, Any] = {
+            "model": self._model,
+            "input": prompt.as_messages(),
+            "max_output_tokens": self._max_output_tokens,
+        }
+        if self._reasoning_effort and self._reasoning_effort != "disabled":
+            request_options["reasoning"] = {"effort": self._reasoning_effort}
+        return request_options
 
 
 def _extract_response_text(response: Any) -> str:
@@ -123,3 +143,18 @@ def _extract_response_text(response: Any) -> str:
                 fragments.append(text)
 
     return "".join(fragments).strip()
+
+
+def _extract_stream_delta(event: Any) -> str:
+    event_type = _event_value(event, "type")
+    if event_type not in {"response.output_text.delta", "response.refusal.delta"}:
+        return ""
+
+    delta = _event_value(event, "delta")
+    return delta if isinstance(delta, str) else ""
+
+
+def _event_value(event: Any, name: str) -> Any:
+    if isinstance(event, dict):
+        return event.get(name)
+    return getattr(event, name, None)

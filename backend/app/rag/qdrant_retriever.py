@@ -22,15 +22,51 @@ QUERY_EXPANSIONS = (
             "данн",
             "субд",
         ),
-        "SQL PostgreSQL SQLAlchemy Alembic relational databases database-backed workflows",
+        ("SQL PostgreSQL SQLAlchemy Alembic relational databases database-backed workflows"),
     ),
     (
         ("fastapi", "backend", "api", "бекенд", "бэкенд", "апи"),
-        "Python FastAPI backend REST APIs request response validation internal services",
+        ("Python FastAPI backend REST APIs request response validation internal services"),
     ),
     (
         ("rag", "llm", "ai-assisted", "assistant", "ассист", "ии", "нейро"),
-        "RAG AI-assisted development knowledge-base assistants LLM automation workflows",
+        ("RAG AI-assisted development knowledge-base assistants LLM automation workflows"),
+    ),
+    (
+        (
+            "service",
+            "services",
+            "website",
+            "web app",
+            "internal tool",
+            "business automation",
+            "collaboration",
+            "build software",
+            "build an app",
+        ),
+        (
+            "software services websites internal tools API integrations business "
+            "automation RAG chatbot collaboration project enquiry"
+        ),
+    ),
+    (
+        (
+            "strength",
+            "strengths",
+            "different",
+            "advantage",
+            "why hire",
+            "what makes",
+            "stands out",
+        ),
+        (
+            "professional strengths automation-first thinking analytical "
+            "business process understanding collaboration working style"
+        ),
+    ),
+    (
+        ("weakness", "weaknesses", "development area", "areas to improve"),
+        "public boundary development areas direct professional conversation",
     ),
     (
         ("project", "projects", "portfolio", "repo", "repository", "проект"),
@@ -224,6 +260,8 @@ def _tag_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
 
 
 def _section_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
-    if chunk.metadata.section in route.section_hints:
+    normalized_section = chunk.metadata.section.casefold()
+    normalized_hints = {hint.casefold() for hint in route.section_hints}
+    if normalized_section in normalized_hints:
         return 0.25
     return 0.0
