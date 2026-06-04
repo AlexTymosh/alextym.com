@@ -26,6 +26,11 @@ class Settings:
     rate_limiting_enabled: bool
     chat_daily_limit_per_ip: int
     contact_daily_limit_per_ip: int
+    service_name: str = "portfolio-backend"
+    service_version: str = "0.1.0"
+    log_level: str = "INFO"
+    log_format: str = "json"
+    request_id_header: str = "X-Request-ID"
     telegram_bot_token: str = ""
     telegram_owner_chat_id: str = ""
     telegram_webhook_secret: str = ""
@@ -115,6 +120,11 @@ def _get_vector_mode() -> str:
     return raw_value if raw_value in {"single", "named"} else "single"
 
 
+def _get_log_format() -> str:
+    raw_value = os.getenv("LOG_FORMAT", "json").strip().lower()
+    return raw_value if raw_value in {"json", "console"} else "json"
+
+
 @lru_cache
 def get_settings() -> Settings:
     _load_local_env_file()
@@ -143,6 +153,11 @@ def get_settings() -> Settings:
         rate_limiting_enabled=_get_bool("RATE_LIMITING_ENABLED", True),
         chat_daily_limit_per_ip=_get_int("CHAT_DAILY_LIMIT_PER_IP", 50),
         contact_daily_limit_per_ip=_get_int("CONTACT_DAILY_LIMIT_PER_IP", 5),
+        service_name=os.getenv("SERVICE_NAME", "portfolio-backend"),
+        service_version=os.getenv("SERVICE_VERSION", "0.1.0"),
+        log_level=os.getenv("LOG_LEVEL", "INFO"),
+        log_format=_get_log_format(),
+        request_id_header=os.getenv("REQUEST_ID_HEADER", "X-Request-ID"),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
         telegram_owner_chat_id=os.getenv("TELEGRAM_OWNER_CHAT_ID", ""),
         telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", ""),
