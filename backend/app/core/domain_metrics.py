@@ -20,6 +20,8 @@ LATENCY_BUCKETS = (
     10.0,
 )
 CHUNK_COUNT_BUCKETS = (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0)
+SAFE_PAGE_LABELS = {"/", "/resume", "/chat", "/contact"}
+SAFE_RESUME_DOWNLOAD_SOURCES = {"resume_page"}
 
 CHAT_REQUESTS_TOTAL = Counter(
     "portfolio_chat_requests_total",
@@ -87,6 +89,18 @@ RATE_LIMIT_CHECKS_TOTAL = Counter(
     "portfolio_rate_limit_checks_total",
     "Rate limit checks by scope and outcome.",
     ("scope", "outcome"),
+    registry=DOMAIN_METRICS_REGISTRY,
+)
+PAGE_VIEWS_TOTAL = Counter(
+    "portfolio_page_views_total",
+    "Privacy-safe aggregate page views by whitelisted page path.",
+    ("page",),
+    registry=DOMAIN_METRICS_REGISTRY,
+)
+RESUME_DOWNLOADS_TOTAL = Counter(
+    "portfolio_resume_downloads_total",
+    "Privacy-safe aggregate resume download clicks by whitelisted source.",
+    ("source",),
     registry=DOMAIN_METRICS_REGISTRY,
 )
 
@@ -177,6 +191,18 @@ def record_rate_limit_check(*, scope: str, outcome: str) -> None:
         scope=_safe_label(scope),
         outcome=_safe_label(outcome),
     ).inc()
+
+
+def record_page_view(page: str) -> None:
+    if page not in SAFE_PAGE_LABELS:
+        return
+    PAGE_VIEWS_TOTAL.labels(page=page).inc()
+
+
+def record_resume_download(source: str) -> None:
+    if source not in SAFE_RESUME_DOWNLOAD_SOURCES:
+        return
+    RESUME_DOWNLOADS_TOTAL.labels(source=source).inc()
 
 
 def domain_metrics_payload() -> bytes:

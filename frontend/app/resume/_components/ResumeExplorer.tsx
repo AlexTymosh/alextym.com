@@ -8,6 +8,7 @@ import type {
   ResumeDetailLevel,
   ResumeSection,
 } from "../../../content/resume";
+import { recordResumeDownload } from "../../../lib/privacy-safe-analytics";
 import { ResumeTimeline } from "./ResumeTimeline";
 import styles from "./ResumeTimeline.module.css";
 
@@ -70,6 +71,7 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
           className={styles.downloadLink}
           download={DOWNLOAD_FILE_NAME}
           href={downloadHref}
+          onClick={recordResumeDownload}
         >
           Download {detailLevel === "concise" ? "concise" : "detailed"} CV
         </a>
