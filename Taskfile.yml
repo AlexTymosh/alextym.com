@@ -3,6 +3,7 @@ version: "3"
 vars:
   BACKEND_PORT: "8000"
   FRONTEND_PORT: "3000"
+  OBSERVABILITY_COMPOSE: "{{.ROOT_DIR}}/infra/observability/docker-compose.yml"
 
 env:
   UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache"
@@ -222,7 +223,7 @@ tasks:
         --before "{{.BEFORE}}"
         --after "{{.AFTER}}"
         --output
-        "{{.OUTPUT | default "../.tmp/evals/eval-comparison.md"}}"
+        '{{.OUTPUT | default "../.tmp/evals/eval-comparison.md"}}'
 
   backend:check:
     desc: Run all backend checks.
@@ -310,6 +311,37 @@ tasks:
     dir: backend
     cmds:
       - docker build -t alextym-backend .
+
+  obs:config:
+    desc: Validate the local observability Docker Compose config.
+    cmds:
+      - >-
+        docker compose -f "{{.OBSERVABILITY_COMPOSE}}" config
+
+  obs:up:
+    desc: Start local Prometheus and Grafana.
+    cmds:
+      - task: obs:config
+      - >-
+        docker compose -f "{{.OBSERVABILITY_COMPOSE}}" up -d
+
+  obs:down:
+    desc: Stop local Prometheus and Grafana.
+    cmds:
+      - >-
+        docker compose -f "{{.OBSERVABILITY_COMPOSE}}" down
+
+  obs:logs:
+    desc: Follow local Prometheus and Grafana logs.
+    cmds:
+      - >-
+        docker compose -f "{{.OBSERVABILITY_COMPOSE}}" logs -f
+
+  obs:restart:
+    desc: Restart local Prometheus and Grafana.
+    cmds:
+      - task: obs:down
+      - task: obs:up
 
   dev:servers:
     internal: true

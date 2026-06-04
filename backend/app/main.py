@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.analytics import router as analytics_router
 from app.api.chat import router as chat_router
 from app.api.contact import router as contact_router
 from app.api.escalation import router as escalation_router
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(contact_router, prefix="/api")
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
+    app.include_router(analytics_router, prefix="/api")
     configure_metrics(app, settings)
     return app
 

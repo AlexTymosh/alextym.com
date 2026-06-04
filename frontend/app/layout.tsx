@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { PrivacySafeAnalytics } from "../components/privacy-safe-analytics";
 import { SiteNavigation } from "../components/site-navigation";
 import {
   getPersonJsonLd,
@@ -82,6 +83,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <PrivacySafeAnalytics />
         <div className="app-shell">
           <SiteNavigation />
           <main className="site-main">{children}</main>
