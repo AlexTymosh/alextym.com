@@ -1,12 +1,20 @@
 import json
+import logging
 import re
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.middleware.request_context import RequestContextMiddleware
+
+
+@pytest.fixture(autouse=True)
+def clear_test_logging_handlers():
+    yield
+    logging.getLogger().handlers.clear()
 
 
 def test_request_id_header_is_added_to_responses(monkeypatch):
