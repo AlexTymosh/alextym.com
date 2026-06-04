@@ -9,6 +9,7 @@ from app.api.rate_limit import (
     enforce_escalation_rate_limit,
 )
 from app.core.config import Settings, get_settings
+from app.core.domain_metrics import record_escalation_event
 from app.schemas.escalation import (
     EscalationCloseResponse,
     EscalationMessageRequest,
@@ -44,24 +45,33 @@ async def escalate(
     settings: Settings = Depends(get_settings),
     service: EscalationService = Depends(get_escalation_service),
 ) -> EscalationResponse:
-    if not escalation_request.is_honeypot_filled:
-        _ensure_handoff_available(service)
-        enforce_escalation_rate_limit(request, settings)
+    if escalation_request.is_honeypot_filled:
+        response = await service.submit(escalation_request)
+        record_escalation_event(action="create", outcome="honeypot")
+        return response
 
     try:
-        return await service.submit(escalation_request)
+        _ensure_handoff_available(service)
+        enforce_escalation_rate_limit(request, settings)
+        response = await service.submit(escalation_request)
     except HandoffUnavailableError as exc:
+        record_escalation_event(action="create", outcome="unavailable")
         raise _handoff_unavailable_http_exception(exc) from exc
     except EscalationConfigurationError as exc:
+        record_escalation_event(action="create", outcome="configuration_error")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Escalation is not configured.",
         ) from exc
     except EscalationDeliveryError as exc:
+        record_escalation_event(action="create", outcome="delivery_error")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not connect with Alex. Please try again later.",
         ) from exc
+
+    record_escalation_event(action="create", outcome="success")
+    return response
 
 
 @router.post(
@@ -76,30 +86,37 @@ async def send_escalation_message(
     service: EscalationService = Depends(get_escalation_service),
 ) -> EscalationMessageResponse:
     if message_request.is_honeypot_filled:
+        record_escalation_event(action="message", outcome="honeypot")
         return EscalationMessageResponse()
 
-    _ensure_handoff_available(service)
-    enforce_escalation_message_rate_limit(request, settings)
-
     try:
-        return await service.submit_user_message(handoff_id, message_request)
+        _ensure_handoff_available(service)
+        enforce_escalation_message_rate_limit(request, settings)
+        response = await service.submit_user_message(handoff_id, message_request)
     except HandoffUnavailableError as exc:
+        record_escalation_event(action="message", outcome="unavailable")
         raise _handoff_unavailable_http_exception(exc) from exc
     except EscalationConfigurationError as exc:
+        record_escalation_event(action="message", outcome="configuration_error")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Escalation messaging is not configured.",
         ) from exc
     except EscalationNotFoundError as exc:
+        record_escalation_event(action="message", outcome="not_found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Escalation session was not found.",
         ) from exc
     except EscalationDeliveryError as exc:
+        record_escalation_event(action="message", outcome="delivery_error")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not send this message to Alex. Please try again later.",
         ) from exc
+
+    record_escalation_event(action="message", outcome="success")
+    return response
 
 
 @router.post(
@@ -111,22 +128,28 @@ async def close_escalation(
     service: EscalationService = Depends(get_escalation_service),
 ) -> EscalationCloseResponse:
     try:
-        return await service.close(handoff_id)
+        response = await service.close(handoff_id)
     except EscalationConfigurationError as exc:
+        record_escalation_event(action="close", outcome="configuration_error")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Escalation session storage is not configured.",
         ) from exc
     except EscalationNotFoundError as exc:
+        record_escalation_event(action="close", outcome="not_found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Escalation session was not found.",
         ) from exc
     except EscalationDeliveryError as exc:
+        record_escalation_event(action="close", outcome="delivery_error")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Could not close this handoff. Please try again later.",
         ) from exc
+
+    record_escalation_event(action="close", outcome="success")
+    return response
 
 
 @router.get("/escalations/{handoff_id}/stream")
@@ -142,20 +165,25 @@ async def stream_escalation_messages(
     try:
         await service.ensure_stream_available(handoff_id)
     except EscalationConfigurationError as exc:
+        record_escalation_event(action="stream", outcome="configuration_error")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Escalation streaming is not configured.",
         ) from exc
     except EscalationNotFoundError as exc:
+        record_escalation_event(action="stream", outcome="not_found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Escalation session was not found.",
         ) from exc
     except EscalationDeliveryError as exc:
+        record_escalation_event(action="stream", outcome="delivery_error")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Escalation stream could not be opened.",
         ) from exc
+
+    record_escalation_event(action="stream", outcome="opened")
 
     async def event_generator() -> AsyncIterator[str]:
         try:
@@ -164,9 +192,14 @@ async def stream_escalation_messages(
                 after_message_id=last_event_id,
             ):
                 if await request.is_disconnected():
+                    record_escalation_event(
+                        action="stream",
+                        outcome="disconnected",
+                    )
                     break
                 yield event
         except EscalationDeliveryError:
+            record_escalation_event(action="stream", outcome="delivery_error")
             yield EscalationService.sse_event(
                 "error",
                 {"message": "Escalation stream is temporarily unavailable."},
@@ -183,10 +216,7 @@ async def stream_escalation_messages(
 
 
 def _ensure_handoff_available(service: EscalationService) -> None:
-    try:
-        service.ensure_handoff_available()
-    except HandoffUnavailableError as exc:
-        raise _handoff_unavailable_http_exception(exc) from exc
+    service.ensure_handoff_available()
 
 
 def _handoff_unavailable_http_exception(

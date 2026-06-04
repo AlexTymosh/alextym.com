@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, Request, status
 
 from app.core.config import Settings, get_settings
+from app.core.domain_metrics import record_rate_limit_check
 from app.services.rate_limit import (
     RateLimitExceeded,
     RateLimitStoreError,
@@ -71,6 +72,7 @@ def _enforce_daily_rate_limit(
     enabled: bool,
 ) -> None:
     if not enabled:
+        record_rate_limit_check(scope=scope, outcome="disabled")
         return
 
     identifier = client_identifier_from_request(request)
@@ -81,9 +83,24 @@ def _enforce_daily_rate_limit(
             limit=limit,
         )
     except RateLimitStoreError:
+        record_rate_limit_check(scope=scope, outcome="store_error")
+        _check_fallback_rate_limiter(scope=scope, identifier=identifier, limit=limit)
+        return
+    except RateLimitExceeded as exc:
+        record_rate_limit_check(scope=scope, outcome="exceeded")
+        raise _rate_limit_http_exception() from exc
+
+    record_rate_limit_check(scope=scope, outcome="allowed")
+
+
+def _check_fallback_rate_limiter(*, scope: str, identifier: str, limit: int) -> None:
+    try:
         get_rate_limiter().check(scope=scope, identifier=identifier, limit=limit)
     except RateLimitExceeded as exc:
+        record_rate_limit_check(scope=scope, outcome="exceeded")
         raise _rate_limit_http_exception() from exc
+
+    record_rate_limit_check(scope=scope, outcome="allowed")
 
 
 def _rate_limit_http_exception() -> HTTPException:
