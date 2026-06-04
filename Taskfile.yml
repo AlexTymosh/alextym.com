@@ -14,14 +14,27 @@ tasks:
     cmds:
       - task --list
 
-  ci:
-    desc: Run all checks expected before push or pull request.
+  ci:quick:
+    desc: Run standard free checks except Docker image build.
     cmds:
       - task: backend:check
       - task: frontend:check
+      - task: rag:check
+
+  ci:
+    desc: Run all free checks expected before push or pull request.
+    cmds:
+      - task: ci:quick
+      - task: docker:build
+
+  pre-pr:
+    desc: Apply safe formatting, then run the full free pre-PR checks.
+    cmds:
+      - task: format
+      - task: ci
 
   format:
-    desc: Apply backend formatting and safe Ruff fixes.
+    desc: Apply all available project formatters.
     cmds:
       - task: backend:format
 
@@ -83,6 +96,12 @@ tasks:
       - uv run ruff check . --fix
       - uv run ruff format .
 
+  backend:compile:
+    desc: Compile backend Python modules to catch syntax errors early.
+    dir: backend
+    cmds:
+      - uv run python -m compileall app scripts tests
+
   backend:test:
     desc: Run backend tests.
     dir: backend
@@ -97,6 +116,12 @@ tasks:
       UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
     cmds:
       - uv run python -m scripts.extract_resume_rag_source
+
+  rag:check:
+    desc: Run free deterministic RAG checks without live OpenAI or Qdrant.
+    cmds:
+      - task: rag:extract-resume
+      - task: rag:eval:free
 
   rag:ingest:
     desc: Rebuild Qdrant vectors from reviewed public knowledge files.
@@ -127,6 +152,7 @@ tasks:
     env:
       UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
       UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+      LOG_LEVEL: WARNING
     cmds:
       - >-
         uv run python -m scripts.run_chat_eval_cycle
@@ -204,6 +230,7 @@ tasks:
       - task: backend:sync
       - task: backend:lint
       - task: backend:format-check
+      - task: backend:compile
       - task: backend:test
 
   frontend:install:
@@ -228,6 +255,12 @@ tasks:
     cmds:
       - npm run lint
 
+  frontend:resume-check:
+    desc: Check resume parser and prevent RAG-only content leaks.
+    dir: frontend
+    cmds:
+      - npm run check:resume
+
   frontend:build:
     desc: Build the frontend.
     dir: frontend
@@ -235,10 +268,16 @@ tasks:
       - npm run build
 
   frontend:e2e:install:
-    desc: Install Playwright browser binaries for frontend E2E tests.
+    desc: Install Playwright browser binaries for local frontend E2E tests.
     dir: frontend
     cmds:
       - npm run e2e:install
+
+  frontend:e2e:install:ci:
+    desc: Install Playwright browser binaries and Linux dependencies for CI.
+    dir: frontend
+    cmds:
+      - npx playwright install --with-deps chromium
 
   frontend:e2e:
     desc: Run frontend Playwright E2E tests.
@@ -247,12 +286,23 @@ tasks:
       - npm run e2e
 
   frontend:check:
-    desc: Run all frontend checks.
+    desc: Run all frontend checks for local development.
     cmds:
       - task: frontend:install
       - task: frontend:lint
+      - task: frontend:resume-check
       - task: frontend:build
       - task: frontend:e2e:install
+      - task: frontend:e2e
+
+  frontend:check:ci:
+    desc: Run all frontend checks on Linux CI runners.
+    cmds:
+      - task: frontend:install
+      - task: frontend:lint
+      - task: frontend:resume-check
+      - task: frontend:build
+      - task: frontend:e2e:install:ci
       - task: frontend:e2e
 
   docker:build:

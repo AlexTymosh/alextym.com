@@ -19,7 +19,8 @@ from app.services.chat_safety import (
 )
 
 INSUFFICIENT_DATA_ANSWER = (
-    "Sorry, I'm not sure I understood.\nCould you clarify, or should I connect you with Alex?"
+    "I do not have enough reliable information in the public knowledge base "
+    "to answer that accurately. Would you like me to connect you with Alex?"
 )
 
 PROMPT_INJECTION_ANSWER = (
@@ -29,8 +30,9 @@ PROMPT_INJECTION_ANSWER = (
 )
 
 UNSUPPORTED_LANGUAGE_ANSWER = (
-    "For accuracy, this public assistant currently answers in English only.\n"
-    "Please ask your question in English."
+    "Извините, этот публичный ассистент настроен на общение только "
+    "на английском языке. Могу показать handoff prompt, чтобы соединить "
+    "вас с Alex."
 )
 
 UNSUPPORTED_NON_ENGLISH_ANSWER = (
@@ -39,10 +41,9 @@ UNSUPPORTED_NON_ENGLISH_ANSWER = (
 )
 
 OUT_OF_SCOPE_ANSWER = (
-    "I'm Alex's AI assistant.\n"
-    "I can help with his experience, projects, software services, "
-    "availability, or contact options.\n"
-    "What would you like to know or build?"
+    "I'm Alex's digital assistant, not a regular AI chat. "
+    "I can answer about Alex's profile, projects, software services, "
+    "availability, or contact options."
 )
 
 HANDOFF_REQUEST_ANSWER = (
@@ -56,7 +57,7 @@ PUBLIC_BOUNDARY_WEAKNESSES_ANSWER = (
     "Would you like me to connect you with Alex?"
 )
 
-SOCIAL_ACKNOWLEDGEMENT_ANSWER = "You're welcome.\nHow can I help you next?"
+SOCIAL_ACKNOWLEDGEMENT_ANSWER = "OK. How else can I help?"
 
 PRIVATE_DATA_ANSWER = (
     "I can't provide private personal information. I can answer questions "
@@ -64,14 +65,22 @@ PRIVATE_DATA_ANSWER = (
     "and experience."
 )
 
-GREETING_ANSWER = "Hi.\nI'm Alex's AI assistant.\nHow can I help you?"
+GREETING_ANSWER = (
+    "Hi. I'm Alex's digital assistant. "
+    "Ask me about Alex's profile, projects, services, availability, "
+    "or contact options."
+)
 
 HELP_ANSWER = (
     "You can ask about Alex's experience, projects, software services, "
     "availability, or contact options."
 )
 
-ASSISTANT_INTRO_ANSWER = "I'm Alex's AI assistant.\nHow can I help you?"
+ASSISTANT_INTRO_ANSWER = (
+    "I'm Alex's digital assistant. "
+    "Ask me about Alex's profile, projects, services, availability, "
+    "or contact options."
+)
 
 STREAM_GUARD_BUFFER_CHARS = 160
 
@@ -779,7 +788,7 @@ class ChatService:
                     sources=[],
                     confidence="medium",
                     not_enough_data=False,
-                    handoff_suggested=False,
+                    handoff_suggested=True,
                     handoff_reason="language_unsupported",
                     language_unsupported=True,
                 ),

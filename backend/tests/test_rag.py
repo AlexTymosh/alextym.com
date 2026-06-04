@@ -8,7 +8,7 @@ from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import InMemoryRetriever
 from app.schemas.chat import ChatRequest
-from app.services.chat import ChatService, OUT_OF_SCOPE_ANSWER
+from app.services.chat import ChatService, GREETING_ANSWER, OUT_OF_SCOPE_ANSWER
 
 
 def test_chunk_markdown_uses_headings_and_metadata() -> None:
@@ -171,7 +171,7 @@ def test_chat_service_answers_greetings_without_rag() -> None:
 
     assert response.not_enough_data is False
     assert response.sources == []
-    assert response.answer == "Hi.\nI'm Alex's AI assistant.\nHow can I help you?"
+    assert response.answer == GREETING_ANSWER
     assert response.confidence == "high"
 
 
