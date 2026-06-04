@@ -31,6 +31,9 @@ class Settings:
     log_level: str = "INFO"
     log_format: str = "json"
     request_id_header: str = "X-Request-ID"
+    metrics_enabled: bool = False
+    metrics_token: str = ""
+    metrics_path: str = "/internal/metrics"
     telegram_bot_token: str = ""
     telegram_owner_chat_id: str = ""
     telegram_webhook_secret: str = ""
@@ -125,6 +128,15 @@ def _get_log_format() -> str:
     return raw_value if raw_value in {"json", "console"} else "json"
 
 
+def _get_metrics_path() -> str:
+    raw_value = os.getenv("METRICS_PATH", "/internal/metrics").strip()
+    if not raw_value.startswith("/") or "?" in raw_value or "#" in raw_value:
+        return "/internal/metrics"
+    if raw_value == "/":
+        return "/internal/metrics"
+    return raw_value.rstrip("/")
+
+
 @lru_cache
 def get_settings() -> Settings:
     _load_local_env_file()
@@ -158,6 +170,9 @@ def get_settings() -> Settings:
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         log_format=_get_log_format(),
         request_id_header=os.getenv("REQUEST_ID_HEADER", "X-Request-ID"),
+        metrics_enabled=_get_bool("METRICS_ENABLED", False),
+        metrics_token=os.getenv("METRICS_TOKEN", ""),
+        metrics_path=_get_metrics_path(),
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
         telegram_owner_chat_id=os.getenv("TELEGRAM_OWNER_CHAT_ID", ""),
         telegram_webhook_secret=os.getenv("TELEGRAM_WEBHOOK_SECRET", ""),
