@@ -11,6 +11,7 @@ import {
 import { useAnimatedLabel } from "../hooks/use-animated-label";
 import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
 import {
+  EscalationApiError,
   closeEscalationStream,
   isHandoffUnavailableError,
   normaliseHandoffState,
@@ -486,6 +487,13 @@ export function ChatShell() {
         showHandoffUnavailableMessage(error.message);
         return;
       }
+      if (error instanceof EscalationApiError && error.status === 429) {
+        setNotice(
+          "You've reached the daily limit for handoff messages. " +
+            "Please try again later.",
+        );
+        return;
+      }
       setNotice(
         "Could not send this message to Alex right now. Please try again later.",
       );
@@ -536,6 +544,13 @@ export function ChatShell() {
       if (isHandoffUnavailableError(error)) {
         showHandoffUnavailableMessage(error.message);
         setDismissedHandoffMessageCount(messages.length);
+        return;
+      }
+      if (error instanceof EscalationApiError && error.status === 429) {
+        setNotice(
+          "You've reached the daily limit for connection requests. " +
+            "Please try again later.",
+        );
         return;
       }
       setNotice(
