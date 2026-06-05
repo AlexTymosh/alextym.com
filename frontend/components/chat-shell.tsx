@@ -11,6 +11,7 @@ import {
 import { useAnimatedLabel } from "../hooks/use-animated-label";
 import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
 import {
+  EscalationApiError,
   closeEscalationStream,
   isHandoffUnavailableError,
   normaliseHandoffState,
@@ -54,6 +55,7 @@ const STREAM_RENDER_MEDIUM_CHARS = 14;
 const STREAM_RENDER_FAST_CHARS = 220;
 const STREAM_RENDER_LARGE_BACKLOG = 720;
 const STREAM_RENDER_MEDIUM_BACKLOG = 280;
+const SOURCE_REVEAL_STEP_MS = 180;
 
 type StreamTextRenderer = {
   append: (text: string) => void;
@@ -204,11 +206,21 @@ export function ChatShell() {
   ]);
 
   useEffect(() => {
-    const chatBody = chatBodyRef.current;
-    if (!chatBody) {
-      return;
-    }
-    chatBody.scrollTop = chatBody.scrollHeight;
+    const scrollToBottom = () => {
+      const chatBody = chatBodyRef.current;
+      if (!chatBody) {
+        return;
+      }
+      chatBody.scrollTop = chatBody.scrollHeight;
+    };
+
+    const frameId = window.requestAnimationFrame(scrollToBottom);
+    const fallbackId = window.setTimeout(scrollToBottom, 80);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(fallbackId);
+    };
   }, [
     handoffState,
     handoffUnavailableMessage,
@@ -216,6 +228,34 @@ export function ChatShell() {
     notice,
     shouldShowHandoffPrompt,
   ]);
+
+  useEffect(() => {
+    const chatBody = chatBodyRef.current;
+    if (!chatBody) {
+      return;
+    }
+
+    let frameId: number | null = null;
+    const scrollToBottomSoon = () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      frameId = window.requestAnimationFrame(() => {
+        chatBody.scrollTop = chatBody.scrollHeight;
+        frameId = null;
+      });
+    };
+
+    const observer = new MutationObserver(scrollToBottomSoon);
+    observer.observe(chatBody, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const textarea = messageInputRef.current;
@@ -364,6 +404,7 @@ export function ChatShell() {
     const assistantId = createMessageId("assistant");
     const history = buildChatHistory(messages);
     let rawStreamText = "";
+    let pendingSources: Message["sources"] | undefined;
 
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
@@ -394,7 +435,9 @@ export function ChatShell() {
           rawStreamText += token;
           renderer.append(token);
         },
-        onSources: (sources) => updateAssistantMessage(assistantId, { sources }),
+        onSources: (sources) => {
+          pendingSources = sources;
+        },
         onDone: (done) =>
           updateAssistantMessage(assistantId, {
             confidence: done.confidence,
@@ -406,6 +449,9 @@ export function ChatShell() {
           }),
       });
       await renderer.finish();
+      if (pendingSources?.length) {
+        updateAssistantMessage(assistantId, { sources: pendingSources });
+      }
     } catch (error) {
       if (isAbortError(error)) {
         return;
@@ -486,6 +532,13 @@ export function ChatShell() {
         showHandoffUnavailableMessage(error.message);
         return;
       }
+      if (error instanceof EscalationApiError && error.status === 429) {
+        setNotice(
+          "You've reached the daily limit for handoff messages. " +
+            "Please try again later.",
+        );
+        return;
+      }
       setNotice(
         "Could not send this message to Alex right now. Please try again later.",
       );
@@ -536,6 +589,13 @@ export function ChatShell() {
       if (isHandoffUnavailableError(error)) {
         showHandoffUnavailableMessage(error.message);
         setDismissedHandoffMessageCount(messages.length);
+        return;
+      }
+      if (error instanceof EscalationApiError && error.status === 429) {
+        setNotice(
+          "You've reached the daily limit for connection requests. " +
+            "Please try again later.",
+        );
         return;
       }
       setNotice(
@@ -743,17 +803,11 @@ export function ChatShell() {
                     getRenderableMessageText(message, thinkingLabel),
                   )}
                 </div>
-                {message.role === "assistant" && message.sources?.length ? (
-                  <div className="message-sources" aria-label="Sources">
-                    {message.sources.map((source) => (
-                      <span
-                        key={`${source.title}-${source.section || "document"}`}
-                      >
-                        {source.title}
-                        {source.section ? ` / ${source.section}` : ""}
-                      </span>
-                    ))}
-                  </div>
+                {message.role === "assistant" ? (
+                  <DelayedMessageSources
+                    key={`${message.id}-${message.sources?.length ?? 0}`}
+                    message={message}
+                  />
                 ) : null}
               </div>
             ))}
@@ -1008,6 +1062,49 @@ function nextStreamRenderBatchSize(
   }
 
   return STREAM_RENDER_BASE_CHARS;
+}
+
+
+function DelayedMessageSources({
+  message,
+}: Readonly<{
+  message: Message;
+}>) {
+  const sourceCount = message.sources?.length ?? 0;
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (!sourceCount) {
+      return;
+    }
+
+    const timeoutIds = Array.from({ length: sourceCount }, (_, index) => {
+      return window.setTimeout(() => {
+        setVisibleCount((currentCount) => Math.max(currentCount, index + 1));
+      }, SOURCE_REVEAL_STEP_MS * (index + 1));
+    });
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [sourceCount]);
+
+  const visibleSources = message.sources?.slice(0, visibleCount) ?? [];
+
+  if (!visibleSources.length) {
+    return null;
+  }
+
+  return (
+    <div className="message-sources" aria-label="Sources">
+      {visibleSources.map((source) => (
+        <span key={`${source.title}-${source.section || "document"}`}>
+          {source.title}
+          {source.section ? ` / ${source.section}` : ""}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function formatHandoffUnavailableMessage(message: string): {

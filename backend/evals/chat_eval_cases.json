@@ -79,12 +79,13 @@
         "handoff_suggested": false,
         "sources": "empty",
         "must_include_any": [
-          "about Alex",
-          "Alex’s profile",
-          "Alex's profile"
+          "Alex's expertise",
+          "Alex's background"
         ],
         "must_include_all": [
-          "regular AI chat"
+          "clarify your request",
+          "professional inquiries",
+          "connect me with Alex"
         ],
         "must_not_include": [
           "pills",
@@ -103,15 +104,20 @@
         "handoff_suggested": false,
         "sources": "empty",
         "must_include_any": [
-          "regular AI chat",
-          "general topics"
+          "Alex's expertise",
+          "Alex's background"
         ],
         "must_not_include": [
           "dose",
           "pharmacist",
           "side effects"
         ],
-        "max_words": 45
+        "max_words": 45,
+        "must_include_all": [
+          "clarify your request",
+          "professional inquiries",
+          "connect me with Alex"
+        ]
       }
     },
     {
@@ -124,15 +130,20 @@
         "handoff_suggested": false,
         "sources": "empty",
         "must_include_any": [
-          "regular AI chat",
-          "general topics"
+          "Alex's expertise",
+          "Alex's background"
         ],
         "must_not_include": [
           "TfL",
           "Google Maps",
           "postcode"
         ],
-        "max_words": 45
+        "max_words": 45,
+        "must_include_all": [
+          "clarify your request",
+          "professional inquiries",
+          "connect me with Alex"
+        ]
       }
     },
     {
@@ -145,16 +156,20 @@
         "handoff_suggested": false,
         "sources": "empty",
         "must_include_any": [
-          "about Alex",
-          "Alex’s profile",
-          "Alex's profile"
+          "Alex's expertise",
+          "Alex's background"
         ],
         "must_not_include": [
           "Tesla",
           "SpaceX",
           "billionaire"
         ],
-        "max_words": 45
+        "max_words": 45,
+        "must_include_all": [
+          "clarify your request",
+          "professional inquiries",
+          "connect me with Alex"
+        ]
       }
     },
     {

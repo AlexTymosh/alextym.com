@@ -41,9 +41,9 @@ UNSUPPORTED_NON_ENGLISH_ANSWER = (
 )
 
 OUT_OF_SCOPE_ANSWER = (
-    "I'm Alex's digital assistant, not a regular AI chat. "
-    "I can answer about Alex's profile, projects, software services, "
-    "availability, or contact options."
+    "To help you best, could you clarify your request? \n"
+    "I exclusively handle professional inquiries regarding Alex's expertise and background. \n"
+    "You can also just type 'connect me with Alex' to reach him directly."
 )
 
 HANDOFF_REQUEST_ANSWER = (
@@ -198,6 +198,18 @@ ALEX_PROFILE_TERMS = (
     "resume",
     "cv",
     "education",
+    "university",
+    "degree",
+    "master",
+    "master's",
+    "masters",
+    "mba",
+    "academic",
+    "honours",
+    "scholarship",
+    "finance",
+    "banking",
+    "insurance",
     "work",
     "worked",
     "career",
@@ -220,6 +232,11 @@ ALEX_PROFILE_TERMS = (
     "automation",
     "rag",
     "qdrant",
+    "prometheus",
+    "grafana",
+    "observability",
+    "metrics",
+    "monitoring",
     "backend",
     "api",
     "website",
@@ -273,6 +290,26 @@ SERVICE_REQUEST_TERMS = (
 WEAKNESS_REQUEST_TERMS = (
     "weakness",
     "weaknesses",
+    "education",
+    "university",
+    "degree",
+    "master",
+    "master's",
+    "masters",
+    "mba",
+    "academic",
+    "honours",
+    "scholarship",
+    "finance",
+    "banking",
+    "insurance",
+    "rag",
+    "qdrant",
+    "prometheus",
+    "grafana",
+    "observability",
+    "metrics",
+    "monitoring",
     "weak point",
     "weak points",
     "development area",
@@ -328,6 +365,11 @@ FOLLOW_UP_PROFILE_TERMS = (
 )
 
 SHORT_CONTINUATION_PATTERNS = (
+    "yes",
+    "yes please",
+    "sure",
+    "please",
+    "go ahead",
     "so tell me",
     "tell me",
     "go on",
@@ -911,6 +953,8 @@ class ChatService:
         normalized_message = _normalize_message(message)
         if any(term in normalized_message for term in ALEX_TERMS):
             return True
+        if _looks_like_profile_topic(normalized_message):
+            return True
         return bool(
             any(term in normalized_message for term in SECOND_PERSON_TERMS)
             and any(term in normalized_message for term in ALEX_PROFILE_TERMS)
@@ -1287,6 +1331,8 @@ def _is_weakness_request(
     history: list[ChatHistoryMessage],
 ) -> bool:
     normalized_message = _normalize_message(message)
+    if _looks_like_profile_topic(normalized_message):
+        return False
     if not any(term in normalized_message for term in WEAKNESS_REQUEST_TERMS):
         return False
     if _is_direct_third_party_subject(normalized_message):
@@ -1307,6 +1353,7 @@ def _is_service_request(message: str) -> bool:
 
 def _is_handoff_request(message: str) -> bool:
     normalized_message = _normalize_message(message)
+    normalized_message = re.sub(r"\bcon+ect\b", "connect", normalized_message)
     return any(pattern in normalized_message for pattern in HANDOFF_REQUEST_PATTERNS)
 
 
@@ -1366,19 +1413,55 @@ def _is_follow_up_profile_question(normalized_message: str) -> bool:
     tokens = set(normalized_message.split())
     if not tokens.intersection(FOLLOW_UP_PRONOUN_TERMS):
         return False
-    return bool(tokens.intersection(FOLLOW_UP_PROFILE_TERMS))
+    return bool(tokens.intersection(FOLLOW_UP_PROFILE_TERMS)) or bool(
+        _looks_like_profile_topic(normalized_message)
+    )
 
 
 def _looks_like_short_profile_follow_up(normalized_message: str) -> bool:
     if not normalized_message:
         return False
-    if len(normalized_message.split()) > 5:
+    if len(normalized_message.split()) > 8:
         return False
-    return any(term in normalized_message for term in FOLLOW_UP_PROFILE_TERMS)
+    return any(term in normalized_message for term in FOLLOW_UP_PROFILE_TERMS) or bool(
+        _looks_like_profile_topic(normalized_message)
+    )
 
 
 def _looks_like_short_continuation(normalized_message: str) -> bool:
     return normalized_message in SHORT_CONTINUATION_PATTERNS
+
+
+def _looks_like_profile_topic(normalized_message: str) -> bool:
+    education_terms = (
+        "academic",
+        "banking",
+        "degree",
+        "education",
+        "finance",
+        "honours",
+        "insurance",
+        "master",
+        "master's",
+        "masters",
+        "mba",
+        "scholarship",
+        "university",
+    )
+    rag_project_terms = (
+        "grafana",
+        "metrics",
+        "monitoring",
+        "observability",
+        "prometheus",
+        "qdrant",
+        "rag",
+        "retrieval augmented",
+        "vector search",
+    )
+    return any(term in normalized_message for term in education_terms) or any(
+        term in normalized_message for term in rag_project_terms
+    )
 
 
 def _should_use_intent_classifier(request: ChatRequest) -> bool:
@@ -1412,6 +1495,10 @@ def _history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> bo
             or "alex's digital assistant" in normalized_content
             or "ask about alex" in normalized_content
             or "alex builds" in normalized_content
+            or "alex focuses" in normalized_content
+            or "alex holds" in normalized_content
+            or "alex worked" in normalized_content
+            or "alex's public" in normalized_content
             or "alex has" in normalized_content
             or "alexs profile" in normalized_content
             or "alex's profile" in normalized_content
@@ -1436,8 +1523,80 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         return "Tell me about Alex's professional background, experience, skills, and projects."
     if normalized_message == "what does he do":
         return "What does Alex do professionally?"
+    if any(
+        term in normalized_message
+        for term in (
+            "academic",
+            "banking",
+            "degree",
+            "education",
+            "finance",
+            "honours",
+            "insurance",
+            "master",
+            "master's",
+            "masters",
+            "mba",
+            "scholarship",
+            "university",
+        )
+    ):
+        return (
+            "Tell me about Alex's education, Master's Degree in Finance, "
+            "Banking and Insurance, university, honours, academic "
+            "scholarship, and analytical background."
+        )
+    if any(
+        term in normalized_message
+        for term in (
+            "grafana",
+            "metrics",
+            "monitoring",
+            "observability",
+            "prometheus",
+            "qdrant",
+            "rag",
+            "retrieval augmented",
+            "vector search",
+        )
+    ):
+        return (
+            "Tell me about Alex's AI portfolio website, RAG architecture, "
+            "retrieval pipeline, Qdrant vector search, Prometheus, Grafana, "
+            "observability, evals, and production-oriented safeguards."
+        )
     if "work" in normalized_message and "experience" in normalized_message:
         return "Tell me about Alex's work experience."
+    if any(
+        term in normalized_message
+        for term in (
+            "mba",
+            "university",
+            "degree",
+            "master",
+            "master's",
+            "education",
+            "finance",
+            "banking",
+            "insurance",
+        )
+    ):
+        return (
+            "Tell me about Alex's education, university degree, finance "
+            "background, and academic achievements."
+        )
+    if any(term in normalized_message for term in ("rag", "qdrant", "embedding")):
+        return (
+            "Tell me about Alex's RAG portfolio website, architecture, "
+            "retrieval system, safeguards, evaluations, and AI assistant."
+        )
+    if any(
+        term in normalized_message for term in ("prometheus", "grafana", "observability", "metrics")
+    ):
+        return (
+            "Tell me about Alex's observability work with Prometheus, "
+            "Grafana, metrics, dashboards, and monitoring."
+        )
     if "soft" in normalized_message and "skill" in normalized_message:
         return (
             "Tell me about Alex's soft skills, working style, collaboration, "

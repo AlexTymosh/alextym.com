@@ -200,6 +200,42 @@ def test_chat_accepts_non_english_handoff_request_before_language_guard() -> Non
     assert body["user_requested_human"] is True
 
 
+def test_chat_accepts_handoff_request_with_connect_typo() -> None:
+    response = client.post("/api/chat", json={"message": "connnect me"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == HANDOFF_REQUEST_ANSWER
+    assert body["handoff_suggested"] is True
+    assert body["handoff_reason"] == "user_requested_human"
+    assert body["user_requested_human"] is True
+
+
+def test_chat_treats_yes_after_alex_follow_up_as_continuation() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "yes",
+            "history": [
+                {"role": "user", "content": "Give me your 1-minute intro."},
+                {
+                    "role": "assistant",
+                    "content": (
+                        "Alex focuses on automation and API integrations. "
+                        "Would you like the key facts from his latest work "
+                        "experience?"
+                    ),
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["handoff_reason"] == "insufficient_data"
+
+
 def test_chat_accepts_confirmation_after_handoff_prompt() -> None:
     response = client.post(
         "/api/chat",
@@ -220,7 +256,43 @@ def test_chat_accepts_confirmation_after_handoff_prompt() -> None:
     assert body["user_requested_human"] is True
 
 
-def test_chat_blocks_general_non_alex_question() -> None:
+def test_chat_routes_mba_follow_up_to_alex_context() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "what about mba?",
+            "history": [
+                {"role": "user", "content": "Tell me about Alex"},
+                {"role": "assistant", "content": "Alex has automation experience."},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["handoff_reason"] == "insufficient_data"
+
+
+def test_chat_routes_university_follow_up_to_alex_context() -> None:
+    response = client.post(
+        "/api/chat",
+        json={
+            "message": "what about his university?",
+            "history": [
+                {"role": "user", "content": "Tell me about Alex"},
+                {"role": "assistant", "content": "Alex has automation experience."},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["handoff_reason"] == "insufficient_data"
+
+
+def test_chat_returns_soft_clarification_for_out_of_scope_question() -> None:
     response = client.post(
         "/api/chat",
         json={"message": "Tell me how I can take pills"},
@@ -229,6 +301,9 @@ def test_chat_blocks_general_non_alex_question() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["answer"] == OUT_OF_SCOPE_ANSWER
+    assert "clarify your request" in body["answer"]
+    assert "professional inquiries" in body["answer"]
+    assert "connect me with Alex" in body["answer"]
     assert body["sources"] == []
     assert body["confidence"] == "medium"
     assert body["not_enough_data"] is False
