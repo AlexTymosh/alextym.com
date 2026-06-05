@@ -41,11 +41,9 @@ UNSUPPORTED_NON_ENGLISH_ANSWER = (
 )
 
 OUT_OF_SCOPE_ANSWER = (
-    "Sorry, I may need a little more context. "
-    "I'm Alex's digital assistant, not a regular AI chat for general topics. "
-    "I can help with Alex's profile, projects, skills, services, "
-    "availability, or contact options. You can also type "
-    '"connect me with Alex".'
+    "To help you best, could you clarify your request? \n"
+    "I exclusively handle professional inquiries regarding Alex's expertise and background. \n"
+    "You can also just type 'connect me with Alex' to reach him directly."
 )
 
 HANDOFF_REQUEST_ANSWER = (

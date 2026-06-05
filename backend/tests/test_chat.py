@@ -301,9 +301,9 @@ def test_chat_returns_soft_clarification_for_out_of_scope_question() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["answer"] == OUT_OF_SCOPE_ANSWER
-    assert "I may need a little more context" in body["answer"]
-    assert "regular AI chat" in body["answer"]
-    assert "Alex's profile" in body["answer"]
+    assert "clarify your request" in body["answer"]
+    assert "professional inquiries" in body["answer"]
+    assert "connect me with Alex" in body["answer"]
     assert body["sources"] == []
     assert body["confidence"] == "medium"
     assert body["not_enough_data"] is False

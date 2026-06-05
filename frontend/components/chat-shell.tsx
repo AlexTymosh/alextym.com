@@ -206,11 +206,21 @@ export function ChatShell() {
   ]);
 
   useEffect(() => {
-    const chatBody = chatBodyRef.current;
-    if (!chatBody) {
-      return;
-    }
-    chatBody.scrollTop = chatBody.scrollHeight;
+    const scrollToBottom = () => {
+      const chatBody = chatBodyRef.current;
+      if (!chatBody) {
+        return;
+      }
+      chatBody.scrollTop = chatBody.scrollHeight;
+    };
+
+    const frameId = window.requestAnimationFrame(scrollToBottom);
+    const fallbackId = window.setTimeout(scrollToBottom, 80);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(fallbackId);
+    };
   }, [
     handoffState,
     handoffUnavailableMessage,
@@ -218,6 +228,34 @@ export function ChatShell() {
     notice,
     shouldShowHandoffPrompt,
   ]);
+
+  useEffect(() => {
+    const chatBody = chatBodyRef.current;
+    if (!chatBody) {
+      return;
+    }
+
+    let frameId: number | null = null;
+    const scrollToBottomSoon = () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      frameId = window.requestAnimationFrame(() => {
+        chatBody.scrollTop = chatBody.scrollHeight;
+        frameId = null;
+      });
+    };
+
+    const observer = new MutationObserver(scrollToBottomSoon);
+    observer.observe(chatBody, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const textarea = messageInputRef.current;
@@ -366,6 +404,7 @@ export function ChatShell() {
     const assistantId = createMessageId("assistant");
     const history = buildChatHistory(messages);
     let rawStreamText = "";
+    let pendingSources: Message["sources"] | undefined;
 
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
@@ -396,7 +435,9 @@ export function ChatShell() {
           rawStreamText += token;
           renderer.append(token);
         },
-        onSources: (sources) => updateAssistantMessage(assistantId, { sources }),
+        onSources: (sources) => {
+          pendingSources = sources;
+        },
         onDone: (done) =>
           updateAssistantMessage(assistantId, {
             confidence: done.confidence,
@@ -408,6 +449,9 @@ export function ChatShell() {
           }),
       });
       await renderer.finish();
+      if (pendingSources?.length) {
+        updateAssistantMessage(assistantId, { sources: pendingSources });
+      }
     } catch (error) {
       if (isAbortError(error)) {
         return;
