@@ -55,6 +55,7 @@ const STREAM_RENDER_MEDIUM_CHARS = 14;
 const STREAM_RENDER_FAST_CHARS = 220;
 const STREAM_RENDER_LARGE_BACKLOG = 720;
 const STREAM_RENDER_MEDIUM_BACKLOG = 280;
+const SOURCE_REVEAL_STEP_MS = 180;
 
 type StreamTextRenderer = {
   append: (text: string) => void;
@@ -758,17 +759,11 @@ export function ChatShell() {
                     getRenderableMessageText(message, thinkingLabel),
                   )}
                 </div>
-                {message.role === "assistant" && message.sources?.length ? (
-                  <div className="message-sources" aria-label="Sources">
-                    {message.sources.map((source) => (
-                      <span
-                        key={`${source.title}-${source.section || "document"}`}
-                      >
-                        {source.title}
-                        {source.section ? ` / ${source.section}` : ""}
-                      </span>
-                    ))}
-                  </div>
+                {message.role === "assistant" ? (
+                  <DelayedMessageSources
+                    key={`${message.id}-${message.sources?.length ?? 0}`}
+                    message={message}
+                  />
                 ) : null}
               </div>
             ))}
@@ -1023,6 +1018,49 @@ function nextStreamRenderBatchSize(
   }
 
   return STREAM_RENDER_BASE_CHARS;
+}
+
+
+function DelayedMessageSources({
+  message,
+}: Readonly<{
+  message: Message;
+}>) {
+  const sourceCount = message.sources?.length ?? 0;
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (!sourceCount) {
+      return;
+    }
+
+    const timeoutIds = Array.from({ length: sourceCount }, (_, index) => {
+      return window.setTimeout(() => {
+        setVisibleCount((currentCount) => Math.max(currentCount, index + 1));
+      }, SOURCE_REVEAL_STEP_MS * (index + 1));
+    });
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [sourceCount]);
+
+  const visibleSources = message.sources?.slice(0, visibleCount) ?? [];
+
+  if (!visibleSources.length) {
+    return null;
+  }
+
+  return (
+    <div className="message-sources" aria-label="Sources">
+      {visibleSources.map((source) => (
+        <span key={`${source.title}-${source.section || "document"}`}>
+          {source.title}
+          {source.section ? ` / ${source.section}` : ""}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function formatHandoffUnavailableMessage(message: string): {

@@ -15,7 +15,8 @@ After the war in Ukraine forced his move to the UK in 2022, he focused on AI-ass
 
 In 2024, he delivered an Odoo Enterprise API integration that reduced one employee's workload by 68%.
 
-He also holds an MBA with honours and has a strong analytical background.
+He holds a Master's Degree in Finance, specialising in Banking and Insurance,
+and has a strong analytical background.
 
 Would you like to know more about his latest work experience?`,
       `Alex combines long-term business automation experience with newer AI-assisted software development.
@@ -26,7 +27,8 @@ After the war in Ukraine forced his move to the UK in 2022, he focused more deep
 
 His 2024 Odoo Enterprise API project reduced one employee's workload by 68%.
 
-He also holds an MBA with honours and is strong in analytics, reporting, and dashboards.
+He holds a Master's Degree in Finance, specialising in Banking and Insurance,
+and is strong in analytics, reporting, and dashboards.
 
 Would you like a short overview of his most recent role?`,
       `Alex focuses on automation, API integrations, ERP workflows, reporting, and operational dashboards.
@@ -162,6 +164,9 @@ export const HANDOFF_CONFIRMATION_PATTERNS = [
 
 export const HANDOFF_REQUEST_PATTERNS = [
   /^\s*connect\s*[.!?]*\s*$/i,
+  /^\s*con+ect\s*[.!?]*\s*$/i,
+  /^\s*con+ect\s+me\s*[.!?]*\s*$/i,
+  /\bcon+ect\s+(me\s+)?(with|to)\s+alex\b/i,
   /^\s*connect\s+me\s*[.!?]*\s*$/i,
   /\bconnect\s+(me\s+)?(with|to)\s+alex\b/i,
   /\bcan\s+you\s+connect\s+me\s+(with|to)\s+alex\b/i,

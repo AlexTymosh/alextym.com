@@ -38,6 +38,9 @@ AI-assisted prototyping, then testing, deployment, and support.
 - Alex should be positioned around automation, APIs, internal tools,
   business process automation, RAG assistants, and practical systems
   integration rather than as a pure frontend or full-stack developer.
+- Alex has implemented an observability layer for the alextym.com portfolio
+  project, including Prometheus metrics, Grafana dashboards, protected metrics
+  endpoints, and operational monitoring.
 
 #### Retrieval Hints
 
@@ -52,6 +55,8 @@ AI-assisted prototyping, then testing, deployment, and support.
 - fastapi
 - api
 - rag
+- prometheus
+- grafana
 - business-process-automation
 
 #### Secondary Tags
@@ -61,6 +66,8 @@ AI-assisted prototyping, then testing, deployment, and support.
 - dashboards
 - data-pipelines
 - internal-tools
+- observability
+- metrics
 
 # Entries
 
@@ -224,6 +231,7 @@ location: Ukraine
 ### Concise
 
 - Graduated with honours.
+- Overall average score: 91.4/100; awarded a competitive academic scholarship.
 
 ### Detailed
 
@@ -257,6 +265,8 @@ location: Ukraine
 
 - Alex holds a Master's Degree in Finance, Banking and Insurance from
   Zaporizhzhia National University and graduated with honours.
+- Alex achieved an overall average score of 91.4/100 and was awarded a
+  competitive academic scholarship.
 - Alex's finance background supports business analysis, data-driven
   decision-making, process analysis, reporting automation, ROI thinking,
   financial workflows, and analytical problem-solving.
@@ -264,7 +274,8 @@ location: Ukraine
 #### Retrieval Hints
 
 - Useful for questions about Alex's education, finance background, analytical
-  skills, business analysis, reporting automation, and ROI-oriented thinking.
+  skills, MBA clarification, university, degree, business analysis, reporting
+  automation, and ROI-oriented thinking.
 
 #### Primary Tags
 
@@ -746,16 +757,18 @@ title: Hard Skills
 - Alex works with LLM workflows, RAG, structured outputs and validation,
   human-in-the-loop review, and token/cost awareness.
 - Alex's tools and stack include Python, SQL, VBA macros, FastAPI, REST APIs,
-  API integration, PostgreSQL, Redis, Pandas, Git, GitHub, and Codex.
+  API integration, PostgreSQL, Redis, Pandas, Git, GitHub, Codex, Prometheus,
+  and Grafana.
 - Alex has experience with Odoo, Bitrix24, ERP/CRM integration, and internal
   business tools.
-- Alex uses Pytest, CI/CD, Docker Compose, and GDPR-aware automation practices.
+- Alex uses Pytest, CI/CD, Docker Compose, Prometheus, Grafana, and GDPR-aware automation.
 
 #### Retrieval Hints
 
 - Useful for questions about Alex's hard skills, technical stack, automation,
   Python, FastAPI, SQL, VBA, APIs, ERP/CRM integration, RAG, testing, CI/CD,
-  Docker Compose, and GDPR-aware automation.
+  Docker Compose, Prometheus, Grafana, observability, metrics, monitoring,
+  and GDPR-aware automation.
 
 #### Primary Tags
 
@@ -775,6 +788,9 @@ title: Hard Skills
 - pytest
 - docker-compose
 - ci-cd
+- prometheus
+- grafana
+- observability
 - erp
 - crm
 - rag
@@ -962,17 +978,23 @@ organization: Independent project
 - Alex is building a personal developer website with an AI assistant and
   RAG-based public profile search.
 - The project uses a Next.js frontend, FastAPI backend, OpenAI embeddings,
-  Qdrant vector search, and a structured public resume source.
+  Qdrant vector search, a structured public resume source, Prometheus metrics,
+  and Grafana dashboards.
 - The project includes recruiter-facing chat behaviour, handoff to Alex,
   contact flows, RAG evals, and controlled content extraction from resume
   markdown into structured JSON chunks.
 - The project keeps public career facts separate from private biography notes.
+- The portfolio project includes a production-minded RAG layer with curated
+  public source material, controlled JSON chunk extraction, vector retrieval,
+  prompt-injection safeguards, deterministic evals, source attribution, handoff
+  flows, and observability metrics.
 
 #### Retrieval Hints
 
 - Useful for questions about Alex's RAG portfolio project, AI assistant,
   vector search, Qdrant, embeddings, recruiter chat, structured resume source,
-  evals, handoff flow, and FastAPI/Next.js architecture.
+  evals, handoff flow, Prometheus/Grafana observability, metrics, dashboards,
+  and FastAPI/Next.js architecture.
 
 #### Primary Tags
 
@@ -990,6 +1012,8 @@ organization: Independent project
 - handoff
 - evals
 - structured-content
+- metrics
+- dashboards
 
 ## Projects — GDPR-aware SaaS Automation Platform
 
@@ -1046,6 +1070,7 @@ organization: Independent project
 - background-processing
 - async-workflows
 - ci-cd
+- ci/cd
 - testing
 
 ## AI-assisted Development Workflow
