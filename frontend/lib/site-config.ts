@@ -1,6 +1,12 @@
 const DEFAULT_SITE_URL = "https://alextym.com";
 
-export const publicRoutes = ["/", "/resume", "/chat", "/contact"] as const;
+export const publicRoutes = [
+  "/",
+  "/resume",
+  "/chat",
+  "/contact",
+  "/disclaimer",
+] as const;
 
 export const siteConfig = {
   name: "alextym.com",

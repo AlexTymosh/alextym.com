@@ -53,7 +53,8 @@ export const profileCard = {
   imageSrc: "/images/profile/alex.webp",
   imageAlt: "",
   summary:
-    "I build practical automation tools that connect APIs, Excel, ERP systems, reports, and dashboards into smoother business workflows.",
+    "I build practical automation tools that connect APIs, Excel, ERP " +
+    "systems, reports, and dashboards into smoother business workflows.",
 } satisfies ProfileCard;
 
 export const assistantCard = {
@@ -69,14 +70,18 @@ export const featuredProject: FeaturedProject = {
   title: "yourname.com",
   description: [
     "Build your own AI portfolio website.",
-    "I open-sourced this site as a reusable MIT-licensed template. Follow the setup guide, replace the public CV and project content, and make it your own.",
+    "I open-sourced this site as a reusable MIT-licensed template. " +
+      "Follow the setup guide, replace the public CV and project content, " +
+      "and make it your own.",
   ],
   cta: "Get the setup guide",
   href: "https://github.com/AlexTymosh/alextym.com",
   previewItems: [
     {
       title: "FastAPI SaaS Template",
-      detail: "GDPR-aware modular backend with tenant access, audit, rate limiting, and API contracts.",
+      detail:
+        "GDPR-aware modular backend with tenant access, audit, " +
+        "rate limiting, and API contracts.",
       href: "https://github.com/AlexTymosh/fastapi-saas-template",
       slot: "top-left",
     },
@@ -88,7 +93,9 @@ export const featuredProject: FeaturedProject = {
     },
     {
       title: "alextym.com",
-      detail: "RAG-based AI portfolio with public CV, chat, contact flow, and reusable setup path.",
+      detail:
+        "RAG-based AI portfolio with public CV, chat, contact flow, " +
+        "and reusable setup path.",
       href: "https://github.com/AlexTymosh/alextym.com",
       slot: "bottom-right",
     },
@@ -108,7 +115,11 @@ export const buildFocus = {
   eyebrow: "Current Engineering Focus",
   title: "SaaS backend systems with GDPR-aware architecture",
   description:
-    "Most of my current effort goes into a FastAPI SaaS backend template: a modular monolith for small and medium SaaS products with tenant/platform access control, Keycloak OIDC/JWT, audit and outbox foundations, Redis-backed rate limiting, structured errors, testing, and observability.",
+    "Most of my current effort goes into a FastAPI SaaS backend template: " +
+    "a modular monolith for small and medium SaaS products with tenant/" +
+    "platform access control, Keycloak OIDC/JWT, audit and outbox " +
+    "foundations, Redis-backed rate limiting, structured errors, testing, " +
+    "and observability.",
 } satisfies BuildFocus;
 
 export const projectStack = [
@@ -126,4 +137,7 @@ export const projectStack = [
   "Ruff",
   "Pytest",
   "OpenTelemetry",
+  "Prometheus",
+  "Grafana",
+  "RAG",
 ] satisfies ProjectStackItem[];

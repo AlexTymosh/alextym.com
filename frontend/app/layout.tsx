@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { PrivacySafeAnalytics } from "../components/privacy-safe-analytics";
 import { SiteNavigation } from "../components/site-navigation";
@@ -11,6 +12,7 @@ import {
 import "./globals.css";
 import "./chat-messages.css";
 import "./theme-overrides.css";
+import "./footer-disclaimer.css";
 
 const siteUrl = getSiteUrl();
 const isPreview = isPreviewDeployment();
@@ -87,11 +89,16 @@ export default function RootLayout({
         <div className="app-shell">
           <SiteNavigation />
           <main className="site-main">{children}</main>
-          <footer className="site-footer">
-            <span className="site-footer__bracket">{"{"}</span>
-            <span className="site-footer__message">Thanks for visiting</span>
-            <span className="site-footer__domain">alextym.com</span>
-            <span className="site-footer__bracket">{"}"}</span>
+          <footer className="site-footer site-footer--with-disclaimer">
+            <div className="site-footer__visit">
+              <span className="site-footer__bracket">{"{"}</span>
+              <span className="site-footer__message">Thanks for visiting</span>
+              <span className="site-footer__domain">alextym.com</span>
+              <span className="site-footer__bracket">{"}"}</span>
+            </div>
+            <Link className="site-footer__disclaimer" href="/disclaimer">
+              Disclaimer
+            </Link>
           </footer>
         </div>
       </body>
