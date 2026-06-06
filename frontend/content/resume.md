@@ -231,7 +231,6 @@ location: Ukraine
 ### Concise
 
 - Graduated with honours.
-- Overall average score: 91.4/100; awarded a competitive academic scholarship.
 
 ### Detailed
 
