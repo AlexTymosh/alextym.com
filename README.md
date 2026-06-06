@@ -6,22 +6,43 @@
   <em>A portfolio website built as a small AI-powered web product: interactive resume, RAG chat, real SSE streaming, SEO setup, video demo, contact flow, and human handoff via Telegram.</em>
 </p>
 
-<p align="center">
+<p align="left">
+  <!-- Project status -->
   <a href="https://github.com/AlexTymosh/alextym.com/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/AlexTymosh/alextym.com/ci.yml?branch=main&style=for-the-badge&label=CI&logo=githubactions&logoColor=white" /></a>
   <a href="https://opensource.org/license/mit/"><img src="https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge" /></a>
+</p>
 
+<p align="left">
+  <!-- Frontend -->
   <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" /></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" /></a>
+</p>
+<p align="left">
+  <!-- Backend and data -->
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" /></a>
   <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /></a>
+  <a href="https://upstash.com/"><img alt="Upstash Redis" src="https://img.shields.io/badge/Upstash_Redis-00E9A3?style=for-the-badge&logo=redis&logoColor=white" /></a>
+</p>
+
+<p align="left">
+  <!-- AI and RAG -->
   <a href="https://openai.com/"><img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" /></a>
   <a href="https://qdrant.tech/"><img src="https://img.shields.io/badge/Qdrant-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" /></a>
+</p>
+
+<p align="left">
+  <!-- Deployment, infrastructure, and observability -->
   <a href="https://vercel.com/"><img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" /></a>
   <a href="https://render.com/"><img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=000000" /></a>
   <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" /></a>
-  <a href="https://upstash.com/"><img alt="Upstash Redis" src="https://img.shields.io/badge/Upstash_Redis-00E9A3?style=for-the-badge&logo=redis&logoColor=white" /></a>
+  <a href="https://prometheus.io/"><img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" /></a>
+  <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" /></a>
+</p>
+
+<p align="left">
+  <!-- Integrations -->
   <a href="https://core.telegram.org/bots/api"><img src="https://img.shields.io/badge/Telegram_Bot_API-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" /></a>
 </p>
 
@@ -91,6 +112,7 @@ The chat also includes a deterministic policy layer before RAG: greetings, unsup
 | **Contact / handoff** | Resend, Telegram Bot API, Telegram webhook, SSE handoff stream, handoff sessions, TTL |
 | **Safety / abuse protection** | prompt-injection checks, output guard, private-data boundary, scope routing, rate limiting, honeypot fields, no-hallucination policy |
 | **SEO / SMM** | metadata, canonical URLs, OpenGraph, Twitter card, JSON-LD, sitemap.xml, robots.txt, favicon, preview indexing control |
+| **Observability** | structured JSON logs, request IDs, Prometheus-compatible metrics, local Grafana/Prometheus lab, Grafana Cloud dashboards |
 | **Dev workflow** | Taskfile, uv, Ruff, Pytest, Docker |
 | **Deployment** | Vercel frontend, Render backend, Cloudflare DNS, Qdrant Cloud |
 
@@ -208,6 +230,47 @@ The project implements a basic protection layer:
 - Separate eval scripts for checking the quality of AI/RAG answers.
 - Deterministic eval mode without OpenAI/Qdrant and live eval mode with real RAG.
 - Eval reports can be compared in before/after format to see regressions/fixes after changes to knowledge, prompt, or retrieval logic.
+
+### 📈 Observability / monitoring
+
+The project includes a free / low-cost observability path built around
+Prometheus-compatible metrics and Grafana dashboards:
+
+- structured JSON backend logs with `request_id` correlation;
+- protected `/internal/metrics` endpoint with bearer-token authentication;
+- HTTP metrics for request counts, status classes and latency;
+- domain metrics for chat, RAG retrieval, LLM calls, contact, escalation,
+  rate limits, page views and CV downloads;
+- local Prometheus + Grafana lab for development and training;
+- Grafana Cloud connection through a protected Render metrics scrape endpoint.
+
+Metrics are disabled by default and must be enabled explicitly with:
+
+```env
+METRICS_ENABLED="true"
+METRICS_TOKEN="<secret-token>"
+METRICS_PATH="/internal/metrics"
+```
+
+For local training:
+
+```bash
+task obs:config
+task obs:up
+task obs:logs
+task obs:restart
+task obs:down
+```
+
+Cloud monitoring uses Grafana Cloud Metrics Endpoint scraping of the protected
+Render backend metrics endpoint. Secrets and tokens are configured only in
+Render / Grafana Cloud and must never be committed to the repository.
+
+#### Grafana dashboard screenshot
+
+File: `docs/assets/grafana-cloud-dashboard.png`
+
+![Grafana Cloud observability dashboard](docs/assets/grafana-cloud-dashboard.png)
 
 ---
 
@@ -437,6 +500,8 @@ flowchart LR
 | `GET` | `/api/escalations/{handoff_id}/stream` | SSE stream of messages from the website owner |
 | `POST` | `/api/escalations/{handoff_id}/close` | close handoff session |
 | `POST` | `/api/telegram/webhook` | Telegram webhook for website owner replies |
+| `POST` | `/api/analytics/events` | privacy-safe aggregate analytics events |
+| `GET` | `/internal/metrics` | protected Prometheus-compatible metrics endpoint |
 
 ---
 
@@ -492,6 +557,27 @@ This matters for employers: AI behaviour is not only “checked manually in the 
 ```bash
 task dev
 ```
+
+Run the local Prometheus/Grafana observability lab after enabling local metrics
+in `backend/.env`:
+
+```env
+METRICS_ENABLED="true"
+METRICS_TOKEN="local-dev-metrics-token"
+METRICS_PATH="/internal/metrics"
+```
+
+```bash
+task obs:config
+task obs:up
+```
+
+Open local dashboards:
+
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001`
+
+> Do not reuse the local metrics token in production.
 
 Check before push / PR:
 
