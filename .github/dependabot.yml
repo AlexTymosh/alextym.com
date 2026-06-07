@@ -4,16 +4,70 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    groups:
+      backend-patch-minor:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+          - minor
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+      time: "06:30"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    groups:
+      github-actions-patch-minor:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+          - minor
 
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+      time: "07:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    groups:
+      nextjs-patch-minor:
+        patterns:
+          - next
+          - eslint-config-next
+          - "@next/*"
+        update-types:
+          - patch
+          - minor
+      react-patch-minor:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - patch
+          - minor
+      frontend-tooling-patch-minor:
+        dependency-type: development
+        patterns:
+          - "@playwright/*"
+          - "@types/node"
+          - autoprefixer
+          - eslint
+          - postcss
+          - tailwindcss
+          - typescript
+        update-types:
+          - patch
+          - minor
