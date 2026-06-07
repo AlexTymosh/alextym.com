@@ -8,6 +8,7 @@ from typing import Any
 import structlog
 
 from app.core.config import Settings
+from app.core.loki import configure_loki_exporter, loki_processor
 
 SENSITIVE_LOG_KEYS = {
     "api_key",
@@ -44,10 +45,12 @@ def configure_logging(settings: Settings) -> None:
     structlog.reset_defaults()
     log_level = _coerce_log_level(settings.log_level)
     renderer = _build_renderer(settings.log_format)
-    shared_processors = _shared_processors(settings)
+    loki_exporter = configure_loki_exporter(settings)
+    base_processors = _base_processors(settings)
+    rendering_processors = _rendering_processors()
 
     formatter = structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=shared_processors,
+        foreign_pre_chain=[*base_processors, *rendering_processors],
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             renderer,
@@ -67,7 +70,9 @@ def configure_logging(settings: Settings) -> None:
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
-            *shared_processors,
+            *base_processors,
+            *_loki_processors(loki_exporter),
+            *rendering_processors,
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
@@ -76,7 +81,7 @@ def configure_logging(settings: Settings) -> None:
     )
 
 
-def _shared_processors(settings: Settings) -> list[Any]:
+def _base_processors(settings: Settings) -> list[Any]:
     return [
         structlog.contextvars.merge_contextvars,
         _add_service_context(settings),
@@ -90,6 +95,17 @@ def _shared_processors(settings: Settings) -> list[Any]:
             utc=True,
         ),
         _redact_sensitive_log_fields,
+    ]
+
+
+def _loki_processors(loki_exporter: Any) -> list[Any]:
+    if loki_exporter is None:
+        return []
+    return [loki_processor(loki_exporter)]
+
+
+def _rendering_processors() -> list[Any]:
+    return [
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),

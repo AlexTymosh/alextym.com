@@ -1,3 +1,6 @@
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+
 from fastapi import FastAPI
 
 from app.api.analytics import router as analytics_router
@@ -8,15 +11,24 @@ from app.api.health import router as health_router
 from app.api.telegram import router as telegram_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.loki import shutdown_loki_exporter
 from app.core.metrics import configure_metrics
 from app.middleware.request_context import RequestContextMiddleware
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        shutdown_loki_exporter(timeout_seconds=2.0)
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings)
 
-    app = FastAPI(title=settings.app_name)
+    app = FastAPI(title=settings.app_name, lifespan=lifespan)
     app.state.settings = settings
     app.add_middleware(
         RequestContextMiddleware,
