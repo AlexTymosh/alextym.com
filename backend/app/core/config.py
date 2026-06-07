@@ -31,6 +31,15 @@ class Settings:
     log_level: str = "INFO"
     log_format: str = "json"
     request_id_header: str = "X-Request-ID"
+    log_export_enabled: bool = False
+    log_export_min_level: str = "WARNING"
+    loki_push_url: str = ""
+    loki_username: str = ""
+    loki_token: str = ""
+    loki_queue_max_size: int = 1000
+    loki_timeout_seconds: float = 1.5
+    loki_batch_size: int = 50
+    loki_flush_interval_seconds: float = 2.0
     metrics_enabled: bool = False
     metrics_token: str = ""
     metrics_path: str = "/internal/metrics"
@@ -108,6 +117,10 @@ def _get_int(name: str, default: int) -> int:
         return default
 
 
+def _get_min_int(name: str, default: int, minimum: int) -> int:
+    return max(minimum, _get_int(name, default))
+
+
 def _get_float(name: str, default: float) -> float:
     raw_value = os.getenv(name)
     if raw_value is None:
@@ -116,6 +129,10 @@ def _get_float(name: str, default: float) -> float:
         return float(raw_value)
     except ValueError:
         return default
+
+
+def _get_min_float(name: str, default: float, minimum: float) -> float:
+    return max(minimum, _get_float(name, default))
 
 
 def _get_vector_mode() -> str:
@@ -135,6 +152,12 @@ def _get_metrics_path() -> str:
     if raw_value == "/":
         return "/internal/metrics"
     return raw_value.rstrip("/")
+
+
+def _get_log_export_min_level() -> str:
+    raw_value = os.getenv("LOG_EXPORT_MIN_LEVEL", "WARNING").strip().upper()
+    allowed_values = {"DEBUG", "INFO", "WARNING", "ERROR"}
+    return raw_value if raw_value in allowed_values else "WARNING"
 
 
 @lru_cache
@@ -170,6 +193,19 @@ def get_settings() -> Settings:
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         log_format=_get_log_format(),
         request_id_header=os.getenv("REQUEST_ID_HEADER", "X-Request-ID"),
+        log_export_enabled=_get_bool("LOG_EXPORT_ENABLED", False),
+        log_export_min_level=_get_log_export_min_level(),
+        loki_push_url=os.getenv("LOKI_PUSH_URL", ""),
+        loki_username=os.getenv("LOKI_USERNAME", ""),
+        loki_token=os.getenv("LOKI_TOKEN", ""),
+        loki_queue_max_size=_get_min_int("LOKI_QUEUE_MAX_SIZE", 1000, 1),
+        loki_timeout_seconds=_get_min_float("LOKI_TIMEOUT_SECONDS", 1.5, 0.1),
+        loki_batch_size=_get_min_int("LOKI_BATCH_SIZE", 50, 1),
+        loki_flush_interval_seconds=_get_min_float(
+            "LOKI_FLUSH_INTERVAL_SECONDS",
+            2.0,
+            0.1,
+        ),
         metrics_enabled=_get_bool("METRICS_ENABLED", False),
         metrics_token=os.getenv("METRICS_TOKEN", ""),
         metrics_path=_get_metrics_path(),
