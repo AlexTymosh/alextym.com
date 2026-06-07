@@ -8,6 +8,9 @@ on:
     branches:
       - main
   merge_group:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
 
 permissions:
   contents: read
@@ -19,7 +22,8 @@ concurrency:
 jobs:
   backend:
     name: backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -27,7 +31,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v2
         with:
-          version: 3.x
+          version: "3.51.1"
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -46,7 +50,8 @@ jobs:
 
   frontend:
     name: frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -54,7 +59,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v2
         with:
-          version: 3.x
+          version: "3.51.1"
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -66,9 +71,18 @@ jobs:
       - name: Run frontend checks
         run: task frontend:check:ci
 
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
   rag:
     name: rag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,7 +90,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v2
         with:
-          version: 3.x
+          version: "3.51.1"
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -95,7 +109,8 @@ jobs:
 
   docker:
     name: docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -103,7 +118,7 @@ jobs:
       - name: Install Task
         uses: go-task/setup-task@v2
         with:
-          version: 3.x
+          version: "3.51.1"
 
       - name: Build backend Docker image
         run: task docker:build
