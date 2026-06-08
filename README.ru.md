@@ -23,6 +23,7 @@
   <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" /></a>
   <a href="https://prometheus.io/"><img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" /></a>
   <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" /></a>
+  <a href="https://grafana.com/oss/loki/"><img src="https://img.shields.io/badge/Loki-F46800?style=for-the-badge&logo=grafana&logoColor=white" /></a>
   <a href="https://upstash.com/"><img alt="Upstash Redis" src="https://img.shields.io/badge/Upstash_Redis-00E9A3?style=for-the-badge&logo=redis&logoColor=white" /></a>
   <a href="https://core.telegram.org/bots/api"><img src="https://img.shields.io/badge/Telegram_Bot_API-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" /></a>
 </p>
@@ -93,7 +94,7 @@ RAG-пайплайн использует Qdrant + OpenAI embeddings. Для п�
 | **Contact / handoff** | Resend, Telegram Bot API, Telegram webhook, SSE handoff stream, handoff sessions, TTL |
 | **Safety / abuse protection** | prompt-injection checks, output guard, private-data boundary, scope routing, rate limiting, honeypot fields, no-hallucination policy |
 | **SEO / SMM** | metadata, canonical URLs, OpenGraph, Twitter card, JSON-LD, sitemap.xml, robots.txt, favicon, preview indexing control |
-| **Observability** | structured JSON logs, request IDs, Prometheus-compatible metrics, local Grafana/Prometheus lab, Grafana Cloud dashboards |
+| **Observability** | structured JSON logs, request IDs, Prometheus-compatible metrics, local Grafana/Prometheus lab, Grafana Cloud dashboards, Grafana Cloud Loki log export, LogQL |
 | **Dev workflow** | Taskfile, uv, Ruff, Pytest, Docker |
 | **Deployment** | Vercel frontend, Render backend, Cloudflare DNS, Qdrant Cloud |
 
@@ -218,6 +219,8 @@ RAG-пайплайн использует Qdrant + OpenAI embeddings. Для п�
 Prometheus-compatible metrics и Grafana dashboards:
 
 - structured JSON backend logs с `request_id` correlation;
+- optional Grafana Cloud Loki export для безопасных structured backend warning/error logs;
+- LogQL-based troubleshooting через Grafana Explore и backend logs dashboard;
 - защищённый `/internal/metrics` endpoint с bearer-token authentication;
 - HTTP metrics для количества запросов, status classes и latency;
 - domain metrics для chat, RAG retrieval, LLM calls, contact, escalation,
@@ -246,6 +249,10 @@ task obs:down
 Cloud monitoring использует Grafana Cloud Metrics Endpoint scraping защищённого
 Render backend metrics endpoint. Secrets и tokens настраиваются только в Render /
 Grafana Cloud и не должны попадать в репозиторий.
+
+Подробнее:
+
+- [Grafana Cloud logs setup](docs/grafana-cloud-logs.ru.md)
 
 #### Скриншот Grafana dashboard
 
