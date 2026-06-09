@@ -39,6 +39,7 @@
   <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" /></a>
   <a href="https://prometheus.io/"><img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" /></a>
   <a href="https://grafana.com/"><img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" /></a>
+  <a href="https://grafana.com/oss/loki/"><img src="https://img.shields.io/badge/Loki-F46800?style=for-the-badge&logo=grafana&logoColor=white" /></a>
 </p>
 
 <p align="left">
@@ -112,7 +113,7 @@ The chat also includes a deterministic policy layer before RAG: greetings, unsup
 | **Contact / handoff** | Resend, Telegram Bot API, Telegram webhook, SSE handoff stream, handoff sessions, TTL |
 | **Safety / abuse protection** | prompt-injection checks, output guard, private-data boundary, scope routing, rate limiting, honeypot fields, no-hallucination policy |
 | **SEO / SMM** | metadata, canonical URLs, OpenGraph, Twitter card, JSON-LD, sitemap.xml, robots.txt, favicon, preview indexing control |
-| **Observability** | structured JSON logs, request IDs, Prometheus-compatible metrics, local Grafana/Prometheus lab, Grafana Cloud dashboards |
+| **Observability** | structured JSON logs, request IDs, Prometheus-compatible metrics, local Grafana/Prometheus lab, Grafana Cloud dashboards, Grafana Cloud Loki log export, LogQL |
 | **Dev workflow** | Taskfile, uv, Ruff, Pytest, Docker |
 | **Deployment** | Vercel frontend, Render backend, Cloudflare DNS, Qdrant Cloud |
 
@@ -237,6 +238,8 @@ The project includes a free / low-cost observability path built around
 Prometheus-compatible metrics and Grafana dashboards:
 
 - structured JSON backend logs with `request_id` correlation;
+- optional Grafana Cloud Loki export for safe structured backend warning/error logs;
+- LogQL-based troubleshooting through Grafana Explore and a backend logs dashboard;
 - protected `/internal/metrics` endpoint with bearer-token authentication;
 - HTTP metrics for request counts, status classes and latency;
 - domain metrics for chat, RAG retrieval, LLM calls, contact, escalation,
@@ -265,6 +268,10 @@ task obs:down
 Cloud monitoring uses Grafana Cloud Metrics Endpoint scraping of the protected
 Render backend metrics endpoint. Secrets and tokens are configured only in
 Render / Grafana Cloud and must never be committed to the repository.
+
+More details:
+
+- [Grafana Cloud logs setup](docs/grafana-cloud-logs.md)
 
 #### Grafana dashboard screenshot
 
