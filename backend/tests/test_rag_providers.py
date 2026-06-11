@@ -234,7 +234,7 @@ def test_qdrant_retriever_expands_short_sql_queries() -> None:
 def test_ingestion_replaces_vectors_from_reviewed_public_knowledge() -> None:
     knowledge_dir = _local_knowledge_dir("provider-ingestion")
     (knowledge_dir / "resume.md").write_text(
-        "# Resume\n\n## Summary\n\nAlex builds FastAPI services.",
+        _structured_resume_markdown(),
         encoding="utf-8",
     )
     fake_embedding_client = FakeEmbeddingClient()
@@ -247,11 +247,19 @@ def test_ingestion_replaces_vectors_from_reviewed_public_knowledge() -> None:
         vector_store=fake_vector_store,
     )
 
-    assert summary.loaded_chunks == 1
-    assert summary.indexed_chunks == 1
-    assert fake_embedding_client.texts == ["Alex builds FastAPI services."]
-    assert fake_vector_store.replaced_chunks[0].metadata.source == "resume.md"
-    assert fake_vector_store.source_files == ("resume.md",)
+    assert summary.loaded_chunks == 2
+    assert summary.indexed_chunks == 2
+    assert fake_embedding_client.texts == [
+        "- Alex builds FastAPI services.",
+        "- Alex delivered API automation.",
+    ]
+    assert fake_vector_store.replaced_chunks[0].metadata.source == "Summary"
+    assert fake_vector_store.source_files == (
+        "content/public/resume.md",
+        "frontend/content/resume.md",
+        "resume.md",
+        "resume.generated.chunks.json",
+    )
 
 
 def test_ingestion_cleans_sources_when_public_knowledge_is_empty() -> None:
@@ -274,7 +282,12 @@ def test_ingestion_cleans_sources_when_public_knowledge_is_empty() -> None:
     assert summary.indexed_chunks == 0
     assert fake_embedding_client.texts == []
     assert fake_vector_store.replaced_chunks == []
-    assert fake_vector_store.source_files == ("resume.md",)
+    assert fake_vector_store.source_files == (
+        "content/public/resume.md",
+        "frontend/content/resume.md",
+        "resume.md",
+        "resume.generated.chunks.json",
+    )
 
 
 class FakeOpenAIEmbeddings:
@@ -437,3 +450,59 @@ def _local_knowledge_dir(name: str) -> Path:
             file_path.unlink()
     test_root.mkdir(parents=True, exist_ok=True)
     return test_root
+
+
+def _structured_resume_markdown() -> str:
+    return """
+# Summary
+
+## Concise
+
+Visible summary.
+
+## Detailed
+
+Visible detailed summary.
+
+## RAG
+
+#### Answer Facts
+
+- Alex builds FastAPI services.
+
+#### Primary Tags
+
+- fastapi
+
+# Entries
+
+## Sample Project
+
+```yaml
+id: sample-project
+section: experience
+startDate: 2024-01
+endDate: present
+title: Sample Project
+```
+
+### Concise
+
+- Visible concise bullet.
+
+### Detailed
+
+- Visible detailed bullet.
+
+### RAG
+
+#### Answer Facts
+
+- Alex delivered API automation.
+
+#### Primary Tags
+
+- api
+
+# Additional Sections
+""".strip()

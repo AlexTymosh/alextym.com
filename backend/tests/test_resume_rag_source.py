@@ -99,7 +99,7 @@ def test_preview_output_is_not_the_embedding_source() -> None:
 
 def test_write_resume_rag_outputs_json_and_tmp_preview(tmp_path: Path) -> None:
     source_path = tmp_path / "resume.md"
-    json_output = tmp_path / "backend" / "knowledge" / "resume.chunks.json"
+    json_output = tmp_path / ".tmp" / "rag" / "resume.chunks.json"
     preview_output = tmp_path / ".tmp" / "preview" / "resume-rag-preview.md"
     source_path.write_text(_fixture_markdown(), encoding="utf-8")
 
@@ -112,7 +112,7 @@ def test_write_resume_rag_outputs_json_and_tmp_preview(tmp_path: Path) -> None:
     assert len(document.chunks) == 2
     assert json_output.exists()
     assert preview_output.exists()
-    assert not (tmp_path / "backend" / "knowledge" / "resume.generated.md").exists()
+    assert not (tmp_path / ".tmp" / "rag" / "resume.generated.md").exists()
     assert FACT_SENTINEL in json_output.read_text(encoding="utf-8")
     assert FACT_SENTINEL in preview_output.read_text(encoding="utf-8")
 
@@ -123,7 +123,7 @@ def test_main_prints_readable_no_colour_summary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     source_path = tmp_path / "resume.md"
-    json_output = tmp_path / "backend" / "knowledge" / "resume.chunks.json"
+    json_output = tmp_path / ".tmp" / "rag" / "resume.chunks.json"
     preview_output = tmp_path / ".tmp" / "preview" / "resume-rag-preview.md"
     source_path.write_text(_fixture_markdown(), encoding="utf-8")
     monkeypatch.setenv("NO_COLOR", "1")
@@ -154,7 +154,7 @@ def test_main_prints_colour_labels(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     source_path = tmp_path / "resume.md"
-    json_output = tmp_path / "backend" / "knowledge" / "resume.chunks.json"
+    json_output = tmp_path / ".tmp" / "rag" / "resume.chunks.json"
     preview_output = tmp_path / ".tmp" / "preview" / "resume-rag-preview.md"
     source_path.write_text(_fixture_markdown(), encoding="utf-8")
     monkeypatch.delenv("NO_COLOR", raising=False)

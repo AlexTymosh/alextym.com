@@ -1,4 +1,4 @@
-# RAG eval tasks and auto comparison
+﻿# RAG eval tasks and auto comparison
 
 ## Tasks
 
@@ -97,6 +97,9 @@ If Qdrant content changed, rebuild embeddings:
 ```powershell
 task rag:ingest
 ```
+
+This uses the generated structured resume ingestion path from
+`content/public/resume.md`.
 
 Then run again:
 

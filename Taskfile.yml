@@ -125,15 +125,9 @@ tasks:
       - task: rag:eval:free
 
   rag:ingest:
-    desc: Rebuild Qdrant vectors from reviewed public knowledge files.
-    dir: backend
-    env:
-      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
-      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    desc: Rebuild Qdrant vectors from the canonical structured resume source.
     cmds:
-      - >-
-        uv run --isolated --env-file .env
-        python -m scripts.ingest_knowledge
+      - task: rag:ingest:generated
 
   rag:ingest:generated:
     desc: Rebuild Qdrant vectors from generated structured resume chunks.
@@ -308,9 +302,8 @@ tasks:
 
   docker:build:
     desc: Build the backend Docker image.
-    dir: backend
     cmds:
-      - docker build -t alextym-backend .
+      - docker build -f backend/Dockerfile -t alextym-backend .
 
   obs:config:
     desc: Validate the local observability Docker Compose config.

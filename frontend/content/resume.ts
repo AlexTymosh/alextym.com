@@ -82,8 +82,8 @@ export function getResumeDataFromMarkdown(markdown: string): ResumeData {
 
 function readResumeMarkdown(): string {
   const possiblePaths = [
-    join(process.cwd(), "content", "resume.md"),
-    join(process.cwd(), "frontend", "content", "resume.md"),
+    join(process.cwd(), "content", "public", "resume.md"),
+    join(process.cwd(), "..", "content", "public", "resume.md"),
   ];
 
   const resumePath = possiblePaths.find((path) => existsSync(path));

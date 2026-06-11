@@ -1,4 +1,4 @@
-# RAG Pipeline
+﻿# RAG Pipeline
 
 ## Purpose
 
@@ -13,7 +13,7 @@ The assistant must not invent facts. If retrieved context is insufficient, it sh
 The current structured RAG flow is built around the canonical public resume source:
 
 ```text
-frontend/content/resume.md
+content/public/resume.md
 ```
 
 This file contains public resume content and structured RAG sections.
@@ -21,29 +21,22 @@ This file contains public resume content and structured RAG sections.
 Generated structured RAG output path:
 
 ```text
-backend/knowledge/resume.generated.chunks.json
+.tmp/rag/resume.generated.chunks.json
 ```
 
 This generated file is intentionally ignored by Git:
 
 ```text
-backend/knowledge/resume.generated.chunks.json
+.tmp/rag/resume.generated.chunks.json
 ```
 
-Legacy public markdown source also exists:
-
-```text
-backend/knowledge/resume.md
-```
-
-Legacy ingestion can still index reviewed public markdown, but the current richer RAG flow is the generated resume chunk pipeline.
+The old `backend/knowledge/` directory has been removed. Do not add new
+backend-local public knowledge sources.
 
 Ignored private / unreviewed paths:
 
 ```text
 private/
-backend/knowledge/biography_public.md
-backend/knowledge/projects.md
 ```
 
 Do not index private drafts or unreviewed biography content.
@@ -75,7 +68,7 @@ If a fact is useful but self-reported, keep that status clear in metadata or wor
 
 ```mermaid
 flowchart TD
-    A["frontend/content/resume.md"] --> B["Extract ## RAG and ### RAG sections"]
+    A["content/public/resume.md"] --> B["Extract ## RAG and ### RAG sections"]
     B --> C["Parse Answer Facts"]
     B --> D["Parse Retrieval Hints"]
     B --> E["Parse Primary / Secondary Tags"]
@@ -83,7 +76,7 @@ flowchart TD
     D --> F
     E --> F
     F --> G["Build vector_inputs"]
-    G --> H["Write backend/knowledge/resume.generated.chunks.json"]
+    G --> H["Write .tmp/rag/resume.generated.chunks.json"]
     G --> I["Write .tmp/human-readable-preview/resume-rag-preview.md"]
 ```
 
@@ -146,13 +139,14 @@ task rag:ingest:generated
 
 The generated ingestion task runs extraction first, then ingests the generated chunks.
 
-Legacy public markdown ingestion:
+Compatibility alias:
 
 ```bash
 task rag:ingest
 ```
 
-Legacy ingestion reads reviewed public markdown files, chunks them, embeds them, and stores them in Qdrant.
+This currently runs the generated ingestion path. Do not reintroduce
+`backend/knowledge/` as a source of truth.
 
 ---
 

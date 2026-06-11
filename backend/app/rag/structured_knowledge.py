@@ -7,8 +7,16 @@ from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.schemas.chat import Confidence
 
 GENERATED_RESUME_CHUNKS_FILE = "resume.generated.chunks.json"
+CANONICAL_RESUME_SOURCE_FILE = "content/public/resume.md"
+PREVIOUS_CANONICAL_RESUME_SOURCE_FILE = "frontend/content/resume.md"
 LEGACY_RESUME_SOURCE_FILE = "resume.md"
-DEFAULT_GENERATED_CHUNKS_PATH = Path("backend/knowledge/resume.generated.chunks.json")
+REPLACED_RESUME_SOURCE_FILES = (
+    CANONICAL_RESUME_SOURCE_FILE,
+    PREVIOUS_CANONICAL_RESUME_SOURCE_FILE,
+    LEGACY_RESUME_SOURCE_FILE,
+    GENERATED_RESUME_CHUNKS_FILE,
+)
+DEFAULT_GENERATED_CHUNKS_PATH = Path(".tmp/rag/resume.generated.chunks.json")
 SUPPORTED_SCHEMA_VERSION = 2
 
 
@@ -45,7 +53,7 @@ def load_generated_resume_chunks(
     return GeneratedResumeChunkBundle(
         chunks=chunks,
         embedding_texts=embedding_texts,
-        source_files=(LEGACY_RESUME_SOURCE_FILE, GENERATED_RESUME_CHUNKS_FILE),
+        source_files=REPLACED_RESUME_SOURCE_FILES,
     )
 
 
@@ -61,6 +69,7 @@ def _chunk_from_payload(
     vector_inputs = _require_dict(chunk_payload, "vector_inputs")
     embedding_text = _require_text(vector_inputs, "body_dense")
     source_title = _require_text(source, "title")
+    source_file = _optional_text(source.get("path")) or CANONICAL_RESUME_SOURCE_FILE
     source_section = _require_text(source, "section")
     topic = _require_text(rag_payload, "topic")
     visibility = _require_text(rag_payload, "visibility")
@@ -76,7 +85,7 @@ def _chunk_from_payload(
         tags=tags,
         extra={
             "schema_version": schema_version,
-            "source_file": GENERATED_RESUME_CHUNKS_FILE,
+            "source_file": source_file,
             "parent_id": _optional_text(chunk_payload.get("parent_id")),
             "source": source,
             "payload": rag_payload,

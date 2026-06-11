@@ -190,6 +190,14 @@ location: Ukraine
   decision-making.
 - Alex designed lightweight internal integrations for insurance and bank
   payment processes, reducing manual accounting work by 8-10 hours per week.
+- Alex built and maintained Dobra Praca's business website as a Bitrix /
+  Bitrix24-based platform for online customer acquisition and service
+  presentation.
+- Alex was invited to speak on a local television channel as a domain expert
+  in employment services.
+- Under Alex's leadership, Dobra Praca achieved 1st place in its regional
+  sector in the 2018 National Business Rating of Ukraine by financial results
+  for Zaporizhzhia region.
 
 #### Retrieval Hints
 
@@ -214,6 +222,9 @@ location: Ukraine
 - operations
 - data-migration
 - process-improvement
+- bitrix24
+- national-business-rating
+- employment-services
 
 ## Zaporizhzhia National University — Concise Education
 
@@ -1132,6 +1143,346 @@ organization: Independent engineering workflow
 - code-review
 - risk-management
 - token-cost-awareness
+
+## Software Services and Collaboration
+
+```yaml
+id: software-services-and-collaboration
+section: experience
+website: false
+startDate: 2026-01
+endDate: present
+title: Software Services and Collaboration
+```
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+#### Answer Facts
+
+- Alex may be a fit for small or medium-sized businesses that need practical
+  software, automation, API, website, internal-tool, reporting, or RAG/chatbot
+  solutions.
+- Alex is best positioned for projects where the main value comes from
+  understanding business processes, simplifying manual work, connecting
+  existing systems, and turning fragmented workflows into maintainable
+  software-supported processes.
+- Relevant service areas include business websites with contact flows and
+  metadata, internal tools, reporting workflows, dashboards, data checks,
+  API integrations, ERP/CRM connections, Excel-to-database migration,
+  lightweight backend services, and RAG knowledge-base assistants.
+- Alex uses AI-assisted prototypes and MVP-style tools with human review,
+  test coverage, implementation boundaries, and clear documentation.
+
+#### Retrieval Hints
+
+- Useful for questions about software services, collaboration, websites,
+  internal tools, business automation, API integrations, reporting workflows,
+  RAG assistants, chatbot projects, MVPs, and small-business software needs.
+
+#### Primary Tags
+
+- services
+- software-services
+- collaboration
+- automation
+- api
+- rag
+- website
+
+#### Secondary Tags
+
+- internal-tools
+- chatbot
+- reporting
+- dashboards
+- erp
+- crm
+- mvp
+
+## Typical Project Types
+
+```yaml
+id: typical-project-types
+section: experience
+website: false
+startDate: 2026-01
+endDate: present
+title: Typical Project Types
+```
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+#### Answer Facts
+
+- Alex's public profile fits projects where a small company needs a cleaner
+  website with a contact flow, public profile, SEO metadata, and an optional
+  AI assistant.
+- Alex's public profile fits projects where a business wants to replace
+  manual Excel-based reporting with a database-backed workflow and dashboard.
+- Alex's public profile fits projects where a team needs an internal tool that
+  connects existing systems through APIs and reduces copy-paste work.
+- Alex's public profile fits RAG assistants over reviewed public or internal
+  documents with clear boundaries and no-hallucination behaviour.
+- Alex's public profile fits lightweight backend services for data validation,
+  workflow automation, reporting preparation, and small MVP experiments.
+
+#### Retrieval Hints
+
+- Useful for questions about project examples, website projects, internal
+  tools, Excel replacement, dashboard projects, database-backed workflows,
+  RAG assistants, lightweight backend services, and MVP experiments.
+
+#### Primary Tags
+
+- project-types
+- services
+- automation
+- internal-tools
+- website
+- rag
+
+#### Secondary Tags
+
+- dashboards
+- excel
+- database
+- backend
+- mvp
+- workflow-automation
+
+## Service Fit and Boundaries
+
+```yaml
+id: service-fit-and-boundaries
+section: experience
+website: false
+startDate: 2026-01
+endDate: present
+title: Service Fit and Boundaries
+```
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+#### Answer Facts
+
+- Alex's public profile is strongest for business-process automation,
+  internal tools, API integrations, practical websites, reporting workflows,
+  and knowledge-base assistants.
+- The assistant should not present Alex as a specialist in every software
+  category.
+- The assistant should not claim that Alex can safely deliver highly
+  regulated, safety-critical, medical, financial-advice, legal-advice,
+  high-scale enterprise, or cybersecurity-critical systems without a proper
+  professional team, domain review, and project-specific validation.
+- For uncertain project scope, the assistant should ask for a short
+  description of the business problem and offer direct contact with Alex.
+
+#### Retrieval Hints
+
+- Useful for questions about service fit, project boundaries, unsuitable
+  project categories, regulated work, safety-critical systems, medical or
+  legal or financial-advice systems, enterprise scale, cybersecurity-critical
+  systems, and when to contact Alex directly.
+
+#### Primary Tags
+
+- service-fit
+- boundaries
+- services
+- contact
+
+#### Secondary Tags
+
+- regulated-systems
+- safety-critical
+- medical
+- legal-advice
+- financial-advice
+- enterprise
+- cybersecurity
+
+## Professional Strengths
+
+```yaml
+id: professional-strengths
+section: experience
+website: false
+startDate: 2026-01
+endDate: present
+title: Professional Strengths
+```
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+#### Answer Facts
+
+- Alex's strengths include automation-first thinking, business-process
+  understanding, data and reporting mindset, API and integration focus,
+  analytical problem-solving, AI-assisted development discipline, and practical
+  communication.
+- Alex looks for repeatable manual work, bottlenecks, fragmented spreadsheets,
+  and process gaps that can be turned into structured workflows.
+- Alex's finance, management, and company-building background helps him
+  connect technical decisions with operational value.
+- Alex prefers clear requirements, direct feedback, documentation, and visible
+  criteria for whether a solution works.
+
+#### Retrieval Hints
+
+- Useful for questions about Alex's strengths, why hire Alex, what makes Alex
+  different, automation-first thinking, business-process understanding,
+  analytical thinking, API integration focus, and working style.
+
+#### Primary Tags
+
+- strengths
+- automation-first
+- business-processes
+- analytical-thinking
+
+#### Secondary Tags
+
+- working-style
+- communication
+- api
+- integration
+- data
+- reporting
+
+## Public Boundary Development Areas
+
+```yaml
+id: public-boundary-development-areas
+section: experience
+website: false
+startDate: 2026-01
+endDate: present
+title: Public Boundary Development Areas
+```
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+#### Answer Facts
+
+- This public profile does not list Alex's private development areas or
+  personal weaknesses.
+- If a visitor asks about weaknesses, weak points, limitations, or development
+  areas, the assistant should not invent a public list.
+- The preferred response is that Alex is aware of his development areas and
+  prefers to discuss them directly in a professional conversation.
+- The assistant should offer to connect the visitor with Alex when questions
+  about private development areas require a direct professional conversation.
+
+#### Retrieval Hints
+
+- Useful for questions about weaknesses, weak points, limitations,
+  development areas, public boundaries, privacy, direct conversation, and
+  handoff to Alex.
+
+#### Primary Tags
+
+- public-boundary
+- development-areas
+- limitations
+- contact
+
+#### Secondary Tags
+
+- privacy
+- weaknesses
+- handoff
+- professional-conversation
+
+## Professional References
+
+```yaml
+id: professional-references
+section: experience
+website: false
+startDate: 2026-01
+endDate: present
+title: Professional References
+```
+
+### Concise
+
+<!-- no bullets -->
+
+### Detailed
+
+<!-- no bullets -->
+
+### RAG
+
+#### Answer Facts
+
+- Contact details for references are available upon request and are not
+  included in the public profile for privacy reasons.
+- Alex can provide professional references from his UK workplace experience
+  and from international business partners he worked with during his time as
+  Founder and Managing Director of Dobra Praca.
+- Potential references may include UK-based workplace contacts and former
+  business partners from Poland, the Czech Republic, Kazakhstan, and other
+  countries involved in Dobra Praca's international business activity.
+
+#### Retrieval Hints
+
+- Useful for questions about references, reference contacts, professional
+  references, workplace references, business partner references, privacy of
+  contact details, and direct contact with Alex.
+
+#### Primary Tags
+
+- references
+- contact
+- privacy
+
+#### Secondary Tags
+
+- uk-workplace
+- business-partners
+- dobra-praca
+- professional-references
 
 # Additional Sections
 

@@ -73,7 +73,7 @@ def _write_generated_chunks(tmp_path: Path) -> Path:
         json.dumps(
             {
                 "schema_version": 2,
-                "source_path": "frontend/content/resume.md",
+                "source_path": "content/public/resume.md",
                 "purpose": "resume_rag_extraction",
                 "chunks": [_generated_chunk()],
             }
@@ -88,7 +88,7 @@ def _generated_chunk() -> dict[str, object]:
         "id": "resume:hard-skills:rag",
         "parent_id": "resume:hard-skills",
         "source": {
-            "path": "frontend/content/resume.md",
+            "path": "content/public/resume.md",
             "id": "hard-skills",
             "title": "Hard Skills",
             "title_url": None,
