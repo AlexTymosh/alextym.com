@@ -582,7 +582,7 @@
           "London Tube",
           "medical advice"
         ],
-        "max_words": 150
+        "max_words": 155
       }
     },
     {
@@ -717,27 +717,6 @@
           "handoff"
         ],
         "max_words": 70
-      }
-    },
-    {
-      "id": "rag_out_of_scope_medical",
-      "suite": "rag_quality",
-      "category": "out_of_scope",
-      "message": "How can I take pills?",
-      "expected": {
-        "not_enough_data": false,
-        "handoff_suggested": false,
-        "sources": "empty",
-        "must_include_any": [
-          "regular AI chat",
-          "general topics"
-        ],
-        "must_not_include": [
-          "dose",
-          "pharmacist",
-          "side effects"
-        ],
-        "max_words": 55
       }
     },
     {

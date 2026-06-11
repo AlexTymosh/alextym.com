@@ -4,8 +4,10 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
+from app.rag.structured_knowledge import CANONICAL_RESUME_SOURCE_FILE
 from app.rag.structured_knowledge import GENERATED_RESUME_CHUNKS_FILE
 from app.rag.structured_knowledge import LEGACY_RESUME_SOURCE_FILE
+from app.rag.structured_knowledge import PREVIOUS_CANONICAL_RESUME_SOURCE_FILE
 from app.rag.structured_knowledge import load_generated_resume_chunks
 from scripts.ingest_generated_resume_chunks import ingest_generated_resume_chunks
 
@@ -20,6 +22,8 @@ def test_load_generated_resume_chunks_uses_body_dense_for_embedding(
     assert len(bundle.chunks) == 1
     assert bundle.embedding_texts == ["Body dense text for embeddings."]
     assert bundle.source_files == (
+        CANONICAL_RESUME_SOURCE_FILE,
+        PREVIOUS_CANONICAL_RESUME_SOURCE_FILE,
         LEGACY_RESUME_SOURCE_FILE,
         GENERATED_RESUME_CHUNKS_FILE,
     )
@@ -28,7 +32,7 @@ def test_load_generated_resume_chunks_uses_body_dense_for_embedding(
     assert bundle.chunks[0].metadata.section == "experience"
     assert bundle.chunks[0].metadata.topic == "hard-skills"
     assert bundle.chunks[0].metadata.tags == ("api", "automation")
-    assert bundle.chunks[0].metadata.extra["source_file"] == (GENERATED_RESUME_CHUNKS_FILE)
+    assert bundle.chunks[0].metadata.extra["source_file"] == (CANONICAL_RESUME_SOURCE_FILE)
 
 
 def test_load_generated_resume_chunks_rejects_unsupported_schema(
@@ -58,6 +62,8 @@ def test_ingest_generated_resume_chunks_uses_structured_json(
     assert summary.indexed_chunks == 1
     assert fake_embedding_client.texts == ["Body dense text for embeddings."]
     assert fake_vector_store.source_files == (
+        CANONICAL_RESUME_SOURCE_FILE,
+        PREVIOUS_CANONICAL_RESUME_SOURCE_FILE,
         LEGACY_RESUME_SOURCE_FILE,
         GENERATED_RESUME_CHUNKS_FILE,
     )
@@ -110,7 +116,7 @@ def _write_generated_chunks(
         json.dumps(
             {
                 "schema_version": schema_version,
-                "source_path": "frontend/content/resume.md",
+                "source_path": "content/public/resume.md",
                 "purpose": "resume_rag_extraction",
                 "chunks": [_generated_chunk()],
             }
@@ -125,7 +131,7 @@ def _generated_chunk() -> dict[str, object]:
         "id": "resume:hard-skills:rag",
         "parent_id": "resume:hard-skills",
         "source": {
-            "path": "frontend/content/resume.md",
+            "path": "content/public/resume.md",
             "id": "hard-skills",
             "title": "Hard Skills",
             "title_url": None,

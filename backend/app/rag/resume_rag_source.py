@@ -8,8 +8,8 @@ from typing import Any
 
 SUMMARY_RAG_MARKER = "## RAG"
 ENTRY_RAG_MARKER = "### RAG"
-DEFAULT_SOURCE_PATH = Path("frontend/content/resume.md")
-DEFAULT_JSON_OUTPUT_PATH = Path("backend/knowledge/resume.generated.chunks.json")
+DEFAULT_SOURCE_PATH = Path("content/public/resume.md")
+DEFAULT_JSON_OUTPUT_PATH = Path(".tmp/rag/resume.generated.chunks.json")
 DEFAULT_PREVIEW_OUTPUT_PATH = Path(".tmp/human-readable-preview/resume-rag-preview.md")
 
 BLOCK_SPLIT_PATTERN = re.compile(r"\n(?=## )")

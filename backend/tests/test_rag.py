@@ -124,15 +124,18 @@ def test_public_knowledge_loader_reads_reviewed_resume() -> None:
     knowledge_dir = _local_knowledge_dir("reviewed")
     try:
         (knowledge_dir / "resume.md").write_text(
-            "# Resume\n\n## Summary\n\nAlex builds FastAPI services.",
+            _structured_resume_markdown(),
             encoding="utf-8",
         )
 
         chunks = load_public_knowledge(knowledge_dir)
 
-        assert len(chunks) == 1
-        assert chunks[0].metadata.source == "resume.md"
-        assert chunks[0].content == "Alex builds FastAPI services."
+        assert len(chunks) == 2
+        assert chunks[0].metadata.source == "Summary"
+        assert chunks[0].metadata.section == "summary"
+        assert chunks[0].metadata.topic == "summary"
+        assert chunks[0].metadata.extra["source_file"].endswith("resume.md")
+        assert chunks[0].content == "- Alex builds FastAPI services."
     finally:
         shutil.rmtree(knowledge_dir.parent, ignore_errors=True)
 
@@ -499,3 +502,59 @@ def _local_knowledge_dir(name: str) -> Path:
     shutil.rmtree(test_root, ignore_errors=True)
     test_root.mkdir(parents=True)
     return test_root
+
+
+def _structured_resume_markdown() -> str:
+    return """
+# Summary
+
+## Concise
+
+Visible summary.
+
+## Detailed
+
+Visible detailed summary.
+
+## RAG
+
+#### Answer Facts
+
+- Alex builds FastAPI services.
+
+#### Primary Tags
+
+- fastapi
+
+# Entries
+
+## Sample Project
+
+```yaml
+id: sample-project
+section: experience
+startDate: 2024-01
+endDate: present
+title: Sample Project
+```
+
+### Concise
+
+- Visible concise bullet.
+
+### Detailed
+
+- Visible detailed bullet.
+
+### RAG
+
+#### Answer Facts
+
+- Alex delivered API automation.
+
+#### Primary Tags
+
+- api
+
+# Additional Sections
+""".strip()

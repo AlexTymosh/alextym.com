@@ -1,4 +1,4 @@
-# Security and Privacy
+﻿# Security and Privacy
 
 ## Purpose
 
@@ -67,30 +67,25 @@ Only use `NEXT_PUBLIC_*` for values that are genuinely public.
 Current public resume source used for structured RAG extraction:
 
 ```text
-frontend/content/resume.md
+content/public/resume.md
 ```
 
 Generated RAG output:
 
 ```text
-backend/knowledge/resume.generated.chunks.json
+.tmp/rag/resume.generated.chunks.json
 ```
 
 This generated output is ignored by Git and should be regenerated locally / during controlled ingestion.
 
-Legacy public knowledge source:
-
-```text
-backend/knowledge/resume.md
-```
+The old `backend/knowledge/` directory has been removed. Do not add new
+backend-local public knowledge sources.
 
 Ignored private / unreviewed paths:
 
 ```text
 private/
-backend/knowledge/biography_public.md
-backend/knowledge/projects.md
-backend/knowledge/resume.generated.chunks.json
+.tmp/rag/resume.generated.chunks.json
 ```
 
 Do not include:

@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 ## Purpose
 
@@ -70,6 +70,9 @@ Expected structure:
 alextym/
 ├─ private/
 │  └─ knowledge/
+├─ content/
+│  └─ public/
+│     └─ resume.md
 ├─ frontend/
 │  ├─ app/
 │  │  ├─ page.tsx
@@ -89,11 +92,9 @@ alextym/
 │  │  ├─ rag/
 │  │  ├─ llm/
 │  │  └─ core/
-│  ├─ knowledge/
 │  ├─ scripts/
 │  ├─ tests/
 │  ├─ Dockerfile
-│  ├─ .dockerignore
 │  ├─ .env.example
 │  ├─ .python-version
 │  ├─ pyproject.toml
@@ -104,6 +105,7 @@ alextym/
 ├─ AGENTS.md
 ├─ SESSION_NOTES.md
 ├─ Taskfile.yml
+├─ .dockerignore
 └─ .gitignore
 ```
 
@@ -231,14 +233,23 @@ Rules:
 
 Use RAG, not fine-tuning.
 
-Public knowledge files:
+Public RAG source of truth:
 
 ```text
-backend/knowledge/resume.md
+content/public/resume.md
 ```
 
-Current rule: `resume.md` is the only committed public RAG source until additional files are
-explicitly reviewed and approved.
+Current rule: `content/public/resume.md` is the only committed public resume
+and RAG source until additional files are explicitly reviewed and approved.
+Structured `## RAG` / `### RAG` sections in that file are extracted into the
+ignored generated artifact:
+
+```text
+.tmp/rag/resume.generated.chunks.json
+```
+
+The old `backend/knowledge/` folder has been removed. Do not reintroduce
+backend-local public knowledge sources.
 
 Do not index or commit the full private biography, unreviewed biography drafts, or unreviewed
 project notes.
@@ -247,13 +258,6 @@ Use ignored local drafts under:
 
 ```text
 private/knowledge/
-```
-
-The files below are ignored and must not be committed at this stage:
-
-```text
-backend/knowledge/biography_public.md
-backend/knowledge/projects.md
 ```
 
 Do not add health information, private contacts, names of colleagues, friends, managers, or other private/personalized data to GitHub, project files, public knowledge files, or frontend code.
@@ -332,7 +336,7 @@ task rag:ingest
 
 Use `uv` for backend Python dependency management. Do not introduce legacy backend install commands.
 
-After changing reviewed public RAG content in `backend/knowledge/resume.md`, rebuild Qdrant with:
+After changing reviewed public RAG content in `content/public/resume.md`, rebuild Qdrant with:
 
 ```bash
 task rag:ingest

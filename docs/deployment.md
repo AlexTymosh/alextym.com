@@ -1,4 +1,4 @@
-# Deployment
+﻿# Deployment
 
 ## Deployment goal
 
@@ -145,7 +145,7 @@ Render
 Backend root / build context:
 
 ```text
-backend/
+repository root
 ```
 
 Backend must be Docker-ready.
@@ -153,8 +153,9 @@ Backend must be Docker-ready.
 Required files:
 
 ```text
+content/public/resume.md
 backend/Dockerfile
-backend/.dockerignore
+.dockerignore
 backend/pyproject.toml
 backend/uv.lock
 ```
@@ -230,8 +231,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-COPY app ./app
+COPY backend/pyproject.toml backend/uv.lock ./
+COPY backend/app ./app
+COPY content/public /content/public
 
 RUN uv sync --frozen --no-dev
 
@@ -499,11 +501,15 @@ task rag:extract-resume
 task rag:ingest:generated
 ```
 
-Legacy markdown ingestion also exists:
+Compatibility alias:
 
 ```bash
 task rag:ingest
 ```
+
+This alias uses the current generated resume ingestion path. The legacy
+`backend/knowledge/` has been removed and must not be reintroduced as a public
+knowledge source.
 
 ---
 
@@ -593,6 +599,9 @@ Vercel:
 
 - [ ] Connect GitHub repository.
 - [ ] Use `frontend/` as project root.
+- [ ] Verify the frontend build can read root-level `content/public/resume.md`.
+      If the platform isolates the frontend root, switch to a repository-root
+      build with frontend install/build commands.
 - [ ] Add custom domain.
 - [ ] Verify `/`, `/resume`, `/chat`, `/contact`.
 - [ ] Verify `/resume/download`.
@@ -601,7 +610,7 @@ Vercel:
 
 Render:
 
-- [ ] Deploy backend Docker image from `backend/`.
+- [ ] Deploy backend Docker image from the repository root using `backend/Dockerfile`.
 - [ ] Configure backend environment variables.
 - [ ] Verify `/api/health/live`.
 - [ ] Verify `/api/health/ready`.

@@ -11,8 +11,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-COPY app ./app
+COPY backend/pyproject.toml backend/uv.lock ./
+COPY backend/app ./app
+COPY content/public /content/public
 
 RUN uv sync --frozen --no-dev
 

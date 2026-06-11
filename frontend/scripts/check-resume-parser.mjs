@@ -11,8 +11,7 @@ import { fileURLToPath } from "node:url";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIR, "..", "..");
 const RESUME_PATHS = [
-  join(REPOSITORY_ROOT, "content", "resume.md"),
-  join(REPOSITORY_ROOT, "frontend", "content", "resume.md"),
+  join(REPOSITORY_ROOT, "content", "public", "resume.md"),
 ];
 
 const SUMMARY_RAG_MARKER = "## RAG";
