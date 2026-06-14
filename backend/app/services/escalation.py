@@ -3,6 +3,7 @@ import json
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from datetime import UTC, datetime
+from html import escape
 from typing import Any, Protocol
 
 from app.core.config import Settings
@@ -101,7 +102,8 @@ class TelegramEscalationNotifier:
                     _build_telegram_control_message(
                         escalation_request,
                         handoff_id=handoff_id,
-                    )
+                    ),
+                    parse_mode="HTML",
                 )
                 await self._telegram_client.send_text_document(
                     _build_telegram_transcript_message(
@@ -382,34 +384,52 @@ def _build_telegram_control_message(
     handoff_id: str,
 ) -> str:
     created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    created_date, created_time, created_offset = _split_iso_datetime(created_at)
     last_user_message = _last_user_message(escalation_request)
     lines = [
-        "New handoff request from alextym.com",
-        f"Created at: {created_at}",
-        f"Reason: {escalation_request.reason}",
-        f"Handoff ID: {handoff_id}",
-        f"State: {ESCALATION_SESSION_STATE_WAITING_FOR_ALEX}",
-        f"Messages: {len(escalation_request.transcript)}",
+        "<b>🚨 New handoff request — alextym.com</b>",
+        "",
+        "<b>Last user message</b>",
+        f"<blockquote>{_html_escape(_clip_control_text(last_user_message))}</blockquote>",
+        "",
+        "<b>Created at</b>",
+        f"<code>{_html_escape(created_date)}</code>",
+        f"<b>{_html_escape(created_time)}</b> {_html_escape(created_offset)}",
+        "",
+        f"<b>AI messages before handoff:</b> {_assistant_message_count(escalation_request)}",
+        f"<b>Status:</b> {_telegram_status_label(ESCALATION_SESSION_STATE_WAITING_FOR_ALEX)}",
     ]
 
-    if last_user_message:
+    if _should_show_handoff_reason(escalation_request.reason):
         lines.extend(
             [
                 "",
-                "Last user message:",
-                _clip_control_text(last_user_message),
+                f"<b>Reason:</b> <code>{_html_escape(escalation_request.reason)}</code>",
             ]
         )
 
     lines.extend(
         [
             "",
-            "Reply to this message to answer the website chat.",
+            f"<code>Ref: {_html_escape(handoff_id)}</code>",
+            "",
+            "Reply to this Telegram message to answer the website chat.",
             "The full transcript is attached as a text file.",
-            f"Use /close {handoff_id} to close the handoff.",
+            f"Fallback close command: <code>/close {_html_escape(handoff_id)}</code>",
         ]
     )
     return "\n".join(lines)
+
+
+def _split_iso_datetime(value: str) -> tuple[str, str, str]:
+    created_date, _, time_with_offset = value.partition("T")
+    if "+" in time_with_offset:
+        created_time, raw_offset = time_with_offset.split("+", 1)
+        return created_date, created_time, f"+{raw_offset}"
+    if "-" in time_with_offset[1:]:
+        created_time, raw_offset = time_with_offset.rsplit("-", 1)
+        return created_date, created_time, f"-{raw_offset}"
+    return created_date, time_with_offset, "UTC"
 
 
 def _build_telegram_transcript_message(
@@ -461,11 +481,31 @@ def _build_telegram_user_message_notification(
     )
 
 
+def _assistant_message_count(escalation_request: EscalationRequest) -> int:
+    return sum(1 for item in escalation_request.transcript if item.role == "assistant")
+
+
+def _should_show_handoff_reason(reason: str) -> bool:
+    return reason != "user_requested_human"
+
+
+def _telegram_status_label(state: str) -> str:
+    if state == ESCALATION_SESSION_STATE_WAITING_FOR_ALEX:
+        return "🔴 Waiting for first operator reply"
+    if state == ESCALATION_SESSION_STATE_CLOSED:
+        return "🟢 Closed"
+    return _html_escape(state)
+
+
 def _last_user_message(escalation_request: EscalationRequest) -> str:
     for item in reversed(escalation_request.transcript):
         if item.role == "user":
             return item.content
     return ""
+
+
+def _html_escape(text: str) -> str:
+    return escape(text or "No user message found.", quote=False)
 
 
 def _clip_control_text(text: str, max_chars: int = 500) -> str:

@@ -32,6 +32,28 @@ async def test_send_message_uses_send_message_for_short_text(monkeypatch) -> Non
 
 
 @pytest.mark.anyio
+async def test_send_message_includes_parse_mode_when_requested(monkeypatch) -> None:
+    fake_urlopen = FakeUrlopen()
+    monkeypatch.setattr(telegram_module, "urlopen", fake_urlopen)
+
+    client = TelegramBotClient(bot_token="token", chat_id="123")
+
+    await client.send_message("<b>Hello</b>", parse_mode="HTML")
+
+    assert len(fake_urlopen.requests) == 1
+    request = fake_urlopen.requests[0].request
+    assert request.full_url == TELEGRAM_SEND_MESSAGE_URL.format(token="token")
+
+    payload = json.loads(request.data.decode("utf-8"))
+    assert payload == {
+        "chat_id": "123",
+        "text": "<b>Hello</b>",
+        "disable_web_page_preview": True,
+        "parse_mode": "HTML",
+    }
+
+
+@pytest.mark.anyio
 async def test_long_message_is_sent_as_document(monkeypatch) -> None:
     fake_urlopen = FakeUrlopen()
     monkeypatch.setattr(telegram_module, "urlopen", fake_urlopen)

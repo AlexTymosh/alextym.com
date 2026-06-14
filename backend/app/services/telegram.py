@@ -30,9 +30,9 @@ class TelegramBotClient:
         self._chat_id = chat_id
         self._timeout_seconds = timeout_seconds
 
-    async def send_message(self, text: str) -> None:
+    async def send_message(self, text: str, *, parse_mode: str | None = None) -> None:
         if len(text) <= TELEGRAM_MESSAGE_MAX_CHARS:
-            await run_in_threadpool(self._send_message_sync, text)
+            await run_in_threadpool(self._send_message_sync, text, parse_mode)
             return
 
         await self.send_text_document(
@@ -47,14 +47,16 @@ class TelegramBotClient:
             filename,
         )
 
-    def _send_message_sync(self, text: str) -> None:
-        payload = json.dumps(
-            {
-                "chat_id": self._chat_id,
-                "text": text,
-                "disable_web_page_preview": True,
-            }
-        ).encode("utf-8")
+    def _send_message_sync(self, text: str, parse_mode: str | None = None) -> None:
+        payload_data = {
+            "chat_id": self._chat_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }
+        if parse_mode:
+            payload_data["parse_mode"] = parse_mode
+
+        payload = json.dumps(payload_data).encode("utf-8")
         request = Request(
             TELEGRAM_SEND_MESSAGE_URL.format(token=self._bot_token),
             data=payload,

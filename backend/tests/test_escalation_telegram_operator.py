@@ -14,9 +14,10 @@ async def test_handoff_notification_sends_control_message_first() -> None:
     await notifier.notify(_escalation_request(), handoff_id=TEST_HANDOFF_ID)
 
     assert telegram_client.calls[0]["type"] == "message"
-    assert "New handoff request from alextym.com" in telegram_client.calls[0]["text"]
-    assert f"Handoff ID: {TEST_HANDOFF_ID}" in telegram_client.calls[0]["text"]
-    assert "Reply to this message" in telegram_client.calls[0]["text"]
+    assert telegram_client.calls[0]["parse_mode"] == "HTML"
+    assert "<b>🚨 New handoff request — alextym.com</b>" in telegram_client.calls[0]["text"]
+    assert f"<code>Ref: {TEST_HANDOFF_ID}</code>" in telegram_client.calls[0]["text"]
+    assert "Reply to this Telegram message" in telegram_client.calls[0]["text"]
     assert "The full transcript is attached as a text file." in (telegram_client.calls[0]["text"])
 
 
@@ -33,10 +34,10 @@ async def test_handoff_notification_sends_transcript_as_document() -> None:
         "text": telegram_client.calls[1]["text"],
     }
     assert "Handoff transcript from alextym.com" in telegram_client.calls[1]["text"]
-    assert "User: Can I speak to Alex?" in telegram_client.calls[1]["text"]
+    assert "User: Can I speak to the site owner?" in telegram_client.calls[1]["text"]
     assert (
-        "Assistant: Would you like me to connect you with Alex?"
-        in (telegram_client.calls[1]["text"])
+        "Assistant: Would you like me to connect you with the site owner?"
+        in telegram_client.calls[1]["text"]
     )
 
 
@@ -48,17 +49,40 @@ async def test_handoff_control_message_includes_operator_summary() -> None:
     await notifier.notify(_escalation_request(), handoff_id=TEST_HANDOFF_ID)
 
     control_message = telegram_client.calls[0]["text"]
-    assert "Messages: 2" in control_message
-    assert "Last user message:" in control_message
-    assert "Can I speak to Alex?" in control_message
+    assert "<b>AI messages before handoff:</b> 1" in control_message
+    assert "<b>Last user message</b>" in control_message
+    assert "<blockquote>Can I speak to the site owner?</blockquote>" in control_message
+    assert "Reason:" not in control_message
+    assert "Handoff ID:" not in control_message
+    assert "State:" not in control_message
+
+
+@pytest.mark.anyio
+async def test_handoff_control_message_escapes_user_text_for_telegram_html() -> None:
+    telegram_client = FakeTelegramClient()
+    notifier = TelegramEscalationNotifier(telegram_client=telegram_client)
+
+    await notifier.notify(
+        _escalation_request(user_message="Can <b>owner</b> read this & reply?"),
+        handoff_id=TEST_HANDOFF_ID,
+    )
+
+    control_message = telegram_client.calls[0]["text"]
+    assert "Can &lt;b&gt;owner&lt;/b&gt; read this &amp; reply?" in control_message
+    assert "Can <b>owner</b> read this & reply?" not in control_message
 
 
 class FakeTelegramClient:
     def __init__(self) -> None:
         self.calls: list[dict[str, str]] = []
 
-    async def send_message(self, text: str) -> None:
-        self.calls.append({"type": "message", "text": text})
+    async def send_message(
+        self,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+    ) -> None:
+        self.calls.append({"type": "message", "text": text, "parse_mode": parse_mode or ""})
 
     async def send_text_document(self, text: str, *, filename: str) -> None:
         self.calls.append(
@@ -70,18 +94,21 @@ class FakeTelegramClient:
         )
 
 
-def _escalation_request() -> EscalationRequest:
+def _escalation_request(
+    *,
+    user_message: str = "Can I speak to the site owner?",
+) -> EscalationRequest:
     return EscalationRequest(
         consent_accepted=True,
         reason="user_requested_human",
         transcript=[
             {
                 "role": "user",
-                "content": "Can I speak to Alex?",
+                "content": user_message,
             },
             {
                 "role": "assistant",
-                "content": "Would you like me to connect you with Alex?",
+                "content": "Would you like me to connect you with the site owner?",
             },
         ],
         company_website="",
