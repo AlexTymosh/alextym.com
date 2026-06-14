@@ -157,6 +157,14 @@ The website has a separate resume page with an interactive filter:
 - section filter: `Experience`, `Education`, `Training`;
 - dynamic CV download link based on the selected detail level and sections.
 
+### 🧾 Unlisted portfolio case study
+
+The website also includes an unlisted portfolio case-study page for direct sharing:
+
+- `/case-studies/netflix-catalogue-analysis`
+
+The page is not part of the main navigation and is marked as `noindex`. It should be removed or replaced with the owner’s own case study and PDF files before reusing the template.
+
 ### ▶️ Embedded YouTube demo
 
 The home page includes an embedded YouTube player through `youtube-nocookie.com`.
@@ -656,6 +664,7 @@ Important note: the codebase intentionally includes public developer-profile con
 - rebuild RAG chunks and re-index Qdrant;
 - review SEO metadata, OpenGraph tags, JSON-LD, keywords and page descriptions;
 - check that the positioning matches your target roles and does not accidentally advertise the wrong skills;
-- remove or replace personal links, profile images, YouTube video IDs and public CV files.
+- remove or replace personal links, profile images, YouTube video IDs and public CV files;
+- remove or replace unlisted case-study routes and related PDF files.
 
 In short: the software is reusable under MIT, but the personal biography/resume/SEO content should be replaced before reuse.
