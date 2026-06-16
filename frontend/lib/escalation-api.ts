@@ -8,6 +8,9 @@ import type {
 } from "../types/chat";
 import { createMessageId } from "./chat-state";
 
+const BROWSER_BACKEND_ORIGIN =
+  process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.replace(/\/$/, "") ?? "";
+
 export class EscalationApiError extends Error {
   readonly status: number;
   readonly code: string | null;
@@ -120,6 +123,11 @@ export async function submitEscalationClose(
   return (await response.json()) as EscalationCloseResponse;
 }
 
+export function buildEscalationStreamUrl(handoffId: string): string {
+  const streamPath = `/api/escalations/${encodeURIComponent(handoffId)}/stream`;
+  return BROWSER_BACKEND_ORIGIN ? `${BROWSER_BACKEND_ORIGIN}${streamPath}` : streamPath;
+}
+
 export function parseEscalationStreamMessage(
   event: Event,
 ): { id: string; content: string } | null {
@@ -128,7 +136,12 @@ export function parseEscalationStreamMessage(
   }
 
   const payload = safeParseJson(event.data) as EscalationStreamMessage | null;
-  if (!payload || payload.role !== "alex") {
+  if (!payload) {
+    return null;
+  }
+
+  const role = typeof payload.role === "string" ? payload.role.toLowerCase() : "";
+  if (role === "user" || role === "visitor") {
     return null;
   }
 

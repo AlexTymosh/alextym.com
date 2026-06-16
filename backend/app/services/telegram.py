@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 TELEGRAM_SEND_MESSAGE_URL = "https://api.telegram.org/bot{token}/sendMessage"
 TELEGRAM_SEND_DOCUMENT_URL = "https://api.telegram.org/bot{token}/sendDocument"
+TELEGRAM_ANSWER_CALLBACK_QUERY_URL = "https://api.telegram.org/bot{token}/answerCallbackQuery"
 TELEGRAM_MESSAGE_MAX_CHARS = 4096
 TELEGRAM_TEXT_DOCUMENT_FILENAME = "telegram-message.txt"
 HANDOFF_ID_PATTERN = re.compile(r"\b(hnd_[a-f0-9]{32})\b", re.IGNORECASE)
@@ -30,9 +31,20 @@ class TelegramBotClient:
         self._chat_id = chat_id
         self._timeout_seconds = timeout_seconds
 
-    async def send_message(self, text: str) -> None:
+    async def send_message(
+        self,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+        reply_markup: dict[str, Any] | None = None,
+    ) -> None:
         if len(text) <= TELEGRAM_MESSAGE_MAX_CHARS:
-            await run_in_threadpool(self._send_message_sync, text)
+            await run_in_threadpool(
+                self._send_message_sync,
+                text,
+                parse_mode,
+                reply_markup,
+            )
             return
 
         await self.send_text_document(
@@ -47,14 +59,37 @@ class TelegramBotClient:
             filename,
         )
 
-    def _send_message_sync(self, text: str) -> None:
-        payload = json.dumps(
-            {
-                "chat_id": self._chat_id,
-                "text": text,
-                "disable_web_page_preview": True,
-            }
-        ).encode("utf-8")
+    async def answer_callback_query(
+        self,
+        callback_query_id: str,
+        *,
+        text: str | None = None,
+        show_alert: bool = False,
+    ) -> None:
+        await run_in_threadpool(
+            self._answer_callback_query_sync,
+            callback_query_id,
+            text,
+            show_alert,
+        )
+
+    def _send_message_sync(
+        self,
+        text: str,
+        parse_mode: str | None = None,
+        reply_markup: dict[str, Any] | None = None,
+    ) -> None:
+        payload_data: dict[str, Any] = {
+            "chat_id": self._chat_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }
+        if parse_mode:
+            payload_data["parse_mode"] = parse_mode
+        if reply_markup is not None:
+            payload_data["reply_markup"] = reply_markup
+
+        payload = json.dumps(payload_data).encode("utf-8")
         request = Request(
             TELEGRAM_SEND_MESSAGE_URL.format(token=self._bot_token),
             data=payload,
@@ -82,6 +117,28 @@ class TelegramBotClient:
             TELEGRAM_SEND_DOCUMENT_URL.format(token=self._bot_token),
             data=body,
             headers={"Content-Type": content_type},
+            method="POST",
+        )
+        self._execute_request(request)
+
+    def _answer_callback_query_sync(
+        self,
+        callback_query_id: str,
+        text: str | None = None,
+        show_alert: bool = False,
+    ) -> None:
+        payload_data: dict[str, Any] = {
+            "callback_query_id": callback_query_id,
+            "show_alert": show_alert,
+        }
+        if text:
+            payload_data["text"] = text[:200]
+
+        payload = json.dumps(payload_data).encode("utf-8")
+        request = Request(
+            TELEGRAM_ANSWER_CALLBACK_QUERY_URL.format(token=self._bot_token),
+            data=payload,
+            headers={"Content-Type": "application/json"},
             method="POST",
         )
         self._execute_request(request)

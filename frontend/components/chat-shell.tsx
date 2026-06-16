@@ -12,6 +12,7 @@ import { useAnimatedLabel } from "../hooks/use-animated-label";
 import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
 import {
   EscalationApiError,
+  buildEscalationStreamUrl,
   closeEscalationStream,
   isHandoffUnavailableError,
   normaliseHandoffState,
@@ -653,9 +654,7 @@ export function ChatShell() {
   function openEscalationStream(nextHandoffId: string) {
     closeEscalationStream(escalationEventSourceRef);
 
-    const eventSource = new EventSource(
-      `/api/escalations/${encodeURIComponent(nextHandoffId)}/stream`,
-    );
+    const eventSource = new EventSource(buildEscalationStreamUrl(nextHandoffId));
     escalationEventSourceRef.current = eventSource;
 
     eventSource.addEventListener("meta", () => {

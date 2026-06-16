@@ -10,7 +10,13 @@ from app.services.escalation_sessions import (
     EscalationSessionRecord,
     EscalationSessionStoreError,
 )
-from app.services.telegram_webhook import TelegramWebhookService
+from app.services.telegram_webhook import (
+    CLOSE_HANDOFF_REPLY,
+    CONTACT_QUICK_REPLY,
+    READING_QUICK_REPLY,
+    STILL_THERE_QUICK_REPLY,
+    TelegramWebhookService,
+)
 
 client = TestClient(app)
 
@@ -76,7 +82,7 @@ def test_telegram_webhook_closes_handoff_with_reply_command() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
-    assert store.closed_handoff_ids == [TEST_HANDOFF_ID]
+    assert store.closed_handoff_ids == [(TEST_HANDOFF_ID, None)]
     assert store.appended_messages == []
 
 
@@ -93,7 +99,176 @@ def test_telegram_webhook_closes_handoff_with_inline_command_id() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
-    assert store.closed_handoff_ids == [TEST_HANDOFF_ID]
+    assert store.closed_handoff_ids == [(TEST_HANDOFF_ID, None)]
+
+
+def test_telegram_webhook_sends_reading_quick_reply_from_callback() -> None:
+    store = FakeEscalationSessionStore()
+    callback_acknowledger = FakeCallbackAcknowledger()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store, callback_acknowledger=callback_acknowledger)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_callback_update(f"handoff:reading:{TEST_HANDOFF_ID}"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.appended_messages == [(TEST_HANDOFF_ID, READING_QUICK_REPLY)]
+    assert callback_acknowledger.callback_answers == [
+        ("callback-1", "Sent to the website chat.", False)
+    ]
+    assert callback_acknowledger.sent_messages == [
+        (
+            "✅ <b>Sent to website chat</b>\n\n"
+            f"<blockquote>{READING_QUICK_REPLY}</blockquote>\n\n"
+            f"<code>Ref: {TEST_HANDOFF_ID}</code>",
+            "HTML",
+            None,
+        )
+    ]
+
+
+def test_telegram_webhook_sends_contact_quick_reply_from_callback() -> None:
+    store = FakeEscalationSessionStore()
+    callback_acknowledger = FakeCallbackAcknowledger()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store, callback_acknowledger=callback_acknowledger)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_callback_update(f"handoff:contact:{TEST_HANDOFF_ID}"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.appended_messages == [(TEST_HANDOFF_ID, CONTACT_QUICK_REPLY)]
+    assert callback_acknowledger.callback_answers == [
+        ("callback-1", "Sent to the website chat.", False)
+    ]
+    assert callback_acknowledger.sent_messages == [
+        (
+            "✅ <b>Sent to website chat</b>\n\n"
+            f"<blockquote>{CONTACT_QUICK_REPLY}</blockquote>\n\n"
+            f"<code>Ref: {TEST_HANDOFF_ID}</code>",
+            "HTML",
+            None,
+        )
+    ]
+
+
+def test_telegram_webhook_sends_still_there_quick_reply_from_callback() -> None:
+    store = FakeEscalationSessionStore()
+    callback_acknowledger = FakeCallbackAcknowledger()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store, callback_acknowledger=callback_acknowledger)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_callback_update(f"handoff:still:{TEST_HANDOFF_ID}"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.appended_messages == [(TEST_HANDOFF_ID, STILL_THERE_QUICK_REPLY)]
+    assert callback_acknowledger.callback_answers == [
+        ("callback-1", "Sent to the website chat.", False)
+    ]
+    assert callback_acknowledger.sent_messages == [
+        (
+            "✅ <b>Sent to website chat</b>\n\n"
+            f"<blockquote>{STILL_THERE_QUICK_REPLY}</blockquote>\n\n"
+            f"<code>Ref: {TEST_HANDOFF_ID}</code>",
+            "HTML",
+            None,
+        )
+    ]
+
+
+def test_telegram_webhook_closes_handoff_from_callback_with_user_message() -> None:
+    store = FakeEscalationSessionStore()
+    callback_acknowledger = FakeCallbackAcknowledger()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store, callback_acknowledger=callback_acknowledger)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_callback_update(f"handoff:close:{TEST_HANDOFF_ID}"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.closed_handoff_ids == [(TEST_HANDOFF_ID, CLOSE_HANDOFF_REPLY)]
+    assert callback_acknowledger.callback_answers == [
+        ("callback-1", "Closed and notified the website visitor.", False)
+    ]
+    assert callback_acknowledger.sent_messages == [
+        (
+            "✅ <b>Handoff closed</b>\n\n"
+            "The website visitor was notified that the conversation was closed.\n\n"
+            f"<code>Ref: {TEST_HANDOFF_ID}</code>",
+            "HTML",
+            None,
+        )
+    ]
+
+
+def test_telegram_webhook_reply_callback_opens_force_reply_prompt() -> None:
+    store = FakeEscalationSessionStore()
+    callback_acknowledger = FakeCallbackAcknowledger()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store, callback_acknowledger=callback_acknowledger)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_callback_update(f"handoff:reply:{TEST_HANDOFF_ID}"),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
+    assert store.appended_messages == []
+    assert store.closed_handoff_ids == []
+    assert callback_acknowledger.callback_answers == [
+        ("callback-1", "Manual reply mode opened.", False)
+    ]
+    assert callback_acknowledger.sent_messages == [
+        (
+            "✍️ <b>Manual reply</b>\n\n"
+            "Reply to this message with your custom answer.\n"
+            "Your reply will be sent to the website chat.\n\n"
+            f"<code>Ref: {TEST_HANDOFF_ID}</code>",
+            "HTML",
+            {
+                "force_reply": True,
+                "selective": True,
+                "input_field_placeholder": "Type the website chat reply here...",
+            },
+        )
+    ]
+
+
+def test_telegram_webhook_ignores_non_owner_callback() -> None:
+    store = FakeEscalationSessionStore()
+    callback_acknowledger = FakeCallbackAcknowledger()
+    app.dependency_overrides[get_settings] = lambda: _settings()
+    _use_webhook_service(store, callback_acknowledger=callback_acknowledger)
+
+    response = client.post(
+        "/api/telegram/webhook",
+        json=_callback_update(f"handoff:reading:{TEST_HANDOFF_ID}", chat_id=987654321),
+        headers={"X-Telegram-Bot-Api-Secret-Token": TEST_SECRET},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ignored"}
+    assert store.appended_messages == []
+    assert callback_acknowledger.callback_answers == []
 
 
 def test_telegram_webhook_ignores_unknown_command() -> None:
@@ -184,10 +359,30 @@ def _valid_update(
     return {"update_id": 1, "message": message}
 
 
+def _callback_update(
+    callback_data: str,
+    *,
+    chat_id: int = 123456789,
+) -> dict[str, object]:
+    return {
+        "update_id": 1,
+        "callback_query": {
+            "id": "callback-1",
+            "from": {"id": chat_id, "is_bot": False, "first_name": "Owner"},
+            "message": {
+                "message_id": 100,
+                "chat": {"id": chat_id, "type": "private"},
+                "text": f"New handoff request from alextym.com\nRef: {TEST_HANDOFF_ID}",
+            },
+            "data": callback_data,
+        },
+    }
+
+
 class FakeEscalationSessionStore:
     def __init__(self) -> None:
         self.appended_messages: list[tuple[str, str]] = []
-        self.closed_handoff_ids: list[str] = []
+        self.closed_handoff_ids: list[tuple[str, str | None]] = []
 
     async def append_alex_message(
         self,
@@ -211,14 +406,30 @@ class FakeEscalationSessionStore:
             ],
         )
 
-    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
-        self.closed_handoff_ids.append(handoff_id)
+    async def close(
+        self,
+        handoff_id: str,
+        *,
+        close_message: str | None = None,
+    ) -> EscalationSessionRecord | None:
+        self.closed_handoff_ids.append((handoff_id, close_message))
+        messages = []
+        if close_message:
+            messages.append(
+                {
+                    "id": "msg_closed",
+                    "role": "alex",
+                    "content": close_message,
+                    "created_at": "2026-01-01T00:01:00+00:00",
+                }
+            )
         return EscalationSessionRecord(
             handoff_id=handoff_id,
             state=ESCALATION_SESSION_STATE_CLOSED,
             created_at="2026-01-01T00:00:00+00:00",
             expires_at="2026-01-01T02:00:00+00:00",
             transcript=[],
+            messages=messages,
         )
 
 
@@ -230,14 +441,48 @@ class FailingEscalationSessionStore:
     ) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("redis failed")
 
-    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+    async def close(
+        self,
+        handoff_id: str,
+        *,
+        close_message: str | None = None,
+    ) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("redis failed")
 
 
-def _use_webhook_service(store) -> None:
+class FakeCallbackAcknowledger:
+    def __init__(self) -> None:
+        self.callback_answers: list[tuple[str, str | None, bool]] = []
+        self.sent_messages: list[tuple[str, str | None, dict[str, object] | None]] = []
+
+    async def answer_callback_query(
+        self,
+        callback_query_id: str,
+        *,
+        text: str | None = None,
+        show_alert: bool = False,
+    ) -> None:
+        self.callback_answers.append((callback_query_id, text, show_alert))
+
+    async def send_message(
+        self,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+        reply_markup: dict[str, object] | None = None,
+    ) -> None:
+        self.sent_messages.append((text, parse_mode, reply_markup))
+
+
+def _use_webhook_service(
+    store,
+    *,
+    callback_acknowledger: FakeCallbackAcknowledger | None = None,
+) -> None:
     app.dependency_overrides[get_telegram_webhook_service] = lambda: TelegramWebhookService(
         owner_chat_id="123456789",
         session_store=store,
+        callback_acknowledger=callback_acknowledger or FakeCallbackAcknowledger(),
     )
 
 

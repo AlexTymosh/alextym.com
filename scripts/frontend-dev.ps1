@@ -6,5 +6,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 $env:BACKEND_ORIGIN = "http://127.0.0.1:$BackendPort"
-npm run dev -- -H 127.0.0.1 -p $FrontendPort
+$env:NEXT_PUBLIC_BACKEND_ORIGIN = "http://127.0.0.1:$BackendPort"
 
+npm run dev -- -H 127.0.0.1 -p $FrontendPort
