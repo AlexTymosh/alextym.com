@@ -29,6 +29,17 @@ from app.services.handoff_availability import (
 )
 from app.services.telegram import TelegramBotClient, TelegramDeliveryError
 
+READING_QUICK_REPLY = "Hi, I’m connected now and reading your request. Please give me a moment."
+CONTACT_QUICK_REPLY = (
+    "Hi, I’m connected now, but I’m sorry, I’m short on time at the moment. "
+    "Is your question urgent, or can we continue in 20–30 minutes?"
+)
+STILL_THERE_QUICK_REPLY = "Are you still there? I’m ready to continue when you are."
+CLOSE_HANDOFF_REPLY = (
+    "This conversation has been closed. "
+    "You can request a new connection with the site owner if needed."
+)
+
 
 class EscalationConfigurationError(Exception):
     pass
@@ -90,6 +101,18 @@ class TelegramEscalationNotifier:
     def __init__(self, *, telegram_client: TelegramBotClient) -> None:
         self._telegram_client = telegram_client
 
+    async def _send_operator_control_message(
+        self,
+        text: str,
+        *,
+        handoff_id: str,
+    ) -> None:
+        await self._telegram_client.send_message(
+            text,
+            parse_mode="HTML",
+            reply_markup=_build_telegram_handoff_reply_markup(handoff_id),
+        )
+
     async def notify(
         self,
         escalation_request: EscalationRequest,
@@ -98,12 +121,12 @@ class TelegramEscalationNotifier:
     ) -> None:
         try:
             if handoff_id:
-                await self._telegram_client.send_message(
+                await self._send_operator_control_message(
                     _build_telegram_control_message(
                         escalation_request,
                         handoff_id=handoff_id,
                     ),
-                    parse_mode="HTML",
+                    handoff_id=handoff_id,
                 )
                 await self._telegram_client.send_text_document(
                     _build_telegram_transcript_message(
@@ -132,11 +155,12 @@ class TelegramEscalationNotifier:
         handoff_id: str,
     ) -> None:
         try:
-            await self._telegram_client.send_message(
+            await self._send_operator_control_message(
                 _build_telegram_user_message_notification(
                     message_request,
                     handoff_id=handoff_id,
-                )
+                ),
+                handoff_id=handoff_id,
             )
         except TelegramDeliveryError as exc:
             raise EscalationDeliveryError(
@@ -295,9 +319,6 @@ class EscalationService:
             if initial_record is None or _is_expired(initial_record):
                 yield self.sse_event("closed", {"reason": "session_expired"})
                 return
-            if initial_record.state == ESCALATION_SESSION_STATE_CLOSED:
-                yield self.sse_event("closed", {"reason": "session_closed"})
-                return
             seen_message_ids.update(_message_ids_through(initial_record, after_message_id))
 
         yield self.sse_event("meta", {"handoff_id": handoff_id, "status": "connected"})
@@ -311,16 +332,16 @@ class EscalationService:
             if session_record is None or _is_expired(session_record):
                 yield self.sse_event("closed", {"reason": "session_expired"})
                 return
-            if session_record.state == ESCALATION_SESSION_STATE_CLOSED:
-                yield self.sse_event("closed", {"reason": "session_closed"})
-                return
-
             for message in session_record.messages:
                 message_id = message.get("id", "")
                 if not message_id or message_id in seen_message_ids:
                     continue
                 seen_message_ids.add(message_id)
                 yield self.sse_event("message", message, event_id=message_id)
+
+            if session_record.state == ESCALATION_SESSION_STATE_CLOSED:
+                yield self.sse_event("closed", {"reason": "session_closed"})
+                return
 
             current_time = asyncio.get_running_loop().time()
             if current_time >= next_heartbeat_at:
@@ -412,13 +433,44 @@ def _build_telegram_control_message(
         [
             "",
             f"<code>Ref: {_html_escape(handoff_id)}</code>",
-            "",
-            "Reply to this Telegram message to answer the website chat.",
-            "The full transcript is attached as a text file.",
-            f"Fallback close command: <code>/close {_html_escape(handoff_id)}</code>",
         ]
     )
     return "\n".join(lines)
+
+
+def _build_telegram_handoff_reply_markup(handoff_id: str) -> dict[str, Any]:
+    return {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "✍️ Reply manually with custom text",
+                    "callback_data": f"handoff:reply:{handoff_id}",
+                },
+                {
+                    "text": "✅ Close + notify visitor",
+                    "callback_data": f"handoff:close:{handoff_id}",
+                },
+            ],
+            [
+                {
+                    "text": "👋 Send: “Hi, I’m connected now and reading...”",
+                    "callback_data": f"handoff:reading:{handoff_id}",
+                },
+            ],
+            [
+                {
+                    "text": "⏳ Send: “Hi, I’m connected, but I’m sorry...”",
+                    "callback_data": f"handoff:contact:{handoff_id}",
+                },
+            ],
+            [
+                {
+                    "text": "❓ Send: “Are you still there? I’m ready...”",
+                    "callback_data": f"handoff:still:{handoff_id}",
+                },
+            ],
+        ]
+    }
 
 
 def _split_iso_datetime(value: str) -> tuple[str, str, str]:
@@ -470,13 +522,19 @@ def _build_telegram_user_message_notification(
     handoff_id: str,
 ) -> str:
     created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
-    return "\n\n".join(
+    return "\n".join(
         [
-            "New visitor message from alextym.com",
-            f"Created at: {created_at}\nHandoff ID: {handoff_id}",
-            f"User: {message_request.content}",
-            "Reply to this Telegram message to send your answer back to the chat.",
-            f"Use /close {handoff_id} to close the handoff.",
+            "💬 <b>New visitor message</b> — alextym.com",
+            "",
+            "<b>Created at</b>",
+            f"<code>{_html_escape(created_at)}</code>",
+            "",
+            "<b>User message</b>",
+            f"<blockquote>{_html_escape(_clip_control_text(message_request.content))}</blockquote>",
+            "",
+            f"<b>Ref:</b> <code>{_html_escape(handoff_id)}</code>",
+            "",
+            "Reply to this Telegram message to send your answer back to the website chat.",
         ]
     )
 

@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from app.schemas.escalation import EscalationRequest
@@ -17,8 +19,56 @@ async def test_handoff_notification_sends_control_message_first() -> None:
     assert telegram_client.calls[0]["parse_mode"] == "HTML"
     assert "<b>🚨 New handoff request — alextym.com</b>" in telegram_client.calls[0]["text"]
     assert f"<code>Ref: {TEST_HANDOFF_ID}</code>" in telegram_client.calls[0]["text"]
-    assert "Reply to this Telegram message" in telegram_client.calls[0]["text"]
-    assert "The full transcript is attached as a text file." in (telegram_client.calls[0]["text"])
+    assert "<b>Button actions</b>" not in telegram_client.calls[0]["text"]
+    assert (
+        "Use the buttons below for quick operator actions."
+        not in (telegram_client.calls[0]["text"])
+    )
+    assert (
+        "The full transcript is attached as a text file." not in (telegram_client.calls[0]["text"])
+    )
+    assert "Fallback close command:" not in telegram_client.calls[0]["text"]
+
+
+@pytest.mark.anyio
+async def test_handoff_notification_adds_inline_operator_actions() -> None:
+    telegram_client = FakeTelegramClient()
+    notifier = TelegramEscalationNotifier(telegram_client=telegram_client)
+
+    await notifier.notify(_escalation_request(), handoff_id=TEST_HANDOFF_ID)
+
+    assert telegram_client.calls[0]["reply_markup"] == {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "✍️ Reply manually with custom text",
+                    "callback_data": f"handoff:reply:{TEST_HANDOFF_ID}",
+                },
+                {
+                    "text": "✅ Close + notify visitor",
+                    "callback_data": f"handoff:close:{TEST_HANDOFF_ID}",
+                },
+            ],
+            [
+                {
+                    "text": "👋 Send: “Hi, I’m connected now and reading...”",
+                    "callback_data": f"handoff:reading:{TEST_HANDOFF_ID}",
+                },
+            ],
+            [
+                {
+                    "text": "⏳ Send: “Hi, I’m connected, but I’m sorry...”",
+                    "callback_data": f"handoff:contact:{TEST_HANDOFF_ID}",
+                },
+            ],
+            [
+                {
+                    "text": "❓ Send: “Are you still there? I’m ready...”",
+                    "callback_data": f"handoff:still:{TEST_HANDOFF_ID}",
+                },
+            ],
+        ]
+    }
 
 
 @pytest.mark.anyio
@@ -74,15 +124,23 @@ async def test_handoff_control_message_escapes_user_text_for_telegram_html() -> 
 
 class FakeTelegramClient:
     def __init__(self) -> None:
-        self.calls: list[dict[str, str]] = []
+        self.calls: list[dict[str, Any]] = []
 
     async def send_message(
         self,
         text: str,
         *,
         parse_mode: str | None = None,
+        reply_markup: dict[str, Any] | None = None,
     ) -> None:
-        self.calls.append({"type": "message", "text": text, "parse_mode": parse_mode or ""})
+        self.calls.append(
+            {
+                "type": "message",
+                "text": text,
+                "parse_mode": parse_mode or "",
+                "reply_markup": reply_markup,
+            }
+        )
 
     async def send_text_document(self, text: str, *, filename: str) -> None:
         self.calls.append(

@@ -4,6 +4,7 @@ import pytest
 
 from app.services import telegram as telegram_module
 from app.services.telegram import (
+    TELEGRAM_ANSWER_CALLBACK_QUERY_URL,
     TELEGRAM_SEND_DOCUMENT_URL,
     TELEGRAM_SEND_MESSAGE_URL,
     TelegramBotClient,
@@ -50,6 +51,44 @@ async def test_send_message_includes_parse_mode_when_requested(monkeypatch) -> N
         "text": "<b>Hello</b>",
         "disable_web_page_preview": True,
         "parse_mode": "HTML",
+    }
+
+
+@pytest.mark.anyio
+async def test_send_message_includes_reply_markup_when_requested(monkeypatch) -> None:
+    fake_urlopen = FakeUrlopen()
+    monkeypatch.setattr(telegram_module, "urlopen", fake_urlopen)
+
+    client = TelegramBotClient(bot_token="token", chat_id="123")
+    reply_markup = {
+        "inline_keyboard": [[{"text": "Close", "callback_data": "handoff:close:hnd_test"}]]
+    }
+
+    await client.send_message("Hello", reply_markup=reply_markup)
+
+    request = fake_urlopen.requests[0].request
+    payload = json.loads(request.data.decode("utf-8"))
+    assert payload["reply_markup"] == reply_markup
+
+
+@pytest.mark.anyio
+async def test_answer_callback_query_posts_callback_acknowledgement(monkeypatch) -> None:
+    fake_urlopen = FakeUrlopen()
+    monkeypatch.setattr(telegram_module, "urlopen", fake_urlopen)
+
+    client = TelegramBotClient(bot_token="token", chat_id="123")
+
+    await client.answer_callback_query("callback-1", text="Sent", show_alert=True)
+
+    assert len(fake_urlopen.requests) == 1
+    request = fake_urlopen.requests[0].request
+    assert request.full_url == TELEGRAM_ANSWER_CALLBACK_QUERY_URL.format(token="token")
+
+    payload = json.loads(request.data.decode("utf-8"))
+    assert payload == {
+        "callback_query_id": "callback-1",
+        "show_alert": True,
+        "text": "Sent",
     }
 
 

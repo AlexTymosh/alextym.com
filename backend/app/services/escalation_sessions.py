@@ -95,7 +95,12 @@ class EscalationSessionStore(Protocol):
     ) -> EscalationSessionRecord | None:
         pass
 
-    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+    async def close(
+        self,
+        handoff_id: str,
+        *,
+        close_message: str | None = None,
+    ) -> EscalationSessionRecord | None:
         pass
 
     async def delete(self, handoff_id: str) -> None:
@@ -121,7 +126,12 @@ class MisconfiguredEscalationSessionStore:
     ) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("Redis session storage is partially configured.")
 
-    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+    async def close(
+        self,
+        handoff_id: str,
+        *,
+        close_message: str | None = None,
+    ) -> EscalationSessionRecord | None:
         raise EscalationSessionStoreError("Redis session storage is partially configured.")
 
     async def delete(self, handoff_id: str) -> None:
@@ -209,21 +219,23 @@ class UpstashRedisEscalationSessionStore:
             state=ESCALATION_SESSION_STATE_CONNECTED,
             messages=[
                 *record.messages,
-                {
-                    "id": _create_message_id(),
-                    "role": "alex",
-                    "content": content,
-                    "created_at": now.isoformat(),
-                },
+                _build_alex_message(content, now),
             ],
         )
         await self._save(updated_record, ttl_seconds=ttl_seconds)
         return updated_record
 
-    async def close(self, handoff_id: str) -> EscalationSessionRecord | None:
+    async def close(
+        self,
+        handoff_id: str,
+        *,
+        close_message: str | None = None,
+    ) -> EscalationSessionRecord | None:
         record = await self.get(handoff_id)
         if record is None:
             return None
+        if record.state == ESCALATION_SESSION_STATE_CLOSED:
+            return record
 
         now = datetime.now(UTC).replace(microsecond=0)
         ttl_seconds = _remaining_ttl_seconds(record.expires_at, now)
@@ -231,7 +243,15 @@ class UpstashRedisEscalationSessionStore:
             await self.delete(handoff_id)
             return None
 
-        updated_record = replace(record, state=ESCALATION_SESSION_STATE_CLOSED)
+        messages = record.messages
+        if close_message:
+            messages = [*record.messages, _build_alex_message(close_message, now)]
+
+        updated_record = replace(
+            record,
+            state=ESCALATION_SESSION_STATE_CLOSED,
+            messages=messages,
+        )
         await self._save(updated_record, ttl_seconds=ttl_seconds)
         return updated_record
 
@@ -305,6 +325,15 @@ def build_escalation_session_store(settings: Settings) -> EscalationSessionStore
         return MisconfiguredEscalationSessionStore()
 
     return None
+
+
+def _build_alex_message(content: str, created_at: datetime) -> dict[str, str]:
+    return {
+        "id": _create_message_id(),
+        "role": "alex",
+        "content": content,
+        "created_at": created_at.isoformat(),
+    }
 
 
 def _create_handoff_id() -> str:

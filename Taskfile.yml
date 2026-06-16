@@ -46,6 +46,29 @@ tasks:
       - task: frontend:install
       - task: dev:servers
 
+  dev:telegram:
+    desc: Run local dev servers and local Telegram polling for handoff button testing.
+    cmds:
+      - task: telegram:preflight
+      - task: backend:sync
+      - task: frontend:install
+      - task: dev:telegram:servers
+
+  telegram:preflight:
+    desc: Validate local Telegram polling requirements before starting dev servers.
+    cmds:
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass
+        -File "{{.ROOT_DIR}}/scripts/telegram-dev-preflight.ps1"
+
+  telegram:poller:
+    desc: Receive Telegram updates through getUpdates and forward them to the local backend.
+    dir: backend
+    cmds:
+      - >-
+        uv run python ../scripts/telegram-dev-poller.py
+        --backend-port {{.BACKEND_PORT}}
+
   smoke:
     desc: Check the local backend and frontend dev servers.
     cmds:
@@ -341,3 +364,10 @@ tasks:
     deps:
       - backend:dev
       - frontend:dev
+
+  dev:telegram:servers:
+    internal: true
+    deps:
+      - backend:dev
+      - frontend:dev
+      - telegram:poller
