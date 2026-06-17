@@ -90,12 +90,8 @@ async def send_escalation_message(
         return EscalationMessageResponse()
 
     try:
-        _ensure_handoff_available(service)
         enforce_escalation_message_rate_limit(request, settings)
         response = await service.submit_user_message(handoff_id, message_request)
-    except HandoffUnavailableError as exc:
-        record_escalation_event(action="message", outcome="unavailable")
-        raise _handoff_unavailable_http_exception(exc) from exc
     except EscalationConfigurationError as exc:
         record_escalation_event(action="message", outcome="configuration_error")
         raise HTTPException(

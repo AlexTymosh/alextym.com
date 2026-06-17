@@ -268,8 +268,6 @@ class EscalationService:
         if message_request.is_honeypot_filled:
             return EscalationMessageResponse()
 
-        self.ensure_handoff_available()
-
         if self._notifier is None:
             raise EscalationConfigurationError("Escalation notifications are not configured.")
         if self._session_store is None:
