@@ -8,6 +8,10 @@ from app.api.escalation import get_escalation_service
 from app.main import app
 from app.schemas.escalation import EscalationMessageRequest, EscalationRequest
 from app.services.escalation import EscalationService
+from app.services.escalation_sessions import (
+    ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+    EscalationSessionRecord,
+)
 from app.services.handoff_availability import (
     HandoffAvailabilityStatus,
     HandoffUnavailableError,
@@ -88,21 +92,27 @@ def test_escalation_returns_403_when_handoff_is_outside_hours() -> None:
     assert notifier.sent_requests == []
 
 
-def test_escalation_message_returns_403_when_handoff_is_outside_hours() -> None:
+def test_escalation_message_allows_active_handoff_outside_hours() -> None:
     notifier = FakeEscalationNotifier()
     app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
         notifier=notifier,
+        session_store=FakeEscalationSessionStore(),
         availability_checker=ClosedHandoffAvailabilityChecker(),
     )
 
     response = client.post(
         "/api/escalations/hnd_test/messages",
-        json={"content": "Hello", "company_website": ""},
+        json={
+            "content": "Hello",
+            "company_website": "",
+        },
     )
 
-    assert response.status_code == 403
-    assert response.json() == {"detail": _closed_detail()}
-    assert notifier.sent_message_requests == []
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert len(notifier.sent_message_requests) == 1
+    assert notifier.sent_message_requests[0].content == "Hello"
+    assert notifier.sent_message_handoff_ids == ["hnd_test"]
 
 
 class ClosedHandoffAvailabilityChecker:
@@ -121,6 +131,7 @@ class FakeEscalationNotifier:
     def __init__(self) -> None:
         self.sent_requests: list[EscalationRequest] = []
         self.sent_message_requests: list[EscalationMessageRequest] = []
+        self.sent_message_handoff_ids: list[str] = []
 
     async def notify(
         self,
@@ -137,6 +148,18 @@ class FakeEscalationNotifier:
         handoff_id: str,
     ) -> None:
         self.sent_message_requests.append(message_request)
+        self.sent_message_handoff_ids.append(handoff_id)
+
+
+class FakeEscalationSessionStore:
+    async def get(self, handoff_id: str) -> EscalationSessionRecord | None:
+        return EscalationSessionRecord(
+            handoff_id=handoff_id,
+            state=ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
+            created_at="2026-01-01T00:00:00+00:00",
+            expires_at="2099-01-01T00:02:00+00:00",
+            transcript=[],
+        )
 
 
 def _checker_at(value: str) -> ScheduledHandoffAvailabilityChecker:
