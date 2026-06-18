@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { contactConfig } from "../lib/project-config";
 
 type SubmitStatus = "idle" | "sending" | "success" | "error";
 
@@ -12,6 +13,7 @@ const initialFormState = {
 };
 
 export function ContactForm() {
+  const formCopy = contactConfig.form;
   const [formState, setFormState] = useState(initialFormState);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [notice, setNotice] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function ContactForm() {
 
     if (!payload.name || !payload.email || !payload.message) {
       setStatus("error");
-      setNotice("Please fill in your name, email, and message.");
+      setNotice(formCopy.notices.missingFields);
       return;
     }
 
@@ -63,21 +65,23 @@ export function ContactForm() {
 
       setFormState(initialFormState);
       setStatus("success");
-      setNotice("Message sent. Alex will review it.");
+      setNotice(formCopy.notices.success);
     } catch (error) {
       setStatus("error");
-      setNotice(error instanceof Error ? error.message : "Could not send message.");
+      setNotice(
+        error instanceof Error ? error.message : formCopy.notices.genericError,
+      );
     }
   }
 
   return (
-    <form className="contact-form" aria-label="Contact form" onSubmit={handleSubmit}>
+    <form className="contact-form" aria-label={formCopy.ariaLabel} onSubmit={handleSubmit}>
       <label>
-        <span>Your Name</span>
+        <span>{formCopy.fields.name.label}</span>
         <input
           name="name"
           type="text"
-          placeholder="Your name"
+          placeholder={formCopy.fields.name.placeholder}
           autoComplete="name"
           maxLength={120}
           required
@@ -89,11 +93,11 @@ export function ContactForm() {
         />
       </label>
       <label>
-        <span>Email Address</span>
+        <span>{formCopy.fields.email.label}</span>
         <input
           name="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={formCopy.fields.email.placeholder}
           autoComplete="email"
           maxLength={254}
           required
@@ -105,11 +109,11 @@ export function ContactForm() {
         />
       </label>
       <label>
-        <span>Message</span>
+        <span>{formCopy.fields.message.label}</span>
         <textarea
           name="message"
           rows={6}
-          placeholder="Tell Alex what you would like to discuss."
+          placeholder={formCopy.fields.message.placeholder}
           maxLength={4000}
           required
           value={formState.message}
@@ -120,7 +124,7 @@ export function ContactForm() {
         />
       </label>
       <label className="contact-form__honeypot" aria-hidden="true">
-        <span>Company Website</span>
+        <span>{formCopy.fields.companyWebsite.label}</span>
         <input
           name="company_website"
           type="text"
@@ -133,7 +137,7 @@ export function ContactForm() {
         />
       </label>
       <button type="submit" className="primary-link contact-form__submit" disabled={isSending}>
-        {isSending ? "Sending..." : "Send Message"}
+        {isSending ? formCopy.sendingLabel : formCopy.submitLabel}
       </button>
       {notice ? (
         <p className={`contact-form__notice contact-form__notice--${statusTone}`} role="status">
@@ -146,20 +150,20 @@ export function ContactForm() {
 
 async function getContactErrorMessage(response: Response): Promise<string> {
   if (response.status === 429) {
-    return "Daily message limit reached. Please try again later.";
+    return contactConfig.form.notices.dailyLimit;
   }
 
   if (response.status === 422) {
-    return "Please check the form fields and try again.";
+    return contactConfig.form.notices.validationError;
   }
 
   if (response.status === 503) {
-    return "Contact form is temporarily unavailable. Please try again later.";
+    return contactConfig.form.notices.unavailable;
   }
 
   if (response.status >= 500) {
-    return "Could not send message. Please try again later.";
+    return contactConfig.form.notices.serverError;
   }
 
-  return "Could not send message. Please try again later.";
+  return contactConfig.form.notices.serverError;
 }

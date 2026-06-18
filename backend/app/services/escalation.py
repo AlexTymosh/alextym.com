@@ -7,6 +7,7 @@ from html import escape
 from typing import Any, Protocol
 
 from app.core.config import Settings
+from app.core.project_config import get_project_config
 from app.schemas.escalation import (
     EscalationCloseResponse,
     EscalationMessageRequest,
@@ -29,12 +30,16 @@ from app.services.handoff_availability import (
 )
 from app.services.telegram import TelegramBotClient, TelegramDeliveryError
 
-READING_QUICK_REPLY = "Hi, I’m connected now and reading your request. Please give me a moment."
-CONTACT_QUICK_REPLY = (
-    "Hi, I’m connected now, but I’m sorry, I’m short on time at the moment. "
-    "Is your question urgent, or can we continue in 20–30 minutes?"
+_PROJECT_CONFIG = get_project_config()
+_SITE_DOMAIN = _PROJECT_CONFIG.site.domain
+READING_QUICK_REPLY = (
+    "Hi, I\u2019m connected now and reading your request. Please give me a moment."
 )
-STILL_THERE_QUICK_REPLY = "Are you still there? I’m ready to continue when you are."
+CONTACT_QUICK_REPLY = (
+    "Hi, I\u2019m connected now, but I\u2019m sorry, I\u2019m short on time at the moment. "
+    "Is your question urgent, or can we continue in 20\u201330 minutes?"
+)
+STILL_THERE_QUICK_REPLY = "Are you still there? I\u2019m ready to continue when you are."
 CLOSE_HANDOFF_REPLY = (
     "This conversation has been closed. "
     "You can request a new connection with the site owner if needed."
@@ -406,7 +411,7 @@ def _build_telegram_control_message(
     created_date, created_time, created_offset = _split_iso_datetime(created_at)
     last_user_message = _last_user_message(escalation_request)
     lines = [
-        "<b>🚨 New handoff request — alextym.com</b>",
+        f"<b>\U0001f6a8 New handoff request \u2014 {_html_escape(_SITE_DOMAIN)}</b>",
         "",
         "<b>Last user message</b>",
         f"<blockquote>{_html_escape(_clip_control_text(last_user_message))}</blockquote>",
@@ -441,29 +446,29 @@ def _build_telegram_handoff_reply_markup(handoff_id: str) -> dict[str, Any]:
         "inline_keyboard": [
             [
                 {
-                    "text": "✍️ Reply manually with custom text",
+                    "text": "\u270d\ufe0f Reply manually with custom text",
                     "callback_data": f"handoff:reply:{handoff_id}",
                 },
                 {
-                    "text": "✅ Close + notify visitor",
+                    "text": "\u2705 Close + notify visitor",
                     "callback_data": f"handoff:close:{handoff_id}",
                 },
             ],
             [
                 {
-                    "text": "👋 Send: “Hi, I’m connected now and reading...”",
+                    "text": "\U0001f44b Send: \u201cHi, I\u2019m connected now and reading...\u201d",
                     "callback_data": f"handoff:reading:{handoff_id}",
                 },
             ],
             [
                 {
-                    "text": "⏳ Send: “Hi, I’m connected, but I’m sorry...”",
+                    "text": "\u23f3 Send: \u201cHi, I\u2019m connected, but I\u2019m sorry...\u201d",
                     "callback_data": f"handoff:contact:{handoff_id}",
                 },
             ],
             [
                 {
-                    "text": "❓ Send: “Are you still there? I’m ready...”",
+                    "text": "\u2753 Send: \u201cAre you still there? I\u2019m ready...\u201d",
                     "callback_data": f"handoff:still:{handoff_id}",
                 },
             ],
@@ -494,7 +499,7 @@ def _build_telegram_transcript_message(
         transcript_lines.append(f"{role}: {item.content}")
 
     header_lines = [
-        "Handoff transcript from alextym.com",
+        f"Handoff transcript from {_SITE_DOMAIN}",
         f"Created at: {created_at}",
         f"Reason: {escalation_request.reason}",
     ]
@@ -522,7 +527,7 @@ def _build_telegram_user_message_notification(
     created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
     return "\n".join(
         [
-            "💬 <b>New visitor message</b> — alextym.com",
+            f"\U0001f4ac <b>New visitor message</b> \u2014 {_html_escape(_SITE_DOMAIN)}",
             "",
             "<b>Created at</b>",
             f"<code>{_html_escape(created_at)}</code>",
@@ -547,9 +552,9 @@ def _should_show_handoff_reason(reason: str) -> bool:
 
 def _telegram_status_label(state: str) -> str:
     if state == ESCALATION_SESSION_STATE_WAITING_FOR_ALEX:
-        return "🔴 Waiting for first operator reply"
+        return "\U0001f534 Waiting for first operator reply"
     if state == ESCALATION_SESSION_STATE_CLOSED:
-        return "🟢 Closed"
+        return "\U0001f7e2 Closed"
     return _html_escape(state)
 
 

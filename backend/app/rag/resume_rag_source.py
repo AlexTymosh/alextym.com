@@ -6,9 +6,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.rag.public_resume_source import get_public_resume_source_file
+from app.rag.public_resume_source import get_public_resume_source_file_for_path
+from app.rag.public_resume_source import get_public_resume_source_path
+
 SUMMARY_RAG_MARKER = "## RAG"
 ENTRY_RAG_MARKER = "### RAG"
-DEFAULT_SOURCE_PATH = Path("content/public/resume.md")
 DEFAULT_JSON_OUTPUT_PATH = Path(".tmp/rag/resume.generated.chunks.json")
 DEFAULT_PREVIEW_OUTPUT_PATH = Path(".tmp/human-readable-preview/resume-rag-preview.md")
 
@@ -97,8 +100,9 @@ class ParsedRagSection:
 def build_resume_rag_document(
     markdown: str,
     *,
-    source_path: str = str(DEFAULT_SOURCE_PATH),
+    source_path: str | None = None,
 ) -> ResumeRagDocument:
+    resolved_source_path = source_path or get_public_resume_source_file()
     normalized_markdown = _normalize_line_endings(markdown)
     chunks: list[ResumeRagChunk] = []
 
@@ -106,7 +110,7 @@ def build_resume_rag_document(
     if summary_rag:
         chunks.append(
             _build_chunk(
-                source_path=source_path,
+                source_path=resolved_source_path,
                 source_id="summary",
                 source_title="Summary",
                 source_section="summary",
@@ -118,7 +122,7 @@ def build_resume_rag_document(
     for entry in _extract_entry_rag_sections(normalized_markdown):
         chunks.append(
             _build_chunk(
-                source_path=source_path,
+                source_path=resolved_source_path,
                 source_id=entry.metadata["id"],
                 source_title=entry.title,
                 source_section=entry.metadata["section"],
@@ -131,7 +135,7 @@ def build_resume_rag_document(
             )
         )
 
-    return ResumeRagDocument(source_path=source_path, chunks=tuple(chunks))
+    return ResumeRagDocument(source_path=resolved_source_path, chunks=tuple(chunks))
 
 
 def render_resume_rag_json(document: ResumeRagDocument) -> str:
@@ -198,7 +202,7 @@ def write_resume_rag_outputs(
     source_text = source_path.read_text(encoding="utf-8")
     document = build_resume_rag_document(
         source_text,
-        source_path=_relative_path(source_path),
+        source_path=get_public_resume_source_file_for_path(source_path),
     )
 
     json_output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -219,7 +223,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--source",
-        default=str(_repository_root() / DEFAULT_SOURCE_PATH),
+        default=str(get_public_resume_source_path()),
         help="Canonical resume markdown source path.",
     )
     parser.add_argument(
@@ -646,13 +650,6 @@ def _format_period(start_date: str | None, end_date: str | None) -> str | None:
     if not start_date and not end_date:
         return None
     return f"{start_date or 'unknown'} - {end_date or 'present'}"
-
-
-def _relative_path(path: Path) -> str:
-    try:
-        return path.resolve().relative_to(_repository_root()).as_posix()
-    except ValueError:
-        return path.as_posix()
 
 
 def _repository_root() -> Path:

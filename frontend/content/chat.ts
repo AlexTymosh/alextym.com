@@ -1,148 +1,83 @@
+import { chatConfig, ownerConfig } from "../lib/project-config";
 import type { QuickPrompt } from "../types/chat";
 
-export const quickPrompts: readonly QuickPrompt[] = [
-  {
-    label: "Give me your 1-minute intro.",
-    responses: [
-      `Alex builds practical automation for business workflows, APIs, ERP systems, reporting, and dashboards.
+const ownerName = ownerConfig.shortName;
+const ownerPossessiveName = ownerConfig.possessiveName;
+const ownerTermPattern = buildOwnerTermPattern();
 
-His automation background goes back to the 2000s:
-- Excel macros while working as a credit broker;
-- MySQL for company operations in 2018;
-- Bitrix24 ERP during the 2020 remote-work shift.
-
-After the war in Ukraine forced his move to the UK in 2022, he focused on AI-assisted engineering, Python automation, and API integrations.
-
-In 2024, he delivered an Odoo Enterprise API integration that reduced one employee's workload by 68%.
-
-He holds a Master's Degree in Finance, specialising in Banking and Insurance,
-and has a strong analytical background.
-
-Would you like to know more about his latest work experience?`,
-      `Alex combines long-term business automation experience with newer AI-assisted software development.
-
-He started with Excel automation in the 2000s, then moved business operations into MySQL in 2018 and Bitrix24 ERP in 2020.
-
-After the war in Ukraine forced his move to the UK in 2022, he focused more deeply on Python, AI engineering, APIs, and workflow automation.
-
-His 2024 Odoo Enterprise API project reduced one employee's workload by 68%.
-
-He holds a Master's Degree in Finance, specialising in Banking and Insurance,
-and is strong in analytics, reporting, and dashboards.
-
-Would you like a short overview of his most recent role?`,
-      `Alex focuses on automation, API integrations, ERP workflows, reporting, and operational dashboards.
-
-His practical automation path includes:
-- Excel macros in the 2000s;
-- moving company processes to MySQL in 2018;
-- implementing Bitrix24 ERP in 2020;
-- building API-based workflow automation in the UK.
-
-After the war in Ukraine forced his move to the UK in 2022, he shifted his focus towards AI-assisted engineering and Python automation.
-
-In 2024, he delivered an Odoo Enterprise integration that reduced one employee's workload by 68%.
-
-Would you like the key facts from his latest work experience?`,
-    ],
-  },
-  {
-    label: "Give me a short overview of his work experience.",
-    responses: [
-      `Alex's career started in finance and operations:
-- assistant accountant;
-- economist and senior economist;
-- deputy branch manager in banking;
-- credit broker;
-- managing director of a recruitment company.
-
-He later helped grow that recruitment company into a regional leader.
-
-After the war in Ukraine forced his move to the UK in late 2022, he focused more deeply on Python, AI-assisted analytics, and automation.
-
-His first UK role was at Hydrosphere UK, where he worked as an Automation Engineer.
-
-Would you like the key facts about his professional achievements?`,
-      `Alex has a mixed business and software automation background.
-
-His work experience includes:
-- finance and accounting support;
-- economist and senior economist roles;
-- banking management;
-- credit brokerage;
-- managing a recruitment company that grew into a regional leader.
-
-After the war in Ukraine forced his relocation to the UK in late 2022, he focused on Python, AI-assisted analytics, and workflow automation.
-
-His first UK position was Automation Engineer at Hydrosphere UK.
-
-Would you like a concise list of his strongest achievements?`,
-      `Alex's work experience developed from finance and banking into business leadership and automation.
-
-His earlier roles included:
-- assistant accountant;
-- economist and senior economist;
-- deputy bank branch manager;
-- credit broker;
-- managing director of a recruitment company.
-
-That recruitment company later became a regional leader.
-
-After the war in Ukraine forced his move to the UK in 2022, he focused on Python, AI-assisted analytics, and automation.
-
-His first UK role was Automation Engineer at Hydrosphere UK.
-
-Would you like a summary of the most relevant achievements?`,
-    ],
-  },
-  {
-    label: "When is Alex ready to start work?",
-    responses: [
-      `I do not have access to Alex's live calendar, so I cannot 
-confirm an exact start date here.
-
-For availability, notice period, interview scheduling, or start-date 
-confirmation, the safest route is to connect with Alex directly.
-
-Would you like me to connect him directly?
-
-Your details will not be passed to him at this stage, and he will not 
-see your phone number or email unless you choose to share them.`,
-      `I cannot check Alex's calendar or confirm a precise start date 
-from this chat.
-
-If you need a reliable answer about availability or scheduling, I can 
-offer a direct handoff to Alex.
-
-Would you like me to connect him directly?
-
-Your contact details will not be shared with him unless you decide to 
-type them yourself.`,
-      `Alex's exact availability should be confirmed with him directly 
-because I do not have access to his live calendar.
-
-For a start date, notice period, interview timing, or hiring discussion, 
-I can help you connect with Alex.
-
-Would you like me to connect him directly?
-
-He will not receive your phone number or email from this chat unless you 
-choose to share those details.`,
-    ],
-  },
-];
-
+export const chatShellCopy = {
+  ariaLabel: "AI digital assistant",
+  contactFormLinkLabel: "Open the contact form",
+  closedInputPlaceholder: "Ask my assistant anything or request a new connection...",
+  defaultInputPlaceholder: "Ask my assistant anything...",
+  handoffActionsAriaLabel: "Handoff actions",
+  handoffCloseLabel: `End handoff with ${ownerName}`,
+  handoffClosedStatus: "Handoff closed",
+  handoffClosingLabel: "Closing...",
+  handoffConnectLabel: `Connect me with ${ownerName}`,
+  handoffConnectedStatus: `${ownerName} is connected`,
+  handoffConnectingLabel: "Connecting...",
+  handoffContinueLabel: "Continue with AI",
+  handoffInputPlaceholder: `Message ${ownerName} through this chat...`,
+  handoffPromptAriaLabel: `Connect with ${ownerName}`,
+  handoffPromptTitle: `Would you like to connect with ${ownerName}?`,
+  handoffReconnectingStatus: "Handoff reconnecting",
+  handoffWaitingStatus: `Waiting for ${ownerName}`,
+  inputAriaLabel: `Ask ${ownerPossessiveName} AI assistant`,
+  introDescription: `Ask about ${ownerPossessiveName} public profile, work experience, automation projects, and availability.`,
+  introTitle: `Hi, I'm ${ownerPossessiveName} AI assistant.`,
+  messageSenderOwner: ownerName,
+  quickPromptsAriaLabel: "Quick prompts",
+  readyStatus: "Ready",
+  resetLabel: "Reset chat",
+  sendLabel: "Send message",
+  sourceLabel: "Sources",
+  title: `${ownerPossessiveName} AI Assistant`,
+  warmupUnavailableStatus: "Warm-up unavailable",
+} as const;
+export const chatHandoffCopy = {
+  closedByUserMessage:
+    "This handoff has been closed. New messages will go to the AI assistant unless you request a new connection.",
+  closeFailureMessage: "Could not close this handoff right now. Please try again later.",
+  connectFailureMessage: `Could not connect with ${ownerName} right now. Please try again later.`,
+  connectionDailyLimitMessage:
+    "You've reached the daily limit for connection requests. Please try again later.",
+  consentCopy: `If you connect with ${ownerName}, this chat history will be shared with them so they can understand the context. No email or phone number will be shared unless you type it yourself.`,
+  defaultUnavailableMessage:
+    "Live handoff is currently outside its configured availability window. Please try again during those hours or use the contact form.",
+  messageDailyLimitMessage:
+    "You've reached the daily limit for handoff messages. Please try again later.",
+  nameRequestMessage: `${ownerName} has been notified and can review this chat for context.\n\nWhile ${ownerName} is getting ready to answer, could you tell me how I should address you?`,
+  notificationSentMessage: `${ownerName} has been notified and will be able to review this chat for context.`,
+  reconnectingNotice:
+    "The live handoff connection is reconnecting. Please keep this page open.",
+  sendFailureMessage: `Could not send this message to ${ownerName} right now. Please try again later.`,
+  sessionClosedMessage:
+    "This handoff session has closed. New messages go back to the AI assistant.",
+  sessionExpiredMessage: `This handoff session has expired. You can continue with the AI assistant or request a new connection with ${ownerName}.`,
+  unavailableRetryLine:
+    "Please try again during those hours or use the contact form.",
+} as const;
+export const chatNoticeCopy = {
+  assistantErrorMessage: "Something went wrong. Please try again later.",
+  assistantUnavailable: "The assistant is temporarily unavailable.",
+  streamingEndedEarly: "The streaming response ended before completion.",
+  streamingFallbackUsed:
+    "Streaming was unavailable, so the JSON fallback was used.",
+  warmupUnavailable:
+    "Backend warm-up is unavailable in this environment. The assistant may still respond.",
+} as const;
+export const quickPrompts =
+  chatConfig.quickPrompts as readonly QuickPrompt[];
 export const warmupMessages = [
-  "Give me a second, I’m getting ready",
-  "Reviewing Alex’s public profile",
-  "Checking project notes",
-  "Preparing a clear answer",
+  "Starting the assistant",
+  `Loading ${ownerPossessiveName} profile`,
+  "Getting ready to chat",
 ] as const;
-
 export const thinkingMessages = [
-  "Thinking",
-  "Looking through Alex’s documents",
-  "Preparing the answer",
+  "Understanding your question",
+  `Checking ${ownerPossessiveName} profile`,
+  "Preparing a grounded answer",
 ] as const;
 
 export const CHAT_HISTORY_LIMIT = 8;
@@ -152,49 +87,66 @@ export const SCRIPTED_RESPONSE_DELAY_MS = 3000;
 export const ESCALATION_TRANSCRIPT_LIMIT = 20;
 export const ESCALATION_TRANSCRIPT_ITEM_MAX_CHARS = 2000;
 export const ESCALATION_TRANSCRIPT_TOTAL_MAX_CHARS = 8000;
-export const ESCALATION_CONSENT_COPY =
-  "If you connect with Alex, this chat history will be shared with him so he can " +
-  "understand the context. No email or phone number will be shared unless you " +
-  "type it yourself.";
+export const ESCALATION_CONSENT_COPY = chatHandoffCopy.consentCopy;
 
 export const HANDOFF_CONFIRMATION_PATTERNS = [
   /^\s*(yes|yeah|yep|sure|ok|okay|confirm|i confirm|yes please|please do)\s*[.!?]*\s*$/i,
-  /^\s*(да|так|ок|окей|добре|пожалуйста|будь ласка)\s*[.!?]*\s*$/i,
+  new RegExp(
+    String.raw`^\s*(\u0434\u0430|\u0442\u0430\u043a|\u043e\u043a|` +
+      String.raw`\u043e\u043a\u0435\u0439|\u0434\u043e\u0431\u0440\u0435|` +
+      String.raw`\u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430|` +
+      String.raw`\u0431\u0443\u0434\u044c\s+\u043b\u0430\u0441\u043a\u0430)` +
+      String.raw`\s*[.!?]*\s*$`,
+    "i",
+  ),
 ] as const;
 
 export const HANDOFF_REQUEST_PATTERNS = [
   /^\s*connect\s*[.!?]*\s*$/i,
   /^\s*con+ect\s*[.!?]*\s*$/i,
   /^\s*con+ect\s+me\s*[.!?]*\s*$/i,
-  /\bcon+ect\s+(me\s+)?(with|to)\s+alex\b/i,
+  new RegExp(String.raw`\bcon+ect\s+(me\s+)?(with|to)\s+${ownerTermPattern}\b`, "i"),
   /^\s*connect\s+me\s*[.!?]*\s*$/i,
-  /\bconnect\s+(me\s+)?(with|to)\s+alex\b/i,
-  /\bcan\s+you\s+connect\s+me\s+(with|to)\s+alex\b/i,
-  /\bgive\s+me\s+alex\b/i,
-  /\bget\s+me\s+alex\b/i,
-  /\bi\s+confirm\s+i('?d| would)\s+like\s+to\s+(talk|speak|chat)\s+(to|with)\s+alex\b/i,
+  new RegExp(String.raw`\bconnect\s+(me\s+)?(with|to)\s+${ownerTermPattern}\b`, "i"),
   new RegExp(
-    String.raw`\bi\s+(want|would\s+like|need|'d\s+like)\s+(to\s+)?` +
-      String.raw`(talk|speak|chat)\s+(to|with)\s+alex\b`,
+    String.raw`\bcan\s+you\s+connect\s+me\s+(with|to)\s+${ownerTermPattern}\b`,
     "i",
   ),
-  /\b(talk|speak|chat)\s+(to|with)\s+alex\b/i,
-  /\bcan\s+alex\s+(contact|call|message|email|reach)\s+me\b/i,
-  /\bi('?d| would)\s+like\s+to\s+hire\s+(alex|him)\b/i,
-  /\bi\s+(want|need)\s+to\s+hire\s+(alex|him)\b/i,
-  /\b(best|great|strong)\s+offer\s+(for\s+)?(alex|him)\b/i,
-  /\btell\s+(alex|him)\s+i\b/i,
+  new RegExp(String.raw`\bgive\s+me\s+${ownerTermPattern}\b`, "i"),
+  new RegExp(String.raw`\bget\s+me\s+${ownerTermPattern}\b`, "i"),
+  new RegExp(
+    String.raw`\bi\s+confirm\s+i('?d| would)\s+like\s+to\s+` +
+      String.raw`(talk|speak|chat)\s+(to|with)\s+${ownerTermPattern}\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bi\s+(want|would\s+like|need|'d\s+like)\s+(to\s+)?` +
+      String.raw`(talk|speak|chat)\s+(to|with)\s+${ownerTermPattern}\b`,
+    "i",
+  ),
+  new RegExp(String.raw`\b(talk|speak|chat)\s+(to|with)\s+${ownerTermPattern}\b`, "i"),
+  new RegExp(
+    String.raw`\bcan\s+${ownerTermPattern}\s+(contact|call|message|email|reach)\s+me\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\bi('?d| would)\s+like\s+to\s+hire\s+(${ownerTermPattern}|him|them)\b`,
+    "i",
+  ),
+  new RegExp(String.raw`\bi\s+(want|need)\s+to\s+hire\s+(${ownerTermPattern}|him|them)\b`, "i"),
+  new RegExp(String.raw`\b(best|great|strong)\s+offer\s+(for\s+)?(${ownerTermPattern}|him|them)\b`, "i"),
+  new RegExp(String.raw`\btell\s+(${ownerTermPattern}|him|them)\s+i\b`, "i"),
   /\bshare\s+code\b/i,
   /\bright-to-work\s+share\s+code\b/i,
   /\buk\s+share\s+code\b/i,
   new RegExp(
-    String.raw`\bget\s+alex\s+(to\s+)?` +
+    String.raw`\bget\s+${ownerTermPattern}\s+(to\s+)?` +
       String.raw`(contact|call|message|email|reply\s+to)\s+me\b`,
     "i",
   ),
   new RegExp(
     String.raw`\bplease\s+(connect|put)\s+me\s+` +
-      String.raw`(through\s+)?(to\s+)?alex\b`,
+      String.raw`(through\s+)?(to\s+)?${ownerTermPattern}\b`,
     "i",
   ),
   new RegExp(
@@ -229,13 +181,63 @@ export const HANDOFF_REQUEST_PATTERNS = [
     "i",
   ),
   /^\s*(human|person|real\s+person|agent|representative|operator)\s*[.!?]*\s*$/i,
-  /\bсоедини\s+меня\b/i,
-  /\bсоедините\s+меня\b/i,
-  /\bсоедини\s+меня\s+с\s+алексом\b/i,
-  /\bсоедините\s+меня\s+с\s+алексом\b/i,
-  /\bпоговорить\s+с\s+алексом\b/i,
-  /\bхочу\s+поговорить\s+с\s+алексом\b/i,
-  /\bхочу\s+связаться\s+с\s+алексом\b/i,
-  /\bхочу\s+поговорити\s+з\s+алексом\b/i,
-  /\bхочу\s+зв'язатися\s+з\s+алексом\b/i,
+  new RegExp(String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\s+\u043c\u0435\u043d\u044f\b`, "i"),
+  new RegExp(String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u0442\u0435\s+\u043c\u0435\u043d\u044f\b`, "i"),
+  new RegExp(
+    String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\s+\u043c\u0435\u043d\u044f\s+` +
+      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u0442\u0435\s+` +
+      String.raw`\u043c\u0435\u043d\u044f\s+\u0441\s+` +
+      String.raw`\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c\s+` +
+      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
+      String.raw`\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c\s+` +
+      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
+      String.raw`\u0441\u0432\u044f\u0437\u0430\u0442\u044c\u0441\u044f\s+` +
+      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
+      String.raw`\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u0438\s+` +
+      String.raw`\u0437\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
+  new RegExp(
+    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
+      String.raw`\u0437\u0432'\u044f\u0437\u0430\u0442\u0438\u0441\u044f\s+` +
+      String.raw`\u0437\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
+    "i",
+  ),
 ] as const;
+
+function buildOwnerTermPattern() {
+  const ownerTerms = [
+    ownerName,
+    ownerConfig.displayName,
+    ...ownerConfig.publicAliases,
+  ]
+    .map((term) => term.trim())
+    .filter(Boolean)
+    .map(escapeRegExp);
+
+  return `(?:${Array.from(new Set(ownerTerms)).join("|")})`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

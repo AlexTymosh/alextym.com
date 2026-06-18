@@ -2,27 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { siteConfig } from "../lib/site-config";
 import { ThemeToggle } from "./theme-toggle";
-
-const navigation = [
-  { href: "/", label: "Home" },
-  { href: "/resume", label: "Resume" },
-  { href: "/chat", label: "Chat" },
-  { href: "/contact", label: "Contact" },
-];
 
 export function SiteNavigation() {
   const pathname = usePathname();
+  const brandLabel = siteConfig.name.toUpperCase();
 
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <Link href="/" className="brand-mark" aria-label="ALEXTYM.COM home">
+        <Link href="/" className="brand-mark" aria-label={`${brandLabel} home`}>
           <span className="brand-mark__braces">{"{ }"}</span>
-          <span>ALEXTYM.COM</span>
+          <span>{brandLabel}</span>
         </Link>
         <nav className="nav-pill" aria-label="Main navigation">
-          {navigation.map((item) => {
+          {siteConfig.navigation.map((item) => {
             const isActive = pathname === item.href;
 
             return (

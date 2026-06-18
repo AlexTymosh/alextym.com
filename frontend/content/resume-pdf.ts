@@ -5,6 +5,11 @@ import type {
   ResumeEntry,
   ResumeSection,
 } from "./resume";
+import {
+  getPublicLink,
+  resumeConfig,
+  siteIdentityConfig,
+} from "../lib/project-config";
 
 export type ResumePdfOptions = {
   detailLevel: ResumeDetailLevel;
@@ -14,6 +19,11 @@ export type ResumePdfOptions = {
 type PdfTextSegment = {
   text: string;
   href?: string;
+};
+
+type PdfSkill = {
+  label: string;
+  value: string;
 };
 
 type PdfLink = {
@@ -42,13 +52,12 @@ const MARGIN_X = 31;
 const MARGIN_TOP = 37;
 const MARGIN_BOTTOM = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
-const DOWNLOAD_FILE_NAME = "Alex_alextym.com.pdf";
+const PDF_LINK_SEPARATOR = ` ${"\u2022"} `;
+const resumePdfConfig = resumeConfig.pdf;
+const DOWNLOAD_FILE_NAME = `${resumeConfig.downloadFileNameBase}.pdf`;
 
-const SECTION_LABELS: Record<ResumeSection, string> = {
-  experience: "WORK EXPERIENCE",
-  education: "EDUCATION",
-  training: "TRAINING",
-};
+const SECTION_LABELS =
+  resumePdfConfig.sectionLabels as Record<ResumeSection, string>;
 
 const SUPPORTED_SECTIONS: ResumeSection[] = [
   "experience",
@@ -58,89 +67,12 @@ const SUPPORTED_SECTIONS: ResumeSection[] = [
 
 const DEFAULT_SECTIONS: ResumeSection[] = ["experience", "education"];
 
-const HEADER_LINKS: PdfTextSegment[] = [
-  {
-    href: "https://alextym.com/",
-    text: "https://alextym.com/",
-  },
-  {
-    text: " • ",
-  },
-  {
-    href: "http://www.linkedin.com/in/alex-tim-tech",
-    text: "http://www.linkedin.com/in/alex-tim-tech",
-  },
-  {
-    text: " • ",
-  },
-  {
-    href: "https://github.com/AlexTymosh",
-    text: "https://github.com/AlexTymosh",
-  },
-  {
-    text: " • Right to work in UK",
-  },
-];
-
-const ROLE_TITLE =
-  "AUTOMATION & INTEGRATION ENGINEER | AI & Workflow Automation Developer";
-
-const PROFILE_TEXT =
-  "Automation Engineer with hands-on experience in Python, API integration, " +
-  "ERP systems, reporting automation, Excel-to-database migration, data " +
-  "pipelines, workflow optimisation, and operational dashboards. Strong " +
-  "analytical background with a Master's degree in Finance with honours. " +
-  "Uses AI-assisted development tools for rapid prototyping, automation, " +
-  "testing support, and documentation, with human review, structured " +
-  "checks, and token/cost awareness.";
-
-const CONTACT_NOTE_FIRST =
-  "Phone and email are intentionally omitted because this CV was downloaded " +
-  "from the developer's website.";
-
-const CONTACT_NOTE_SECOND: PdfTextSegment[] = [
-  {
-    text: "Please use LinkedIn, the contact form, or the AI assistant on ",
-  },
-  {
-    href: "https://alextym.com/",
-    text: "alextym.com",
-  },
-  {
-    text: ".",
-  },
-];
-
-const SKILLS = [
-  [
-    "Automation",
-    "Process automation, workflow optimisation, reporting automation, data " +
-      "pipelines, Excel-to-database migration, operational bottleneck analysis.",
-  ],
-  [
-    "AI & Methods",
-    "LLM workflows, RAG, structured outputs & validation, human-in-the-loop " +
-      "review, token/cost awareness.",
-  ],
-  [
-    "Tools & Stack",
-    "Python, SQL, VBA macros, FastAPI, REST APIs, API integration, " +
-      "PostgreSQL, Redis, Pandas, Git, GitHub, Codex.",
-  ],
-  [
-    "Business Systems",
-    "Odoo, Bitrix24, ERP/CRM integration, internal tools.",
-  ],
-  [
-    "Quality & Compliance",
-    "Pytest, CI/CD, Docker Compose, GDPR-aware automation.",
-  ],
-  [
-    "Professional",
-    "Requirements gathering, stakeholder communication, process analysis, " +
-      "technical documentation.",
-  ],
-] as const;
+const HEADER_LINKS = withPdfLinkSeparators(buildHeaderLinks());
+const ROLE_TITLE = resumePdfConfig.roleTitle;
+const CONTACT_NOTE_FIRST = resumePdfConfig.contactNote.first;
+const CONTACT_NOTE_SECOND =
+  resumePdfConfig.contactNote.second as PdfTextSegment[];
+const SKILLS = resumePdfConfig.skills as PdfSkill[];
 
 const HELVETICA_WIDTHS: Record<string, number> = {
   " ": 278,
@@ -266,7 +198,7 @@ export function buildResumePdf(
   const additionalSections = getVisibleAdditionalSections(resumeData, options);
   const document = new PdfTextDocument(options.detailLevel);
 
-  renderHeader(document);
+  renderHeader(document, resumeData);
   renderSkills(document);
   renderResumeEntries(document, entries);
   renderAdditionalSections(document, additionalSections);
@@ -319,8 +251,64 @@ function getVisibleAdditionalSections(
     .filter((section) => section.items.length > 0);
 }
 
-function renderHeader(document: PdfTextDocument): void {
-  document.addText("OLEKSII (ALEX) TYMOSHENKO", {
+function withPdfLinkSeparators(
+  segments: readonly PdfTextSegment[],
+): PdfTextSegment[] {
+  return segments.flatMap((segment, index) => {
+    if (index === 0) {
+      return [segment];
+    }
+
+    return [{ text: PDF_LINK_SEPARATOR }, segment];
+  });
+}
+
+function buildHeaderLinks(): PdfTextSegment[] {
+  const visibility = resumePdfConfig.headerLinkVisibility as Record<string, boolean>;
+  const segments: PdfTextSegment[] = [];
+
+  if (visibility.website) {
+    segments.push({
+      href: ensureTrailingSlash(siteIdentityConfig.canonicalUrl),
+      text: getWebsiteDisplayText(siteIdentityConfig.canonicalUrl),
+    });
+  }
+
+  for (const key of ["linkedin", "github", "facebook"]) {
+    if (!visibility[key]) {
+      continue;
+    }
+
+    const link = getPublicLink(key);
+    if (link) {
+      segments.push({
+        href: link.href,
+        text: link.label,
+      });
+    }
+  }
+
+  if (visibility.rightToWorkUk) {
+    segments.push({ text: "Right to work in UK" });
+  }
+
+  return segments;
+}
+
+function getWebsiteDisplayText(value: string): string {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return value.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  }
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+function renderHeader(document: PdfTextDocument, resumeData: ResumeData): void {
+  document.addText(resumePdfConfig.displayName, {
     color: "teal",
     font: "F1",
     leading: 22,
@@ -339,19 +327,27 @@ function renderHeader(document: PdfTextDocument): void {
     size: 8.5,
   });
   document.addGap(9);
-  document.addNote(CONTACT_NOTE_FIRST, CONTACT_NOTE_SECOND);
+  document.addNote(
+    resumePdfConfig.noteLabel,
+    CONTACT_NOTE_FIRST,
+    CONTACT_NOTE_SECOND,
+  );
   document.addGap(9);
-  document.addParagraph(PROFILE_TEXT, {
+  document.addParagraph(getResumeProfileText(resumeData), {
     leading: 13,
     size: 9.4,
   });
 }
 
-function renderSkills(document: PdfTextDocument): void {
-  document.addSectionHeading("SKILLS");
+function getResumeProfileText(resumeData: ResumeData): string {
+  return resumeData.summary.concise.join(" ");
+}
 
-  for (const [label, value] of SKILLS) {
-    document.addLabelParagraph(label, value);
+function renderSkills(document: PdfTextDocument): void {
+  document.addSectionHeading(resumePdfConfig.skillsHeading);
+
+  for (const skill of SKILLS) {
+    document.addLabelParagraph(skill.label, skill.value);
   }
 }
 
@@ -427,7 +423,7 @@ function formatPeriod(entry: ResumeEntry): string {
   const startDate = formatResumeDate(entry.startDate);
 
   if (!entry.endDate) {
-    return `${startDate} - Present`;
+    return `${startDate} - ${resumePdfConfig.presentLabel}`;
   }
 
   const endDate = formatResumeDate(entry.endDate);
@@ -518,8 +514,11 @@ class PdfTextDocument {
     this.y -= leading;
   }
 
-  addNote(firstSentence: string, secondSentence: PdfTextSegment[]): void {
-    const label = "Note:";
+  addNote(
+    label: string,
+    firstSentence: string,
+    secondSentence: PdfTextSegment[],
+  ): void {
     const size = 9.4;
     const labelWidth = estimateTextWidth(label, size, "F1");
     const textX = MARGIN_X + labelWidth + 7;

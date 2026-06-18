@@ -33,7 +33,7 @@
 ## 🌐 Live Demo
 
 🚀 **Frontend:** [https://alextym.com](https://alextym.com)  
-⚙️ **Backend health endpoint:** [https://alextym-backend.onrender.com/api/health/live](https://alextym-backend.onrender.com/api/health/live)
+⚙️ **Проверка backend через rewrite:** [https://alextym.com/api/health/live](https://alextym.com/api/health/live)
 
 ---
 

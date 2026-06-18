@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { ChatShell } from "../../components/chat-shell";
+import { getSeoPage } from "../../lib/project-config";
+
+const chatSeo = getSeoPage("chat");
 
 export const metadata: Metadata = {
-  title: "AI Profile Chat",
-  description:
-    "Ask Alex Tymoshenko's AI profile assistant about his projects, CV, " +
-    "automation experience, Python, FastAPI, and RAG portfolio work.",
+  title: chatSeo.title,
+  description: chatSeo.description,
   alternates: {
-    canonical: "/chat",
+    canonical: chatSeo.canonical,
   },
 };
 

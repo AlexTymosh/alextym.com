@@ -8,6 +8,7 @@ import {
   HANDOFF_CONFIRMATION_PATTERNS,
   HANDOFF_REQUEST_PATTERNS,
   SCRIPTED_RESPONSE_DELAY_MS,
+  chatShellCopy,
 } from "../content/chat";
 import type {
   ChatHistoryMessage,
@@ -15,6 +16,11 @@ import type {
   HandoffState,
   Message,
 } from "../types/chat";
+
+const cyrillicHandoffInvitationMarkers = [
+  "\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u043b \u0432\u0430\u0441 \u0441 \u0430\u043b\u0435\u043a\u0441\u043e\u043c",
+  "\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u043b\u0438 \u0441 \u043d\u0438\u043c \u043b\u0438\u0447\u043d\u043e",
+] as const;
 
 export async function waitForScriptedResponse(
   signal: AbortSignal,
@@ -155,16 +161,20 @@ export function hasPendingHandoffSuggestion(messages: Message[]): boolean {
 
 export function isHandoffInvitationText(text: string): boolean {
   const normalizedText = text.toLowerCase();
+  const ownerHandoffMarkers = [
+    chatShellCopy.handoffConnectLabel,
+    chatShellCopy.handoffPromptAriaLabel,
+    chatShellCopy.handoffPromptTitle,
+  ].map((marker) => marker.toLowerCase());
   return (
     normalizedText.includes("would you like me to connect him directly") ||
-    normalizedText.includes("would you like to connect with alex") ||
-    normalizedText.includes("connect with alex") ||
-    normalizedText.includes("connect me with alex") ||
+    ownerHandoffMarkers.some((marker) => normalizedText.includes(marker)) ||
     normalizedText.includes("handoff prompt below") ||
     normalizedText.includes("offer a handoff") ||
     normalizedText.includes("website can offer a connection") ||
-    normalizedText.includes("соединил вас с алексом") ||
-    normalizedText.includes("поговорили с ним лично")
+    cyrillicHandoffInvitationMarkers.some((marker) =>
+      normalizedText.includes(marker),
+    )
   );
 }
 

@@ -237,10 +237,7 @@ large alerting setup.
 Before deployment:
 
 ```bash
-task backend:check
-task frontend:check
-task rag:check
-task ci:quick
+task ci
 ```
 
 Before changing observability files:

@@ -1,0 +1,355 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alextym.com/schemas/project.config.schema.json",
+  "title": "Public project configuration",
+  "description": "Shared non-secret configuration for reusable project identity, public copy, SEO, and wizard-editable settings.",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "project",
+    "content",
+    "owner",
+    "site",
+    "links",
+    "seo",
+    "home",
+    "contact",
+    "chat",
+    "disclaimer",
+    "resume",
+    "wizard"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "./project.config.schema.json"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "templateName",
+        "packageBaseName",
+        "frontendPackageName",
+        "backendPackageName",
+        "dockerImageName",
+        "observabilityServiceName"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "templateName": { "$ref": "#/$defs/nonEmptyString" },
+        "packageBaseName": { "$ref": "#/$defs/packageName" },
+        "frontendPackageName": { "$ref": "#/$defs/packageName" },
+        "backendPackageName": { "$ref": "#/$defs/packageName" },
+        "dockerImageName": { "$ref": "#/$defs/packageName" },
+        "observabilityServiceName": { "$ref": "#/$defs/packageName" }
+      }
+    },
+    "content": {
+      "type": "object",
+      "required": ["publicResumePath"],
+      "additionalProperties": false,
+      "properties": {
+        "publicResumePath": { "$ref": "#/$defs/repoPath" }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "required": [
+        "displayName",
+        "shortName",
+        "possessiveName",
+        "localizedNames",
+        "roleTitle",
+        "publicAliases"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "displayName": { "$ref": "#/$defs/nonEmptyString" },
+        "shortName": { "$ref": "#/$defs/nonEmptyString" },
+        "possessiveName": { "$ref": "#/$defs/nonEmptyString" },
+        "localizedNames": {
+          "type": "object",
+          "required": ["russian", "ukrainian"],
+          "additionalProperties": false,
+          "properties": {
+            "russian": { "$ref": "#/$defs/nonEmptyString" },
+            "ukrainian": { "$ref": "#/$defs/nonEmptyString" }
+          }
+        },
+        "roleTitle": { "$ref": "#/$defs/nonEmptyString" },
+        "publicAliases": { "$ref": "#/$defs/nonEmptyStringArray" }
+      }
+    },
+    "site": {
+      "type": "object",
+      "required": [
+        "name",
+        "canonicalUrl"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "canonicalUrl": { "$ref": "#/$defs/url" }
+      }
+    },
+    "links": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/url" }
+    },
+    "seo": {
+      "type": "object",
+      "required": [
+        "defaultTitle",
+        "description",
+        "shortDescription",
+        "keywords",
+        "openGraph",
+        "jsonLd",
+        "pages"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "defaultTitle": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "shortDescription": { "$ref": "#/$defs/nonEmptyString" },
+        "keywords": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "openGraph": {
+          "type": "object",
+          "required": ["imagePath", "imageAlt"],
+          "additionalProperties": false,
+          "properties": {
+            "imagePath": { "$ref": "#/$defs/repoPath" },
+            "imageAlt": { "$ref": "#/$defs/nonEmptyString" }
+          }
+        },
+        "jsonLd": {
+          "type": "object",
+          "required": ["jobTitle", "knowsAbout"],
+          "additionalProperties": false,
+          "properties": {
+            "jobTitle": { "$ref": "#/$defs/nonEmptyString" },
+            "knowsAbout": { "$ref": "#/$defs/nonEmptyStringArray" }
+          }
+        },
+        "pages": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/seoPage" }
+        }
+      }
+    },
+    "home": {
+      "type": "object",
+      "required": [
+        "profileCard",
+        "assistantCard",
+        "connectCard",
+        "featuredProject",
+        "featuredAutomationDemo",
+        "buildFocus",
+        "projectStack"
+      ],
+      "additionalProperties": true
+    },
+    "contact": {
+      "type": "object",
+      "required": ["heading", "socialLinks", "form"],
+      "additionalProperties": true,
+      "properties": {
+        "heading": {
+          "type": "object",
+          "required": ["title", "description"],
+          "additionalProperties": true
+        },
+        "socialLinks": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "form": {
+          "type": "object",
+          "required": ["ariaLabel", "fields", "submitLabel", "sendingLabel", "notices"],
+          "additionalProperties": true
+        }
+      }
+    },
+    "chat": {
+      "type": "object",
+      "required": [
+        "quickPrompts",
+        "languageRestrictions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "quickPrompts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/quickPrompt" }
+        },
+        "languageRestrictions": {
+          "type": "object",
+          "required": [
+            "russian",
+            "ukrainian",
+            "otherNonEnglish"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "russian": { "$ref": "#/$defs/languageRestriction" },
+            "ukrainian": { "$ref": "#/$defs/languageRestriction" },
+            "otherNonEnglish": { "$ref": "#/$defs/languageRestriction" }
+          }
+        }
+      }
+    },
+    "disclaimer": {
+      "type": "object",
+      "required": ["title", "bodyMarkdown"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "bodyMarkdown": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "resume": {
+      "type": "object",
+      "required": [
+        "pageHeading",
+        "downloadFileNameBase",
+        "detailLevels",
+        "sectionButtons",
+        "defaultSections",
+        "pdf"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "pageHeading": { "$ref": "#/$defs/nonEmptyString" },
+        "downloadFileNameBase": { "$ref": "#/$defs/nonEmptyString" },
+        "detailLevels": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/idLabel" }
+        },
+        "sectionButtons": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/idLabel" }
+        },
+        "defaultSections": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "pdf": {
+          "type": "object",
+          "required": [
+            "roleTitle",
+            "headerLinkVisibility",
+            "contactNote",
+            "skills"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "wizard": {
+      "type": "object",
+      "required": ["behaviour", "editableSections"],
+      "additionalProperties": false,
+      "properties": {
+        "behaviour": {
+          "type": "object",
+          "required": [
+            "loadExistingConfig",
+            "patchChangedFieldsOnly",
+            "preserveUnknownFields"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "loadExistingConfig": { "type": "boolean", "const": true },
+            "patchChangedFieldsOnly": { "type": "boolean", "const": true },
+            "preserveUnknownFields": { "type": "boolean" }
+          }
+        },
+        "editableSections": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/wizardSection" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "packageName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\\\]+$"
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "format": "uri"
+    },
+    "seoPage": {
+      "type": "object",
+      "required": ["description"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "quickPrompt": {
+      "type": "object",
+      "required": ["label", "responses"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "responses": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
+    },
+    "languageRestriction": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "idLabel": {
+      "type": "object",
+      "required": ["id", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "wizardSection": {
+      "type": "object",
+      "required": ["id", "title", "paths"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "paths": { "$ref": "#/$defs/nonEmptyStringArray" }
+      }
+    }
+  }
+}

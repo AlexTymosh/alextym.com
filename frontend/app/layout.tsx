@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
     default: siteConfig.title,
-    template: "%s | Alex Tymoshenko",
+    template: siteConfig.titleTemplate,
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     images: [
       {
         url: siteConfig.ogImagePath,
-        width: 1200,
-        height: 630,
-        alt: "Alex Tymoshenko software developer portfolio",
+        width: siteConfig.ogImageWidth,
+        height: siteConfig.ogImageHeight,
+        alt: siteConfig.ogImageAlt,
       },
     ],
   },
@@ -76,7 +76,7 @@ export default function RootLayout({
 })();`;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={siteConfig.language} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script
@@ -92,12 +92,12 @@ export default function RootLayout({
           <footer className="site-footer site-footer--with-disclaimer">
             <div className="site-footer__visit">
               <span className="site-footer__bracket">{"{"}</span>
-              <span className="site-footer__message">Thanks for visiting</span>
-              <span className="site-footer__domain">alextym.com</span>
+              <span className="site-footer__message">{siteConfig.footer.message}</span>
+              <span className="site-footer__domain">{siteConfig.name}</span>
               <span className="site-footer__bracket">{"}"}</span>
             </div>
             <Link className="site-footer__disclaimer" href="/disclaimer">
-              Disclaimer
+              {siteConfig.footer.disclaimerLabel}
             </Link>
           </footer>
         </div>

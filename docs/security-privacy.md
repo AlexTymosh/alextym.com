@@ -477,7 +477,7 @@ Render / backend host:
 Vercel:
 
 - use rewrites for `/api/*`;
-- keep backend URL in deployment configuration;
+- keep the backend URL in the Vercel `BACKEND_ORIGIN` environment variable, not in source code;
 - do not expose private env vars to frontend;
 - exclude preview deployments from indexing where configured.
 
