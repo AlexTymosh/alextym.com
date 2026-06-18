@@ -19,6 +19,8 @@ uv-cache/
 
 node_modules/
 .next/
+frontend/.generated/
+*.tsbuildinfo
 out/
 dist/
 build/

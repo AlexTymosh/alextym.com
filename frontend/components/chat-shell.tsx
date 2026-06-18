@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import {
   ESCALATION_CONSENT_COPY,
+  chatHandoffCopy,
+  chatNoticeCopy,
+  chatShellCopy,
   quickPrompts,
   thinkingMessages,
   warmupMessages,
@@ -48,13 +51,9 @@ import type {
 } from "../types/chat";
 
 const DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE =
-  "Live handoff is available from 09:00 to 21:00 Europe/London time. " +
-  "Please try again during those hours or use the contact form.";
+  chatHandoffCopy.defaultUnavailableMessage;
 
-const HANDOFF_NAME_REQUEST_MESSAGE =
-  "Alex has been notified and can review this chat for context.\n\n" +
-  "While Alex is getting ready to answer, could you tell me how I should " +
-  "address you?";
+const HANDOFF_NAME_REQUEST_MESSAGE = chatHandoffCopy.nameRequestMessage;
 
 const STREAM_RENDER_TICK_MS = 100;
 const STREAM_RENDER_BASE_CHARS = 6;
@@ -134,34 +133,34 @@ export function ChatShell() {
 
   const statusLabel = useMemo(() => {
     if (handoffState === "connected") {
-      return "Alex is connected";
+      return chatShellCopy.handoffConnectedStatus;
     }
     if (handoffState === "waiting_for_alex") {
-      return "Waiting for Alex";
+      return chatShellCopy.handoffWaitingStatus;
     }
     if (handoffState === "error") {
-      return "Handoff reconnecting";
+      return chatShellCopy.handoffReconnectingStatus;
     }
     if (handoffState === "closed") {
-      return "Handoff closed";
+      return chatShellCopy.handoffClosedStatus;
     }
     if (warmupStatus === "ready") {
-      return "Ready";
+      return chatShellCopy.readyStatus;
     }
     if (warmupStatus === "error") {
-      return "Warm-up unavailable";
+      return chatShellCopy.warmupUnavailableStatus;
     }
     return warmupLabel;
   }, [handoffState, warmupLabel, warmupStatus]);
 
   const inputPlaceholder = useMemo(() => {
     if (isHumanHandoffActive(handoffId, handoffState)) {
-      return "Message Alex through this chat...";
+      return chatShellCopy.handoffInputPlaceholder;
     }
     if (handoffState === "closed") {
-      return "Ask my assistant anything or request a new connection...";
+      return chatShellCopy.closedInputPlaceholder;
     }
-    return "Ask my assistant anything...";
+    return chatShellCopy.defaultInputPlaceholder;
   }, [handoffId, handoffState]);
 
   const handoffStatusText = useMemo(() => {
@@ -346,11 +345,11 @@ export function ChatShell() {
     } catch (error) {
       if (!isAbortError(error)) {
         updateAssistantMessage(assistantId, {
-          text: "Something went wrong. Please try again later.",
+          text: chatNoticeCopy.assistantErrorMessage,
           confidence: "low",
           notEnoughData: true,
         });
-        setNotice("The assistant is temporarily unavailable.");
+        setNotice(chatNoticeCopy.assistantUnavailable);
       }
     } finally {
       if (abortControllerRef.current === abortController) {
@@ -482,22 +481,20 @@ export function ChatShell() {
             languageUnsupported: fallbackResponse.language_unsupported,
             userRequestedHuman: fallbackResponse.user_requested_human,
           });
-          setNotice(
-            "Streaming was unavailable, so the JSON fallback was used.",
-          );
+          setNotice(chatNoticeCopy.streamingFallbackUsed);
         } catch (fallbackError) {
           if (!isAbortError(fallbackError)) {
             updateAssistantMessage(assistantId, {
-              text: "Something went wrong. Please try again later.",
+              text: chatNoticeCopy.assistantErrorMessage,
               confidence: "low",
               notEnoughData: true,
             });
-            setNotice("The assistant is temporarily unavailable.");
+            setNotice(chatNoticeCopy.assistantUnavailable);
           }
         }
       } else {
         renderer.flush();
-        setNotice("The streaming response ended before completion.");
+        setNotice(chatNoticeCopy.streamingEndedEarly);
       }
     } finally {
       renderer.cancel();
@@ -540,15 +537,10 @@ export function ChatShell() {
         return;
       }
       if (error instanceof EscalationApiError && error.status === 429) {
-        setNotice(
-          "You've reached the daily limit for handoff messages. " +
-            "Please try again later.",
-        );
+        setNotice(chatHandoffCopy.messageDailyLimitMessage);
         return;
       }
-      setNotice(
-        "Could not send this message to Alex right now. Please try again later.",
-      );
+      setNotice(chatHandoffCopy.sendFailureMessage);
     } finally {
       setIsSendingHandoffMessage(false);
       focusMessageInputSoon();
@@ -588,8 +580,7 @@ export function ChatShell() {
           role: "assistant",
           text: nextHandoffId
             ? HANDOFF_NAME_REQUEST_MESSAGE
-            : "Alex has been notified and will be able to review this chat " +
-              "for context.",
+            : chatHandoffCopy.notificationSentMessage,
         },
       ]);
     } catch (error) {
@@ -599,15 +590,10 @@ export function ChatShell() {
         return;
       }
       if (error instanceof EscalationApiError && error.status === 429) {
-        setNotice(
-          "You've reached the daily limit for connection requests. " +
-            "Please try again later.",
-        );
+        setNotice(chatHandoffCopy.connectionDailyLimitMessage);
         return;
       }
-      setNotice(
-        "Could not connect with Alex right now. Please try again later.",
-      );
+      setNotice(chatHandoffCopy.connectFailureMessage);
     } finally {
       setIsEscalating(false);
       focusMessageInputSoon();
@@ -636,7 +622,7 @@ export function ChatShell() {
         },
       ]);
     } catch {
-      setNotice("Could not close this handoff right now. Please try again later.");
+      setNotice(chatHandoffCopy.closeFailureMessage);
     } finally {
       setIsClosingHandoff(false);
       focusMessageInputSoon();
@@ -707,9 +693,7 @@ export function ChatShell() {
       setHandoffState((currentState) =>
         currentState === "connected" ? "connected" : "error",
       );
-      setNotice(
-        "The live handoff connection is reconnecting. Please keep this page open.",
-      );
+      setNotice(chatHandoffCopy.reconnectingNotice);
     });
   }
 
@@ -728,7 +712,7 @@ export function ChatShell() {
   }
 
   return (
-    <section className="chat-shell" aria-label="AI digital assistant">
+    <section className="chat-shell" aria-label={chatShellCopy.ariaLabel}>
       <div className="chat-shell__header">
         <div className="chat-shell__title">
           <span
@@ -736,7 +720,7 @@ export function ChatShell() {
             aria-hidden="true"
           />
           <div>
-            <h1>Alex&apos;s AI Assistant</h1>
+            <h1>{chatShellCopy.title}</h1>
             <p>{statusLabel}</p>
           </div>
         </div>
@@ -744,7 +728,7 @@ export function ChatShell() {
           type="button"
           className="icon-button"
           onClick={resetChat}
-          aria-label="Reset chat"
+          aria-label={chatShellCopy.resetLabel}
         >
           <span aria-hidden="true">R</span>
         </button>
@@ -763,12 +747,9 @@ export function ChatShell() {
             <div className="assistant-orb" aria-hidden="true">
               {"{ }"}
             </div>
-            <h2>Hi, I&apos;m Alex&apos;s AI assistant.</h2>
-            <p>
-              Ask about Alex&apos;s public profile, work experience, automation
-              projects, and availability.
-            </p>
-            <div className="prompt-list" aria-label="Quick prompts">
+            <h2>{chatShellCopy.introTitle}</h2>
+            <p>{chatShellCopy.introDescription}</p>
+            <div className="prompt-list" aria-label={chatShellCopy.quickPromptsAriaLabel}>
               {quickPrompts.map((prompt) => (
                 <button
                   key={prompt.label}
@@ -798,7 +779,9 @@ export function ChatShell() {
                 className={`message message--${message.role}`}
               >
                 {message.role === "alex" ? (
-                  <div className="message__sender">Alex</div>
+                  <div className="message__sender">
+                    {chatShellCopy.messageSenderOwner}
+                  </div>
                 ) : null}
                 <div className="message__content">
                   {renderMessageText(
@@ -821,15 +804,15 @@ export function ChatShell() {
         <div
           className="message message--assistant handoff-prompt"
           role="region"
-          aria-label="Connect with Alex"
+          aria-label={chatShellCopy.handoffPromptAriaLabel}
         >
           <div className="message__content">
             <p>
-              <strong>Would you like to connect with Alex?</strong>
+              <strong>{chatShellCopy.handoffPromptTitle}</strong>
             </p>
             <p>{ESCALATION_CONSENT_COPY}</p>
           </div>
-          <div className="prompt-list" aria-label="Handoff actions">
+          <div className="prompt-list" aria-label={chatShellCopy.handoffActionsAriaLabel}>
             <button
               type="button"
               className="prompt-button"
@@ -840,7 +823,9 @@ export function ChatShell() {
                 {">"}
               </span>
               <span>
-                {isEscalating ? "Connecting..." : "Connect me with Alex"}
+                {isEscalating
+                  ? chatShellCopy.handoffConnectingLabel
+                  : chatShellCopy.handoffConnectLabel}
               </span>
             </button>
             <button
@@ -852,7 +837,7 @@ export function ChatShell() {
               <span className="prompt-button__icon" aria-hidden="true">
                 {">"}
               </span>
-              <span>Continue with AI</span>
+              <span>{chatShellCopy.handoffContinueLabel}</span>
             </button>
           </div>
         </div>
@@ -865,7 +850,9 @@ export function ChatShell() {
           onClick={() => void closeHandoff()}
           disabled={isClosingHandoff}
         >
-          {isClosingHandoff ? "Closing..." : "End handoff with Alex"}
+          {isClosingHandoff
+            ? chatShellCopy.handoffClosingLabel
+            : chatShellCopy.handoffCloseLabel}
         </button>
       ) : null}
 
@@ -888,7 +875,7 @@ export function ChatShell() {
                 textUnderlineOffset: "3px",
               }}
             >
-              Open the contact form
+              {chatShellCopy.contactFormLinkLabel}
             </a>
             .
           </span>
@@ -896,15 +883,14 @@ export function ChatShell() {
       ) : null}
       {warmupStatus === "error" ? (
         <p className="chat-shell__notice">
-          Backend warm-up is unavailable in this environment. The assistant may
-          still respond.
+          {chatNoticeCopy.warmupUnavailable}
         </p>
       ) : null}
       {notice ? <p className="chat-shell__notice">{notice}</p> : null}
 
       <form className="chat-shell__form" onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor="chat-message">
-          Ask Alex&apos;s AI assistant
+          {chatShellCopy.inputAriaLabel}
         </label>
         <textarea
           ref={messageInputRef}
@@ -924,7 +910,7 @@ export function ChatShell() {
         />
         <button
           type="submit"
-          aria-label="Send message"
+          aria-label={chatShellCopy.sendLabel}
           disabled={
             isThinking ||
             isEscalating ||
@@ -1070,23 +1056,14 @@ function getHandoffClosedMessage(
   reason: EscalationStreamClosedReason,
 ): string {
   if (reason === "session_closed") {
-    return (
-      "This handoff has been closed. New messages will go to " +
-      "the AI assistant unless you request a new connection."
-    );
+    return chatHandoffCopy.closedByUserMessage;
   }
 
   if (reason === "session_expired") {
-    return (
-      "This handoff session has expired. You can continue with the " +
-      "AI assistant or request a new connection with Alex."
-    );
+    return chatHandoffCopy.sessionExpiredMessage;
   }
 
-  return (
-    "This handoff session has closed. You can continue with the " +
-    "AI assistant or request a new connection with Alex."
-  );
+  return chatHandoffCopy.sessionClosedMessage;
 }
 
 
@@ -1121,7 +1098,7 @@ function DelayedMessageSources({
   }
 
   return (
-    <div className="message-sources" aria-label="Sources">
+    <div className="message-sources" aria-label={chatShellCopy.sourceLabel}>
       {visibleSources.map((source) => (
         <span key={`${source.title}-${source.section || "document"}`}>
           {source.title}
@@ -1136,7 +1113,7 @@ function formatHandoffUnavailableMessage(message: string): {
   availabilityLine: string;
   retryLine: string;
 } {
-  const retryLine = "Please try again during those hours or use the contact form.";
+  const retryLine = chatHandoffCopy.unavailableRetryLine;
   const fallbackLine = DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE.replace(
     ` ${retryLine}`,
     "",

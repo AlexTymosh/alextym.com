@@ -4,13 +4,22 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run sync:project-config",
     "build": "next build",
+    "prebuild": "npm run sync:project-config",
     "start": "next start",
     "lint": "eslint .",
+    "prelint": "npm run sync:project-config",
+    "typecheck": "tsc --noEmit",
+    "pretypecheck": "npm run sync:project-config",
     "check:resume": "node scripts/check-resume-parser.mjs",
+    "precheck:resume": "npm run sync:project-config",
     "e2e": "playwright test",
+    "pree2e": "npm run sync:project-config",
     "e2e:headed": "playwright test --headed",
-    "e2e:install": "playwright install chromium"
+    "pree2e:headed": "npm run sync:project-config",
+    "e2e:install": "playwright install chromium",
+    "sync:project-config": "node scripts/sync-project-config.mjs"
   },
   "dependencies": {
     "next": "^16.2.9",

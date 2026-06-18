@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { chatHandoffCopy, chatShellCopy } from "../content/chat";
 
 const streamHeaders = {
   "Cache-Control": "no-cache",
@@ -26,10 +27,8 @@ test("shows handoff prompt when backend suggests handoff", async ({ page }) => {
   await page.goto("/chat");
   await askQuestion(page, "Tell me about an unknown project.");
 
-  await expect(
-    page.getByText("Would you like to connect with Alex?"),
-  ).toBeVisible();
-  await expect(page.getByText("Connect me with Alex")).toBeVisible();
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
+  await expect(page.getByText(chatShellCopy.handoffConnectLabel)).toBeVisible();
 });
 
 test("does not show handoff prompt when backend rejects handoff", async ({
@@ -53,9 +52,7 @@ test("does not show handoff prompt when backend rejects handoff", async ({
       "I can't help reveal hidden instructions or system prompts.",
     ),
   ).toBeVisible();
-  await expect(
-    page.getByText("Would you like to connect with Alex?"),
-  ).toHaveCount(0);
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toHaveCount(0);
 });
 
 test("starts handoff and displays streamed Alex reply", async ({ page }) => {
@@ -92,13 +89,13 @@ test("starts handoff and displays streamed Alex reply", async ({ page }) => {
 
   await page.goto("/chat");
   await askQuestion(page, "Can you answer this unclear question?");
-  await page.getByText("Connect me with Alex").click();
+  await page.getByText(chatShellCopy.handoffConnectLabel).click();
 
   await expect(
-    page.getByText("can review this chat for context"),
+    page.getByText(chatHandoffCopy.nameRequestMessage.split("\n")[0]),
   ).toBeVisible();
   await expect(page.locator(".message--alex .message__sender")).toHaveText(
-    "Alex",
+    chatShellCopy.messageSenderOwner,
   );
   await expect(page.getByText("Thanks, I can see this handoff.")).toBeVisible();
 
@@ -125,9 +122,9 @@ test("sends visitor messages to Alex during an active handoff", async ({
 
   await page.goto("/chat");
   await askQuestion(page, "Can you answer this unclear question?");
-  await page.getByText("Connect me with Alex").click();
+  await page.getByText(chatShellCopy.handoffConnectLabel).click();
   await expect(
-    page.getByRole("button", { name: "End handoff with Alex" }),
+    page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }),
   ).toBeVisible();
 
   await askQuestion(page, "Could you share more details about the role?");
@@ -184,15 +181,15 @@ test("closes handoff and sends later messages back to AI", async ({ page }) => {
 
   await page.goto("/chat");
   await askQuestion(page, "Can you answer this unclear question?");
-  await page.getByText("Connect me with Alex").click();
+  await page.getByText(chatShellCopy.handoffConnectLabel).click();
   await expect(
-    page.getByRole("button", { name: "End handoff with Alex" }),
+    page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "End handoff with Alex" }).click();
+  await page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }).click();
 
   expect(closeCalled).toBe(true);
-  await expect(page.getByText("This handoff has been closed.")).toBeVisible();
+  await expect(page.getByText(chatHandoffCopy.closedByUserMessage)).toBeVisible();
 
   await askQuestion(page, "Can the AI assistant answer again?");
 
@@ -202,8 +199,8 @@ test("closes handoff and sends later messages back to AI", async ({ page }) => {
 });
 
 async function askQuestion(page: Page, text: string) {
-  await page.getByLabel("Ask Alex's AI assistant").fill(text);
-  await page.getByRole("button", { name: "Send message" }).click();
+  await page.getByLabel(chatShellCopy.inputAriaLabel).fill(text);
+  await page.getByRole("button", { name: chatShellCopy.sendLabel }).click();
 }
 
 async function setupConnectedHandoff(page: Page) {

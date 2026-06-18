@@ -5,17 +5,15 @@ import type {
   ResumeEntry,
   ResumeSection,
 } from "../../../content/resume";
+import { resumeConfig } from "../../../lib/project-config";
 import styles from "./ResumeTimeline.module.css";
 
 const YEAR_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 const YEAR_PATTERN = /^\d{4}$/;
 const LINK_PATTERN = /\[([^\]]+)]\(([^)]+)\)/g;
 
-const SECTION_LABELS: Record<ResumeSection, string> = {
-  experience: "Work Experience",
-  education: "Education",
-  training: "Training",
-};
+const SECTION_LABELS =
+  resumeConfig.sectionLabels as Record<ResumeSection, string>;
 
 export type ResumeTimelineProps = {
   entries: ResumeEntry[];
@@ -27,7 +25,7 @@ export function ResumeTimeline({
   entries,
 }: ResumeTimelineProps) {
   return (
-    <div className={styles.timeline} aria-label="Resume timeline">
+    <div className={styles.timeline} aria-label={resumeConfig.timelineAriaLabel}>
       {entries.map((entry, index) => {
         const previousEntry = entries[index - 1];
         const shouldShowSectionDivider =
@@ -149,7 +147,7 @@ function formatResumeDate(date: string): string {
 
 function formatResumePeriod(startDate: string, endDate: string | null): string {
   if (!endDate) {
-    return `${formatResumeDate(startDate)} – Present`;
+    return `${formatResumeDate(startDate)} – ${resumeConfig.presentLabel}`;
   }
 
   if (startDate === endDate) {

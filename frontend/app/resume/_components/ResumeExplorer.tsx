@@ -9,6 +9,7 @@ import type {
   ResumeSection,
 } from "../../../content/resume";
 import { recordResumeDownload } from "../../../lib/privacy-safe-analytics";
+import { resumeConfig } from "../../../lib/project-config";
 import { ResumeTimeline } from "./ResumeTimeline";
 import styles from "./ResumeTimeline.module.css";
 
@@ -16,19 +17,13 @@ type ResumeExplorerProps = {
   resumeData: ResumeData;
 };
 
-const DETAIL_LEVELS: { id: ResumeDetailLevel; label: string }[] = [
-  { id: "concise", label: "Concise" },
-  { id: "detailed", label: "Detailed" },
-];
+type DetailLevelOption = { id: ResumeDetailLevel; label: string };
+type SectionButton = { id: ResumeSection; label: string };
 
-const SECTION_BUTTONS: { id: ResumeSection; label: string }[] = [
-  { id: "experience", label: "Experience" },
-  { id: "education", label: "Education" },
-  { id: "training", label: "Training" },
-];
-
-const DEFAULT_SECTIONS: ResumeSection[] = ["experience", "education"];
-const DOWNLOAD_FILE_NAME = "Alex_alextym.com.pdf";
+const DETAIL_LEVELS = resumeConfig.detailLevels as DetailLevelOption[];
+const SECTION_BUTTONS = resumeConfig.sectionButtons as SectionButton[];
+const DEFAULT_SECTIONS = resumeConfig.defaultSections as ResumeSection[];
+const DOWNLOAD_FILE_NAME = `${resumeConfig.downloadFileNameBase}.pdf`;
 
 export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
   const [detailLevel, setDetailLevel] =
@@ -64,7 +59,7 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
     <div className={styles.explorer}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <h1>Alex Tymoshenko</h1>
+          <h1>{resumeConfig.pageHeading}</h1>
         </div>
 
         <a
@@ -73,14 +68,14 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
           href={downloadHref}
           onClick={recordResumeDownload}
         >
-          Download {detailLevel === "concise" ? "concise" : "detailed"} CV
+          {formatDownloadLabel(detailLevel)}
         </a>
       </header>
 
-      <IntroText />
+      <IntroText paragraphs={resumeData.summary.concise} />
 
-      <div className={styles.toolbar} aria-label="Resume controls">
-        <ControlGroup label="Detail level">
+      <div className={styles.toolbar} aria-label={resumeConfig.controlsAriaLabel}>
+        <ControlGroup label={resumeConfig.detailControlLabel}>
           {DETAIL_LEVELS.map((item) => (
             <button
               aria-pressed={detailLevel === item.id}
@@ -94,7 +89,7 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
           ))}
         </ControlGroup>
 
-        <ControlGroup label="Sections">
+        <ControlGroup label={resumeConfig.sectionsControlLabel}>
           {SECTION_BUTTONS.map((item) => {
             const isActive = selectedSections.includes(item.id);
 
@@ -121,7 +116,7 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
         <ResumeTimeline entries={visibleEntries} detailLevel={detailLevel} />
       ) : (
         <p className={styles.emptyState} role="status">
-          Select at least one section to show resume entries.
+          {resumeConfig.emptyState}
         </p>
       )}
 
@@ -132,19 +127,12 @@ export function ResumeExplorer({ resumeData }: ResumeExplorerProps) {
   );
 }
 
-function IntroText() {
+function IntroText({ paragraphs }: { paragraphs: readonly string[] }) {
   return (
     <div className={styles.introText}>
-      <p>
-        Automation Engineer focused on Python, API integrations, ERP workflows,
-        reporting automation, Excel-to-database migration, data pipelines, and
-        operational dashboards.
-      </p>
-
-      <p>
-        I offer a three-step approach: requirements and ROI analysis, rapid
-        AI-assisted prototyping, then testing, deployment, and support.
-      </p>
+      {paragraphs.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
     </div>
   );
 }
@@ -156,7 +144,7 @@ function AdditionalSections({
 }>) {
   return (
     <section
-      aria-label="Additional CV sections"
+      aria-label={resumeConfig.additionalSectionsAriaLabel}
       className={styles.additionalSections}
     >
       {sections.map((section) => (
@@ -210,6 +198,10 @@ function getDownloadHref(
   });
 
   return `/resume/download?${params.toString()}`;
+}
+
+function formatDownloadLabel(detailLevel: ResumeDetailLevel): string {
+  return resumeConfig.downloadLabelTemplate.replace("{detail}", detailLevel);
 }
 
 function getEntryVisibleIn(entry: {

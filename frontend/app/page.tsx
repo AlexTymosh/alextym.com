@@ -5,11 +5,15 @@ import type { FeaturedProjectPreviewItem } from "../content/home";
 import {
   assistantCard,
   buildFocus,
+  connectCard,
   featuredAutomationDemo,
   featuredProject,
+  getVisibleConnectLinkKeys,
   profileCard,
   projectStack,
+  projectStackTitle,
 } from "../content/home";
+import { getPublicLinks } from "../lib/project-config";
 import styles from "./page.module.css";
 
 const projectPreviewSlotClassNames: Record<FeaturedProjectPreviewItem["slot"], string> = {
@@ -41,6 +45,13 @@ function FacebookIcon() {
     </svg>
   );
 }
+
+const socialIcons = {
+  facebook: <FacebookIcon />,
+  github: <GitHubIcon />,
+  linkedin: <LinkedInIcon />,
+  website: null,
+};
 
 function getYouTubeEmbedUrl(videoId: string) {
   return `https://www.youtube-nocookie.com/embed/${videoId}`;
@@ -85,9 +96,10 @@ function ProjectPreviewTitle({ item }: { item: FeaturedProjectPreviewItem }) {
 export default function HomePage() {
   const youtubeEmbedUrl = getYouTubeEmbedUrl(featuredAutomationDemo.youtubeVideoId);
   const youtubeWatchUrl = getYouTubeWatchUrl(featuredAutomationDemo.youtubeVideoId);
+  const socialLinks = getPublicLinks(getVisibleConnectLinkKeys());
 
   return (
-    <section className="home-grid" aria-label="Alex Tymoshenko portfolio overview">
+    <section className="home-grid" aria-label={`${profileCard.name} portfolio overview`}>
       <article className="card profile-card">
         <div className={`avatar-mark ${styles.profileImageFrame}`} aria-hidden="true">
           <Image
@@ -117,27 +129,26 @@ export default function HomePage() {
       </article>
 
       <article className="card connect-card">
-        <p className="eyebrow">Connect</p>
+        <p className="eyebrow">{connectCard.eyebrow}</p>
         <div className="social-row">
-          <a href="https://github.com/AlexTymosh" target="_blank" rel="noreferrer" aria-label="GitHub">
-            <GitHubIcon />
-          </a>
-          <a
-            href="https://www.facebook.com/ol.tymoshenko"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Facebook"
-          >
-            <FacebookIcon />
-          </a>
-          <a
-            href="https://www.linkedin.com/in/alex-tim-tech/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="LinkedIn"
-          >
-            <LinkedInIcon />
-          </a>
+          {socialLinks.map((link) => {
+            const icon = socialIcons[link.key];
+            if (!icon) {
+              return null;
+            }
+
+            return (
+              <a
+                key={link.key}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={link.label}
+              >
+                {icon}
+              </a>
+            );
+          })}
         </div>
       </article>
 
@@ -212,7 +223,7 @@ export default function HomePage() {
         </div>
 
         <div className={styles.embeddedStack}>
-          <p className="eyebrow">Project Stack</p>
+          <p className="eyebrow">{projectStackTitle}</p>
           <div className="tag-cloud">
             {projectStack.map((item) => (
               <span key={item}>{item}</span>
