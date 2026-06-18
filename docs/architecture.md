@@ -193,13 +193,74 @@ flowchart LR
     ApiRewrite --> Browser
 ```
 
-The frontend proxies `/api/...` requests to the backend through `frontend/vercel.json`.
+The frontend calls local `/api/...` paths. `frontend/next.config.mjs` creates
+the production rewrite from the `BACKEND_ORIGIN` environment variable.
 
-Current production rewrite target:
+Current rewrite shape:
 
 ```text
-https://alextym-backend.onrender.com/api/:path*
+/api/:path* -> ${BACKEND_ORIGIN}/api/:path*
 ```
+
+---
+
+## Shared project configuration
+
+Reusable public template settings live in:
+
+```text
+config/project.config.json
+```
+
+This config contains non-secret project identity, public links, SEO
+descriptions, social preview copy, home page copy, language restriction
+toggles, quick prompts, resume page labels, resume PDF link visibility, and
+disclaimer page text. Assistant labels are derived from owner names.
+
+Local editing is handled through:
+
+```bash
+task setup:wizard
+```
+
+The wizard loads the existing config, shows editable fields from
+`wizard.editableSections`, groups settings by tab, patches changed fields only,
+and requires review plus validation before saving. The CLI fallback is available
+through:
+
+```bash
+task setup:wizard:cli
+```
+
+The local GUI wizard intentionally exposes only common template settings.
+Contact-form implementation copy and technical honeypot fields remain in
+project config for runtime use, but are not shown in the wizard by default.
+Resume settings shown in the wizard are limited to the page heading, download
+file base name, PDF display name, and PDF link visibility. Resume page intro
+text and PDF profile text are derived from `content/public/resume.md`.
+
+Technical site defaults are code-owned rather than wizard-owned: navigation
+routes, footer boilerplate, HTML language, page canonical paths, JSON-LD
+`Person` type, Open Graph image dimensions, and standard chat handoff/status
+messages are derived by the application. Standard assistant boundary answers
+and assistant labels are also code-owned and interpolate owner names. The
+wizard edits the owner name, canonical website URL, public links, SEO
+descriptions, quick prompts, language restriction toggles with read-only
+fallback previews, home content, resume PDF link visibility, and disclaimer text.
+Long quick-prompt responses and the disclaimer body are edited as multi-line
+text in the GUI while the wizard preserves the required JSON config structure.
+
+Do not put secrets, provider credentials, deployment-specific backend hosts, or
+private biography data in project config. Deployment hosts stay in provider
+environment variables. Public resume and public RAG content stay in:
+
+```text
+content/public/resume.md
+```
+
+The backend RAG extractor and loaders resolve that file through
+`content.publicResumePath` in `config/project.config.json`. Do not add a second
+hardcoded resume source path in backend code.
 
 ---
 

@@ -49,7 +49,7 @@ Routing:
 
 ```text
 Frontend calls /api/*
-Vercel rewrites /api/* -> backend host
+Next.js rewrites /api/* -> BACKEND_ORIGIN
 ```
 
 Fallback routing:
@@ -220,7 +220,8 @@ Rules:
 - Keep the home page as a simple standalone page.
 - Put the AI chat experience on `/chat`, not on the home page.
 - Use `/api/*` from the frontend; do not call the backend host directly.
-- Use `frontend/vercel.json` for rewrites.
+- Use `BACKEND_ORIGIN`-driven Next.js rewrites for `/api/*`.
+- Do not hardcode backend deployment hosts in `frontend/vercel.json`.
 - Support dark/light mode.
 - Keep `/resume` and `/contact` simple for MVP.
 - Add loading, error, and warm-up states for chat.

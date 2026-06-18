@@ -237,10 +237,7 @@ Alerts должны быть редкими и actionable. Для low-traffic pe
 Перед deployment:
 
 ```bash
-task backend:check
-task frontend:check
-task rag:check
-task ci:quick
+task ci
 ```
 
 Перед изменением observability files:
