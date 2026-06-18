@@ -16,6 +16,7 @@ import {
   closeEscalationStream,
   isHandoffUnavailableError,
   normaliseHandoffState,
+  parseEscalationStreamClosedReason,
   parseEscalationStreamMessage,
   submitEscalation,
   submitEscalationClose,
@@ -39,7 +40,12 @@ import {
   handoffStatusCopy,
   renderMessageText,
 } from "../lib/chat-formatting";
-import type { HandoffState, Message, QuickPrompt } from "../types/chat";
+import type {
+  EscalationStreamClosedReason,
+  HandoffState,
+  Message,
+  QuickPrompt,
+} from "../types/chat";
 
 const DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE =
   "Live handoff is available from 09:00 to 21:00 Europe/London time. " +
@@ -626,9 +632,7 @@ export function ChatShell() {
         {
           id: createMessageId("assistant"),
           role: "assistant",
-          text:
-            "This handoff has been closed. New messages will go to " +
-            "the AI assistant unless you request a new connection.",
+          text: getHandoffClosedMessage("session_closed"),
         },
       ]);
     } catch {
@@ -685,7 +689,8 @@ export function ChatShell() {
       setHandoffUnavailableMessage(null);
     });
 
-    eventSource.addEventListener("closed", () => {
+    eventSource.addEventListener("closed", (event) => {
+      const reason = parseEscalationStreamClosedReason(event);
       closeEscalationStream(escalationEventSourceRef);
       setHandoffState("closed");
       setMessages((currentMessages) => [
@@ -693,9 +698,7 @@ export function ChatShell() {
         {
           id: createMessageId("assistant"),
           role: "assistant",
-          text:
-            "This handoff session has expired. You can continue with the " +
-            "AI assistant or request a new connection with Alex.",
+          text: getHandoffClosedMessage(reason),
         },
       ]);
     });
@@ -1061,6 +1064,29 @@ function nextStreamRenderBatchSize(
   }
 
   return STREAM_RENDER_BASE_CHARS;
+}
+
+function getHandoffClosedMessage(
+  reason: EscalationStreamClosedReason,
+): string {
+  if (reason === "session_closed") {
+    return (
+      "This handoff has been closed. New messages will go to " +
+      "the AI assistant unless you request a new connection."
+    );
+  }
+
+  if (reason === "session_expired") {
+    return (
+      "This handoff session has expired. You can continue with the " +
+      "AI assistant or request a new connection with Alex."
+    );
+  }
+
+  return (
+    "This handoff session has closed. You can continue with the " +
+    "AI assistant or request a new connection with Alex."
+  );
 }
 
 
