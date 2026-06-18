@@ -14,7 +14,8 @@ The command is an alias for the current structured resume pipeline:
 task rag:ingest:generated
 ```
 
-The current source of truth is `content/public/resume.md`.
+The current source of truth is the public resume file referenced by
+`content.publicResumePath` in `config/project.config.json`.
 The pipeline extracts reviewed `## RAG` / `### RAG` sections into generated
 chunks, generates OpenAI embeddings, and replaces the matching source vectors
 in Qdrant.

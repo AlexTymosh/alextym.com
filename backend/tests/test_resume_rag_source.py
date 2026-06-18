@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from app.rag.public_resume_source import get_public_resume_source_file
 from app.rag.resume_rag_source import (
     build_resume_rag_document,
     render_resume_rag_json,
@@ -21,6 +22,7 @@ def test_extracts_only_answer_facts_as_content() -> None:
     document = build_resume_rag_document(_fixture_markdown())
     chunk = _get_chunk(document, "sample-entry")
 
+    assert document.source_path == get_public_resume_source_file()
     assert FACT_SENTINEL in chunk.content
     assert HINT_SENTINEL not in chunk.content
     assert CONCISE_SENTINEL not in chunk.content

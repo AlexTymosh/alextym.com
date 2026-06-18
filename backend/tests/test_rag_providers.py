@@ -4,8 +4,10 @@ from types import SimpleNamespace
 from app.core.config import Settings
 from app.llm.openai_client import OpenAIEmbeddingClient, OpenAIResponsesClient
 from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.public_resume_source import get_public_resume_source_file_for_path
 from app.rag.qdrant_retriever import QdrantRetriever
 from app.rag.qdrant_store import QdrantKnowledgeStore
+from app.rag.structured_knowledge import GENERATED_RESUME_CHUNKS_FILE
 from scripts.ingest_knowledge import ingest_public_knowledge
 
 EXPECTED_QDRANT_INDEX_FIELDS = [
@@ -223,7 +225,10 @@ def test_qdrant_retriever_expands_short_sql_queries() -> None:
         score_threshold=0.4,
     )
 
-    chunks = retriever.retrieve("У Алекса есть опыт с SQL?")
+    chunks = retriever.retrieve(
+        "\u0423 \u0410\u043b\u0435\u043a\u0441\u0430 "
+        "\u0435\u0441\u0442\u044c \u043e\u043f\u044b\u0442 \u0441 SQL?"
+    )
 
     assert chunks
     assert fake_embedding_client.last_text is not None
@@ -255,10 +260,8 @@ def test_ingestion_replaces_vectors_from_reviewed_public_knowledge() -> None:
     ]
     assert fake_vector_store.replaced_chunks[0].metadata.source == "Summary"
     assert fake_vector_store.source_files == (
-        "content/public/resume.md",
-        "frontend/content/resume.md",
-        "resume.md",
-        "resume.generated.chunks.json",
+        get_public_resume_source_file_for_path(knowledge_dir / "resume.md"),
+        GENERATED_RESUME_CHUNKS_FILE,
     )
 
 
@@ -283,10 +286,8 @@ def test_ingestion_cleans_sources_when_public_knowledge_is_empty() -> None:
     assert fake_embedding_client.texts == []
     assert fake_vector_store.replaced_chunks == []
     assert fake_vector_store.source_files == (
-        "content/public/resume.md",
-        "frontend/content/resume.md",
-        "resume.md",
-        "resume.generated.chunks.json",
+        get_public_resume_source_file_for_path(knowledge_dir / "resume.md"),
+        GENERATED_RESUME_CHUNKS_FILE,
     )
 
 

@@ -1,7 +1,7 @@
 """Legacy ingestion compatibility entrypoint.
 
 Prefer `task rag:ingest:generated`, which extracts structured RAG chunks from
-the canonical `content/public/resume.md` source before embedding.
+the configured public resume source before embedding.
 """
 
 from dataclasses import dataclass
@@ -10,12 +10,12 @@ from pathlib import Path
 from app.core.config import Settings, get_settings
 from app.llm.client import EmbeddingClient, ProviderConfigurationError, ProviderRequestError
 from app.llm.openai_client import OpenAIEmbeddingClient
-from app.rag.knowledge_base import CANONICAL_RESUME_SOURCE_PATH, load_public_knowledge
+from app.rag.knowledge_base import load_public_knowledge
 from app.rag.models import KnowledgeChunk
+from app.rag.public_resume_source import get_public_resume_source_file_for_path
+from app.rag.public_resume_source import get_public_resume_source_path
 from app.rag.qdrant_store import QdrantKnowledgeStore
 from app.rag.structured_knowledge import GENERATED_RESUME_CHUNKS_FILE
-from app.rag.structured_knowledge import LEGACY_RESUME_SOURCE_FILE
-from app.rag.structured_knowledge import PREVIOUS_CANONICAL_RESUME_SOURCE_FILE
 
 
 @dataclass(frozen=True)
@@ -33,11 +33,10 @@ def ingest_public_knowledge(
     vector_store: QdrantKnowledgeStore | None = None,
 ) -> IngestionSummary:
     resolved_settings = settings or get_settings()
-    chunks = load_public_knowledge(knowledge_dir)
+    source_path = get_public_resume_source_path(knowledge_dir)
+    chunks = load_public_knowledge(source_path)
     source_files = (
-        CANONICAL_RESUME_SOURCE_PATH.as_posix(),
-        PREVIOUS_CANONICAL_RESUME_SOURCE_FILE,
-        LEGACY_RESUME_SOURCE_FILE,
+        get_public_resume_source_file_for_path(source_path),
         GENERATED_RESUME_CHUNKS_FILE,
     )
 

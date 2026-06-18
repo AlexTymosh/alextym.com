@@ -3,17 +3,17 @@ from pathlib import Path
 
 from app.rag.models import ChunkMetadata
 from app.rag.models import KnowledgeChunk
-from app.rag.resume_rag_source import DEFAULT_SOURCE_PATH
+from app.rag.public_resume_source import get_public_resume_source_file_for_path
+from app.rag.public_resume_source import get_public_resume_source_path
 from app.rag.resume_rag_source import ResumeRagChunk
 from app.rag.resume_rag_source import build_resume_rag_document
 from app.rag.retriever import InMemoryRetriever
 
 PLACEHOLDER_MARKER = "<!-- alextym:placeholder -->"
-CANONICAL_RESUME_SOURCE_PATH = DEFAULT_SOURCE_PATH
 
 
 def load_public_knowledge(resume_source_path: Path | None = None) -> list[KnowledgeChunk]:
-    source_path = _resolve_resume_source_path(resume_source_path)
+    source_path = get_public_resume_source_path(resume_source_path)
     if not source_path.exists():
         return []
 
@@ -23,20 +23,12 @@ def load_public_knowledge(resume_source_path: Path | None = None) -> list[Knowle
 
     document = build_resume_rag_document(
         source_text,
-        source_path=_relative_path(source_path),
+        source_path=get_public_resume_source_file_for_path(source_path),
     )
     return [
         _knowledge_chunk_from_resume_rag_chunk(chunk, source_file=document.source_path)
         for chunk in document.chunks
     ]
-
-
-def _resolve_resume_source_path(resume_source_path: Path | None) -> Path:
-    if resume_source_path is None:
-        return _repository_root() / CANONICAL_RESUME_SOURCE_PATH
-    if resume_source_path.is_dir():
-        return resume_source_path / "resume.md"
-    return resume_source_path
 
 
 def _knowledge_chunk_from_resume_rag_chunk(
@@ -86,17 +78,6 @@ def _knowledge_chunk_from_resume_rag_chunk(
             },
         ),
     )
-
-
-def _repository_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
-def _relative_path(path: Path) -> str:
-    try:
-        return path.resolve().relative_to(_repository_root()).as_posix()
-    except ValueError:
-        return path.as_posix()
 
 
 @lru_cache
