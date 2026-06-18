@@ -15,18 +15,11 @@ tasks:
     cmds:
       - task --list
 
-  ci:quick:
-    desc: Run standard free checks except Docker image build.
-    cmds:
-      - task: backend:check
-      - task: frontend:check
-      - task: rag:check
-
   ci:
-    desc: Run all free checks expected before push or pull request.
+    desc: Run all free checks expected before push or pull request with a summary.
+    silent: true
     cmds:
-      - task: ci:quick
-      - task: docker:build
+      - node scripts/run-ci.mjs
 
   pre-pr:
     desc: Apply safe formatting, then run the full free pre-PR checks.
@@ -77,6 +70,47 @@ tasks:
         -File "{{.ROOT_DIR}}/scripts/smoke.ps1"
         -BackendPort {{.BACKEND_PORT}}
         -FrontendPort {{.FRONTEND_PORT}}
+
+  repo:diff-check:
+    desc: Check staged and unstaged diff whitespace.
+    cmds:
+      - git diff --check
+
+  repo:cyrillic-check:
+    desc: Prevent raw Cyrillic outside .ru documentation.
+    cmds:
+      - node scripts/check-no-raw-cyrillic.mjs
+
+  repo:check:
+    desc: Run repository hygiene checks.
+    cmds:
+      - task: repo:diff-check
+      - task: repo:cyrillic-check
+
+  config:check:
+    desc: Validate shared public project configuration.
+    cmds:
+      - node scripts/check-project-config.mjs
+
+  wizard:check:
+    desc: Validate the local project setup wizard.
+    cmds:
+      - node scripts/check-setup-wizard.mjs
+
+  setup:wizard:
+    desc: Edit shared public project configuration through the local GUI setup wizard.
+    cmds:
+      - node scripts/setup-project-config-gui.mjs {{.CLI_ARGS}}
+
+  setup:wizard:cli:
+    desc: Edit shared public project configuration through the CLI setup wizard.
+    cmds:
+      - node scripts/setup-project-config.mjs {{.CLI_ARGS}}
+
+  deployment:check:
+    desc: Validate local and production deployment routing configuration.
+    cmds:
+      - node scripts/check-deployment-config.mjs
 
   stop:
     desc: Stop local dev servers on the project ports.
@@ -135,9 +169,6 @@ tasks:
   rag:extract-resume:
     desc: Build generated RAG sources from the canonical resume markdown.
     dir: backend
-    env:
-      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
-      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
     cmds:
       - uv run python -m scripts.extract_resume_rag_source
 
@@ -145,7 +176,19 @@ tasks:
     desc: Run free deterministic RAG checks without live OpenAI or Qdrant.
     cmds:
       - task: rag:extract-resume
-      - task: rag:eval:free
+      - task: rag:eval:contract
+
+  rag:eval:contract:
+    desc: Run stateless deterministic contract evals without live OpenAI or Qdrant.
+    dir: backend
+    env:
+      LOG_LEVEL: WARNING
+    cmds:
+      - >-
+        uv run python -m scripts.run_chat_evals
+        --suite contract
+        --mode isolated
+        --report-json "../.tmp/evals/contract.json"
 
   rag:ingest:
     desc: Rebuild Qdrant vectors from the canonical structured resume source.
@@ -165,11 +208,9 @@ tasks:
         python -m scripts.ingest_generated_resume_chunks
 
   rag:eval:free:
-    desc: Run free deterministic eval cycle without OpenAI/Qdrant.
+    desc: Run local before/after contract eval cycle without live OpenAI/Qdrant.
     dir: backend
     env:
-      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
-      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
       LOG_LEVEL: WARNING
     cmds:
       - >-
@@ -273,6 +314,12 @@ tasks:
     cmds:
       - npm run lint
 
+  frontend:typecheck:
+    desc: Run frontend TypeScript type checks.
+    dir: frontend
+    cmds:
+      - npm run typecheck
+
   frontend:resume-check:
     desc: Check resume parser and prevent RAG-only content leaks.
     dir: frontend
@@ -303,25 +350,35 @@ tasks:
     cmds:
       - npm run e2e
 
+  frontend:e2e:built:
+    desc: Run frontend Playwright E2E tests against the existing production build.
+    dir: frontend
+    env:
+      PLAYWRIGHT_USE_EXISTING_BUILD: "true"
+    cmds:
+      - npm run e2e
+
   frontend:check:
     desc: Run all frontend checks for local development.
     cmds:
       - task: frontend:install
       - task: frontend:lint
+      - task: frontend:typecheck
       - task: frontend:resume-check
       - task: frontend:build
       - task: frontend:e2e:install
-      - task: frontend:e2e
+      - task: frontend:e2e:built
 
   frontend:check:ci:
     desc: Run all frontend checks on Linux CI runners.
     cmds:
       - task: frontend:install
       - task: frontend:lint
+      - task: frontend:typecheck
       - task: frontend:resume-check
       - task: frontend:build
       - task: frontend:e2e:install:ci
-      - task: frontend:e2e
+      - task: frontend:e2e:built
 
   docker:build:
     desc: Build the backend Docker image.

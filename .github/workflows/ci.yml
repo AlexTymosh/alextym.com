@@ -20,6 +20,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  project:
+    name: project
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Task
+        uses: go-task/setup-task@v2
+        with:
+          version: "3.51.1"
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Run repository hygiene checks
+        run: task repo:check
+
+      - name: Run project config checks
+        run: task config:check
+
+      - name: Run setup wizard checks
+        run: task wizard:check
+
+      - name: Run deployment config checks
+        run: task deployment:check
+
   backend:
     name: backend
     runs-on: ubuntu-24.04
