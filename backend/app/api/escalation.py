@@ -10,6 +10,7 @@ from app.api.rate_limit import (
 )
 from app.core.config import Settings, get_settings
 from app.core.domain_metrics import record_escalation_event
+from app.core.project_config import get_project_config
 from app.schemas.escalation import (
     EscalationCloseResponse,
     EscalationMessageRequest,
@@ -26,6 +27,7 @@ from app.services.escalation import (
 from app.services.handoff_availability import HandoffUnavailableError
 
 router = APIRouter(tags=["escalation"])
+_OWNER_REFERENCE = get_project_config().assistant.owner_reference
 
 
 def get_escalation_service(
@@ -67,7 +69,7 @@ async def escalate(
         record_escalation_event(action="create", outcome="delivery_error")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Could not connect with Alex. Please try again later.",
+            detail=f"Could not connect with {_OWNER_REFERENCE}. Please try again later.",
         ) from exc
 
     record_escalation_event(action="create", outcome="success")
@@ -108,7 +110,7 @@ async def send_escalation_message(
         record_escalation_event(action="message", outcome="delivery_error")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Could not send this message to Alex. Please try again later.",
+            detail=f"Could not send this message to {_OWNER_REFERENCE}. Please try again later.",
         ) from exc
 
     record_escalation_event(action="message", outcome="success")

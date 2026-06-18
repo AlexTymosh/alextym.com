@@ -8,7 +8,12 @@ from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import InMemoryRetriever
 from app.schemas.chat import ChatRequest
-from app.services.chat import ChatService, GREETING_ANSWER, OUT_OF_SCOPE_ANSWER
+from app.services.chat import (
+    ChatService,
+    GREETING_ANSWER,
+    OUT_OF_SCOPE_ANSWER,
+    UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
+)
 
 
 def test_chunk_markdown_uses_headings_and_metadata() -> None:
@@ -256,10 +261,10 @@ def test_chat_service_resolves_pronoun_profile_question_after_russian_language_p
         ChatRequest(
             message="Let me know about his work experience",
             history=[
-                {"role": "user", "content": "привет"},
+                {"role": "user", "content": "\u043f\u0440\u0438\u0432\u0435\u0442"},
                 {
                     "role": "assistant",
-                    "content": "Извините, Алекс настроил меня на общение только на английском языке.",
+                    "content": UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
                 },
             ],
         )
@@ -288,7 +293,10 @@ def test_chat_service_resolves_short_continuation_from_previous_alex_question() 
     )
 
     assert retriever.queries == [
-        "Continue answering about Alex's professional profile based on the previous Alex-related question."
+        (
+            "Continue answering about Alex's professional profile based on the "
+            "previous Alex-related question."
+        )
     ]
     assert response.answer == "More Alex context."
     assert response.not_enough_data is False
@@ -312,7 +320,10 @@ def test_chat_service_resolves_short_soft_skills_follow_up_from_alex_context() -
     )
 
     assert retriever.queries == [
-        "Tell me about Alex's soft skills, working style, collaboration, communication, and problem-solving."
+        (
+            "Tell me about Alex's soft skills, working style, collaboration, "
+            "communication, and problem-solving."
+        )
     ]
     assert response.answer == "Grounded soft skills answer."
     assert response.not_enough_data is False
@@ -323,7 +334,11 @@ def test_chat_service_uses_llm_intent_classifier_for_ambiguous_profile_question(
     retriever = RecordingRetriever([chunk])
     llm_client = SequenceLLMClient(
         [
-            '{"intent":"alex_profile_question","rewritten_query":"Tell me about Alex work experience","confidence":"high","reason":"his refers to Alex from context"}',
+            (
+                '{"intent":"alex_profile_question","rewritten_query":"Tell me about '
+                'Alex work experience","confidence":"high","reason":"his refers to '
+                'Alex from context"}'
+            ),
             "Classified and grounded answer.",
         ]
     )
@@ -413,7 +428,8 @@ def test_chat_service_refuses_private_personal_data_requests() -> None:
 
     assert response.not_enough_data is True
     assert response.sources == []
-    assert "private personal information" in response.answer
+    assert "not sure I can help" in response.answer
+    assert "professional background" in response.answer
 
 
 def test_chat_service_falls_back_to_extractive_answer_when_llm_fails() -> None:

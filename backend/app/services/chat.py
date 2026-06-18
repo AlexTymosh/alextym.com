@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.project_config import get_project_config
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
 from app.llm.factory import get_configured_llm_client
 from app.rag.factory import get_configured_retriever
@@ -18,69 +19,109 @@ from app.services.chat_safety import (
     is_unsafe_chat_output,
 )
 
+_PROJECT_CONFIG = get_project_config()
+_OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
+_OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
+_OWNER_RUSSIAN_NAME = _PROJECT_CONFIG.owner.russian_name
+_OWNER_UKRAINIAN_NAME = _PROJECT_CONFIG.owner.ukrainian_name
+_OWNER_ALIASES = tuple(
+    dict.fromkeys(
+        [
+            _OWNER_REFERENCE.casefold(),
+            *(alias.casefold() for alias in _PROJECT_CONFIG.owner.public_aliases),
+        ]
+    )
+)
+_CHAT_LANGUAGE_RESTRICTIONS = _PROJECT_CONFIG.chat.language_restrictions
+HANDOFF_PROMPT_TITLE = f"Would you like to connect with {_OWNER_REFERENCE}?"
+
 INSUFFICIENT_DATA_ANSWER = (
     "I do not have enough reliable information in the public knowledge base "
-    "to answer that accurately. Would you like me to connect you with Alex?"
+    "to answer that accurately. \n"
+    f"Would you like me to connect you with {_OWNER_REFERENCE}?"
 )
-
 PROMPT_INJECTION_ANSWER = (
-    "I can't help with hidden instructions, system prompts, private data, "
-    "or internal rules. I can answer questions about Alex's professional "
-    "background, projects, services, or contact options."
+    "I\u2019m not sure I can help with that request.\n"
+    f"Let\u2019s focus on {_OWNER_POSSESSIVE} professional background or "
+    "collaboration options. \n"
+    "Could you clarify what you\u2019d like to know?"
 )
-
-UNSUPPORTED_LANGUAGE_ANSWER = (
-    "Извините, этот публичный ассистент настроен на общение только "
-    "на английском языке. Могу показать handoff prompt, чтобы соединить "
-    "вас с Alex."
+UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER = (
+    "\u0418\u0437\u0432\u0438\u043d\u0438\u0442\u0435, "
+    f"{_OWNER_RUSSIAN_NAME} "
+    "\u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0438\u043b "
+    "\u043c\u0435\u043d\u044f \u0432 \u043e\u0431\u0449\u0435\u043d\u0438\u0438 "
+    "\u043d\u0430 \u0440\u0443\u0441\u0441\u043a\u043e\u043c "
+    "\u044f\u0437\u044b\u043a\u0435. \u042f \u043c\u043e\u0433\u0443 "
+    "\u043e\u0442\u0432\u0435\u0447\u0430\u0442\u044c "
+    "\u0442\u043e\u043b\u044c\u043a\u043e "
+    "\u043f\u043e-\u0430\u043d\u0433\u043b\u0438\u0439\u0441\u043a\u0438.\n"
+    "\u0414\u043b\u044f \u043e\u0431\u0449\u0435\u043d\u0438\u044f "
+    "\u043f\u043e-\u0440\u0443\u0441\u0441\u043a\u0438 \u044f "
+    "\u043c\u043e\u0433\u0443 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0438\u0442\u044c "
+    "\u043f\u0440\u044f\u043c\u043e\u0435 \u043e\u0431\u0449\u0435\u043d\u0438\u0435."
 )
-
+UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER = (
+    "\u0412\u0438\u0431\u0430\u0447\u0442\u0435, "
+    f"{_OWNER_UKRAINIAN_NAME} "
+    "\u043e\u0431\u043c\u0435\u0436\u0438\u0432 \u043c\u0435\u043d\u0435 "
+    "\u0443 \u0441\u043f\u0456\u043b\u043a\u0443\u0432\u0430\u043d\u043d\u0456 "
+    "\u0443\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u043e\u044e "
+    "\u043c\u043e\u0432\u043e\u044e. \u042f \u043c\u043e\u0436\u0443 "
+    "\u0432\u0456\u0434\u043f\u043e\u0432\u0456\u0434\u0430\u0442\u0438 "
+    "\u043b\u0438\u0448\u0435 "
+    "\u0430\u043d\u0433\u043b\u0456\u0439\u0441\u044c\u043a\u043e\u044e.\n"
+    "\u042f\u043a\u0449\u043e \u0432\u0430\u043c \u0437\u0440\u0443\u0447\u043d\u0456\u0448\u0435 "
+    "\u0441\u043f\u0456\u043b\u043a\u0443\u0432\u0430\u0442\u0438\u0441\u044f "
+    "\u0440\u0456\u0434\u043d\u043e\u044e \u043c\u043e\u0432\u043e\u044e, "
+    "\u044f \u043c\u043e\u0436\u0443 "
+    "\u0437\u0430\u043f\u0440\u043e\u043f\u043e\u043d\u0443\u0432\u0430\u0442\u0438 "
+    "\u043f\u0440\u044f\u043c\u0435 \u0437\u0432\u0435\u0440\u043d\u0435\u043d\u043d\u044f."
+)
 UNSUPPORTED_NON_ENGLISH_ANSWER = (
-    "To avoid misunderstandings, this public assistant currently supports "
-    "English only.\nPlease ask your question in English."
+    f"Sorry, {_OWNER_REFERENCE} has limited me to English.\n"
+    "Please ask your question in English, or use the contact option below "
+    f"to reach {_OWNER_REFERENCE} directly."
 )
-
 OUT_OF_SCOPE_ANSWER = (
-    "To help you best, could you clarify your request? \n"
-    "I exclusively handle professional inquiries regarding Alex's expertise and background. \n"
-    "You can also just type 'connect me with Alex' to reach him directly."
+    "To help you best, could you clarify your request?\n"
+    f"I handle professional enquiries about {_OWNER_POSSESSIVE} expertise "
+    "and background.\n"
+    f"You can also type 'connect me with {_OWNER_REFERENCE}' to reach "
+    "them directly."
 )
-
 HANDOFF_REQUEST_ANSWER = (
-    "I can help connect you with Alex. Please use the handoff prompt below to confirm."
+    f"I can connect you with {_OWNER_REFERENCE} directly. Please confirm below to continue."
 )
-
 PUBLIC_BOUNDARY_WEAKNESSES_ANSWER = (
-    "Thank you for the deeper interest. Alex prefers to discuss development "
-    "areas directly in a professional conversation.\n"
-    "This public assistant is limited to verified public profile information.\n"
-    "Would you like me to connect you with Alex?"
+    "Thank you for the deeper interest.\n"
+    f"{_OWNER_REFERENCE} prefers to discuss their weaknesses directly rather "
+    "than through a public assistant.\n"
+    "I can share verified information about their professional background, "
+    f"or you can type \u201cconnect me with {_OWNER_REFERENCE}\u201d so I can "
+    "connect you with them for a direct conversation.\n"
 )
-
 SOCIAL_ACKNOWLEDGEMENT_ANSWER = "OK. How else can I help?"
-
-PRIVATE_DATA_ANSWER = (
-    "I can't provide private personal information. I can answer questions "
-    "about Alex's public professional profile, projects, services, skills, "
-    "and experience."
-)
-
-GREETING_ANSWER = (
-    "Hi. I'm Alex's digital assistant. "
-    "Ask me about Alex's profile, projects, services, availability, "
-    "or contact options."
-)
-
+PRIVATE_DATA_ANSWER = PROMPT_INJECTION_ANSWER
+GREETING_ANSWER = f"Hi. I\u2019m {_OWNER_POSSESSIVE} digital assistant. How can I help you today?"
 HELP_ANSWER = (
-    "You can ask about Alex's experience, projects, software services, "
-    "availability, or contact options."
+    f"You can ask about {_OWNER_POSSESSIVE} experience, projects, software "
+    "services, availability, or contact options."
 )
-
 ASSISTANT_INTRO_ANSWER = (
-    "I'm Alex's digital assistant. "
-    "Ask me about Alex's profile, projects, services, availability, "
-    "or contact options."
+    f"I\u2019m {_OWNER_POSSESSIVE} digital assistant. \n"
+    f"I can tell you about {_OWNER_POSSESSIVE} professional background."
 )
+LANGUAGE_FALLBACK_ANSWERS = {
+    "russian": UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
+    "ukrainian": UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER,
+    "other": UNSUPPORTED_NON_ENGLISH_ANSWER,
+}
+LANGUAGE_RESTRICTIONS_BY_STATUS = {
+    "russian": _CHAT_LANGUAGE_RESTRICTIONS.russian,
+    "ukrainian": _CHAT_LANGUAGE_RESTRICTIONS.ukrainian,
+    "other": _CHAT_LANGUAGE_RESTRICTIONS.other_non_english,
+}
 
 STREAM_GUARD_BUFFER_CHARS = 160
 
@@ -161,23 +202,9 @@ PRIVATE_DATA_PATTERNS = (
     "private address",
 )
 
-PRIVATE_DATA_ALEX_TERMS = (
-    "alex",
-    "alextym",
-    "tymosh",
-    "tymoshenko",
-    "his",
-    "him",
-    "you",
-    "your",
-)
+ALEX_TERMS = _OWNER_ALIASES
 
-ALEX_TERMS = (
-    "alex",
-    "alextym",
-    "tymosh",
-    "tymoshenko",
-)
+PRIVATE_DATA_ALEX_TERMS = (*ALEX_TERMS, "his", "him", "you", "your")
 
 ALEX_PROFILE_TERMS = (
     "experience",
@@ -283,7 +310,7 @@ SERVICE_REQUEST_TERMS = (
     "business automation",
     "rag chatbot",
     "ai assistant",
-    "can alex build",
+    f"can {_OWNER_REFERENCE.casefold()} build",
     "can he build",
 )
 
@@ -316,7 +343,7 @@ WEAKNESS_REQUEST_TERMS = (
     "development areas",
     "areas to improve",
     "limitations",
-    "what should alex improve",
+    f"what should {_OWNER_REFERENCE.casefold()} improve",
     "what should he improve",
 )
 
@@ -381,37 +408,56 @@ SHORT_CONTINUATION_PATTERNS = (
 HANDOFF_REQUEST_PATTERNS = (
     "connect",
     "connect me",
-    "connect me with alex",
-    "connect me to alex",
-    "speak with alex",
-    "talk to alex",
-    "talk with alex",
-    "chat with alex",
-    "i want to speak with alex",
-    "i would like to speak with alex",
-    "i'd like to speak with alex",
-    "i confirm i'd like to speak with alex",
-    "i confirm i would like to speak with alex",
-    "give me alex",
-    "get me alex",
-    "hire alex",
     "hire him",
-    "i want to hire alex",
     "i'd like to hire him",
     "i would like to hire him",
     "offer him",
-    "offer alex",
     "best offer",
     "share code",
     "right to work share code",
     "uk share code",
-    "соедини меня",
-    "соедините меня",
-    "хочу поговорить с алексом",
-    "хочу поговорити з алексом",
-    "хочу зв'язатися з алексом",
-    "хочу связаться с алексом",
-    "поговорить с алексом",
+    f"connect me with {_OWNER_REFERENCE.casefold()}",
+    f"connect me to {_OWNER_REFERENCE.casefold()}",
+    f"speak with {_OWNER_REFERENCE.casefold()}",
+    f"talk to {_OWNER_REFERENCE.casefold()}",
+    f"talk with {_OWNER_REFERENCE.casefold()}",
+    f"chat with {_OWNER_REFERENCE.casefold()}",
+    f"i want to speak with {_OWNER_REFERENCE.casefold()}",
+    f"i would like to speak with {_OWNER_REFERENCE.casefold()}",
+    f"i'd like to speak with {_OWNER_REFERENCE.casefold()}",
+    f"i confirm i'd like to speak with {_OWNER_REFERENCE.casefold()}",
+    f"i confirm i would like to speak with {_OWNER_REFERENCE.casefold()}",
+    f"give me {_OWNER_REFERENCE.casefold()}",
+    f"get me {_OWNER_REFERENCE.casefold()}",
+    f"hire {_OWNER_REFERENCE.casefold()}",
+    f"i want to hire {_OWNER_REFERENCE.casefold()}",
+    f"offer {_OWNER_REFERENCE.casefold()}",
+    "\u0441\u043e\u0435\u0434\u0438\u043d\u0438 \u043c\u0435\u043d\u044f",
+    "\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u0442\u0435 \u043c\u0435\u043d\u044f",
+    (
+        "\u0445\u043e\u0447\u0443 "
+        "\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c "
+        "\u0441 \u0430\u043b\u0435\u043a\u0441\u043e\u043c"
+    ),
+    (
+        "\u0445\u043e\u0447\u0443 "
+        "\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u0438 "
+        "\u0437 \u0430\u043b\u0435\u043a\u0441\u043e\u043c"
+    ),
+    (
+        "\u0445\u043e\u0447\u0443 "
+        "\u0437\u0432'\u044f\u0437\u0430\u0442\u0438\u0441\u044f "
+        "\u0437 \u0430\u043b\u0435\u043a\u0441\u043e\u043c"
+    ),
+    (
+        "\u0445\u043e\u0447\u0443 "
+        "\u0441\u0432\u044f\u0437\u0430\u0442\u044c\u0441\u044f "
+        "\u0441 \u0430\u043b\u0435\u043a\u0441\u043e\u043c"
+    ),
+    (
+        "\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c "
+        "\u0441 \u0430\u043b\u0435\u043a\u0441\u043e\u043c"
+    ),
 )
 
 HANDOFF_CONFIRMATION_PATTERNS = (
@@ -425,13 +471,13 @@ HANDOFF_CONFIRMATION_PATTERNS = (
     "i confirm",
     "yes please",
     "please do",
-    "да",
-    "так",
-    "ок",
-    "окей",
-    "добре",
-    "пожалуйста",
-    "будь ласка",
+    "\u0434\u0430",
+    "\u0442\u0430\u043a",
+    "\u043e\u043a",
+    "\u043e\u043a\u0435\u0439",
+    "\u0434\u043e\u0431\u0440\u0435",
+    "\u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430",
+    "\u0431\u0443\u0434\u044c \u043b\u0430\u0441\u043a\u0430",
 )
 
 CONTACT_OR_AVAILABILITY_TERMS = (
@@ -498,6 +544,24 @@ ENGLISH_LANGUAGE_ANCHORS = (
     "with",
     "work",
     "would",
+)
+
+UKRAINIAN_SPECIFIC_CYRILLIC_CHARS = frozenset("\u0404\u0406\u0407\u0490\u0454\u0456\u0457\u0491")
+UKRAINIAN_LANGUAGE_MARKERS = (
+    "\u0431\u0443\u0434\u044c \u043b\u0430\u0441\u043a\u0430",
+    "\u043c\u0435\u043d\u0456",
+    "\u043c\u043e\u0436\u0435\u0448",
+    "\u043e\u043b\u0435\u043a\u0441",
+    "\u043f\u0440\u0438\u0432\u0456\u0442",
+    "\u0440\u043e\u0437\u043a\u0430\u0436\u0438",
+    "\u0443\u043a\u0440\u0430\u0457\u043d",
+    "\u0445\u043e\u0447\u0443 \u0437\u0432'\u044f\u0437\u0430\u0442\u0438\u0441\u044f",
+)
+RUSSIAN_LANGUAGE_MARKERS = (
+    "\u043f\u0440\u0438\u0432\u0435\u0442",
+    "\u0440\u0430\u0441\u0441\u043a\u0430\u0436\u0438",
+    "\u0441\u0432\u044f\u0437\u0430\u0442\u044c\u0441\u044f",
+    "\u0445\u043e\u0447\u0443 \u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c",
 )
 
 
@@ -755,7 +819,7 @@ class ChatService:
         context: RagAnswerContext,
     ) -> ChatResponse:
         if context.handoff_suggested and not _answer_mentions_handoff(answer):
-            answer = answer.rstrip() + "\n\nWould you like to connect with Alex?"
+            answer = answer.rstrip() + "\n\n" + HANDOFF_PROMPT_TITLE
 
         return ChatResponse(
             answer=answer,
@@ -817,16 +881,11 @@ class ChatService:
             )
 
         language_status = _detect_unsupported_language(message)
-        if language_status is not None:
-            answer = (
-                UNSUPPORTED_LANGUAGE_ANSWER
-                if language_status == "cyrillic"
-                else UNSUPPORTED_NON_ENGLISH_ANSWER
-            )
+        if language_status is not None and LANGUAGE_RESTRICTIONS_BY_STATUS[language_status].enabled:
             return ChatPolicyResult(
                 intent="language_unsupported",
                 response=ChatResponse(
-                    answer=answer,
+                    answer=LANGUAGE_FALLBACK_ANSWERS[language_status],
                     sources=[],
                     confidence="medium",
                     not_enough_data=False,
@@ -1015,8 +1074,8 @@ class ChatService:
             return QuestionResolution(
                 is_alex_specific=True,
                 retrieval_query=(
-                    "Continue answering about Alex's professional profile based "
-                    "on the previous Alex-related question."
+                    f"Continue answering about {_OWNER_POSSESSIVE} professional "
+                    f"profile based on the previous {_OWNER_REFERENCE}-related question."
                 ),
                 conversational_context=conversational_context,
             )
@@ -1047,7 +1106,7 @@ class ChatService:
 
         prompt = PromptBundle(
             system=(
-                "Classify whether the user is asking about Alex's public "
+                f"Classify whether the user is asking about {_OWNER_POSSESSIVE} public "
                 "professional profile or software services. Return only compact "
                 "JSON with keys: intent, rewritten_query, confidence, reason."
             ),
@@ -1091,9 +1150,9 @@ class ChatService:
             return INSUFFICIENT_DATA_ANSWER
 
         if len(excerpts) == 1:
-            return f"According to Alex's public knowledge base, {excerpts[0]}"
+            return f"According to {_OWNER_POSSESSIVE} public knowledge base, {excerpts[0]}"
 
-        return "According to Alex's public knowledge base, " + " ".join(
+        return f"According to {_OWNER_POSSESSIVE} public knowledge base, " + " ".join(
             f"{index}. {excerpt}" for index, excerpt in enumerate(excerpts, start=1)
         )
 
@@ -1289,15 +1348,25 @@ def _detect_unsupported_language(message: str) -> str | None:
     other_ratio = other_count / total_letters
 
     if cyrillic_count >= 4 and cyrillic_ratio >= 0.45:
-        return "cyrillic"
+        return _classify_cyrillic_language(cleaned_message, normalized_message)
     if cyrillic_count >= 12 and cyrillic_ratio >= 0.25:
-        return "cyrillic"
+        return _classify_cyrillic_language(cleaned_message, normalized_message)
     if other_count >= 6 and other_ratio >= 0.35:
         return "other"
     if other_count >= 12 and other_ratio >= 0.25:
         return "other"
 
     return None
+
+
+def _classify_cyrillic_language(message: str, normalized_message: str) -> str:
+    if any(character in UKRAINIAN_SPECIFIC_CYRILLIC_CHARS for character in message):
+        return "ukrainian"
+    if any(marker in normalized_message for marker in UKRAINIAN_LANGUAGE_MARKERS):
+        return "ukrainian"
+    if any(marker in normalized_message for marker in RUSSIAN_LANGUAGE_MARKERS):
+        return "russian"
+    return "russian"
 
 
 def _strip_noise_for_language_detection(message: str) -> str:
@@ -1366,12 +1435,15 @@ def _is_handoff_confirmation_after_prompt(request: ChatRequest) -> bool:
         if item.role != "assistant":
             continue
         normalized_content = _normalize_message(item.content)
+        language_fallback_prompts = {
+            _normalize_message(UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER),
+            _normalize_message(UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER),
+        }
         return (
             "connect" in normalized_content
             or "connection" in normalized_content
             or "handoff" in normalized_content
-            or "соединил" in normalized_content
-            or "поговорили с ним лично" in normalized_content
+            or normalized_content in language_fallback_prompts
         )
 
     return False
@@ -1486,32 +1558,42 @@ def _last_explicit_user_subject(history: list[ChatHistoryMessage]) -> str | None
 
 
 def _history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> bool:
+    owner_markers = _owner_context_markers()
     for item in reversed(history):
         if item.role != "assistant":
             continue
         normalized_content = _normalize_message(item.content)
-        if (
-            "alex's ai assistant" in normalized_content
-            or "alex's digital assistant" in normalized_content
-            or "ask about alex" in normalized_content
-            or "alex builds" in normalized_content
-            or "alex focuses" in normalized_content
-            or "alex holds" in normalized_content
-            or "alex worked" in normalized_content
-            or "alex's public" in normalized_content
-            or "alex has" in normalized_content
-            or "alexs profile" in normalized_content
-            or "alex's profile" in normalized_content
-            or "alextym" in normalized_content
-            or "алекс" in normalized_content
-        ):
+        if any(marker in normalized_content for marker in owner_markers):
             return True
     return False
 
 
+def _owner_context_markers() -> tuple[str, ...]:
+    owner_markers = set(ALEX_TERMS)
+    owner_markers.add(_normalize_message(_PROJECT_CONFIG.assistant.display_name))
+    owner_markers.add(_normalize_message(UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER))
+    owner_markers.add(_normalize_message(UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER))
+
+    for owner_term in ALEX_TERMS:
+        owner_markers.update(
+            {
+                f"ask about {owner_term}",
+                f"{owner_term} builds",
+                f"{owner_term} focuses",
+                f"{owner_term} has",
+                f"{owner_term} holds",
+                f"{owner_term} worked",
+                f"{owner_term} public",
+                f"{owner_term} profile",
+            }
+        )
+
+    return tuple(marker for marker in owner_markers if marker)
+
+
 def _services_retrieval_query() -> str:
     return (
-        "Tell me about Alex's software services, automation projects, "
+        f"Tell me about {_OWNER_POSSESSIVE} software services, automation projects, "
         "websites, API integrations, internal tools, RAG chatbots, and "
         "collaboration options."
     )
@@ -1519,10 +1601,15 @@ def _services_retrieval_query() -> str:
 
 def _rewrite_alex_retrieval_query(message: str) -> str:
     normalized_message = _normalize_message(message)
-    if normalized_message in {"tell me about alex", "tell me about him"}:
-        return "Tell me about Alex's professional background, experience, skills, and projects."
+    if normalized_message == "tell me about him" or any(
+        normalized_message == f"tell me about {owner_term}" for owner_term in ALEX_TERMS
+    ):
+        return (
+            f"Tell me about {_OWNER_POSSESSIVE} professional background, "
+            "experience, skills, and projects."
+        )
     if normalized_message == "what does he do":
-        return "What does Alex do professionally?"
+        return f"What does {_OWNER_REFERENCE} do professionally?"
     if any(
         term in normalized_message
         for term in (
@@ -1542,7 +1629,7 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         )
     ):
         return (
-            "Tell me about Alex's education, Master's Degree in Finance, "
+            f"Tell me about {_OWNER_POSSESSIVE} education, Master's Degree in Finance, "
             "Banking and Insurance, university, honours, academic "
             "scholarship, and analytical background."
         )
@@ -1561,12 +1648,12 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         )
     ):
         return (
-            "Tell me about Alex's AI portfolio website, RAG architecture, "
+            f"Tell me about {_OWNER_POSSESSIVE} AI portfolio website, RAG architecture, "
             "retrieval pipeline, Qdrant vector search, Prometheus, Grafana, "
             "observability, evals, and production-oriented safeguards."
         )
     if "work" in normalized_message and "experience" in normalized_message:
-        return "Tell me about Alex's work experience."
+        return f"Tell me about {_OWNER_POSSESSIVE} work experience."
     if any(
         term in normalized_message
         for term in (
@@ -1582,40 +1669,43 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         )
     ):
         return (
-            "Tell me about Alex's education, university degree, finance "
+            f"Tell me about {_OWNER_POSSESSIVE} education, university degree, finance "
             "background, and academic achievements."
         )
     if any(term in normalized_message for term in ("rag", "qdrant", "embedding")):
         return (
-            "Tell me about Alex's RAG portfolio website, architecture, "
+            f"Tell me about {_OWNER_POSSESSIVE} RAG portfolio website, architecture, "
             "retrieval system, safeguards, evaluations, and AI assistant."
         )
     if any(
         term in normalized_message for term in ("prometheus", "grafana", "observability", "metrics")
     ):
         return (
-            "Tell me about Alex's observability work with Prometheus, "
+            f"Tell me about {_OWNER_POSSESSIVE} observability work with Prometheus, "
             "Grafana, metrics, dashboards, and monitoring."
         )
     if "soft" in normalized_message and "skill" in normalized_message:
         return (
-            "Tell me about Alex's soft skills, working style, collaboration, "
+            f"Tell me about {_OWNER_POSSESSIVE} soft skills, working style, collaboration, "
             "communication, and problem-solving."
         )
     if "hard" in normalized_message and "skill" in normalized_message:
         return (
-            "Tell me about Alex's hard skills, technical stack, tools, "
+            f"Tell me about {_OWNER_POSSESSIVE} hard skills, technical stack, tools, "
             "and software engineering capabilities."
         )
     if any(term in normalized_message for term in ("service", "website", "software")):
         return _services_retrieval_query()
     if "strength" in normalized_message or "different" in normalized_message:
         return (
-            "Tell me about Alex's professional strengths, working style, "
+            f"Tell me about {_OWNER_POSSESSIVE} professional strengths, working style, "
             "automation-first thinking, and collaboration approach."
         )
     if "your" in normalized_message and "project" in normalized_message:
-        return "Tell me about Alex's professional projects and software work."
+        return f"Tell me about {_OWNER_POSSESSIVE} professional projects and software work."
     if _is_follow_up_profile_question(normalized_message):
-        return "Tell me about Alex's professional background, experience, skills, and projects."
+        return (
+            f"Tell me about {_OWNER_POSSESSIVE} professional background, "
+            "experience, skills, and projects."
+        )
     return message

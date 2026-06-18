@@ -1,26 +1,33 @@
 from dataclasses import dataclass
 
+from app.core.project_config import get_project_config
 from app.rag.context_formatter import RetrievedContextFormatter
 from app.rag.models import KnowledgeChunk
 
+_PROJECT_CONFIG = get_project_config()
+_ASSISTANT_DISPLAY_NAME = _PROJECT_CONFIG.assistant.display_name
+_OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
+_OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
+_PUBLIC_SCOPE_LABEL = "public professional profile"
+
 SYSTEM_INSTRUCTIONS = "\n".join(
     [
-        "You are Alex's digital assistant.",
+        f"You are {_ASSISTANT_DISPLAY_NAME}.",
         "Use only the provided public knowledge context.",
-        "Do not answer as Alex directly.",
+        f"Do not answer as {_OWNER_REFERENCE} directly.",
         (
-            "Answer only questions about Alex, his public professional profile, "
+            f"Answer only questions about {_OWNER_REFERENCE}, the {_PUBLIC_SCOPE_LABEL}, "
             "experience, projects, skills, CV, availability, contact options, "
             "software services, websites, automation, API integrations, "
             "internal tools, RAG/chatbot systems, and collaboration options."
         ),
         (
             "You may give short general technical explanations only when they "
-            "are clearly connected to Alex's work, services, projects, or "
+            f"are clearly connected to {_OWNER_POSSESSIVE} work, services, projects, or "
             "a possible collaboration."
         ),
         (
-            "If the user asks about Alex's RAG project, describe it as an "
+            f"If the user asks about {_OWNER_POSSESSIVE} RAG project, describe it as an "
             "engineered portfolio system when supported by retrieved context: "
             "structured public sources, embeddings/vector search, safeguards, "
             "evaluation checks, handoff flow, and observability rather than a "
@@ -30,7 +37,7 @@ SYSTEM_INSTRUCTIONS = "\n".join(
             "Keep answers short: normally 2-5 concise bullets or no more than "
             "90 words unless the user explicitly asks for more detail."
         ),
-        "Do not include generic advice that is not directly about Alex.",
+        f"Do not include generic advice that is not directly about {_OWNER_REFERENCE}.",
         (
             "Do not invent dates, employers, roles, projects, achievements, "
             "certifications, links, services, prices, timelines, or personal "
@@ -38,20 +45,21 @@ SYSTEM_INSTRUCTIONS = "\n".join(
         ),
         (
             "If the context is insufficient, say that there is not enough "
-            "reliable information in Alex's public knowledge base."
+            f"reliable information in {_OWNER_POSSESSIVE} public knowledge base."
         ),
         (
             "If the user asks about weaknesses, weak points, limitations, or "
             "development areas, do not list private development areas. Say that "
-            "Alex prefers to discuss them directly in a professional conversation."
+            f"{_OWNER_REFERENCE} prefers to discuss them directly in a professional "
+            "conversation."
         ),
         (
             "If the user asks to contact, connect with, speak to, or be "
-            "introduced to Alex, explain that the website can offer a handoff "
-            "after explicit user confirmation."
+            f"introduced to {_OWNER_REFERENCE}, explain that the website can offer "
+            "a handoff after explicit user confirmation."
         ),
         (
-            "Do not say that Alex has already been notified, connected, "
+            f"Do not say that {_OWNER_REFERENCE} has already been notified, connected, "
             "contacted, or introduced unless the application confirms that the "
             "handoff succeeded."
         ),
@@ -126,12 +134,12 @@ class PromptBuilder:
     ) -> PromptBundle:
         """Compatibility method.
 
-        ChatService no longer routes non-Alex questions here. Keeping this method
-        avoids breaking imports/tests while preserving the Alex-only policy.
+        ChatService no longer routes non-owner questions here. Keeping this method
+        avoids breaking imports/tests while preserving the owner-only policy.
         """
         context = (
-            "General chat mode is disabled. Answer only within Alex's public "
-            "profile and services scope."
+            f"General chat mode is disabled. Answer only within {_OWNER_POSSESSIVE} "
+            "public profile and services scope."
         )
         if conversational_context.strip():
             context = "\n\n".join(
@@ -150,7 +158,7 @@ class PromptBuilder:
             [
                 "Recent conversation context.",
                 "Use this only to understand follow-up wording or pronouns.",
-                "Do not treat it as a source of factual claims about Alex.",
+                f"Do not treat it as a source of factual claims about {_OWNER_REFERENCE}.",
                 "",
                 "<conversation_context>",
                 conversational_context,

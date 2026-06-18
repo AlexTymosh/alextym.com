@@ -4,7 +4,11 @@ from typing import Protocol
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import Settings
+from app.core.project_config import get_project_config
 from app.schemas.contact import ContactRequest, ContactResponse
+
+_PROJECT_CONFIG = get_project_config()
+_SITE_DOMAIN = _PROJECT_CONFIG.site.domain
 
 
 class ContactConfigurationError(Exception):
@@ -44,7 +48,7 @@ class ResendContactEmailSender:
         params: resend.Emails.SendParams = {
             "from": self._from_email,
             "to": [self._target_email],
-            "subject": f"New alextym.com contact from {contact_request.name}",
+            "subject": f"New {_SITE_DOMAIN} contact from {contact_request.name}",
             "html": _build_contact_email_html(contact_request),
             "reply_to": contact_request.email,
         }
