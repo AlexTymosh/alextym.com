@@ -2,6 +2,7 @@ import type {
   EscalationCloseResponse,
   EscalationMessageResponse,
   EscalationResponse,
+  EscalationStreamClosedReason,
   EscalationStreamMessage,
   EscalationTranscriptMessage,
   HandoffState,
@@ -125,7 +126,9 @@ export async function submitEscalationClose(
 
 export function buildEscalationStreamUrl(handoffId: string): string {
   const streamPath = `/api/escalations/${encodeURIComponent(handoffId)}/stream`;
-  return BROWSER_BACKEND_ORIGIN ? `${BROWSER_BACKEND_ORIGIN}${streamPath}` : streamPath;
+  return BROWSER_BACKEND_ORIGIN
+    ? `${BROWSER_BACKEND_ORIGIN}${streamPath}`
+    : streamPath;
 }
 
 export function parseEscalationStreamMessage(
@@ -156,6 +159,23 @@ export function parseEscalationStreamMessage(
       : createMessageId("alex");
 
   return { id, content };
+}
+
+export function parseEscalationStreamClosedReason(
+  event: Event,
+): EscalationStreamClosedReason {
+  if (!(event instanceof MessageEvent)) {
+    return "unknown";
+  }
+
+  const payload = asRecord(safeParseJson(event.data));
+  const reason = getString(payload?.reason);
+
+  if (reason === "session_closed" || reason === "session_expired") {
+    return reason;
+  }
+
+  return "unknown";
 }
 
 export function normaliseHandoffState(

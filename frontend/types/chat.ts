@@ -68,6 +68,11 @@ export type EscalationStreamMessage = {
   created_at?: string;
 };
 
+export type EscalationStreamClosedReason =
+  | "session_closed"
+  | "session_expired"
+  | "unknown";
+
 export type Message = {
   id: string;
   role: MessageRole;
