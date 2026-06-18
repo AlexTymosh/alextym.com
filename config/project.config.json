@@ -1,0 +1,431 @@
+{
+  "$schema": "./project.config.schema.json",
+  "schemaVersion": 1,
+  "project": {
+    "templateName": "AI portfolio website with RAG chat",
+    "packageBaseName": "alextym",
+    "frontendPackageName": "alextym-frontend",
+    "backendPackageName": "alextym-backend",
+    "dockerImageName": "alextym-backend",
+    "observabilityServiceName": "portfolio-backend"
+  },
+  "content": {
+    "publicResumePath": "content/public/resume.md"
+  },
+  "owner": {
+    "displayName": "Alex Tymoshenko",
+    "shortName": "Alex",
+    "possessiveName": "Alex's",
+    "localizedNames": {
+      "russian": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
+      "ukrainian": "\u041e\u043b\u0435\u043a\u0441\u0456\u0439"
+    },
+    "roleTitle": "Software Developer & Automation Engineer",
+    "publicAliases": ["alex", "alextym", "tymosh", "tymoshenko"]
+  },
+  "site": {
+    "name": "alextym.com",
+    "canonicalUrl": "https://alextym.com"
+  },
+  "links": {
+    "github": "https://github.com/AlexTymosh",
+    "linkedin": "https://www.linkedin.com/in/alex-tim-tech/",
+    "facebook": "https://www.facebook.com/ol.tymoshenko"
+  },
+  "seo": {
+    "defaultTitle": "Alex Tymoshenko | Software Developer & Automation Engineer",
+    "description": "Software developer focused on Python, FastAPI, API integrations, business process automation, ERP/CRM workflows, and RAG-based AI portfolio systems.",
+    "shortDescription": "Python, FastAPI, API integrations, business process automation, ERP/CRM workflows, and RAG-based AI portfolio systems.",
+    "keywords": [
+      "Alex Tymoshenko",
+      "Software Developer",
+      "Python Developer",
+      "FastAPI",
+      "Automation Engineer",
+      "API Integration",
+      "Business Process Automation",
+      "ERP Automation",
+      "RAG",
+      "AI Portfolio",
+      "Basingstoke",
+      "UK"
+    ],
+    "openGraph": {
+      "imagePath": "/og-image.png",
+      "imageAlt": "Alex Tymoshenko software developer portfolio"
+    },
+    "jsonLd": {
+      "jobTitle": "Software Developer",
+      "knowsAbout": [
+        "Python",
+        "FastAPI",
+        "API integrations",
+        "Business process automation",
+        "ERP/CRM automation",
+        "RAG systems"
+      ]
+    },
+    "pages": {
+      "resume": {
+        "description": "Resume of Alex Tymoshenko: software developer focused on Python, FastAPI, automation, API integrations, ERP/CRM workflows, and business systems."
+      },
+      "chat": {
+        "description": "Ask Alex Tymoshenko's AI profile assistant about his projects, CV, automation experience, Python, FastAPI, and RAG portfolio work."
+      },
+      "contact": {
+        "description": "Contact Alex Tymoshenko for software development, automation, API integration, Python, FastAPI, or business process automation opportunities."
+      },
+      "disclaimer": {
+        "description": "Disclaimer for the portfolio website, AI assistant, contact flow, human handoff, analytics, and monitoring boundaries."
+      }
+    }
+  },
+  "home": {
+    "profileCard": {
+      "name": "Alex Tymoshenko",
+      "imageSrc": "/images/profile/alex.webp",
+      "imageAlt": "",
+      "summary": "I build practical automation tools that connect APIs, Excel, ERP systems, reports, and dashboards into smoother business workflows."
+    },
+    "assistantCard": {
+      "eyebrow": "AI Profile Chat",
+      "title": "Quick questions",
+      "description": "\u2728 Save time by asking about my CV, projects, and professional background.",
+      "cta": "Ask my AI assistant",
+      "href": "/chat"
+    },
+    "connectCard": {
+      "eyebrow": "Connect",
+      "linkVisibility": {
+        "github": true,
+        "linkedin": true,
+        "facebook": true
+      }
+    },
+    "projectStackTitle": "Project Stack",
+    "featuredProject": {
+      "previewHeading": "Latest Projects in Progress",
+      "title": "yourname.com",
+      "description": [
+        "Build your own AI portfolio website.",
+        "I open-sourced this site as a reusable MIT-licensed template. Follow the setup guide, replace the public CV and project content, and make it your own."
+      ],
+      "cta": "Get the setup guide",
+      "href": "https://github.com/AlexTymosh/alextym.com",
+      "previewItems": [
+        {
+          "title": "FastAPI SaaS Template",
+          "detail": "GDPR-aware modular backend with tenant access, audit, rate limiting, and API contracts.",
+          "href": "https://github.com/AlexTymosh/fastapi-saas-template",
+          "slot": "top-left"
+        },
+        {
+          "title": "Job Application AI Assistant",
+          "detail": "CV tailoring, ATS-style checks, and evidence-based application support.",
+          "href": "https://github.com/AlexTymosh/job-application-assistant",
+          "slot": "top-right"
+        },
+        {
+          "title": "alextym.com",
+          "detail": "RAG-based AI portfolio with public CV, chat, contact flow, and reusable setup path.",
+          "href": "https://github.com/AlexTymosh/alextym.com",
+          "slot": "bottom-right"
+        }
+      ]
+    },
+    "featuredAutomationDemo": {
+      "eyebrow": "Unusual Automation",
+      "title": "Excel API Magic",
+      "description": "Making Excel work like a modern business system.",
+      "youtubeVideoId": "uAvHcnk1ym8",
+      "youtubeTitle": "Excel API Integration demo",
+      "cta": "Open on YouTube"
+    },
+    "buildFocus": {
+      "eyebrow": "Current Engineering Focus",
+      "title": "SaaS backend systems with GDPR-aware architecture",
+      "description": "Most of my current effort goes into a FastAPI SaaS backend template: a modular monolith for small and medium SaaS products with tenant/platform access control, Keycloak OIDC/JWT, audit and outbox foundations, Redis-backed rate limiting, structured errors, testing, and observability."
+    },
+    "projectStack": [
+      "Python 3.12",
+      "FastAPI",
+      "Pydantic v2",
+      "SQLAlchemy",
+      "Alembic",
+      "PostgreSQL",
+      "Redis",
+      "Keycloak/OIDC",
+      "Dramatiq",
+      "Docker Compose",
+      "uv",
+      "Ruff",
+      "Pytest",
+      "OpenTelemetry",
+      "Prometheus",
+      "Grafana",
+      "RAG",
+      "Qdarnt"
+    ]
+  },
+  "contact": {
+    "heading": {
+      "title": "Contact Me",
+      "description": "For hiring, collaboration, or project conversations, send a short note."
+    },
+    "socialLinks": ["linkedin", "github", "facebook"],
+    "form": {
+      "ariaLabel": "Contact form",
+      "fields": {
+        "name": {
+          "label": "Your Name",
+          "placeholder": "Your name"
+        },
+        "email": {
+          "label": "Email Address",
+          "placeholder": "you@example.com"
+        },
+        "message": {
+          "label": "Message",
+          "placeholder": "Tell Alex what you would like to discuss."
+        },
+        "companyWebsite": {
+          "label": "Company Website"
+        }
+      },
+      "submitLabel": "Send Message",
+      "sendingLabel": "Sending...",
+      "notices": {
+        "missingFields": "Please fill in your name, email, and message.",
+        "success": "Message sent. Alex will review it.",
+        "genericError": "Could not send message.",
+        "dailyLimit": "Daily message limit reached. Please try again later.",
+        "validationError": "Please check the form fields and try again.",
+        "unavailable": "Contact form is temporarily unavailable. Please try again later.",
+        "serverError": "Could not send message. Please try again later."
+      }
+    }
+  },
+  "chat": {
+    "quickPrompts": [
+      {
+        "label": "Give me your 1-minute intro.",
+        "responses": [
+          "Alex builds practical automation for business workflows, APIs, ERP systems, reporting, and dashboards.\n\nHis automation background goes back to the 2000s:\n- Excel macros while working as a credit broker;\n- MySQL for company operations in 2018;\n- Bitrix24 ERP during the 2020 remote-work shift.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he focused on AI-assisted engineering, Python automation, and API integrations.\n\nIn 2024, he delivered an Odoo Enterprise API integration that reduced one employee's workload by 68%.\n\nHe holds a Master's Degree in Finance, specialising in Banking and Insurance, and has a strong analytical background.\n\nWould you like to know more about his latest work experience?",
+          "Alex combines long-term business automation experience with newer AI-assisted software development.\n\nHe started with Excel automation in the 2000s, then moved business operations into MySQL in 2018 and Bitrix24 ERP in 2020.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he focused more deeply on Python, AI engineering, APIs, and workflow automation.\n\nHis 2024 Odoo Enterprise API project reduced one employee's workload by 68%.\n\nHe holds a Master's Degree in Finance, specialising in Banking and Insurance, and is strong in analytics, reporting, and dashboards.\n\nWould you like a short overview of his most recent role?",
+          "Alex focuses on automation, API integrations, ERP workflows, reporting, and operational dashboards.\n\nHis practical automation path includes:\n- Excel macros in the 2000s;\n- moving company processes to MySQL in 2018;\n- implementing Bitrix24 ERP in 2020;\n- building API-based workflow automation in the UK.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he shifted his focus towards AI-assisted engineering and Python automation.\n\nIn 2024, he delivered an Odoo Enterprise integration that reduced one employee's workload by 68%.\n\nWould you like the key facts from his latest work experience?"
+        ]
+      },
+      {
+        "label": "Give me a short overview of his work experience.",
+        "responses": [
+          "Alex's career started in finance and operations:\n- assistant accountant;\n- economist and senior economist;\n- deputy branch manager in banking;\n- credit broker;\n- managing director of a recruitment company.\n\nHe later helped grow that recruitment company into a regional leader.\n\nAfter the war in Ukraine forced his move to the UK in late 2022, he focused more deeply on Python, AI-assisted analytics, and automation.\n\nHis first UK role was at Hydrosphere UK, where he worked as an Automation Engineer.\n\nWould you like the key facts about his professional achievements?",
+          "Alex has a mixed business and software automation background.\n\nHis work experience includes:\n- finance and accounting support;\n- economist and senior economist roles;\n- banking management;\n- credit brokerage;\n- managing a recruitment company that grew into a regional leader.\n\nAfter the war in Ukraine forced his relocation to the UK in late 2022, he focused on Python, AI-assisted analytics, and workflow automation.\n\nHis first UK position was Automation Engineer at Hydrosphere UK.\n\nWould you like a concise list of his strongest achievements?",
+          "Alex's work experience developed from finance and banking into business leadership and automation.\n\nHis earlier roles included:\n- assistant accountant;\n- economist and senior economist;\n- deputy bank branch manager;\n- credit broker;\n- managing director of a recruitment company.\n\nThat recruitment company later became a regional leader.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he focused on Python, AI-assisted analytics, and automation.\n\nHis first UK role was Automation Engineer at Hydrosphere UK.\n\nWould you like a summary of the most relevant achievements?"
+        ]
+      },
+      {
+        "label": "When is Alex ready to start work?",
+        "responses": [
+          "I do not have access to Alex's live calendar, so I cannot confirm an exact start date here.\n\nFor availability, notice period, interview scheduling, or start-date confirmation, the safest route is to connect with Alex directly.\n\nWould you like me to connect him directly?\n\nYour details will not be passed to him at this stage, and he will not see your phone number or email unless you choose to share them.",
+          "I cannot check Alex's calendar or confirm a precise start date from this chat.\n\nIf you need a reliable answer about availability or scheduling, I can offer a direct handoff to Alex.\n\nWould you like me to connect him directly?\n\nYour contact details will not be shared with him unless you decide to type them yourself.",
+          "Alex's exact availability should be confirmed with him directly because I do not have access to his live calendar.\n\nFor a start date, notice period, interview timing, or hiring discussion, I can help you connect with Alex.\n\nWould you like me to connect him directly?\n\nHe will not receive your phone number or email from this chat unless you choose to share those details."
+        ]
+      }
+    ],
+    "languageRestrictions": {
+      "russian": {
+        "enabled": true
+      },
+      "ukrainian": {
+        "enabled": true
+      },
+      "otherNonEnglish": {
+        "enabled": true
+      }
+    }
+  },
+  "disclaimer": {
+    "title": "Website, AI assistant, and monitoring disclaimer",
+    "bodyMarkdown": "## Purpose\n\nThis website and its AI assistant are provided for informational and portfolio demonstration purposes. They are not a guarantee of availability, professional certification, legal advice, immigration advice, financial advice, medical advice, or any other regulated professional advice.\n\n## AI assistant limitations\n\nThe assistant is designed to answer questions from reviewed public professional context. It can be incomplete or wrong. If it does not have enough information, it should say so and suggest direct contact instead of inventing facts.\n\n## Do not submit sensitive information\n\nDo not submit passwords, API keys, payment details, private tokens, medical information, legal case details, home addresses, confidential employer/client data, or personal data about other people through the chat, contact form, or handoff flow.\n\n## Human handoff\n\nIf a visitor confirms human handoff, relevant chat context may be sent to the website owner through Telegram so the owner can reply. Do not start handoff with sensitive third-party personal data or confidential business information.\n\n## Analytics and monitoring\n\nThe project uses operational metrics and privacy-safe aggregate product metrics. These metrics are intended to monitor reliability and broad usage signals. They are not intended to profile individual visitors.\n\nThe project intentionally avoids visitor IDs, user IDs, analytics cookies, localStorage tracking IDs, IP hashes, User-Agent hashes, raw referrers, query strings, and per-user chat usage metrics.\n\n## Reuse\n\nThe codebase may be reused according to its license, but personal profile content, resume content, SEO metadata, screenshots, public CV files, video IDs, and RAG knowledge examples should be replaced before reuse for another person or organisation."
+  },
+  "resume": {
+    "pageHeading": "Alex Tymoshenko",
+    "downloadFileNameBase": "alextym.com_Software_Engineer_CV",
+    "downloadLabelTemplate": "Download {detail} CV",
+    "detailControlLabel": "Detail level",
+    "sectionsControlLabel": "Sections",
+    "controlsAriaLabel": "Resume controls",
+    "timelineAriaLabel": "Resume timeline",
+    "additionalSectionsAriaLabel": "Additional CV sections",
+    "emptyState": "Select at least one section to show resume entries.",
+    "presentLabel": "Present",
+    "sectionLabels": {
+      "experience": "Work Experience",
+      "education": "Education",
+      "training": "Training"
+    },
+    "detailLevels": [
+      { "id": "concise", "label": "Concise" },
+      { "id": "detailed", "label": "Detailed" }
+    ],
+    "sectionButtons": [
+      { "id": "experience", "label": "Experience" },
+      { "id": "education", "label": "Education" },
+      { "id": "training", "label": "Training" }
+    ],
+    "defaultSections": ["experience", "education"],
+    "pdf": {
+      "displayName": "OLEKSII (ALEX) TYMOSHENKO",
+      "roleTitle": "AUTOMATION & INTEGRATION ENGINEER | AI & Workflow Automation Developer",
+      "sectionLabels": {
+        "experience": "WORK EXPERIENCE",
+        "education": "EDUCATION",
+        "training": "TRAINING"
+      },
+      "skillsHeading": "SKILLS",
+      "noteLabel": "Note:",
+      "presentLabel": "Present",
+      "headerLinkVisibility": {
+        "website": true,
+        "linkedin": true,
+        "github": true,
+        "facebook": false,
+        "rightToWorkUk": true
+      },
+      "contactNote": {
+        "first": "Phone and email are intentionally omitted because this CV was downloaded from the developer's website.",
+        "second": [
+          { "text": "Please use LinkedIn, the contact form, or the AI assistant on " },
+          { "text": "alextym.com", "href": "https://alextym.com/" },
+          { "text": "." }
+        ]
+      },
+      "skills": [
+        {
+          "label": "Automation",
+          "value": "Process automation, workflow optimisation, reporting automation, data pipelines, Excel-to-database migration, operational bottleneck analysis."
+        },
+        {
+          "label": "AI & Methods",
+          "value": "LLM workflows, RAG, structured outputs & validation, human-in-the-loop review, token/cost awareness."
+        },
+        {
+          "label": "Tools & Stack",
+          "value": "Python, SQL, VBA macros, FastAPI, REST APIs, API integration, PostgreSQL, Redis, Pandas, Git, GitHub, Codex."
+        },
+        {
+          "label": "Business Systems",
+          "value": "Odoo, Bitrix24, ERP/CRM integration, internal tools."
+        },
+        {
+          "label": "Quality & Compliance",
+          "value": "Pytest, CI/CD, Docker Compose, GDPR-aware automation."
+        },
+        {
+          "label": "Professional",
+          "value": "Requirements gathering, stakeholder communication, process analysis, technical documentation."
+        }
+      ]
+    }
+  },
+  "wizard": {
+    "behaviour": {
+      "loadExistingConfig": true,
+      "patchChangedFieldsOnly": true,
+      "preserveUnknownFields": false
+    },
+    "editableSections": [
+      {
+        "id": "siteIdentity",
+        "title": "Site identity",
+        "paths": [
+          "site.name",
+          "site.canonicalUrl",
+          "owner.displayName",
+          "owner.shortName",
+          "owner.possessiveName",
+          "owner.localizedNames.russian",
+          "owner.localizedNames.ukrainian",
+          "owner.roleTitle",
+          "owner.publicAliases",
+          "links.github",
+          "links.linkedin",
+          "links.facebook",
+          "seo.defaultTitle",
+          "seo.description",
+          "seo.shortDescription",
+          "seo.keywords",
+          "seo.openGraph.imagePath",
+          "seo.openGraph.imageAlt",
+          "seo.jsonLd.jobTitle",
+          "seo.jsonLd.knowsAbout",
+          "seo.pages.resume.description",
+          "seo.pages.chat.description",
+          "seo.pages.contact.description",
+          "seo.pages.disclaimer.description"
+        ]
+      },
+      {
+        "id": "homePage",
+        "title": "Home page",
+        "paths": [
+          "home.profileCard.name",
+          "home.profileCard.imageSrc",
+          "home.profileCard.summary",
+          "home.connectCard.linkVisibility.github",
+          "home.connectCard.linkVisibility.linkedin",
+          "home.connectCard.linkVisibility.facebook",
+          "home.projectStackTitle",
+          "home.featuredProject.previewHeading",
+          "home.featuredProject.title",
+          "home.featuredProject.description",
+          "home.featuredProject.cta",
+          "home.featuredProject.href",
+          "home.featuredProject.previewItems[0].title",
+          "home.featuredProject.previewItems[0].detail",
+          "home.featuredProject.previewItems[0].href",
+          "home.featuredProject.previewItems[1].title",
+          "home.featuredProject.previewItems[1].detail",
+          "home.featuredProject.previewItems[1].href",
+          "home.featuredProject.previewItems[2].title",
+          "home.featuredProject.previewItems[2].detail",
+          "home.featuredProject.previewItems[2].href",
+          "home.featuredAutomationDemo.eyebrow",
+          "home.featuredAutomationDemo.title",
+          "home.featuredAutomationDemo.description",
+          "home.featuredAutomationDemo.youtubeVideoId",
+          "home.featuredAutomationDemo.youtubeTitle",
+          "home.featuredAutomationDemo.cta",
+          "home.buildFocus.eyebrow",
+          "home.buildFocus.title",
+          "home.buildFocus.description",
+          "home.projectStack"
+        ]
+      },
+      {
+        "id": "chatSettings",
+        "title": "Chat",
+        "paths": ["chat.quickPrompts", "chat.languageRestrictions"]
+      },
+      {
+        "id": "resumePdf",
+        "title": "Resume page and PDF public header",
+        "paths": [
+          "resume.pageHeading",
+          "resume.downloadFileNameBase",
+          "resume.pdf.displayName",
+          "resume.pdf.headerLinkVisibility.website",
+          "resume.pdf.headerLinkVisibility.linkedin",
+          "resume.pdf.headerLinkVisibility.github",
+          "resume.pdf.headerLinkVisibility.facebook",
+          "resume.pdf.headerLinkVisibility.rightToWorkUk"
+        ]
+      },
+      {
+        "id": "disclaimerPage",
+        "title": "Disclaimer page",
+        "paths": ["disclaimer"]
+      }
+    ]
+  }
+}

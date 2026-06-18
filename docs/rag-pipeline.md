@@ -17,6 +17,9 @@ content/public/resume.md
 ```
 
 This file contains public resume content and structured RAG sections.
+The backend resolves this path from `content.publicResumePath` in
+`config/project.config.json`, so executable RAG code should not carry a second
+hardcoded public resume path.
 
 Generated structured RAG output path:
 
@@ -401,7 +404,7 @@ If context is insufficient, use the insufficient-data path.
 Current insufficient-data answer:
 
 ```text
-I do not have enough reliable information in Alex's public knowledge base to answer that accurately.
+I do not have enough reliable information in the public knowledge base to answer that accurately.
 ```
 
 ---
@@ -439,6 +442,8 @@ The stronger protections are:
 Current eval-related tasks:
 
 ```bash
+task rag:check
+task rag:eval:contract
 task rag:eval:free
 task rag:eval:paid
 task rag:eval:generated
@@ -449,7 +454,9 @@ task rag:eval:compare
 Eval modes:
 
 ```text
-contract / isolated      -> deterministic eval cycle without live OpenAI/Qdrant
+contract / isolated      -> deterministic eval without live OpenAI/Qdrant
+rag:check                -> CI-friendly extraction + stateless contract eval
+rag:eval:free            -> local before/after contract eval cycle
 rag_quality / live       -> live RAG eval cycle with real retrieval
 rag_generated_quality    -> generated RAG quality evals
 rag_retrieval_quality    -> retrieval quality evals

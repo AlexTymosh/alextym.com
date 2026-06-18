@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from app.core.project_config import get_project_config
 from app.rag.models import RetrievalFilter
+
+_OWNER_REFERENCE = get_project_config().assistant.owner_reference.casefold()
 
 QueryIntent = Literal[
     "hard_skills",
@@ -346,7 +349,7 @@ ROUTING_RULES: tuple[tuple[QueryIntent, tuple[str, ...], QueryRoute], ...] = (
             "talk with",
             "hire",
             "offer",
-            "message alex",
+            f"message {_OWNER_REFERENCE}",
         ),
         QueryRoute(
             intent="contact",

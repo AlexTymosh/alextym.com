@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
+import { chatShellCopy } from "../content/chat";
+import {
+  chatConfig,
+  contactConfig,
+  resumeConfig,
+} from "../lib/project-config";
 
 test.beforeEach(async ({ page }) => {
   await mockWarmup(page);
@@ -8,12 +14,12 @@ test.beforeEach(async ({ page }) => {
 test("renders key public pages", async ({ page }) => {
   await gotoAndExpectOk(page, "/");
   await expect(
-    page.getByRole("heading", { name: "Alex Tymoshenko" }),
+    page.getByRole("heading", { name: resumeConfig.pageHeading }),
   ).toBeVisible();
 
   await gotoAndExpectOk(page, "/resume");
   await expect(
-    page.getByRole("heading", { name: "Alex Tymoshenko" }),
+    page.getByRole("heading", { name: resumeConfig.pageHeading }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /download concise cv/i }),
@@ -23,19 +29,19 @@ test("renders key public pages", async ({ page }) => {
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Alex's AI Assistant",
+      name: chatShellCopy.title,
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: /ask alex/i }),
+    page.getByRole("textbox", { name: chatShellCopy.inputAriaLabel }),
   ).toBeVisible();
 
   await gotoAndExpectOk(page, "/contact");
   await expect(
-    page.getByRole("heading", { name: "Contact Me" }),
+    page.getByRole("heading", { name: contactConfig.heading.title }),
   ).toBeVisible();
   await expect(
-    page.getByRole("form", { name: "Contact form" }),
+    page.getByRole("form", { name: contactConfig.form.ariaLabel }),
   ).toBeVisible();
 });
 
@@ -51,7 +57,7 @@ test("navigates between primary pages from the main navigation", async ({
   await navigation.getByRole("link", { name: "Resume" }).click();
   await expect(page).toHaveURL(/\/resume$/);
   await expect(
-    page.getByRole("heading", { name: "Alex Tymoshenko" }),
+    page.getByRole("heading", { name: resumeConfig.pageHeading }),
   ).toBeVisible();
 
   await navigation.getByRole("link", { name: "Chat" }).click();
@@ -59,31 +65,31 @@ test("navigates between primary pages from the main navigation", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Alex's AI Assistant",
+      name: chatShellCopy.title,
     }),
   ).toBeVisible();
 
   await navigation.getByRole("link", { name: "Contact" }).click();
   await expect(page).toHaveURL(/\/contact$/);
   await expect(
-    page.getByRole("heading", { name: "Contact Me" }),
+    page.getByRole("heading", { name: contactConfig.heading.title }),
   ).toBeVisible();
 
   await navigation.getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByRole("heading", { name: "Alex Tymoshenko" }),
+    page.getByRole("heading", { name: resumeConfig.pageHeading }),
   ).toBeVisible();
 });
 
 test("renders the contact form without sending email", async ({ page }) => {
   await gotoAndExpectOk(page, "/contact");
 
-  await expect(page.getByLabel("Your Name")).toBeVisible();
-  await expect(page.getByLabel("Email Address")).toBeVisible();
-  await expect(page.getByLabel("Message")).toBeVisible();
+  await expect(page.getByLabel(contactConfig.form.fields.name.label)).toBeVisible();
+  await expect(page.getByLabel(contactConfig.form.fields.email.label)).toBeVisible();
+  await expect(page.getByLabel(contactConfig.form.fields.message.label)).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Send Message" }),
+    page.getByRole("button", { name: contactConfig.form.submitLabel }),
   ).toBeEnabled();
 });
 
@@ -92,15 +98,17 @@ test("renders the chat shell without requiring the live backend", async ({
 }) => {
   await gotoAndExpectOk(page, "/chat");
 
-  const chatShell = page.getByLabel("AI digital assistant");
+  const chatShell = page.getByLabel(chatShellCopy.ariaLabel);
 
-  await expect(chatShell.getByText("Ready", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Give me your 1-minute intro." }),
+    chatShell.getByText(chatShellCopy.readyStatus, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: chatConfig.quickPrompts[0].label }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: "Give me a short overview of his work experience.",
+      name: chatConfig.quickPrompts[1].label,
     }),
   ).toBeVisible();
 });

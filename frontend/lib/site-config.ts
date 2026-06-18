@@ -1,44 +1,42 @@
-const DEFAULT_SITE_URL = "https://alextym.com";
+import { projectConfig } from "./project-config";
 
-export const publicRoutes = [
-  "/",
-  "/resume",
-  "/chat",
-  "/contact",
-  "/disclaimer",
+const DEFAULT_SITE_URL = projectConfig.site.canonicalUrl;
+const DEFAULT_LANGUAGE = "en";
+const DEFAULT_OG_IMAGE_WIDTH = 1200;
+const DEFAULT_OG_IMAGE_HEIGHT = 630;
+
+export const publicRoutes = ["/", "/resume", "/chat", "/contact", "/disclaimer"];
+
+export const siteNavigation = [
+  { href: "/", label: "Home" },
+  { href: "/resume", label: "Resume" },
+  { href: "/chat", label: "Chat" },
+  { href: "/contact", label: "Contact" },
 ] as const;
 
 export const siteConfig = {
-  name: "alextym.com",
-  personName: "Alex Tymoshenko",
-  title: "Alex Tymoshenko | Software Developer & Automation Engineer",
-  description:
-    "Software developer focused on Python, FastAPI, API integrations, " +
-    "business process automation, ERP/CRM workflows, and RAG-based AI " +
-    "portfolio systems.",
-  shortDescription:
-    "Python, FastAPI, API integrations, business process automation, " +
-    "ERP/CRM workflows, and RAG-based AI portfolio systems.",
-  ogImagePath: "/og-image.png",
-  links: {
-    github: "https://github.com/AlexTymosh",
-    linkedin: "https://www.linkedin.com/in/alex-tim-tech/",
+  footer: {
+    disclaimerLabel: "Disclaimer",
+    message: "Thanks for visiting",
   },
-  keywords: [
-    "Alex Tymoshenko",
-    "Software Developer",
-    "Python Developer",
-    "FastAPI",
-    "Automation Engineer",
-    "API Integration",
-    "Business Process Automation",
-    "ERP Automation",
-    "RAG",
-    "AI Portfolio",
-    "Basingstoke",
-    "UK",
-  ],
-} as const;
+  language: DEFAULT_LANGUAGE,
+  links: {
+    ...projectConfig.links,
+    website: projectConfig.site.canonicalUrl,
+  },
+  name: projectConfig.site.name,
+  navigation: siteNavigation,
+  ogImageAlt: projectConfig.seo.openGraph.imageAlt,
+  ogImageHeight: DEFAULT_OG_IMAGE_HEIGHT,
+  ogImagePath: projectConfig.seo.openGraph.imagePath,
+  ogImageWidth: DEFAULT_OG_IMAGE_WIDTH,
+  personName: projectConfig.owner.displayName,
+  shortDescription: projectConfig.seo.shortDescription,
+  title: projectConfig.seo.defaultTitle,
+  titleTemplate: `%s | ${projectConfig.owner.displayName}`,
+  description: projectConfig.seo.description,
+  keywords: projectConfig.seo.keywords,
+};
 
 export function getSiteUrl() {
   const configuredUrl = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
@@ -58,16 +56,9 @@ export function getPersonJsonLd() {
     "@type": "Person",
     name: siteConfig.personName,
     url: siteUrl,
-    jobTitle: "Software Developer",
+    jobTitle: projectConfig.seo.jsonLd.jobTitle,
     sameAs: [siteConfig.links.github, siteConfig.links.linkedin],
-    knowsAbout: [
-      "Python",
-      "FastAPI",
-      "API integrations",
-      "Business process automation",
-      "ERP/CRM automation",
-      "RAG systems",
-    ],
+    knowsAbout: projectConfig.seo.jsonLd.knowsAbout,
   };
 
   return JSON.stringify(personJsonLd).replace(/</g, "\\u003c");

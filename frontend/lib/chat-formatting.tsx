@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { chatHandoffCopy } from "../content/chat";
 import type { HandoffState, Message } from "../types/chat";
 
 export function handoffStatusCopy(state: HandoffState): string | null {
@@ -6,13 +7,10 @@ export function handoffStatusCopy(state: HandoffState): string | null {
     return null;
   }
   if (state === "closed") {
-    return (
-      "This handoff session has closed. New messages go back to " +
-      "the AI assistant."
-    );
+    return chatHandoffCopy.sessionClosedMessage;
   }
   if (state === "error") {
-    return "The live handoff connection is reconnecting. Keep this page open.";
+    return chatHandoffCopy.reconnectingNotice;
   }
   return null;
 }
@@ -31,7 +29,7 @@ export function getRenderableMessageText(
 export function renderMessageText(text: string) {
   const normalizedText = text
     .replace(/:\s+[-*]\s+/g, ":\n- ")
-    .replace(/\s+[-*]\s+(?=[A-ZА-ЯЁ0-9])/g, "\n- ");
+    .replace(/\s+[-*]\s+(?=[A-Z\u0410-\u042f\u04010-9])/g, "\n- ");
   const lines = normalizedText.split(/\r?\n/);
   const nodes: ReactNode[] = [];
   let listItems: string[] = [];

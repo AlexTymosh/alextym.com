@@ -1,18 +1,21 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { resumeConfig } from "../lib/project-config";
+
+const expectedResumeDownloadFileName = `${resumeConfig.downloadFileNameBase}.pdf`;
 
 test("renders the resume and switches detail level", async ({ page }) => {
   await page.goto("/resume");
 
   await expect(
-    page.getByRole("heading", { name: "Alex Tymoshenko" }),
+    page.getByRole("heading", { name: resumeConfig.pageHeading }),
   ).toBeVisible();
   await expect(page.getByText("Automation Engineer focused")).toBeVisible();
   await expect(
     page.getByText("Built an Odoo ERP-integrated API"),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Detailed" }).click();
+  await page.getByRole("button", { name: resumeConfig.detailLevels[1].label }).click();
 
   await expect(
     page.getByText("Architected and deployed an internal API"),
@@ -36,10 +39,10 @@ test("updates the CV download link from active filters", async ({ page }) => {
   );
   await expect(downloadLink).toHaveAttribute(
     "download",
-    "Alex_alextym.com.pdf",
+    expectedResumeDownloadFileName,
   );
 
-  await page.getByRole("button", { name: "Training" }).click();
+  await page.getByRole("button", { name: resumeConfig.sectionButtons[2].label }).click();
 
   await expect(downloadLink).toHaveAttribute(
     "href",
@@ -55,7 +58,7 @@ test("returns a generated PDF for the active CV filters", async ({ page }) => {
   expect(response.ok()).toBe(true);
   expect(response.headers()["content-type"]).toContain("application/pdf");
   expect(response.headers()["content-disposition"]).toContain(
-    "Alex_alextym.com.pdf",
+    expectedResumeDownloadFileName,
   );
 
   const body = await response.body();
@@ -118,17 +121,23 @@ test("omits disabled resume sections from generated PDF", async ({ page }) => {
 test("shows experience and education by default", async ({ page }) => {
   await page.goto("/resume");
 
-  const timeline = page.getByLabel("Resume timeline");
-  const experienceButton = page.getByRole("button", { name: "Experience" });
-  const educationButton = page.getByRole("button", { name: "Education" });
-  const trainingButton = page.getByRole("button", { name: "Training" });
+  const timeline = page.getByLabel(resumeConfig.timelineAriaLabel);
+  const experienceButton = page.getByRole("button", {
+    name: resumeConfig.sectionButtons[0].label,
+  });
+  const educationButton = page.getByRole("button", {
+    name: resumeConfig.sectionButtons[1].label,
+  });
+  const trainingButton = page.getByRole("button", {
+    name: resumeConfig.sectionButtons[2].label,
+  });
 
   await expect(experienceButton).toHaveAttribute("aria-pressed", "true");
   await expect(educationButton).toHaveAttribute("aria-pressed", "true");
   await expect(trainingButton).toHaveAttribute("aria-pressed", "false");
 
-  await expect(timeline.getByText("Work Experience")).toBeVisible();
-  await expect(timeline.getByText("Education")).toBeVisible();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.experience)).toBeVisible();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.education)).toBeVisible();
   await expect(page.getByText("Hydrosphere UK Ltd")).toBeVisible();
   await expect(
     page.getByText("Master's Degree in Finance, Banking and Insurance"),
@@ -141,15 +150,21 @@ test("shows experience and education by default", async ({ page }) => {
 test("keeps resume section filters independent", async ({ page }) => {
   await page.goto("/resume");
 
-  const timeline = page.getByLabel("Resume timeline");
-  const experienceButton = page.getByRole("button", { name: "Experience" });
-  const educationButton = page.getByRole("button", { name: "Education" });
-  const trainingButton = page.getByRole("button", { name: "Training" });
+  const timeline = page.getByLabel(resumeConfig.timelineAriaLabel);
+  const experienceButton = page.getByRole("button", {
+    name: resumeConfig.sectionButtons[0].label,
+  });
+  const educationButton = page.getByRole("button", {
+    name: resumeConfig.sectionButtons[1].label,
+  });
+  const trainingButton = page.getByRole("button", {
+    name: resumeConfig.sectionButtons[2].label,
+  });
 
   await trainingButton.click();
 
   await expect(trainingButton).toHaveAttribute("aria-pressed", "true");
-  await expect(timeline.getByText("Training")).toBeVisible();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.training)).toBeVisible();
   await expect(
     page.getByText("Intermediate Backend Development with FastAPI"),
   ).toBeVisible();
@@ -157,7 +172,7 @@ test("keeps resume section filters independent", async ({ page }) => {
   await educationButton.click();
 
   await expect(educationButton).toHaveAttribute("aria-pressed", "false");
-  await expect(timeline.getByText("Education")).toBeHidden();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.education)).toBeHidden();
   await expect(
     page.getByText("Master's Degree in Finance, Banking and Insurance"),
   ).toBeHidden();
@@ -169,17 +184,17 @@ test("keeps resume section filters independent", async ({ page }) => {
   await experienceButton.click();
 
   await expect(experienceButton).toHaveAttribute("aria-pressed", "false");
-  await expect(timeline.getByText("Work Experience")).toBeHidden();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.experience)).toBeHidden();
   await expect(page.getByText("Hydrosphere UK Ltd")).toBeHidden();
-  await expect(timeline.getByText("Training")).toBeVisible();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.training)).toBeVisible();
 });
 
 test("splits concise and detailed education entries", async ({ page }) => {
   await page.goto("/resume");
 
-  const timeline = page.getByLabel("Resume timeline");
+  const timeline = page.getByLabel(resumeConfig.timelineAriaLabel);
 
-  await expect(timeline.getByText("Education")).toBeVisible();
+  await expect(timeline.getByText(resumeConfig.sectionLabels.education)).toBeVisible();
   await expect(
     page.getByText("Master's Degree in Finance, Banking and Insurance"),
   ).toBeVisible();
@@ -188,7 +203,7 @@ test("splits concise and detailed education entries", async ({ page }) => {
   ).toBeHidden();
   await expect(page.getByText("Graduated with honours.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Detailed" }).click();
+  await page.getByRole("button", { name: resumeConfig.detailLevels[1].label }).click();
 
   await expect(
     page.getByText("Master's Degree in Finance, Banking and Insurance"),
@@ -204,8 +219,8 @@ test("splits concise and detailed education entries", async ({ page }) => {
 test("shows an empty state when every section is disabled", async ({ page }) => {
   await page.goto("/resume");
 
-  await page.getByRole("button", { name: "Experience" }).click();
-  await page.getByRole("button", { name: "Education" }).click();
+  await page.getByRole("button", { name: resumeConfig.sectionButtons[0].label }).click();
+  await page.getByRole("button", { name: resumeConfig.sectionButtons[1].label }).click();
 
   await expect(page.getByText("Hydrosphere UK Ltd")).toBeHidden();
   await expect(
@@ -216,8 +231,8 @@ test("shows an empty state when every section is disabled", async ({ page }) => 
 test("sorts visible entries by section before date", async ({ page }) => {
   await page.goto("/resume");
 
-  await page.getByRole("button", { name: "Detailed" }).click();
-  await page.getByRole("button", { name: "Training" }).click();
+  await page.getByRole("button", { name: resumeConfig.detailLevels[1].label }).click();
+  await page.getByRole("button", { name: resumeConfig.sectionButtons[2].label }).click();
 
   const titles = await page.locator("article h2").allTextContents();
 
@@ -238,7 +253,7 @@ test("sorts visible entries by section before date", async ({ page }) => {
 test("filters additional sections by detail level", async ({ page }) => {
   await page.goto("/resume");
 
-  const additionalSections = page.getByLabel("Additional CV sections");
+  const additionalSections = page.getByLabel(resumeConfig.additionalSectionsAriaLabel);
   const languagesHeading = additionalSections.getByRole("heading", {
     name: "Languages",
   });
@@ -256,7 +271,7 @@ test("filters additional sections by detail level", async ({ page }) => {
   await expect(additionalSections.getByText("Polish")).toBeHidden();
   await expect(referencesHeading).toBeHidden();
 
-  await page.getByRole("button", { name: "Detailed" }).click();
+  await page.getByRole("button", { name: resumeConfig.detailLevels[1].label }).click();
 
   await expect(additionalSections.getByText("Ukrainian")).toBeVisible();
   await expect(additionalSections.getByText("Russian")).toBeVisible();
@@ -290,8 +305,8 @@ test("renders evidence and credential links", async ({ page }) => {
     }),
   ).toHaveAttribute("href", "/evidence/dobra-praca-regional-award-2018");
 
-  await page.getByRole("button", { name: "Detailed" }).click();
-  await page.getByRole("button", { name: "Training" }).click();
+  await page.getByRole("button", { name: resumeConfig.detailLevels[1].label }).click();
+  await page.getByRole("button", { name: resumeConfig.sectionButtons[2].label }).click();
 
   await expect(
     page.getByRole("link", { name: "English Language B2 Level" }),

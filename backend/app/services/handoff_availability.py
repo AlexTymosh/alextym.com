@@ -9,6 +9,7 @@ DEFAULT_HANDOFF_TIMEZONE = "Europe/London"
 DEFAULT_HANDOFF_START = "09:00"
 DEFAULT_HANDOFF_END = "21:00"
 CONTACT_PATH = "/contact"
+DEFAULT_HANDOFF_RETRY_LINE = "Please try again during those hours or use the contact form."
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,7 @@ class HandoffAvailabilityStatus:
         return (
             "Live handoff is available from "
             f"{self.start_time} to {self.end_time} {self.timezone} time. "
-            "Please try again during those hours or use the contact form."
+            f"{DEFAULT_HANDOFF_RETRY_LINE}"
         )
 
     def to_http_detail(self) -> dict[str, str]:

@@ -3,10 +3,14 @@ import { defineConfig, devices } from "@playwright/test";
 const port = Number(process.env.PLAYWRIGHT_PORT || 3000);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${port}`;
 const useDevServer = process.env.PLAYWRIGHT_USE_DEV_SERVER === "true";
+const useExistingBuild = process.env.PLAYWRIGHT_USE_EXISTING_BUILD === "true";
 
+const productionServerCommand = useExistingBuild
+  ? `npm run start -- --hostname 127.0.0.1 --port ${port}`
+  : `npm run build && npm run start -- --hostname 127.0.0.1 --port ${port}`;
 const localServerCommand = useDevServer
   ? `npm run dev -- --hostname 127.0.0.1 --port ${port}`
-  : `npm run build && npm run start -- --hostname 127.0.0.1 --port ${port}`;
+  : productionServerCommand;
 
 export default defineConfig({
   testDir: "./e2e",

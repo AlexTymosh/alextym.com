@@ -13,7 +13,8 @@ WORKDIR /app
 
 COPY backend/pyproject.toml backend/uv.lock ./
 COPY backend/app ./app
-COPY content/public /content/public
+COPY config ./config
+COPY content/public ./content/public
 
 RUN uv sync --frozen --no-dev
 

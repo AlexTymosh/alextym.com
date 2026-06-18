@@ -4,13 +4,15 @@
 
 | Task | Cost | Purpose |
 |---|---:|---|
-| `rag:eval:free` | Free | Contract eval cycle without OpenAI/Qdrant |
+| `rag:check` | Free | CI-friendly generated RAG extraction and stateless contract eval |
+| `rag:eval:contract` | Free | Direct contract eval report without before/after rotation |
+| `rag:eval:free` | Free | Local before/after contract eval cycle without OpenAI/Qdrant |
 | `rag:eval:paid` | Paid | Live RAG eval cycle with OpenAI/Qdrant |
 | `rag:eval:compare` | Free | Manual comparison for two custom reports |
 
 ## Auto-cycle algorithm
 
-Each eval task uses three files.
+The before/after eval cycle tasks use three files.
 
 For paid/live RAG evals:
 
@@ -40,7 +42,28 @@ When the task starts:
 This means that after the first baseline, every next run automatically compares
 the previous run with the current run.
 
-## Run free eval cycle
+## Run stateless contract eval
+
+This is the CI-friendly free check. It extracts generated RAG chunks and writes
+a single deterministic contract report without rotating before/after files.
+
+```powershell
+task rag:check
+```
+
+Direct contract eval only:
+
+```powershell
+task rag:eval:contract
+```
+
+This writes:
+
+```text
+.tmp/evals/contract.json
+```
+
+## Run free before/after eval cycle
 
 ```powershell
 task rag:eval:free

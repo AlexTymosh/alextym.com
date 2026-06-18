@@ -4,18 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.public_resume_source import get_public_resume_source_file
 from app.schemas.chat import Confidence
 
 GENERATED_RESUME_CHUNKS_FILE = "resume.generated.chunks.json"
-CANONICAL_RESUME_SOURCE_FILE = "content/public/resume.md"
-PREVIOUS_CANONICAL_RESUME_SOURCE_FILE = "frontend/content/resume.md"
-LEGACY_RESUME_SOURCE_FILE = "resume.md"
-REPLACED_RESUME_SOURCE_FILES = (
-    CANONICAL_RESUME_SOURCE_FILE,
-    PREVIOUS_CANONICAL_RESUME_SOURCE_FILE,
-    LEGACY_RESUME_SOURCE_FILE,
-    GENERATED_RESUME_CHUNKS_FILE,
-)
 DEFAULT_GENERATED_CHUNKS_PATH = Path(".tmp/rag/resume.generated.chunks.json")
 SUPPORTED_SCHEMA_VERSION = 2
 
@@ -53,7 +45,7 @@ def load_generated_resume_chunks(
     return GeneratedResumeChunkBundle(
         chunks=chunks,
         embedding_texts=embedding_texts,
-        source_files=REPLACED_RESUME_SOURCE_FILES,
+        source_files=_source_files_for_replacement(payload),
     )
 
 
@@ -69,7 +61,7 @@ def _chunk_from_payload(
     vector_inputs = _require_dict(chunk_payload, "vector_inputs")
     embedding_text = _require_text(vector_inputs, "body_dense")
     source_title = _require_text(source, "title")
-    source_file = _optional_text(source.get("path")) or CANONICAL_RESUME_SOURCE_FILE
+    source_file = _optional_text(source.get("path")) or get_public_resume_source_file()
     source_section = _require_text(source, "section")
     topic = _require_text(rag_payload, "topic")
     visibility = _require_text(rag_payload, "visibility")
@@ -113,6 +105,14 @@ def _load_json_payload(path: Path) -> dict[str, Any]:
         raise ValueError("Generated RAG chunks payload must be a JSON object.")
 
     return payload
+
+
+def _source_files_for_replacement(payload: dict[str, Any]) -> tuple[str, ...]:
+    source_files = [
+        _optional_text(payload.get("source_path")) or get_public_resume_source_file(),
+        GENERATED_RESUME_CHUNKS_FILE,
+    ]
+    return tuple(dict.fromkeys(source_files))
 
 
 def _require_dict_value(raw_value: object, name: str) -> dict[str, Any]:

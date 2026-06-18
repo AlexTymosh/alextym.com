@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { getResumeData } from "../../content/resume";
+import { getSeoPage } from "../../lib/project-config";
 import { ResumeExplorer } from "./_components/ResumeExplorer";
 
+const resumeSeo = getSeoPage("resume");
+
 export const metadata: Metadata = {
-  title: "Resume",
-  description:
-    "Resume of Alex Tymoshenko: software developer focused on Python, " +
-    "FastAPI, automation, API integrations, ERP/CRM workflows, and " +
-    "business systems.",
+  title: resumeSeo.title,
+  description: resumeSeo.description,
   alternates: {
-    canonical: "/resume",
+    canonical: resumeSeo.canonical,
   },
 };
 

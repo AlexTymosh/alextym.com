@@ -11,7 +11,15 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_CASES_PATH = Path(__file__).resolve().parents[1] / "evals" / "chat_eval_cases.json"
-WORD_PATTERN = re.compile(r"[A-Za-zА-Яа-яЁёІіЇїЄєҐґŁłÓóŻżŹźĆćŃńŚś]+|\d+")
+WORD_PATTERN = re.compile(
+    "["
+    "A-Za-z"
+    "\u0410-\u042f\u0430-\u044f"
+    "\u0401\u0451\u0406\u0456\u0407\u0457\u0404\u0454\u0490\u0491"
+    "\u0141\u0142\u00d3\u00f3\u017b\u017c\u0179\u017a"
+    "\u0106\u0107\u0143\u0144\u015a\u015b"
+    r"]+|\d+"
+)
 
 
 @dataclass(frozen=True)

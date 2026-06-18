@@ -1,27 +1,29 @@
 import { expect, test } from "@playwright/test";
+import { getSeoPage, projectConfig } from "../lib/project-config";
+import { publicRoutes, siteConfig } from "../lib/site-config";
 
-const siteUrl = "https://alextym.com";
+const siteUrl = projectConfig.site.canonicalUrl;
 
 const pageMetadataCases = [
   {
     path: "/",
-    title: "Alex Tymoshenko | Software Developer & Automation Engineer",
-    description: /Python, FastAPI, API integrations/,
+    title: projectConfig.seo.defaultTitle,
+    description: projectConfig.seo.description,
   },
   {
     path: "/resume",
-    title: "Resume | Alex Tymoshenko",
-    description: /Resume of Alex Tymoshenko/,
+    title: formatPageTitle(getSeoPage("resume").title),
+    description: getSeoPage("resume").description,
   },
   {
     path: "/chat",
-    title: "AI Profile Chat | Alex Tymoshenko",
-    description: /AI profile assistant/,
+    title: formatPageTitle(getSeoPage("chat").title),
+    description: getSeoPage("chat").description,
   },
   {
     path: "/contact",
-    title: "Contact | Alex Tymoshenko",
-    description: /Contact Alex Tymoshenko/,
+    title: formatPageTitle(getSeoPage("contact").title),
+    description: getSeoPage("contact").description,
   },
 ];
 
@@ -45,11 +47,11 @@ test.describe("SEO metadata", () => {
 
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
       "content",
-      "Alex Tymoshenko | Software Developer & Automation Engineer",
+      projectConfig.seo.defaultTitle,
     );
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
       "content",
-      `${siteUrl}/og-image.png`,
+      absoluteSiteUrl(projectConfig.seo.openGraph.imagePath),
     );
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
       "content",
@@ -73,7 +75,7 @@ test.describe("SEO metadata", () => {
     };
 
     expect(structuredData["@type"]).toBe("Person");
-    expect(structuredData.name).toBe("Alex Tymoshenko");
+    expect(structuredData.name).toBe(projectConfig.owner.displayName);
   });
 
   test("robots.txt allows public pages and blocks api routes", async ({ page }) => {
@@ -82,23 +84,24 @@ test.describe("SEO metadata", () => {
     await expect(page.locator("body")).toContainText("User-Agent: *");
     await expect(page.locator("body")).toContainText("Allow: /");
     await expect(page.locator("body")).toContainText("Disallow: /api/");
-    await expect(page.locator("body")).toContainText(
-      `Sitemap: ${siteUrl}/sitemap.xml`,
-    );
+    await expect(page.locator("body")).toContainText(`Sitemap: ${siteUrl}/sitemap.xml`);
   });
 
   test("sitemap.xml lists canonical public pages", async ({ page }) => {
     await page.goto("/sitemap.xml");
 
-    await expect(page.locator("body")).toContainText(`<loc>${siteUrl}</loc>`);
-    await expect(page.locator("body")).toContainText(
-      `<loc>${siteUrl}/resume</loc>`,
-    );
-    await expect(page.locator("body")).toContainText(
-      `<loc>${siteUrl}/chat</loc>`,
-    );
-    await expect(page.locator("body")).toContainText(
-      `<loc>${siteUrl}/contact</loc>`,
-    );
+    for (const route of publicRoutes) {
+      await expect(page.locator("body")).toContainText(
+        `<loc>${absoluteSiteUrl(route)}</loc>`,
+      );
+    }
   });
 });
+
+function formatPageTitle(title: string): string {
+  return siteConfig.titleTemplate.replace("%s", title);
+}
+
+function absoluteSiteUrl(path: string): string {
+  return `${siteUrl}${path === "/" ? "" : path}`;
+}
