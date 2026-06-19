@@ -581,6 +581,24 @@ task obs:up
 task ci
 ```
 
+Для локальной frontend-разработки скопируй пример env-файла и при необходимости измени backend URL:
+
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+```env
+BACKEND_ORIGIN="http://localhost:8000"
+```
+
+Для Vercel deployments задай frontend environment variable в **Vercel Project Settings -> Environment Variables** для **Preview** и **Production**:
+
+```env
+BACKEND_ORIGIN="https://yourname.onrender.com"
+```
+
+Frontend по-прежнему вызывает локальные `/api/*` paths. `frontend/next.config.mjs` использует `BACKEND_ORIGIN`, чтобы переписать эти запросы на backend service. Значение должно быть только backend origin: не добавляйте `/api`, `/health` или любой другой path. 
+
 Пересборка generated RAG chunks:
 
 ```bash
