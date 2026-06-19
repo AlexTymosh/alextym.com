@@ -1,4 +1,4 @@
-﻿# Deployment
+# Deployment
 
 ## Deployment goal
 
@@ -91,7 +91,29 @@ Frontend checks after deploy:
 
 Frontend code should call local `/api/*` paths. It must not call OpenAI, Qdrant, Resend, Telegram, or Redis directly.
 
-Required Vercel frontend environment variable:
+### Frontend environment variable
+
+`BACKEND_ORIGIN` is a frontend deployment setting. It is read by `frontend/next.config.mjs` during the Vercel build and is used for `/api/*` rewrites.
+
+For local development, copy the example file:
+
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+Local example:
+
+```env
+BACKEND_ORIGIN=http://localhost:8000
+```
+
+For Vercel Preview and Production deployments, define the variable in Vercel Project Settings -> Environment Variables:
+
+```text
+BACKEND_ORIGIN=https://alextym-backend.onrender.com
+```
+
+Reusable template example:
 
 ```text
 BACKEND_ORIGIN=https://<backend-host>
@@ -103,8 +125,27 @@ Render-style example:
 BACKEND_ORIGIN=https://<render-service>.onrender.com
 ```
 
-Do not add a trailing `/api` path. Trailing slashes are normalised by
-`frontend/next.config.mjs`.
+Rules:
+
+- set the variable for the Vercel environments that build the frontend, at minimum `Preview` and `Production`;
+- use only the backend origin;
+- do not include `/api`, `/health`, `/api/health/live`, or any other path;
+- do not use `localhost` in Vercel deployments;
+- after changing the variable in Vercel, redeploy the frontend.
+
+Valid:
+
+```text
+BACKEND_ORIGIN=https://alextym-backend.onrender.com
+```
+
+Invalid:
+
+```text
+BACKEND_ORIGIN=http://localhost:8000
+BACKEND_ORIGIN=https://alextym-backend.onrender.com/api
+BACKEND_ORIGIN=https://alextym-backend.onrender.com/api/health/live
+```
 
 Before deploying a reused template, update public project settings locally:
 

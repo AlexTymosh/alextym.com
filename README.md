@@ -645,14 +645,23 @@ CLI fallback:
 task setup:wizard:cli -- --list-sections
 ```
 
-For Vercel deployments, set the frontend environment variable:
+For local frontend development, copy the example file and adjust the backend URL if needed:
 
-```env
-BACKEND_ORIGIN="https://<backend-host>"
+```bash
+cp frontend/.env.example frontend/.env.local
 ```
 
-The frontend still calls `/api/*`; the backend host stays in deployment
-settings rather than source code.
+```env
+BACKEND_ORIGIN="http://localhost:8000"
+```
+
+For Vercel deployments, set the frontend environment variable in **Vercel Project Settings -> Environment Variables** for both **Preview** and **Production**:
+
+```env
+BACKEND_ORIGIN="https://alextym-backend.onrender.com"
+```
+
+The frontend still calls local `/api/*` paths. `frontend/next.config.mjs` uses `BACKEND_ORIGIN` to rewrite those requests to the backend service. The value must be the backend origin only: do not include `/api`, `/health`, or any other path. 
 
 Rebuild generated RAG chunks:
 
