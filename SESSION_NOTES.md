@@ -37,7 +37,7 @@ cd frontend && npm run lint
 | 3 | Backend chat | done | `backend/app/services/chat.py` | Extract intent resolution and follow-up routing helpers. Preserve routing behaviour. | `task ci` | |
 | 4 | Backend chat/RAG | done | `backend/app/services/chat.py` | Extract confidence scoring helpers. Preserve confidence labels. | `task ci` | |
 | 5 | Backend API/SSE | done | `backend/app/services/chat.py`, `backend/app/services/escalation.py`, `backend/app/api/*` | Add shared SSE serialization helper and remove service-owned SSE formatting. | `task ci` | |
-| 6 | Handoff copy | todo | `backend/app/services/escalation.py`, `backend/app/services/telegram_webhook.py` | Centralise shared handoff quick-reply copy. Remove duplication. | `task ci` | |
+| 6 | Handoff copy | done | `backend/app/services/escalation.py`, `backend/app/services/telegram_webhook.py` | Centralise shared handoff quick-reply copy. Remove duplication. | `task ci` | |
 | 7 | Handoff notifier | todo | `backend/app/services/escalation.py` | Move notifier protocol, noop notifier, Telegram notifier, and Telegram message builders into separate modules. | `task ci` | |
 | 8 | Handoff sessions | todo | `backend/app/services/escalation_sessions.py` | Separate session state transitions from Redis persistence. Store should not accept API schema objects. | `task ci` | |
 | 9 | Handoff API | todo | `backend/app/api/escalation.py`, `backend/app/services/escalation.py` | Remove duplicated availability gate from API. Keep business rule in service. | `task ci` | |

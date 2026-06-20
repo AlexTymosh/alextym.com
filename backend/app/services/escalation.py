@@ -28,22 +28,15 @@ from app.services.handoff_availability import (
     HandoffAvailabilityChecker,
     build_handoff_availability_checker,
 )
+from app.services.handoff_copy import (
+    CONTACT_QUICK_REPLY_BUTTON_LABEL,
+    READING_QUICK_REPLY_BUTTON_LABEL,
+    STILL_THERE_QUICK_REPLY_BUTTON_LABEL,
+)
 from app.services.telegram import TelegramBotClient, TelegramDeliveryError
 
 _PROJECT_CONFIG = get_project_config()
 _SITE_DOMAIN = _PROJECT_CONFIG.site.domain
-READING_QUICK_REPLY = (
-    "Hi, I\u2019m connected now and reading your request. Please give me a moment."
-)
-CONTACT_QUICK_REPLY = (
-    "Hi, I\u2019m connected now, but I\u2019m sorry, I\u2019m short on time at the moment. "
-    "Is your question urgent, or can we continue in 20\u201330 minutes?"
-)
-STILL_THERE_QUICK_REPLY = "Are you still there? I\u2019m ready to continue when you are."
-CLOSE_HANDOFF_REPLY = (
-    "This conversation has been closed. "
-    "You can request a new connection with the site owner if needed."
-)
 
 
 class EscalationConfigurationError(Exception):
@@ -442,19 +435,19 @@ def _build_telegram_handoff_reply_markup(handoff_id: str) -> dict[str, Any]:
             ],
             [
                 {
-                    "text": "\U0001f44b Send: \u201cHi, I\u2019m connected now and reading...\u201d",
+                    "text": READING_QUICK_REPLY_BUTTON_LABEL,
                     "callback_data": f"handoff:reading:{handoff_id}",
                 },
             ],
             [
                 {
-                    "text": "\u23f3 Send: \u201cHi, I\u2019m connected, but I\u2019m sorry...\u201d",
+                    "text": CONTACT_QUICK_REPLY_BUTTON_LABEL,
                     "callback_data": f"handoff:contact:{handoff_id}",
                 },
             ],
             [
                 {
-                    "text": "\u2753 Send: \u201cAre you still there? I\u2019m ready...\u201d",
+                    "text": STILL_THERE_QUICK_REPLY_BUTTON_LABEL,
                     "callback_data": f"handoff:still:{handoff_id}",
                 },
             ],
