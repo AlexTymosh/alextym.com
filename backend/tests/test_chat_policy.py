@@ -1,5 +1,11 @@
 from fastapi.testclient import TestClient
 
+from tests.chat_expected_responses import (
+    ASSISTANT_INTRO_ANSWER,
+    GREETING_ANSWER,
+    INSUFFICIENT_DATA_ANSWER,
+)
+
 
 def test_chat_returns_clarification_response_for_insufficient_data(
     empty_chat_client: TestClient,
@@ -11,8 +17,7 @@ def test_chat_returns_clarification_response_for_insufficient_data(
 
     assert response.status_code == 200
     body = response.json()
-    assert "not have enough reliable information" in body["answer"]
-    assert "connect you with Alex" in body["answer"]
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
     assert body["sources"] == []
     assert body["confidence"] == "low"
     assert body["not_enough_data"] is True
@@ -29,7 +34,7 @@ def test_chat_handles_greeting_without_insufficient_data(
 
     assert response.status_code == 200
     body = response.json()
-    assert "digital assistant" in body["answer"]
+    assert body["answer"] == GREETING_ANSWER
     assert body["confidence"] == "high"
     assert body["not_enough_data"] is False
     assert body["handoff_suggested"] is False
@@ -46,8 +51,10 @@ def test_chat_handles_good_afternoon_as_greeting(
 
     assert response.status_code == 200
     body = response.json()
+    assert body["answer"] == GREETING_ANSWER
     assert body["not_enough_data"] is False
-    assert "digital assistant" in body["answer"]
+    assert body["handoff_suggested"] is False
+    assert body["sources"] == []
 
 
 def test_chat_handles_intro_request_without_retrieval(
@@ -60,10 +67,10 @@ def test_chat_handles_intro_request_without_retrieval(
 
     assert response.status_code == 200
     body = response.json()
+    assert body["answer"] == ASSISTANT_INTRO_ANSWER
     assert body["not_enough_data"] is False
     assert body["handoff_suggested"] is False
     assert body["sources"] == []
-    assert "Alex's digital assistant" in body["answer"]
 
 
 def test_chat_handles_social_acknowledgement_without_out_of_scope(

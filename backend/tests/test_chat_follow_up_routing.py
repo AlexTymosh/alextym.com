@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from tests.chat_expected_responses import INSUFFICIENT_DATA_ANSWER
+
 
 def test_chat_treats_yes_after_alex_follow_up_as_continuation(
     empty_chat_client: TestClient,
@@ -24,7 +26,11 @@ def test_chat_treats_yes_after_alex_follow_up_as_continuation(
 
     assert response.status_code == 200
     body = response.json()
-    assert "not have enough reliable information" in body["answer"]
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["sources"] == []
+    assert body["confidence"] == "low"
+    assert body["not_enough_data"] is True
+    assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "insufficient_data"
 
 
@@ -44,7 +50,11 @@ def test_chat_routes_mba_follow_up_to_alex_context(
 
     assert response.status_code == 200
     body = response.json()
-    assert "not have enough reliable information" in body["answer"]
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["sources"] == []
+    assert body["confidence"] == "low"
+    assert body["not_enough_data"] is True
+    assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "insufficient_data"
 
 
@@ -64,5 +74,9 @@ def test_chat_routes_university_follow_up_to_alex_context(
 
     assert response.status_code == 200
     body = response.json()
-    assert "not have enough reliable information" in body["answer"]
+    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["sources"] == []
+    assert body["confidence"] == "low"
+    assert body["not_enough_data"] is True
+    assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "insufficient_data"
