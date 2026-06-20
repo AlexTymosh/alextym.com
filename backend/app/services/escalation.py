@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from datetime import UTC, datetime
@@ -15,6 +14,7 @@ from app.schemas.escalation import (
     EscalationRequest,
     EscalationResponse,
 )
+from app.schemas.sse import ServerSentComment, ServerSentEvent, ServerSentStreamItem
 from app.services.escalation_sessions import (
     ESCALATION_SESSION_STATE_CLOSED,
     ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
@@ -312,7 +312,7 @@ class EscalationService:
         handoff_id: str,
         *,
         after_message_id: str | None = None,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[ServerSentStreamItem]:
         if self._session_store is None:
             raise EscalationConfigurationError("Escalation session storage is not configured.")
 
@@ -320,11 +320,11 @@ class EscalationService:
         if after_message_id:
             initial_record = await self._get_session(handoff_id)
             if initial_record is None or _is_expired(initial_record):
-                yield self.sse_event("closed", {"reason": "session_expired"})
+                yield ServerSentEvent("closed", {"reason": "session_expired"})
                 return
             seen_message_ids.update(_message_ids_through(initial_record, after_message_id))
 
-        yield self.sse_event("meta", {"handoff_id": handoff_id, "status": "connected"})
+        yield ServerSentEvent("meta", {"handoff_id": handoff_id, "status": "connected"})
 
         next_heartbeat_at = (
             asyncio.get_running_loop().time() + self._stream_heartbeat_interval_seconds
@@ -333,22 +333,22 @@ class EscalationService:
         while True:
             session_record = await self._get_session(handoff_id)
             if session_record is None or _is_expired(session_record):
-                yield self.sse_event("closed", {"reason": "session_expired"})
+                yield ServerSentEvent("closed", {"reason": "session_expired"})
                 return
             for message in session_record.messages:
                 message_id = message.get("id", "")
                 if not message_id or message_id in seen_message_ids:
                     continue
                 seen_message_ids.add(message_id)
-                yield self.sse_event("message", message, event_id=message_id)
+                yield ServerSentEvent("message", message, event_id=message_id)
 
             if session_record.state == ESCALATION_SESSION_STATE_CLOSED:
-                yield self.sse_event("closed", {"reason": "session_closed"})
+                yield ServerSentEvent("closed", {"reason": "session_closed"})
                 return
 
             current_time = asyncio.get_running_loop().time()
             if current_time >= next_heartbeat_at:
-                yield ": heartbeat\n\n"
+                yield ServerSentComment("heartbeat")
                 next_heartbeat_at = current_time + self._stream_heartbeat_interval_seconds
 
             await asyncio.sleep(self._stream_poll_interval_seconds)
@@ -386,20 +386,6 @@ class EscalationService:
 
         with suppress(EscalationSessionStoreError):
             await self._session_store.delete(session_record.handoff_id)
-
-    @staticmethod
-    def sse_event(
-        event: str,
-        data: dict[str, Any],
-        *,
-        event_id: str | None = None,
-    ) -> str:
-        payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-        lines = []
-        if event_id:
-            lines.append(f"id: {event_id}")
-        lines.extend([f"event: {event}", f"data: {payload}"])
-        return "\n".join(lines) + "\n\n"
 
 
 def _build_telegram_control_message(
