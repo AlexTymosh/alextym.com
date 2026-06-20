@@ -33,7 +33,7 @@ cd frontend && npm run lint
 | Step | Area | Status | Target files | Required action | Validation | Notes |
 |---:|---|---|---|---|---|---|
 | 1 | Backend tests | done | `backend/tests/test_chat.py` | Split chat endpoint tests by behaviour area. Keep production code unchanged. | `task ci` | |
-| 2 | Backend chat | todo | `backend/app/services/chat.py` | Extract pre-RAG policy and language helpers. Preserve response payloads. | `task ci` | |
+| 2 | Backend chat | done | `backend/app/services/chat.py` | Extract pre-RAG policy and language helpers. Preserve response payloads. | `task ci` | |
 | 3 | Backend chat | todo | `backend/app/services/chat.py` | Extract intent resolution and follow-up routing helpers. Preserve routing behaviour. | `task ci` | |
 | 4 | Backend chat/RAG | todo | `backend/app/services/chat.py` | Extract confidence scoring helpers. Preserve confidence labels. | `task ci` | |
 | 5 | Backend API/SSE | todo | `backend/app/services/chat.py`, `backend/app/services/escalation.py`, `backend/app/api/*` | Add shared SSE serialization helper and remove service-owned SSE formatting. | `task ci` | |
