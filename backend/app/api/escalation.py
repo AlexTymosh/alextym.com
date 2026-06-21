@@ -54,7 +54,6 @@ async def escalate(
         return response
 
     try:
-        _ensure_handoff_available(service)
         enforce_escalation_rate_limit(request, settings)
         response = await service.submit(escalation_request)
     except HandoffUnavailableError as exc:
@@ -209,10 +208,6 @@ async def stream_escalation_messages(
         media_type=SSE_MEDIA_TYPE,
         headers=SSE_HEADERS,
     )
-
-
-def _ensure_handoff_available(service: EscalationService) -> None:
-    service.ensure_handoff_available()
 
 
 def _handoff_unavailable_http_exception(
