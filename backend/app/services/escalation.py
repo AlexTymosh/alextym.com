@@ -32,6 +32,7 @@ from app.services.escalation_sessions import (
     EscalationSessionStoreError,
     build_escalation_session_store,
 )
+from app.services.escalation_session_state import build_initial_session_record
 from app.services.handoff_availability import (
     AlwaysAvailableHandoffAvailabilityChecker,
     HandoffAvailabilityChecker,
@@ -217,9 +218,17 @@ class EscalationService:
         if self._session_store is None:
             return None
 
+        session_record = build_initial_session_record(
+            transcript=[
+                {"role": item.role, "content": item.content}
+                for item in escalation_request.transcript
+            ],
+            ttl_seconds=self._session_ttl_seconds,
+        )
+
         try:
             return await self._session_store.create(
-                escalation_request,
+                session_record,
                 ttl_seconds=self._session_ttl_seconds,
             )
         except EscalationSessionStoreError as exc:
