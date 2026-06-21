@@ -1,7 +1,7 @@
 import re
 
 from app.rag.models import KnowledgeChunk
-from app.schemas.chat import Confidence
+from app.core.confidence import Confidence
 
 
 def confidence_from_chunks(chunks: list[KnowledgeChunk], query: str) -> Confidence:

@@ -42,7 +42,7 @@ cd frontend && npm run lint
 | 8 | Handoff sessions | done | `backend/app/services/escalation_sessions.py` | Separate session state transitions from Redis persistence. Store should not accept API schema objects. | `task ci` | |
 | 9 | Handoff API | done | `backend/app/api/escalation.py`, `backend/app/services/escalation.py` | Remove duplicated availability gate from API. Keep business rule in service. | `task ci` | |
 | 10 | Rate limit | done | `backend/app/services/rate_limit.py`, `backend/app/api/rate_limit.py` | Move client identity extraction out of service layer. Remove FastAPI import from service module. | `task ci` | |
-| 11 | RAG/schema | todo | `backend/app/schemas/chat.py`, `backend/app/rag/qdrant_store.py` | Move `Confidence` type to a neutral module and update imports. | `task ci` | |
+| 11 | RAG/schema | done | `backend/app/schemas/chat.py`, `backend/app/rag/qdrant_store.py` | Move `Confidence` type to a neutral module and update imports. | `task ci` | |
 | 12 | RAG adapter | todo | `backend/app/rag/qdrant_retriever.py`, RAG store fakes/tests | Remove `inspect.signature()` capability detection. Standardise store `search()` contract. | `task ci` | |
 | 13 | Telegram tests | todo | `backend/tests/test_telegram_webhook.py` | Split webhook tests by auth, replies, callbacks, close, and errors. | `task ci` | |
 | 14 | Frontend stream | todo | `frontend/components/chat-shell.tsx` | Extract stream text renderer and handoff EventSource lifecycle into dedicated modules/hooks. | `task ci` | |

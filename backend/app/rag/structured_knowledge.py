@@ -5,7 +5,7 @@ from typing import Any
 
 from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.public_resume_source import get_public_resume_source_file
-from app.schemas.chat import Confidence
+from app.core.confidence import Confidence
 
 GENERATED_RESUME_CHUNKS_FILE = "resume.generated.chunks.json"
 DEFAULT_GENERATED_CHUNKS_PATH = Path(".tmp/rag/resume.generated.chunks.json")

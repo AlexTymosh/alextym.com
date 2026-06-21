@@ -12,7 +12,8 @@ from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import Retriever
-from app.schemas.chat import ChatRequest, ChatResponse, Confidence
+from app.core.confidence import Confidence
+from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.sse import ServerSentEvent
 from app.services.chat_confidence import confidence_from_chunks
 from app.services.chat_intent_resolution import (
