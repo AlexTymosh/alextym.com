@@ -4,11 +4,18 @@ from html import escape
 from typing import Literal, Protocol
 
 from app.core.config import Settings
-from app.schemas.telegram import TelegramCallbackQuery, TelegramMessage, TelegramUpdate
-from app.services.escalation_sessions import (
+from app.repositories.escalation_session_store import (
     EscalationSessionStore,
     EscalationSessionStoreError,
-    build_escalation_session_store,
+)
+from app.schemas.telegram import TelegramCallbackQuery, TelegramMessage, TelegramUpdate
+from app.services.escalation_sessions import build_escalation_session_store
+from app.services.handoff_copy import (
+    CONTACT_QUICK_REPLY as CONTACT_QUICK_REPLY,
+    HANDOFF_CLOSED_AFTER_NO_RESPONSE_REPLY as CLOSE_HANDOFF_REPLY,
+    READING_QUICK_REPLY as READING_QUICK_REPLY,
+    STILL_THERE_QUICK_REPLY as STILL_THERE_QUICK_REPLY,
+    quick_reply_for_callback_action,
 )
 from app.services.telegram import TelegramBotClient, TelegramDeliveryError
 
@@ -22,16 +29,6 @@ CALLBACK_DATA_PATTERN = re.compile(
     re.IGNORECASE,
 )
 MAX_TELEGRAM_REPLY_CHARS = 2000
-READING_QUICK_REPLY = "Hi, I’m connected now and reading your request. Please give me a moment."
-CONTACT_QUICK_REPLY = (
-    "Hi, I’m connected now, but I’m sorry, I’m short on time at the moment. "
-    "Is your question urgent, or can we continue in 20–30 minutes?"
-)
-STILL_THERE_QUICK_REPLY = "Are you still there? I’m ready to continue when you are."
-CLOSE_HANDOFF_REPLY = (
-    "This conversation has been closed because there was no response for a while. "
-    "You can request a new connection with the site owner if needed."
-)
 REPLY_HELP_CALLBACK_TEXT = "Manual reply mode opened."
 ACTION_SENT_CALLBACK_TEXT = "Sent to the website chat."
 ACTION_CLOSED_CALLBACK_TEXT = "Closed and notified the website visitor."
@@ -167,7 +164,7 @@ class TelegramWebhookService:
         if callback_action.action == "close":
             return await self._close_from_callback(callback_query, callback_action.handoff_id)
 
-        quick_reply = _quick_reply_for_callback_action(callback_action.action)
+        quick_reply = quick_reply_for_callback_action(callback_action.action)
         if quick_reply is None:
             await self._answer_callback_query(
                 callback_query.id,
@@ -402,13 +399,3 @@ def _parse_callback_data(data: str | None) -> TelegramCallbackAction | None:
         action=match.group(1).lower(),
         handoff_id=match.group(2).lower(),
     )
-
-
-def _quick_reply_for_callback_action(action: str) -> str | None:
-    if action == "reading":
-        return READING_QUICK_REPLY
-    if action == "contact":
-        return CONTACT_QUICK_REPLY
-    if action == "still":
-        return STILL_THERE_QUICK_REPLY
-    return None

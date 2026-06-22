@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 
 from app.api.escalation import get_escalation_service
 from app.main import app
-from app.schemas.escalation import EscalationRequest
 from app.services.escalation import EscalationService
 from app.services.escalation_sessions import (
     ESCALATION_SESSION_STATE_CONNECTED,
@@ -122,7 +121,7 @@ class SequenceEscalationSessionStore:
 
     async def create(
         self,
-        escalation_request: EscalationRequest,
+        session_record: EscalationSessionRecord,
         *,
         ttl_seconds: int,
     ) -> EscalationSessionRecord:
@@ -149,7 +148,7 @@ class SequenceEscalationSessionStore:
 class FailingEscalationSessionStore:
     async def create(
         self,
-        escalation_request: EscalationRequest,
+        session_record: EscalationSessionRecord,
         *,
         ttl_seconds: int,
     ) -> EscalationSessionRecord:

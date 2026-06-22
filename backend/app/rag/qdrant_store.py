@@ -10,7 +10,7 @@ from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
 from app.rag.vector_config import DenseVectorName, NAMED_DENSE_VECTOR_NAMES
 from app.rag.vector_config import VectorMode, normalise_query_vector_name
 from app.rag.vector_config import normalise_vector_mode
-from app.schemas.chat import Confidence
+from app.core.confidence import Confidence
 
 NamedEmbeddings = dict[DenseVectorName, list[float]]
 

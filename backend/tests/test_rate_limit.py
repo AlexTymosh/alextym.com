@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 
+from app.api.rate_limit import client_identifier_from_request
 from app.services.rate_limit import (
     InMemoryDailyRateLimiter,
     MisconfiguredDailyRateLimiter,
@@ -79,6 +81,42 @@ def test_misconfigured_daily_rate_limiter_fails_explicitly() -> None:
         limiter.check(scope="chat", identifier="127.0.0.1", limit=1)
 
 
+def test_client_identifier_prefers_first_forwarded_for_ip() -> None:
+    request = _request(
+        headers={
+            "x-forwarded-for": "203.0.113.10, 10.0.0.1",
+            "x-real-ip": "198.51.100.20",
+        },
+        client_host="127.0.0.1",
+    )
+
+    assert client_identifier_from_request(request) == "203.0.113.10"
+
+
+def test_client_identifier_uses_real_ip_when_forwarded_for_is_blank() -> None:
+    request = _request(
+        headers={
+            "x-forwarded-for": "   ",
+            "x-real-ip": "198.51.100.20",
+        },
+        client_host="127.0.0.1",
+    )
+
+    assert client_identifier_from_request(request) == "198.51.100.20"
+
+
+def test_client_identifier_falls_back_to_request_client_host() -> None:
+    request = _request(headers={}, client_host="127.0.0.1")
+
+    assert client_identifier_from_request(request) == "127.0.0.1"
+
+
+def test_client_identifier_returns_unknown_without_client_host() -> None:
+    request = _request(headers={}, client_host=None)
+
+    assert client_identifier_from_request(request) == "unknown"
+
+
 class FakeRedisExecutor:
     def __init__(self) -> None:
         self.commands: list[list[object]] = []
@@ -97,3 +135,12 @@ class FakeRedisExecutor:
             return 1
 
         raise AssertionError(f"Unexpected command: {command}")
+
+
+def _request(
+    *,
+    headers: dict[str, str],
+    client_host: str | None,
+) -> SimpleNamespace:
+    client = SimpleNamespace(host=client_host) if client_host is not None else None
+    return SimpleNamespace(headers=headers, client=client)

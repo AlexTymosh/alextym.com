@@ -88,7 +88,7 @@ def test_escalation_honeypot_returns_success_without_sending() -> None:
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
     assert notifier.sent_requests == []
-    assert session_store.created_requests == []
+    assert session_store.created_records == []
 
 
 def test_escalation_sends_valid_transcript() -> None:
@@ -142,7 +142,7 @@ def test_escalation_creates_redis_ttl_session_when_store_is_configured() -> None
         "state": ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
         "expires_in_seconds": 120,
     }
-    assert len(session_store.created_requests) == 1
+    assert len(session_store.created_records) == 1
     assert session_store.created_ttl_seconds == [120]
     assert notifier.sent_handoff_ids == ["hnd_test"]
 
@@ -493,7 +493,7 @@ class FakeEscalationSessionStore:
         existing_handoff_id: str | None = "hnd_test",
         existing_state: str = ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
     ) -> None:
-        self.created_requests: list[EscalationRequest] = []
+        self.created_records: list[EscalationSessionRecord] = []
         self.created_ttl_seconds: list[int] = []
         self.deleted_handoff_ids: list[str] = []
         self.closed_handoff_ids: list[str] = []
@@ -502,13 +502,13 @@ class FakeEscalationSessionStore:
 
     async def create(
         self,
-        escalation_request: EscalationRequest,
+        session_record: EscalationSessionRecord,
         *,
         ttl_seconds: int,
     ) -> EscalationSessionRecord:
-        self.created_requests.append(escalation_request)
+        self.created_records.append(session_record)
         self.created_ttl_seconds.append(ttl_seconds)
-        return _session_record("hnd_test", escalation_request)
+        return _session_record("hnd_test", source_record=session_record)
 
     async def get(self, handoff_id: str) -> EscalationSessionRecord | None:
         if self.existing_handoff_id is None or handoff_id != self.existing_handoff_id:
@@ -535,7 +535,7 @@ class FakeEscalationSessionStore:
 class FailingEscalationSessionStore:
     async def create(
         self,
-        escalation_request: EscalationRequest,
+        session_record: EscalationSessionRecord,
         *,
         ttl_seconds: int,
     ) -> EscalationSessionRecord:
@@ -560,15 +560,13 @@ class FailingEscalationSessionStore:
 
 def _session_record(
     handoff_id: str,
-    escalation_request: EscalationRequest | None = None,
+    source_record: EscalationSessionRecord | None = None,
     *,
     state: str = ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
 ) -> EscalationSessionRecord:
     transcript = []
-    if escalation_request is not None:
-        transcript = [
-            {"role": item.role, "content": item.content} for item in escalation_request.transcript
-        ]
+    if source_record is not None:
+        transcript = source_record.transcript
     return EscalationSessionRecord(
         handoff_id=handoff_id,
         state=state,

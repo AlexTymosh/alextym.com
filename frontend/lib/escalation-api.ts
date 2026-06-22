@@ -7,7 +7,7 @@ import type {
   EscalationTranscriptMessage,
   HandoffState,
 } from "../types/chat";
-import { createMessageId } from "./chat-state";
+import { createMessageId } from "./chat-message-id";
 
 const BROWSER_BACKEND_ORIGIN =
   process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.replace(/\/$/, "") ?? "";
