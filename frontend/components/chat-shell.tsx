@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import {
   ESCALATION_CONSENT_COPY,
@@ -12,19 +12,17 @@ import {
   warmupMessages,
 } from "../content/chat";
 import { useAnimatedLabel } from "../hooks/use-animated-label";
+import { useEscalationStream } from "../hooks/use-escalation-stream";
 import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
 import {
   EscalationApiError,
-  buildEscalationStreamUrl,
-  closeEscalationStream,
   isHandoffUnavailableError,
   normaliseHandoffState,
-  parseEscalationStreamClosedReason,
-  parseEscalationStreamMessage,
   submitEscalation,
   submitEscalationClose,
   submitEscalationMessage,
 } from "../lib/escalation-api";
+import { createStreamTextRenderer } from "../lib/stream-text-renderer";
 import {
   buildChatHistory,
   buildEscalationTranscript,
@@ -55,25 +53,7 @@ const DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE =
 
 const HANDOFF_NAME_REQUEST_MESSAGE = chatHandoffCopy.nameRequestMessage;
 
-const STREAM_RENDER_TICK_MS = 100;
-const STREAM_RENDER_BASE_CHARS = 6;
-const STREAM_RENDER_MEDIUM_CHARS = 14;
-const STREAM_RENDER_FAST_CHARS = 220;
-const STREAM_RENDER_LARGE_BACKLOG = 720;
-const STREAM_RENDER_MEDIUM_BACKLOG = 280;
 const SOURCE_REVEAL_STEP_MS = 180;
-
-type StreamTextRenderer = {
-  append: (text: string) => void;
-  cancel: () => void;
-  finish: () => Promise<void>;
-  flush: () => void;
-};
-
-type StreamTextRendererOptions = {
-  signal: AbortSignal;
-  onUpdate: (text: string) => void;
-};
 
 export function ChatShell() {
   const [input, setInput] = useState("");
@@ -97,14 +77,66 @@ export function ChatShell() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const escalationEventSourceRef = useRef<EventSource | null>(null);
-  const seenEscalationMessageIdsRef = useRef<Set<string>>(new Set());
 
   const warmupLabel = useAnimatedLabel(
     warmupStatus === "warming",
     warmupMessages,
   );
   const thinkingLabel = useAnimatedLabel(isThinking, thinkingMessages);
+
+  const handleEscalationStreamMeta = useCallback(() => {
+    setNotice(null);
+    setHandoffUnavailableMessage(null);
+    setHandoffState((currentState) =>
+      currentState === "connected" ? "connected" : "waiting_for_alex",
+    );
+  }, []);
+
+  const handleEscalationStreamMessage = useCallback(
+    (message: { id: string; content: string }) => {
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        { id: message.id, role: "alex", text: message.content },
+      ]);
+      setHandoffState("connected");
+      setNotice(null);
+      setHandoffUnavailableMessage(null);
+    },
+    [],
+  );
+
+  const handleEscalationStreamClosed = useCallback(
+    (reason: EscalationStreamClosedReason) => {
+      setHandoffState("closed");
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        {
+          id: createMessageId("assistant"),
+          role: "assistant",
+          text: getHandoffClosedMessage(reason),
+        },
+      ]);
+    },
+    [],
+  );
+
+  const handleEscalationStreamError = useCallback(() => {
+    setHandoffState((currentState) =>
+      currentState === "connected" ? "connected" : "error",
+    );
+    setNotice(chatHandoffCopy.reconnectingNotice);
+  }, []);
+
+  const {
+    closeEscalationStream,
+    openEscalationStream,
+    resetEscalationStream,
+  } = useEscalationStream({
+    onClosed: handleEscalationStreamClosed,
+    onError: handleEscalationStreamError,
+    onMessage: handleEscalationStreamMessage,
+    onMeta: handleEscalationStreamMeta,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -127,9 +159,9 @@ export function ChatShell() {
     return () => {
       isMounted = false;
       abortControllerRef.current?.abort();
-      closeEscalationStream(escalationEventSourceRef);
+      closeEscalationStream();
     };
-  }, []);
+  }, [closeEscalationStream]);
 
   const statusLabel = useMemo(() => {
     if (handoffState === "connected") {
@@ -298,8 +330,7 @@ export function ChatShell() {
   function resetChat() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-    closeEscalationStream(escalationEventSourceRef);
-    seenEscalationMessageIdsRef.current.clear();
+    resetEscalationStream();
     setInput("");
     setMessages([]);
     setIsThinking(false);
@@ -569,7 +600,6 @@ export function ChatShell() {
       setHandoffState(nextHandoffId ? nextState : "idle");
 
       if (nextHandoffId) {
-        seenEscalationMessageIdsRef.current.clear();
         openEscalationStream(nextHandoffId);
       }
 
@@ -611,7 +641,7 @@ export function ChatShell() {
 
     try {
       await submitEscalationClose(handoffId);
-      closeEscalationStream(escalationEventSourceRef);
+      closeEscalationStream();
       setHandoffState("closed");
       setMessages((currentMessages) => [
         ...currentMessages,
@@ -639,62 +669,6 @@ export function ChatShell() {
   function showHandoffUnavailableMessage(message: string) {
     setHandoffUnavailableMessage(message || DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE);
     setNotice(null);
-  }
-
-  function openEscalationStream(nextHandoffId: string) {
-    closeEscalationStream(escalationEventSourceRef);
-
-    const eventSource = new EventSource(buildEscalationStreamUrl(nextHandoffId));
-    escalationEventSourceRef.current = eventSource;
-
-    eventSource.addEventListener("meta", () => {
-      setNotice(null);
-      setHandoffUnavailableMessage(null);
-      setHandoffState((currentState) =>
-        currentState === "connected" ? "connected" : "waiting_for_alex",
-      );
-    });
-
-    eventSource.addEventListener("message", (event) => {
-      const message = parseEscalationStreamMessage(event);
-      if (!message) {
-        return;
-      }
-
-      if (seenEscalationMessageIdsRef.current.has(message.id)) {
-        return;
-      }
-      seenEscalationMessageIdsRef.current.add(message.id);
-
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        { id: message.id, role: "alex", text: message.content },
-      ]);
-      setHandoffState("connected");
-      setNotice(null);
-      setHandoffUnavailableMessage(null);
-    });
-
-    eventSource.addEventListener("closed", (event) => {
-      const reason = parseEscalationStreamClosedReason(event);
-      closeEscalationStream(escalationEventSourceRef);
-      setHandoffState("closed");
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: createMessageId("assistant"),
-          role: "assistant",
-          text: getHandoffClosedMessage(reason),
-        },
-      ]);
-    });
-
-    eventSource.addEventListener("error", () => {
-      setHandoffState((currentState) =>
-        currentState === "connected" ? "connected" : "error",
-      );
-      setNotice(chatHandoffCopy.reconnectingNotice);
-    });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -924,132 +898,6 @@ export function ChatShell() {
       </form>
     </section>
   );
-}
-
-function createStreamTextRenderer({
-  signal,
-  onUpdate,
-}: StreamTextRendererOptions): StreamTextRenderer {
-  let pendingText = "";
-  let visibleText = "";
-  let isCancelled = false;
-  let isFinishing = false;
-  let timerId: number | null = null;
-  let finishResolver: (() => void) | null = null;
-
-  function append(text: string) {
-    if (isCancelled || !text) {
-      return;
-    }
-
-    pendingText += text;
-    scheduleTick();
-  }
-
-  function scheduleTick() {
-    if (isCancelled || timerId !== null) {
-      return;
-    }
-    if (!pendingText) {
-      resolveIfFinished();
-      return;
-    }
-
-    timerId = window.setTimeout(runTick, STREAM_RENDER_TICK_MS);
-  }
-
-  function runTick() {
-    timerId = null;
-    if (isCancelled) {
-      resolveIfFinished();
-      return;
-    }
-
-    const batchSize = nextStreamRenderBatchSize(pendingText.length, isFinishing);
-    const nextText = pendingText.slice(0, batchSize);
-    pendingText = pendingText.slice(batchSize);
-    visibleText += nextText;
-    onUpdate(visibleText);
-
-    if (pendingText) {
-      scheduleTick();
-      return;
-    }
-
-    resolveIfFinished();
-  }
-
-  function finish() {
-    isFinishing = true;
-    if (!pendingText) {
-      return Promise.resolve();
-    }
-
-    scheduleTick();
-    return new Promise<void>((resolve) => {
-      finishResolver = resolve;
-    });
-  }
-
-  function flush() {
-    if (isCancelled || !pendingText) {
-      return;
-    }
-
-    if (timerId !== null) {
-      window.clearTimeout(timerId);
-      timerId = null;
-    }
-    visibleText += pendingText;
-    pendingText = "";
-    onUpdate(visibleText);
-    resolveIfFinished();
-  }
-
-  function cancel() {
-    isCancelled = true;
-    pendingText = "";
-    if (timerId !== null) {
-      window.clearTimeout(timerId);
-      timerId = null;
-    }
-    resolveIfFinished();
-  }
-
-  function resolveIfFinished() {
-    if (pendingText || !finishResolver) {
-      return;
-    }
-
-    finishResolver();
-    finishResolver = null;
-  }
-
-  signal.addEventListener("abort", cancel, { once: true });
-
-  return {
-    append,
-    cancel,
-    finish,
-    flush,
-  };
-}
-
-function nextStreamRenderBatchSize(
-  pendingLength: number,
-  isFinishing: boolean,
-): number {
-  if (pendingLength >= STREAM_RENDER_LARGE_BACKLOG) {
-    return STREAM_RENDER_FAST_CHARS;
-  }
-  if (pendingLength >= STREAM_RENDER_MEDIUM_BACKLOG) {
-    return STREAM_RENDER_MEDIUM_CHARS;
-  }
-  if (isFinishing && pendingLength > STREAM_RENDER_MEDIUM_CHARS) {
-    return STREAM_RENDER_MEDIUM_CHARS;
-  }
-
-  return STREAM_RENDER_BASE_CHARS;
 }
 
 function getHandoffClosedMessage(
