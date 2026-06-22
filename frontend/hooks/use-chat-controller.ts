@@ -4,19 +4,21 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { chatHandoffCopy, chatNoticeCopy, chatShellCopy } from "../content/chat";
 import { useEscalationStream } from "../hooks/use-escalation-stream";
 import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
+import { isAbortError } from "../lib/chat-errors";
+import { buildChatHistory } from "../lib/chat-history";
 import {
-  buildChatHistory,
-  buildEscalationTranscript,
-  chooseScriptedResponse,
-  createMessageId,
   hasPendingHandoffSuggestion,
-  isAbortError,
   isHandoffConfirmationText,
   isHandoffRequestText,
   isHumanHandoffActive,
   shouldAssistantSuggestHandoff,
+} from "../lib/chat-handoff";
+import { createMessageId } from "../lib/chat-message-id";
+import {
+  chooseScriptedResponse,
   waitForScriptedResponse,
-} from "../lib/chat-state";
+} from "../lib/chat-scripted-responses";
+import { buildEscalationTranscript } from "../lib/chat-transcript";
 import {
   EscalationApiError,
   isHandoffUnavailableError,

@@ -47,7 +47,7 @@ cd frontend && npm run lint
 | 13 | Telegram tests | done | `backend/tests/test_telegram_webhook.py` | Split webhook tests by auth, replies, callbacks, close, and errors. | `task ci` | |
 | 14 | Frontend stream | done | `frontend/components/chat-shell.tsx` | Extract stream text renderer and handoff EventSource lifecycle into dedicated modules/hooks. | `task ci` | |
 | 15 | Frontend controller | done | `frontend/components/chat-shell.tsx` | Move chat state machine and submit flow to controller hook. Keep component render-focused. | `task ci` | |
-| 16 | Frontend utilities | todo | `frontend/lib/chat-state.ts` | Split chat-state utilities by concern after controller extraction. | `task ci` | |
+| 16 | Frontend utilities | done | `frontend/lib/chat-state.ts` | Split chat-state utilities by concern after controller extraction. | `task ci` | |
 
 ## Commit order
 
