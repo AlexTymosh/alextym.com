@@ -5,242 +5,33 @@ from app.core.project_config import get_project_config
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
 from app.rag.prompt_builder import PromptBundle
 from app.schemas.chat import ChatHistoryMessage, ChatRequest
-from app.services.chat_language import normalize_message
-from app.services.chat_policy import (
-    ALEX_TERMS,
+from app.services.chat_copy import (
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
     UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER,
 )
+from app.services.chat_intent_terms import (
+    ALEX_PROFILE_TERMS,
+    ALEX_TERMS,
+    BROAD_EDUCATION_REWRITE_TERMS,
+    CONTACT_OR_AVAILABILITY_TERMS,
+    EDUCATION_PROFILE_TERMS,
+    FOLLOW_UP_PROFILE_TERMS,
+    FOLLOW_UP_PRONOUN_TERMS,
+    KNOWN_THIRD_PARTY_SUBJECTS,
+    OBSERVABILITY_REWRITE_TERMS,
+    RAG_PROJECT_TERMS,
+    RAG_REWRITE_TERMS,
+    SECOND_PERSON_TERMS,
+    SERVICE_REQUEST_TERMS,
+    SERVICE_REWRITE_TERMS,
+    SHORT_CONTINUATION_PATTERNS,
+    WEAKNESS_REQUEST_TERMS,
+)
+from app.services.chat_language import normalize_message
 
 _PROJECT_CONFIG = get_project_config()
 _OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
 _OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
-
-ALEX_PROFILE_TERMS = (
-    "experience",
-    "skill",
-    "skills",
-    "hard skill",
-    "hard skills",
-    "soft skill",
-    "soft skills",
-    "strength",
-    "strengths",
-    "strong side",
-    "strong sides",
-    "advantage",
-    "different",
-    "project",
-    "projects",
-    "resume",
-    "cv",
-    "education",
-    "university",
-    "degree",
-    "master",
-    "master's",
-    "masters",
-    "mba",
-    "academic",
-    "honours",
-    "scholarship",
-    "finance",
-    "banking",
-    "insurance",
-    "work",
-    "worked",
-    "career",
-    "background",
-    "intro",
-    "profile",
-    "portfolio",
-    "summary",
-    "github",
-    "linkedin",
-    "contact",
-    "availability",
-    "available",
-    "start",
-    "hire",
-    "role",
-    "stack",
-    "python",
-    "fastapi",
-    "automation",
-    "rag",
-    "qdrant",
-    "prometheus",
-    "grafana",
-    "observability",
-    "metrics",
-    "monitoring",
-    "backend",
-    "api",
-    "website",
-    "web app",
-    "software",
-    "program",
-    "internal tool",
-    "chatbot",
-    "collaboration",
-    "service",
-    "services",
-    "integration",
-    "right to work",
-    "work authorisation",
-    "work authorization",
-    "share code",
-    "uk location",
-    "based in the uk",
-    "visa",
-    "employment eligibility",
-    "work permit",
-)
-
-SERVICE_REQUEST_TERMS = (
-    "build a website",
-    "create a website",
-    "make a website",
-    "need a website",
-    "need a program",
-    "need a tool",
-    "need an internal tool",
-    "need software",
-    "build a tool",
-    "build software",
-    "create software",
-    "build an app",
-    "create an app",
-    "automation project",
-    "automate my",
-    "automate our",
-    "api integration",
-    "integrate api",
-    "internal tool",
-    "business automation",
-    "rag chatbot",
-    "ai assistant",
-    f"can {_OWNER_REFERENCE.casefold()} build",
-    "can he build",
-)
-
-WEAKNESS_REQUEST_TERMS = (
-    "weakness",
-    "weaknesses",
-    "education",
-    "university",
-    "degree",
-    "master",
-    "master's",
-    "masters",
-    "mba",
-    "academic",
-    "honours",
-    "scholarship",
-    "finance",
-    "banking",
-    "insurance",
-    "rag",
-    "qdrant",
-    "prometheus",
-    "grafana",
-    "observability",
-    "metrics",
-    "monitoring",
-    "weak point",
-    "weak points",
-    "development area",
-    "development areas",
-    "areas to improve",
-    "limitations",
-    f"what should {_OWNER_REFERENCE.casefold()} improve",
-    "what should he improve",
-)
-
-SECOND_PERSON_TERMS = (
-    "you",
-    "your",
-    "yours",
-)
-
-FOLLOW_UP_PRONOUN_TERMS = (
-    "he",
-    "him",
-    "his",
-)
-
-FOLLOW_UP_PROFILE_TERMS = (
-    "background",
-    "career",
-    "do",
-    "does",
-    "experience",
-    "profile",
-    "project",
-    "projects",
-    "skill",
-    "skills",
-    "soft",
-    "hard",
-    "tell",
-    "work",
-    "availability",
-    "available",
-    "start",
-    "hire",
-    "stack",
-    "service",
-    "services",
-    "website",
-    "software",
-    "automation",
-    "strength",
-    "strengths",
-    "different",
-    "weakness",
-    "weaknesses",
-)
-
-SHORT_CONTINUATION_PATTERNS = (
-    "yes",
-    "yes please",
-    "sure",
-    "please",
-    "go ahead",
-    "so tell me",
-    "tell me",
-    "go on",
-    "continue",
-    "more",
-    "more please",
-)
-
-CONTACT_OR_AVAILABILITY_TERMS = (
-    "contact",
-    "connect",
-    "speak",
-    "talk",
-    "chat",
-    "hire",
-    "offer",
-    "availability",
-    "available",
-    "start",
-    "start date",
-    "new job",
-    "right to work",
-    "work authorisation",
-    "work authorization",
-    "share code",
-    "uk work",
-    "uk location",
-    "based in the uk",
-    "visa",
-    "employment eligibility",
-    "work permit",
-)
-
-KNOWN_THIRD_PARTY_SUBJECTS = ("elon musk",)
 
 
 @dataclass(frozen=True)
@@ -483,34 +274,8 @@ def _looks_like_short_continuation(normalized_message: str) -> bool:
 
 
 def _looks_like_profile_topic(normalized_message: str) -> bool:
-    education_terms = (
-        "academic",
-        "banking",
-        "degree",
-        "education",
-        "finance",
-        "honours",
-        "insurance",
-        "master",
-        "master's",
-        "masters",
-        "mba",
-        "scholarship",
-        "university",
-    )
-    rag_project_terms = (
-        "grafana",
-        "metrics",
-        "monitoring",
-        "observability",
-        "prometheus",
-        "qdrant",
-        "rag",
-        "retrieval augmented",
-        "vector search",
-    )
-    return any(term in normalized_message for term in education_terms) or any(
-        term in normalized_message for term in rag_project_terms
+    return any(term in normalized_message for term in EDUCATION_PROFILE_TERMS) or any(
+        term in normalized_message for term in RAG_PROJECT_TERMS
     )
 
 
@@ -577,43 +342,13 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         )
     if normalized_message == "what does he do":
         return f"What does {_OWNER_REFERENCE} do professionally?"
-    if any(
-        term in normalized_message
-        for term in (
-            "academic",
-            "banking",
-            "degree",
-            "education",
-            "finance",
-            "honours",
-            "insurance",
-            "master",
-            "master's",
-            "masters",
-            "mba",
-            "scholarship",
-            "university",
-        )
-    ):
+    if any(term in normalized_message for term in EDUCATION_PROFILE_TERMS):
         return (
             f"Tell me about {_OWNER_POSSESSIVE} education, Master's Degree in Finance, "
             "Banking and Insurance, university, honours, academic "
             "scholarship, and analytical background."
         )
-    if any(
-        term in normalized_message
-        for term in (
-            "grafana",
-            "metrics",
-            "monitoring",
-            "observability",
-            "prometheus",
-            "qdrant",
-            "rag",
-            "retrieval augmented",
-            "vector search",
-        )
-    ):
+    if any(term in normalized_message for term in RAG_PROJECT_TERMS):
         return (
             f"Tell me about {_OWNER_POSSESSIVE} AI portfolio website, RAG architecture, "
             "retrieval pipeline, Qdrant vector search, Prometheus, Grafana, "
@@ -621,32 +356,17 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
         )
     if "work" in normalized_message and "experience" in normalized_message:
         return f"Tell me about {_OWNER_POSSESSIVE} work experience."
-    if any(
-        term in normalized_message
-        for term in (
-            "mba",
-            "university",
-            "degree",
-            "master",
-            "master's",
-            "education",
-            "finance",
-            "banking",
-            "insurance",
-        )
-    ):
+    if any(term in normalized_message for term in BROAD_EDUCATION_REWRITE_TERMS):
         return (
             f"Tell me about {_OWNER_POSSESSIVE} education, university degree, finance "
             "background, and academic achievements."
         )
-    if any(term in normalized_message for term in ("rag", "qdrant", "embedding")):
+    if any(term in normalized_message for term in RAG_REWRITE_TERMS):
         return (
             f"Tell me about {_OWNER_POSSESSIVE} RAG portfolio website, architecture, "
             "retrieval system, safeguards, evaluations, and AI assistant."
         )
-    if any(
-        term in normalized_message for term in ("prometheus", "grafana", "observability", "metrics")
-    ):
+    if any(term in normalized_message for term in OBSERVABILITY_REWRITE_TERMS):
         return (
             f"Tell me about {_OWNER_POSSESSIVE} observability work with Prometheus, "
             "Grafana, metrics, dashboards, and monitoring."
@@ -661,7 +381,7 @@ def _rewrite_alex_retrieval_query(message: str) -> str:
             f"Tell me about {_OWNER_POSSESSIVE} hard skills, technical stack, tools, "
             "and software engineering capabilities."
         )
-    if any(term in normalized_message for term in ("service", "website", "software")):
+    if any(term in normalized_message for term in SERVICE_REWRITE_TERMS):
         return _services_retrieval_query()
     if "strength" in normalized_message or "different" in normalized_message:
         return (

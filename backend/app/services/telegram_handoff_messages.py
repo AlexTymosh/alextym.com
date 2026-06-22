@@ -4,7 +4,7 @@ from typing import Any
 
 from app.core.project_config import get_project_config
 from app.schemas.escalation import EscalationMessageRequest, EscalationRequest
-from app.services.escalation_sessions import (
+from app.services.escalation_session_state import (
     ESCALATION_SESSION_STATE_CLOSED,
     ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,
 )

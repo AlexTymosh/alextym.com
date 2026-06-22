@@ -16,14 +16,7 @@ from app.core.confidence import Confidence
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.sse import ServerSentEvent
 from app.services.chat_confidence import confidence_from_chunks
-from app.services.chat_intent_resolution import (
-    handoff_reason_after_answer,
-    is_weakness_request,
-    resolve_question,
-    should_offer_handoff_after_answer,
-)
-from app.services.chat_language import normalize_message as _normalize_message
-from app.services.chat_policy import (
+from app.services.chat_copy import (
     ASSISTANT_INTRO_ANSWER,
     GREETING_ANSWER,
     HANDOFF_PROMPT_TITLE,
@@ -38,6 +31,15 @@ from app.services.chat_policy import (
     UNSUPPORTED_NON_ENGLISH_ANSWER,
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
     UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER,
+)
+from app.services.chat_intent_resolution import (
+    handoff_reason_after_answer,
+    is_weakness_request,
+    resolve_question,
+    should_offer_handoff_after_answer,
+)
+from app.services.chat_language import normalize_message as _normalize_message
+from app.services.chat_policy import (
     ChatPolicyResult,
     apply_pre_rag_policy,
     handoff_request_response,

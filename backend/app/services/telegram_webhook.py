@@ -4,12 +4,12 @@ from html import escape
 from typing import Literal, Protocol
 
 from app.core.config import Settings
-from app.schemas.telegram import TelegramCallbackQuery, TelegramMessage, TelegramUpdate
-from app.services.escalation_sessions import (
+from app.repositories.escalation_session_store import (
     EscalationSessionStore,
     EscalationSessionStoreError,
-    build_escalation_session_store,
 )
+from app.schemas.telegram import TelegramCallbackQuery, TelegramMessage, TelegramUpdate
+from app.services.escalation_sessions import build_escalation_session_store
 from app.services.handoff_copy import (
     CONTACT_QUICK_REPLY as CONTACT_QUICK_REPLY,
     HANDOFF_CLOSED_AFTER_NO_RESPONSE_REPLY as CLOSE_HANDOFF_REPLY,

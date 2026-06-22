@@ -4,6 +4,10 @@ from contextlib import suppress
 from datetime import UTC, datetime
 
 from app.core.config import Settings
+from app.repositories.escalation_session_store import (
+    EscalationSessionStore,
+    EscalationSessionStoreError,
+)
 from app.schemas.escalation import (
     EscalationCloseResponse,
     EscalationMessageRequest,
@@ -28,8 +32,6 @@ from app.services.telegram_handoff_notifier import (
 from app.services.escalation_sessions import (
     ESCALATION_SESSION_STATE_CLOSED,
     EscalationSessionRecord,
-    EscalationSessionStore,
-    EscalationSessionStoreError,
     build_escalation_session_store,
 )
 from app.services.escalation_session_state import build_initial_session_record
