@@ -92,6 +92,30 @@ def test_escalation_returns_403_when_handoff_is_outside_hours() -> None:
     assert notifier.sent_requests == []
 
 
+def test_escalation_checks_handoff_availability_once_on_success() -> None:
+    checker = CountingAvailableHandoffAvailabilityChecker()
+    notifier = FakeEscalationNotifier()
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=notifier,
+        availability_checker=checker,
+    )
+
+    response = client.post(
+        "/api/escalations",
+        json={
+            "consent_accepted": True,
+            "reason": "user_requested_human",
+            "transcript": [{"role": "user", "content": "Can I speak to Alex?"}],
+            "company_website": "",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert checker.calls == 1
+    assert len(notifier.sent_requests) == 1
+
+
 def test_escalation_message_allows_active_handoff_outside_hours() -> None:
     notifier = FakeEscalationNotifier()
     app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
@@ -125,6 +149,14 @@ class ClosedHandoffAvailabilityChecker:
                 timezone="Europe/London",
             )
         )
+
+
+class CountingAvailableHandoffAvailabilityChecker:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def ensure_available(self) -> None:
+        self.calls += 1
 
 
 class FakeEscalationNotifier:

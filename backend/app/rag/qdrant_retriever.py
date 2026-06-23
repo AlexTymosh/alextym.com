@@ -1,4 +1,4 @@
-import inspect
+from typing import Protocol
 
 from app.core.config import Settings
 from app.llm.client import EmbeddingClient
@@ -127,7 +127,7 @@ class QdrantRetriever:
         self,
         *,
         embedding_client: EmbeddingClient,
-        store: QdrantKnowledgeStore,
+        store: "KnowledgeSearchStore",
         default_limit: int,
         score_threshold: float,
     ) -> None:
@@ -166,36 +166,31 @@ class QdrantRetriever:
         return _rerank_chunks(filtered_chunks, query=normalized_query, route=route)
 
 
+class KnowledgeSearchStore(Protocol):
+    def search(
+        self,
+        *,
+        embedding: list[float],
+        limit: int,
+        score_threshold: float,
+        payload_filter: RetrievalFilter | None = None,
+    ) -> list[KnowledgeChunk]: ...
+
+
 def _search_store(
     *,
-    store: QdrantKnowledgeStore,
+    store: KnowledgeSearchStore,
     embedding: list[float],
     limit: int,
     score_threshold: float,
     payload_filter: RetrievalFilter | None,
 ) -> list[KnowledgeChunk]:
-    if _store_accepts_payload_filter(store):
-        return store.search(
-            embedding=embedding,
-            limit=limit,
-            score_threshold=score_threshold,
-            payload_filter=payload_filter,
-        )
-
     return store.search(
         embedding=embedding,
         limit=limit,
         score_threshold=score_threshold,
+        payload_filter=payload_filter,
     )
-
-
-def _store_accepts_payload_filter(store: object) -> bool:
-    try:
-        signature = inspect.signature(store.search)  # type: ignore[attr-defined]
-    except (TypeError, ValueError):
-        return True
-
-    return "payload_filter" in signature.parameters
 
 
 def _expand_query(query: str) -> str:
