@@ -8,6 +8,7 @@ from app.api.rate_limit import (
     enforce_escalation_message_rate_limit,
     enforce_escalation_rate_limit,
 )
+from app.api.sse import SSE_HEADERS, SSE_MEDIA_TYPE, serialize_sse_item, sse_event
 from app.core.config import Settings, get_settings
 from app.core.domain_metrics import record_escalation_event
 from app.core.project_config import get_project_config
@@ -53,7 +54,6 @@ async def escalate(
         return response
 
     try:
-        _ensure_handoff_available(service)
         enforce_escalation_rate_limit(request, settings)
         response = await service.submit(escalation_request)
     except HandoffUnavailableError as exc:
@@ -195,26 +195,19 @@ async def stream_escalation_messages(
                         outcome="disconnected",
                     )
                     break
-                yield event
+                yield serialize_sse_item(event)
         except EscalationDeliveryError:
             record_escalation_event(action="stream", outcome="delivery_error")
-            yield EscalationService.sse_event(
+            yield sse_event(
                 "error",
                 {"message": "Escalation stream is temporarily unavailable."},
             )
 
     return StreamingResponse(
         event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
+        media_type=SSE_MEDIA_TYPE,
+        headers=SSE_HEADERS,
     )
-
-
-def _ensure_handoff_available(service: EscalationService) -> None:
-    service.ensure_handoff_available()
 
 
 def _handoff_unavailable_http_exception(

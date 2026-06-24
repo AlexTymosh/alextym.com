@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.schemas.chat import Confidence
+from app.core.confidence import Confidence
 
 
 @dataclass(frozen=True)
