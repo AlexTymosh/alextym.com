@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from app.api.rate_limit import enforce_chat_rate_limit
+from app.api.sse import SSE_HEADERS, SSE_MEDIA_TYPE, serialize_sse_item, sse_event
 from app.core.config import Settings, get_settings
 from app.core.domain_metrics import record_chat_request
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.chat import ChatService
 from app.services.chat_metrics import MetricsChatService, build_metrics_chat_service
 
 logger = structlog.get_logger(__name__)
@@ -51,23 +51,20 @@ async def chat_stream(
                         policy_intent="none",
                     )
                     break
-                yield event
+                yield serialize_sse_item(event)
         except Exception as exc:
             logger.exception(
                 "chat.stream.failed",
                 message="Chat stream failed.",
                 error_type=type(exc).__name__,
             )
-            yield ChatService._sse_event(
+            yield sse_event(
                 "error",
                 {"message": "Something went wrong. Please try again later."},
             )
 
     return StreamingResponse(
         event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
+        media_type=SSE_MEDIA_TYPE,
+        headers=SSE_HEADERS,
     )

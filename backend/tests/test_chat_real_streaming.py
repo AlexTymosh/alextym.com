@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections.abc import AsyncIterator, Iterable, Iterator
 from types import SimpleNamespace
 
@@ -8,6 +7,7 @@ from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
 from app.rag.retriever import InMemoryRetriever
 from app.schemas.chat import ChatRequest
+from app.schemas.sse import ServerSentEvent
 from app.services.chat import ChatService, PROMPT_INJECTION_ANSWER
 
 
@@ -70,11 +70,11 @@ def test_openai_responses_client_streams_output_text_deltas() -> None:
     assert fake_responses.last_request["reasoning"] == {"effort": "low"}
 
 
-async def _collect_events(stream: AsyncIterator[str]) -> list[str]:
+async def _collect_events(stream: AsyncIterator[ServerSentEvent]) -> list[ServerSentEvent]:
     return [event async for event in stream]
 
 
-def _joined_token_text(events: Iterable[str]) -> str:
+def _joined_token_text(events: Iterable[ServerSentEvent]) -> str:
     return "".join(
         payload["text"]
         for payload in _event_payloads(events, event_name="token")
@@ -82,26 +82,22 @@ def _joined_token_text(events: Iterable[str]) -> str:
     )
 
 
-def _done_payload(events: Iterable[str]) -> dict[str, object]:
+def _done_payload(events: Iterable[ServerSentEvent]) -> dict[str, object]:
     done_payloads = _event_payloads(events, event_name="done")
     assert done_payloads
     return done_payloads[-1]
 
 
 def _event_payloads(
-    events: Iterable[str],
+    events: Iterable[ServerSentEvent],
     *,
     event_name: str,
 ) -> list[dict[str, object]]:
     payloads: list[dict[str, object]] = []
     for event in events:
-        if not event.startswith(f"event: {event_name}\n"):
+        if event.event != event_name:
             continue
-        for line in event.splitlines():
-            if line.startswith("data: "):
-                payload = json.loads(line.removeprefix("data: "))
-                if isinstance(payload, dict):
-                    payloads.append(payload)
+        payloads.append(event.data)
     return payloads
 
 

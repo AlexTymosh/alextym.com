@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections.abc import AsyncIterator, Iterator
 
 from app.core.config import Settings
@@ -20,6 +19,7 @@ from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
 from app.rag.retriever import Retriever
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.sse import ServerSentEvent
 from app.services.chat import ChatService
 from app.services.chat_safety import is_prompt_injection_attempt
 
@@ -117,13 +117,12 @@ class MetricsChatService:
         )
         return response
 
-    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[str]:
+    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ServerSentEvent]:
         done_payload: dict[str, object] | None = None
         try:
             async for event in self._service.stream_answer(request):
-                parsed_payload = _parse_done_event(event)
-                if parsed_payload is not None:
-                    done_payload = parsed_payload
+                if event.event == "done":
+                    done_payload = event.data
                 yield event
         except Exception:
             record_chat_request(
@@ -209,20 +208,6 @@ def _classify_chat_response(
     if response.sources:
         return "rag", "none"
     return "scripted", "none"
-
-
-def _parse_done_event(event: str) -> dict[str, object] | None:
-    if not event.startswith("event: done\n"):
-        return None
-    for line in event.splitlines():
-        if not line.startswith("data:"):
-            continue
-        try:
-            payload = json.loads(line.removeprefix("data:").strip())
-        except json.JSONDecodeError:
-            return None
-        return payload if isinstance(payload, dict) else None
-    return None
 
 
 def _string_value(value: object, *, default: str) -> str:

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from app.core.config import Settings
 from app.llm.openai_client import OpenAIEmbeddingClient, OpenAIResponsesClient
-from app.rag.models import ChunkMetadata, KnowledgeChunk
+from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
 from app.rag.public_resume_source import get_public_resume_source_file_for_path
 from app.rag.qdrant_retriever import QdrantRetriever
 from app.rag.qdrant_store import QdrantKnowledgeStore
@@ -403,6 +403,7 @@ class FakeSearchStore:
         embedding: list[float],
         limit: int,
         score_threshold: float,
+        payload_filter: RetrievalFilter | None = None,
     ) -> list[KnowledgeChunk]:
         return self._chunks[:limit]
 

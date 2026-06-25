@@ -2,7 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-Confidence = Literal["low", "medium", "high"]
+from app.core.confidence import Confidence
+
 ChatHistoryRole = Literal["user", "assistant"]
 HandoffReason = Literal[
     "insufficient_data",

@@ -10,8 +10,6 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
-from fastapi import Request
-
 from app.core.config import Settings
 
 RATE_LIMIT_KEY_PREFIX = "rate-limit:daily"
@@ -170,23 +168,6 @@ def build_rate_limiter(settings: Settings) -> DailyRateLimiter:
         return MisconfiguredDailyRateLimiter()
 
     return get_rate_limiter()
-
-
-def client_identifier_from_request(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        first_forwarded_ip = forwarded_for.split(",", 1)[0].strip()
-        if first_forwarded_ip:
-            return first_forwarded_ip
-
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-
-    if request.client and request.client.host:
-        return request.client.host
-
-    return "unknown"
 
 
 def _redis_daily_key(*, scope: str, identifier: str, now: datetime) -> str:
