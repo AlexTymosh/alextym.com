@@ -97,7 +97,7 @@ async function runChecks() {
       projectConfig.config,
       "chat.quickPrompts[0].label",
     );
-    assert.equal(currentPrompt, "Give me your 1-minute intro.");
+    assert.equal(currentPrompt, "Give me Alex's 30-second intro");
 
     const patchedOwner = applyAssignmentsToRaw(projectConfig.raw, projectConfig.config, [
       { path: "owner.shortName", rawValue: "Jordan" },
