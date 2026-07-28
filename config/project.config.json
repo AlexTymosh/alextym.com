@@ -20,8 +20,12 @@
       "russian": "\u0410\u043b\u0435\u043a\u0441\u0435\u0439",
       "ukrainian": "\u041e\u043b\u0435\u043a\u0441\u0456\u0439"
     },
-    "roleTitle": "Software Developer & Automation Engineer",
-    "publicAliases": ["alex", "alextym", "tymosh", "tymoshenko"]
+    "roleTitle": "Automation & Integration Engineer",
+    "publicAliases": [
+      "Alex",
+      "Oleksii",
+      "Tymoshenko"
+    ]
   },
   "site": {
     "name": "alextym.com",
@@ -33,11 +37,12 @@
     "facebook": "https://www.facebook.com/ol.tymoshenko"
   },
   "seo": {
-    "defaultTitle": "Alex Tymoshenko | Software Developer & Automation Engineer",
-    "description": "Software developer focused on Python, FastAPI, API integrations, business process automation, ERP/CRM workflows, and RAG-based AI portfolio systems.",
-    "shortDescription": "Python, FastAPI, API integrations, business process automation, ERP/CRM workflows, and RAG-based AI portfolio systems.",
+    "defaultTitle": "Alex Tymoshenko | Automation Engineer",
+    "description": "Automation Engineer focused on BI, data analysis, API integrations, ERP/CRM workflows, and AI-assisted tools that reduce manual work.",
+    "shortDescription": "Automation Engineer focused on BI, data analysis, API integrations, ERP/CRM workflows, and AI-assisted tools that reduce manual work.",
     "keywords": [
       "Alex Tymoshenko",
+      "Oleksii Tymoshenko",
       "Software Developer",
       "Python Developer",
       "FastAPI",
@@ -52,28 +57,33 @@
     ],
     "openGraph": {
       "imagePath": "/og-image.png",
-      "imageAlt": "Alex Tymoshenko software developer portfolio"
+      "imageAlt": "Alex Tymoshenko, Automation and Integration Engineer portfolio"
     },
     "jsonLd": {
-      "jobTitle": "Software Developer",
+      "jobTitle": "Automation Engineer",
       "knowsAbout": [
-        "Python",
-        "FastAPI",
-        "API integrations",
         "Business process automation",
-        "ERP/CRM automation",
-        "RAG systems"
+        "API integrations",
+        "ERP/CRM workflows",
+        "BI Analyst",
+        "BI reporting",
+        "Data analysis",
+        "Data pipelines",
+        "AI-assisted internal tools",
+        "RAG systems",
+        "Python",
+        "FastAPI"
       ]
     },
     "pages": {
       "resume": {
-        "description": "Resume of Alex Tymoshenko: software developer focused on Python, FastAPI, automation, API integrations, ERP/CRM workflows, and business systems."
+        "description": "Resume of Alex (Oleksii) Tymoshenko, Automation Engineer focused on BI, API integrations, ERP/CRM workflows, data analysis, and AI-assisted tools.\n"
       },
       "chat": {
-        "description": "Ask Alex Tymoshenko's AI profile assistant about his projects, CV, automation experience, Python, FastAPI, and RAG portfolio work."
+        "description": "Ask Alex Tymoshenko's AI assistant about his CV, automation projects, BI/data analysis, API integrations, ERP/CRM workflows, and potential collaboration."
       },
       "contact": {
-        "description": "Contact Alex Tymoshenko for software development, automation, API integration, Python, FastAPI, or business process automation opportunities."
+        "description": "Contact Alex Tymoshenko about automation projects, BI/data analysis, API integrations, ERP/CRM workflows, AI-assisted tools, job opportunities, or collaboration."
       },
       "disclaimer": {
         "description": "Disclaimer for the portfolio website, AI assistant, contact flow, human handoff, analytics, and monitoring boundaries."
@@ -85,7 +95,7 @@
       "name": "Alex Tymoshenko",
       "imageSrc": "/images/profile/alex.webp",
       "imageAlt": "",
-      "summary": "I build practical automation tools that connect APIs, Excel, ERP systems, reports, and dashboards into smoother business workflows."
+      "summary": "Automation Engineer focused on reducing manual work through BI/data analysis, API integrations, ERP/CRM workflow automation, and AI-assisted internal tools.\n"
     },
     "assistantCard": {
       "eyebrow": "AI Profile Chat",
@@ -102,7 +112,7 @@
         "facebook": true
       }
     },
-    "projectStackTitle": "Project Stack",
+    "projectStackTitle": "Technologies and Focus Areas Behind My Projects",
     "featuredProject": {
       "previewHeading": "Latest Projects in Progress",
       "title": "yourname.com",
@@ -134,9 +144,9 @@
       ]
     },
     "featuredAutomationDemo": {
-      "eyebrow": "Unusual Automation",
-      "title": "Excel API Magic",
-      "description": "Making Excel work like a modern business system.",
+      "eyebrow": "Excel API Magic",
+      "title": "Excel-based ERP/API Automation Platform",
+      "description": "Lightweight internal tool connecting Excel workflows with Odoo ERP, API sync, reporting, structured logging, and user-facing automation.",
       "youtubeVideoId": "uAvHcnk1ym8",
       "youtubeTitle": "Excel API Integration demo",
       "cta": "Open on YouTube"
@@ -147,30 +157,32 @@
       "description": "Most of my current effort goes into a FastAPI SaaS backend template: a modular monolith for small and medium SaaS products with tenant/platform access control, Keycloak OIDC/JWT, audit and outbox foundations, Redis-backed rate limiting, structured errors, testing, and observability."
     },
     "projectStack": [
-      "Python 3.12",
+      "Python",
       "FastAPI",
-      "Pydantic v2",
-      "SQLAlchemy",
-      "Alembic",
+      "TypeScript",
+      "Next.js",
       "PostgreSQL",
       "Redis",
+      "SQLAlchemy",
+      "Alembic",
+      "Pydantic v2",
       "Keycloak/OIDC",
-      "Dramatiq",
-      "Docker Compose",
-      "uv",
-      "Ruff",
-      "Pytest",
-      "OpenTelemetry",
-      "Prometheus",
-      "Grafana",
+      "API integrations",
       "RAG",
-      "Qdarnt"
+      "OpenAI API",
+      "Qdrant",
+      "BI/reporting workflows",
+      "Docker",
+      "Linux",
+      "Prometheus",
+      "Grafana"
     ]
   },
   "contact": {
     "heading": {
       "title": "Contact Me",
-      "description": "For hiring, collaboration, or project conversations, send a short note."
+      "description": ["Contact me about Automation Engineer, Python Developer, ",
+        "API Integration, Internal Tools, or AI-assisted workflow automation roles"]
     },
     "socialLinks": ["linkedin", "github", "facebook"],
     "form": {
@@ -208,27 +220,23 @@
   "chat": {
     "quickPrompts": [
       {
-        "label": "Give me your 1-minute intro.",
+        "label": "Give me Alex's 30-second intro",
         "responses": [
-          "Alex builds practical automation for business workflows, APIs, ERP systems, reporting, and dashboards.\n\nHis automation background goes back to the 2000s:\n- Excel macros while working as a credit broker;\n- MySQL for company operations in 2018;\n- Bitrix24 ERP during the 2020 remote-work shift.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he focused on AI-assisted engineering, Python automation, and API integrations.\n\nIn 2024, he delivered an Odoo Enterprise API integration that reduced one employee's workload by 68%.\n\nHe holds a Master's Degree in Finance, specialising in Banking and Insurance, and has a strong analytical background.\n\nWould you like to know more about his latest work experience?",
-          "Alex combines long-term business automation experience with newer AI-assisted software development.\n\nHe started with Excel automation in the 2000s, then moved business operations into MySQL in 2018 and Bitrix24 ERP in 2020.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he focused more deeply on Python, AI engineering, APIs, and workflow automation.\n\nHis 2024 Odoo Enterprise API project reduced one employee's workload by 68%.\n\nHe holds a Master's Degree in Finance, specialising in Banking and Insurance, and is strong in analytics, reporting, and dashboards.\n\nWould you like a short overview of his most recent role?",
-          "Alex focuses on automation, API integrations, ERP workflows, reporting, and operational dashboards.\n\nHis practical automation path includes:\n- Excel macros in the 2000s;\n- moving company processes to MySQL in 2018;\n- implementing Bitrix24 ERP in 2020;\n- building API-based workflow automation in the UK.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he shifted his focus towards AI-assisted engineering and Python automation.\n\nIn 2024, he delivered an Odoo Enterprise integration that reduced one employee's workload by 68%.\n\nWould you like the key facts from his latest work experience?"
+          "Alex is an Automation Engineer with a strong business analysis background.\nHe analyses raw technical data and business processes, genuinely enjoys identifying bottlenecks, and turns them into clear automation solutions with well-defined acceptance criteria.\nHe has a strong understanding of the challenges, limitations and practical realities of modern tools, from Excel dependencies to AI hype.\nHe prefers a S.M.A.R.T. approach to task-setting and follows the Kaizen philosophy: improvement is not a one-off task, but a continuous process guided by clearly defined metrics.\n\nWould you like to see details about his latest work experience?",
+          "Alex is an Automation Engineer with a strong understanding of end-to-end workflows.\nHe understands both the technical side of automation and the business context: how processes work, how roles are distributed, where bottlenecks appear, and what limitations exist in ERP systems, AI tools and API integrations.\nHis focus is not simply to implement IT solutions, but to improve operational processes and demonstrate business impact through clear metrics.\n\nWould you like to see details about his latest work experience?",
+          "Alex is an Automation Engineer who helps companies improve operational processes through analysis, automation and measurable outcomes.\nHe is able to take a process from analysis through to the implementation of an automation solution, followed by quality control and documentation. Alex works with Python, Excel-to-ERP migration, API integrations, internal tools and AI-assisted automation.\nIn his work, he prefers a S.M.A.R.T. approach.\n\nWould you like to see an example from his most recent work experience?"
         ]
       },
       {
-        "label": "Give me a short overview of his work experience.",
+        "label": "What are Alex's main strengths?",
         "responses": [
-          "Alex's career started in finance and operations:\n- assistant accountant;\n- economist and senior economist;\n- deputy branch manager in banking;\n- credit broker;\n- managing director of a recruitment company.\n\nHe later helped grow that recruitment company into a regional leader.\n\nAfter the war in Ukraine forced his move to the UK in late 2022, he focused more deeply on Python, AI-assisted analytics, and automation.\n\nHis first UK role was at Hydrosphere UK, where he worked as an Automation Engineer.\n\nWould you like the key facts about his professional achievements?",
-          "Alex has a mixed business and software automation background.\n\nHis work experience includes:\n- finance and accounting support;\n- economist and senior economist roles;\n- banking management;\n- credit brokerage;\n- managing a recruitment company that grew into a regional leader.\n\nAfter the war in Ukraine forced his relocation to the UK in late 2022, he focused on Python, AI-assisted analytics, and workflow automation.\n\nHis first UK position was Automation Engineer at Hydrosphere UK.\n\nWould you like a concise list of his strongest achievements?",
-          "Alex's work experience developed from finance and banking into business leadership and automation.\n\nHis earlier roles included:\n- assistant accountant;\n- economist and senior economist;\n- deputy bank branch manager;\n- credit broker;\n- managing director of a recruitment company.\n\nThat recruitment company later became a regional leader.\n\nAfter the war in Ukraine forced his move to the UK in 2022, he focused on Python, AI-assisted analytics, and automation.\n\nHis first UK role was Automation Engineer at Hydrosphere UK.\n\nWould you like a summary of the most relevant achievements?"
+          "Alex\u2019s main strengths are systems thinking and experience at the intersection of business analysis, data analysis and software automation.\nHe can communicate with technical specialists in their own language, while explaining solution options, strengths and weaknesses, risks and opportunities to non-technical stakeholders in plain business terms.\nWhen needed, Alex can support the full end-to-end cycle: from process analysis through to measurable results.\nWould you like to see an example from his experience?"
         ]
       },
       {
-        "label": "When is Alex ready to start work?",
+        "label": "Why hire Alex?",
         "responses": [
-          "I do not have access to Alex's live calendar, so I cannot confirm an exact start date here.\n\nFor availability, notice period, interview scheduling, or start-date confirmation, the safest route is to connect with Alex directly.\n\nWould you like me to connect him directly?\n\nYour details will not be passed to him at this stage, and he will not see your phone number or email unless you choose to share them.",
-          "I cannot check Alex's calendar or confirm a precise start date from this chat.\n\nIf you need a reliable answer about availability or scheduling, I can offer a direct handoff to Alex.\n\nWould you like me to connect him directly?\n\nYour contact details will not be shared with him unless you decide to type them yourself.",
-          "Alex's exact availability should be confirmed with him directly because I do not have access to his live calendar.\n\nFor a start date, notice period, interview timing, or hiring discussion, I can help you connect with Alex.\n\nWould you like me to connect him directly?\n\nHe will not receive your phone number or email from this chat unless you choose to share those details."
+          "Alex combines the skills needed for end-to-end solutions.\n\n- he can carry out data analysis;\n- he can perform business analysis;\n- he can implement technical automation solutions;\n- he can run quality checks and provide measurable metrics.\n\nFor example, in his latest role at Hydrosphere, withon his first 60 days Alex analysed supplier product data, assessed its impact on internal processes, and then automated the workflow by creating a tool that generated product matrices from suppliers' Excel price lists, mapped them into the ERP system, and monitored pricing anomalies."
         ]
       }
     ],
@@ -250,7 +258,7 @@
   },
   "resume": {
     "pageHeading": "Alex Tymoshenko",
-    "downloadFileNameBase": "alextym.com_Software_Engineer_CV",
+    "downloadFileNameBase": "alextym.com_Automation_Engineer_CV",
     "downloadLabelTemplate": "Download {detail} CV",
     "detailControlLabel": "Detail level",
     "sectionsControlLabel": "Sections",
