@@ -1,6 +1,6 @@
 ---
-version: 1
-owner: Alex Tymoshenko
+version: 2
+owner: Alex (Oleksii) Tymoshenko
 scope: public website resume source with structured RAG sections
 rag_indexing: true
 ---
@@ -9,21 +9,15 @@ rag_indexing: true
 
 ## Concise
 
-Automation Engineer focused on Python, API integrations, ERP workflows,
-reporting automation, Excel-to-database migration, data pipelines, and
-operational dashboards.
+Automation Engineer focused on end-to-end business automation across process analysis, data analysis, BI, API integrations, ERP/CRM workflows, and AI-assisted tools.
 
-I offer a three-step approach: requirements and ROI analysis, rapid
-AI-assisted prototyping, then testing, deployment, and support.
+I turn manual and fragmented processes into controlled, measurable workflows. I cover the full cycle: requirements and ROI assessment, prototyping, implementation, validation, deployment, documentation, recovery planning, and ongoing support.
 
 ## Detailed
 
-Automation Engineer focused on Python, API integrations, ERP workflows,
-reporting automation, Excel-to-database migration, data pipelines, and
-operational dashboards.
+Automation Engineer focused on end-to-end business automation across process analysis, data analysis, BI, API integrations, ERP/CRM workflows, and AI-assisted tools.
 
-I offer a three-step approach: requirements and ROI analysis, rapid
-AI-assisted prototyping, then testing, deployment, and support.
+I turn manual and fragmented processes into controlled, measurable workflows. I cover the full cycle: requirements and ROI assessment, prototyping, implementation, validation, deployment, documentation, recovery planning, and ongoing support.
 
 ## RAG
 
@@ -137,14 +131,14 @@ location: United Kingdom
 - product-data
 - systems-integration
 
-## Founder and Managing Director — Dobra Praca
+## Business Automation & Data Lead — Dobra Praca
 
 ```yaml
 id: dobra-praca-managing-director-2014-2022
 section: experience
 startDate: 2014-09
 endDate: 2022-09
-title: Founder and Managing Director
+title: Business Automation & Data Lead
 organization: [Dobra Praca](https://share.google/0GyqZkUydoTzwUw0B)
 location: Ukraine
 ```
@@ -208,12 +202,15 @@ location: Ukraine
 
 #### Primary Tags
 
+- SQL
 - excel
 - reporting
 - dashboards
 - database
+- ERP
 - automation
 - business-process-automation
+- BI
 
 #### Secondary Tags
 
@@ -225,6 +222,7 @@ location: Ukraine
 - bitrix24
 - national-business-rating
 - employment-services
+- ERP
 
 ## Zaporizhzhia National University — Concise Education
 
@@ -280,12 +278,20 @@ location: Ukraine
 - Alex's finance background supports business analysis, data-driven
   decision-making, process analysis, reporting automation, ROI thinking,
   financial workflows, and analytical problem-solving.
+- The Owner's Master's applied research analysed a real corporate borrower and
+  examined how off-balance-sheet obligations could affect creditworthiness and
+  the final borrower class.
+- The research proposed a revised assessment workflow and validated the
+  approach on historical borrower data.
 
 #### Retrieval Hints
 
 - Useful for questions about Alex's education, finance background, analytical
   skills, MBA clarification, university, degree, business analysis, reporting
   automation, and ROI-oriented thinking.
+- Useful for questions about the Master's research topic, applied banking
+  analysis, credit risk, real-world financial analysis, and corporate borrower
+  assessment.
 
 #### Primary Tags
 
@@ -299,6 +305,10 @@ location: Ukraine
 - reporting
 - roi
 - data-driven-decisions
+- applied-research
+- banking
+- credit-risk
+- corporate-borrower-assessment
 
 ## Zaporizhzhia National University — Bachelor's Degree
 
@@ -941,7 +951,7 @@ location: United Kingdom
 #### Retrieval Hints
 
 - Useful for recruiter questions about UK location, right to work, work
-  authorisation, work authorization, visa status, share code, employment
+  authorisation, visa status, share code, employment
   eligibility, and hiring checks.
 - If a recruiter asks for a share code or right-to-work confirmation, the
   assistant should suggest connecting with Alex directly.
@@ -1489,8 +1499,8 @@ title: Professional References
 ## Languages
 
 - English: B1/B2, Intermediate to Upper-Intermediate
-- Ukrainian | detailed: Native
-- Russian | detailed: C2, Proficient
+- Ukrainian | detailed: C2, Proficient
+- Russian | detailed: Native
 - Polish | detailed: B1, Intermediate
 
 ## References

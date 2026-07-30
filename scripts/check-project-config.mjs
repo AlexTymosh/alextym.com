@@ -332,10 +332,10 @@ function assertChatConfig(config) {
   const quickPrompts = getPath(config, "chat.quickPrompts");
   if (Array.isArray(quickPrompts)) {
     const introPrompt = quickPrompts.find((prompt) =>
-      isPlainObject(prompt) && String(prompt.label ?? "").includes("1-minute intro"),
+      isPlainObject(prompt) && String(prompt.label ?? "").includes("30-second intro"),
     );
     if (!introPrompt) {
-      fail("chat.quickPrompts must include the current 1-minute intro prompt.");
+      fail("chat.quickPrompts must include the current 30-second intro.");
     }
 
     quickPrompts.forEach((prompt, index) => {

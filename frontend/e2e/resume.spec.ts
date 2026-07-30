@@ -238,7 +238,7 @@ test("sorts visible entries by section before date", async ({ page }) => {
 
   expect(titles.slice(0, 4)).toEqual([
     "Systems Integration & Automation Engineer",
-    "Founder and Managing Director",
+    "Business Automation & Data Lead",
     "Master's Degree in Finance, Banking and Insurance",
     "Bachelor's Degree in Finance and Credit",
   ]);
