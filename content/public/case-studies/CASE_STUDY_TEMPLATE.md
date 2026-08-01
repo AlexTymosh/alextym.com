@@ -10,15 +10,11 @@ schemaVersion: 1
 id: case-example
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: related-resume-entry-id
-startDate: 2025-01
-endDate: 2025-03
+parentEntryId: related-resume-entry-id
+date: 2025-03
 title: Example Case Study
 organization: Example Organisation
 location: United Kingdom
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -78,6 +74,7 @@ retrievalPriority: normal
 
 ### Primary Tags
 
+- case-study
 - distinctive-topic
 
 ### Secondary Tags

@@ -3,14 +3,10 @@ schemaVersion: 1
 id: case-iot-buoy-fault-diagnosis
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: hydrosphere-systems-integration-2024-2026
-startDate: 2025-08
-endDate: 2025-11
+parentEntryId: hydrosphere-systems-integration-2024-2026
+date: 2025-11
 title: IoT Buoy Fault Diagnosis Through Data Analysis
 organization: Hydrosphere UK Ltd
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -18,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's ability to use data analysis to diagnose complex
+- This case demonstrates the Owner's ability to use data analysis to diagnose complex
   technical systems, distinguish multiple simultaneous faults, create and test
   hypotheses, work with incomplete evidence, collaborate across software and hardware
   boundaries, and convert findings into operational and engineering improvements.
@@ -108,8 +104,9 @@ retrievalPriority: normal
   and installing electronic boards inside the buoy.
 - The revised instructions accounted for board placement, separation, and potential
   interference between components.
-- The project resolved two independent problems: a six-hour software defect and an
-  intermittent hardware-layout or interference issue.
+- The investigation resolved the six-hour software defect and narrowed the remaining
+  intermittent fault to a probable hardware-layout or interference issue supported by
+  telemetry analysis and shielding tests.
 
 ## Limitations
 

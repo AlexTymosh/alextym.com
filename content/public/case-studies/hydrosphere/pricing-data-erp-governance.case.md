@@ -3,14 +3,10 @@ schemaVersion: 1
 id: case-pricing-data-erp-governance
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: hydrosphere-systems-integration-2024-2026
-startDate: 2024-09
-endDate: 2024-12
+parentEntryId: hydrosphere-systems-integration-2024-2026
+date: 2024-12
 title: Pricing Data and ERP Governance
 organization: Hydrosphere UK Ltd
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -18,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's ability to move from an apparently simple price
+- This case demonstrates the Owner's ability to move from an apparently simple price
   update to root-cause analysis, data governance, ERP data restructuring, process
   redesign, automation, validation, stakeholder negotiation, and measurable operational
   control.

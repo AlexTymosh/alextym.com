@@ -3,14 +3,10 @@ schemaVersion: 1
 id: case-weee-reporting-automation
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: hydrosphere-systems-integration-2024-2026
-startDate: 2025-06
-endDate: 2025-06
+parentEntryId: hydrosphere-systems-integration-2024-2026
+date: 2025-06
 title: WEEE Reporting Automation
 organization: Hydrosphere UK Ltd
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -18,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's end-to-end ownership across process analysis, ROI
+- This case demonstrates the Owner's end-to-end ownership across process analysis, ROI
   assessment, stakeholder objections, ERP data modelling, rapid prototyping, Excel and
   API automation, historical validation, operational controls, documentation, and
   pragmatic scope management.

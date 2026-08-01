@@ -2,16 +2,12 @@
 schemaVersion: 1
 id: case-corporate-borrower-credit-risk-process-analysis
 documentType: case-study
-section: experience
-website: false
-parentExperienceId: znu-master-finance-2016-2018
-startDate: 2017
-endDate: 2018-01
+section: education
+parentEntryId: znu-master-finance-2016-2018
+date: 2018-01
 title: Corporate Borrower Credit Risk and Process Analysis
 organization: Independent applied banking research
 location: Ukraine
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 

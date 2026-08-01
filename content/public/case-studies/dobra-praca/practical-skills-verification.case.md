@@ -3,13 +3,10 @@ schemaVersion: 1
 id: case-cross-border-skills-verification
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: dobra-praca-managing-director-2014-2022
-startDate: 2016
+parentEntryId: dobra-praca-managing-director-2014-2022
+date: 2016
 title: Cross-Border Practical Skills Verification
 organization: Dobra Praca
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -17,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's experience in risk analysis, stakeholder
+- This case demonstrates the Owner's experience in risk analysis, stakeholder
   coordination, practical assessment design, evidence-based recruitment, and
   cross-border expectation management.
 

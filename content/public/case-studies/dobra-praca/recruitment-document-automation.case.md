@@ -3,13 +3,10 @@ schemaVersion: 1
 id: case-recruitment-document-automation
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: dobra-praca-managing-director-2014-2022
-startDate: 2015
+parentEntryId: dobra-praca-managing-director-2014-2022
+date: 2015
 title: Recruitment Workflow and Document Automation
 organization: Dobra Praca
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -17,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's early experience in workflow automation, document
+- This case demonstrates the Owner's early experience in workflow automation, document
   generation, rule-based screening, service design, data reuse, process standardisation,
   and human-in-the-loop decision-making.
 

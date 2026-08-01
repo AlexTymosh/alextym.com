@@ -3,14 +3,10 @@ schemaVersion: 1
 id: case-procurement-order-control
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: hydrosphere-systems-integration-2024-2026
-startDate: 2025-03
-endDate: 2026-06
+parentEntryId: hydrosphere-systems-integration-2024-2026
+date: 2026-04
 title: ERP-Integrated Procurement and Order Control
 organization: Hydrosphere UK Ltd
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -18,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's ability to investigate incidents without stopping
+- This case demonstrates the Owner's ability to investigate incidents without stopping
   at an individual error, identify systemic causes, model processes, design controls,
   work within technology constraints, integrate ERP data, and reduce operational
   dependency on a specific employee.

@@ -1,67 +1,265 @@
-# SESSION_NOTES.md
+# SESSION_NOTES
 
-Purpose: execute behaviour-preserving architecture refactors from the current boundary audit.
+## Scope
 
-## Constraints
+Branch: `feat/case-study-rag-pipeline`
 
-- Work one step at a time.
-- Do not change user-visible behaviour unless the active step explicitly requires it.
-- Do not restyle UI during architecture refactors.
-- Do not rename public routes, request schemas, response schemas, or environment variables unless the active step explicitly requires it.
-- Prefer moving code before rewriting code.
-- After each step, update the table status.
-- Status values: `todo`, `in_progress`, `blocked`, `done`.
-- If blocked, record the exact blocker in the `Notes` column.
+Goal: add structured public case studies to the existing resume-based RAG pipeline without
+creating a parallel knowledge architecture or weakening source validation.
 
-## Validation commands
+Current branch state reviewed on 2026-08-01:
 
-Primary:
+- The branch is based on `main` and contains ten `**/*.case.md` source files.
+- `README.md` and `CASE_STUDY_TEMPLATE.md` are documentation-only files.
+- `backend/tests/test_case_study_structure.py` validates source structure.
+- No production case-study parser, generated case-study artifact, or Qdrant ingestion exists yet.
+- Existing production RAG ingestion is still resume-specific.
 
-```bash
-task ci
-```
+## Architectural decisions
 
-Fallback when `task` is unavailable:
+1. `resume.md` and case studies remain separate canonical source types.
+2. Only `**/*.case.md` is eligible for case-study parsing and indexing.
+3. A front-matter `id` is the canonical stable identifier; file names may remain concise.
+4. `parentEntryId` links a case to a relevant resume entry, including experience,
+   education, or project entries.
+5. `section` must match the linked parent entry section.
+6. Each case stores one `date` value in `YYYY` or `YYYY-MM` format.
+7. When a previous source had a date range, `date` uses the end or completion date.
+8. The case date must fall within the known parent entry period.
+9. Public availability and exclusion from website rendering are properties of this source
+   directory, not repeated front-matter fields.
+10. Retrieval hints and tags are retrieval metadata, not answer content.
+11. Future parsing must use a shared contract module rather than duplicating validation
+    between tests and production code.
+12. Case studies will use the existing Qdrant collection and a unified generated knowledge
+    dataset.
 
-```bash
-cd backend && python -m pytest
-cd frontend && npm run lint
-```
+## Delivery plan
 
-## Execution table
+### Stage 1 — Correct sources and define schema
 
-| Step | Area | Status | Target files | Required action | Validation | Notes |
-|---:|---|---|---|---|---|---|
-| 1 | Backend tests | done | `backend/tests/test_chat.py` | Split chat endpoint tests by behaviour area. Keep production code unchanged. | `task ci` | |
-| 2 | Backend chat | done | `backend/app/services/chat.py` | Extract pre-RAG policy and language helpers. Preserve response payloads. | `task ci` | |
-| 3 | Backend chat | done | `backend/app/services/chat.py` | Extract intent resolution and follow-up routing helpers. Preserve routing behaviour. | `task ci` | |
-| 4 | Backend chat/RAG | done | `backend/app/services/chat.py` | Extract confidence scoring helpers. Preserve confidence labels. | `task ci` | |
-| 5 | Backend API/SSE | done | `backend/app/services/chat.py`, `backend/app/services/escalation.py`, `backend/app/api/*` | Add shared SSE serialization helper and remove service-owned SSE formatting. | `task ci` | |
-| 6 | Handoff copy | done | `backend/app/services/escalation.py`, `backend/app/services/telegram_webhook.py` | Centralise shared handoff quick-reply copy. Remove duplication. | `task ci` | |
-| 7 | Handoff notifier | done | `backend/app/services/escalation.py` | Move notifier protocol, noop notifier, Telegram notifier, and Telegram message builders into separate modules. | `task ci` | |
-| 8 | Handoff sessions | done | `backend/app/services/escalation_sessions.py` | Separate session state transitions from Redis persistence. Store should not accept API schema objects. | `task ci` | |
-| 9 | Handoff API | done | `backend/app/api/escalation.py`, `backend/app/services/escalation.py` | Remove duplicated availability gate from API. Keep business rule in service. | `task ci` | |
-| 10 | Rate limit | done | `backend/app/services/rate_limit.py`, `backend/app/api/rate_limit.py` | Move client identity extraction out of service layer. Remove FastAPI import from service module. | `task ci` | |
-| 11 | RAG/schema | done | `backend/app/schemas/chat.py`, `backend/app/rag/qdrant_store.py` | Move `Confidence` type to a neutral module and update imports. | `task ci` | |
-| 12 | RAG adapter | done | `backend/app/rag/qdrant_retriever.py`, RAG store fakes/tests | Remove `inspect.signature()` capability detection. Standardise store `search()` contract. | `task ci` | |
-| 13 | Telegram tests | done | `backend/tests/test_telegram_webhook.py` | Split webhook tests by auth, replies, callbacks, close, and errors. | `task ci` | |
-| 14 | Frontend stream | done | `frontend/components/chat-shell.tsx` | Extract stream text renderer and handoff EventSource lifecycle into dedicated modules/hooks. | `task ci` | |
-| 15 | Frontend controller | done | `frontend/components/chat-shell.tsx` | Move chat state machine and submit flow to controller hook. Keep component render-focused. | `task ci` | |
-| 16 | Frontend utilities | done | `frontend/lib/chat-state.ts` | Split chat-state utilities by concern after controller extraction. | `task ci` | |
+Status: **completed in this archive**
 
-## Commit order
+Completed changes:
 
-1. Test split before risky backend chat extraction.
-2. Backend chat helper extraction.
-3. SSE and handoff shared copy extraction.
-4. Handoff service/session boundary cleanup.
-5. Infrastructure/RAG boundary cleanup.
-6. Telegram test split.
-7. Frontend stream/controller/rendering cleanup.
+- Renamed `parentExperienceId` to the semantically correct `parentEntryId` in all ten cases,
+  the template, documentation, and structural tests.
+- Simplified front matter by removing metadata that is identical for every case or unrelated
+  to case-study ingestion.
+- Replaced `startDate` and `endDate` with a single required `date` field.
+- Used the end or completion date where a previous date range existed.
+- Corrected the corporate credit-risk case from `section: experience` to
+  `section: education` so it matches its parent resume entry.
+- Corrected the procurement case date to `2026-04` so it does not extend beyond the linked
+  employment period.
+- Refined the IoT result wording so the software defect is stated as resolved while the
+  hardware-layout or interference finding remains explicitly probable and evidence-backed.
+- Normalised `the Owner` inside sentences while retaining `The Owner` at sentence starts.
+- Updated the template to include the required `case-study` primary tag.
+- Expanded the case-study README with field semantics, the single-date rule, and parent rules.
+- Strengthened the existing repository test to verify:
+  - the exact ten expected case IDs;
+  - the simplified metadata schema;
+  - absence of removed metadata fields;
+  - parent entry existence;
+  - parent/case section consistency;
+  - case-date containment within known parent dates;
+  - template/schema alignment;
+  - responsible Owner wording.
 
-## Stop conditions
+Impact analysis:
 
-- Stop if `task ci` fails after a move-only refactor.
-- Stop if public API response JSON changes unexpectedly.
-- Stop if frontend chat/handoff behaviour changes without an explicit requirement.
-- Stop if a refactor requires schema or environment variable changes not listed in the active step.
+- Changes affect only case-study content, case-study documentation, and its structural test.
+- `resume.md` is unchanged.
+- No production parser currently consumes these fields, so the schema correction does not
+  create a runtime compatibility regression.
+- No new issue is required for Stage 1.
+
+### Stage 2 — Centralise the source contract
+
+Status: pending
+
+Create:
+
+- `backend/app/rag/case_study_contract.py`
+- focused unit fixtures under `backend/tests/`
+
+Responsibilities:
+
+- discover `**/*.case.md`;
+- parse YAML front matter with `yaml.safe_load`;
+- validate typed metadata;
+- parse H1/H2/H3 sections;
+- preserve multiline bullets;
+- normalise dates and section identifiers;
+- validate retrieval metadata;
+- validate collection-level uniqueness and parent relationships.
+
+Implementation direction:
+
+- Use existing Pydantic v2 for typed models and `extra="forbid"`.
+- Declare PyYAML as a direct runtime dependency when production parsing is introduced and
+  refresh `uv.lock` in the same change.
+- Do not retain parsing logic only inside tests.
+
+Completion criteria:
+
+- structural tests call the shared contract module;
+- invalid metadata and malformed Markdown fixtures fail deterministically;
+- production code contains no `pytest` assertions or test-specific exceptions.
+
+### Stage 3 — Add negative contract tests
+
+Status: pending
+
+Cover:
+
+- missing or malformed front matter;
+- unknown metadata fields;
+- invalid IDs and dates;
+- duplicate case IDs;
+- missing required sections;
+- `Retrieval` not last;
+- missing `case-study` tag;
+- duplicate or overlapping tags;
+- missing parent entry;
+- parent section mismatch;
+- case date outside the parent period;
+- unresolved template placeholders;
+- duplicate normalised section slugs;
+- multiline bullet preservation.
+
+### Stage 4 — Parse case studies into semantic chunks
+
+Status: pending
+
+Create:
+
+- `backend/app/rag/case_study_rag_source.py`
+- `backend/tests/test_case_study_rag_source.py`
+
+Rules:
+
+- one answer chunk per semantic H2 section;
+- no answer chunk for `Retrieval`;
+- stable IDs such as `case:<case-id>:analysis`;
+- shared parent ID `case:<case-id>`;
+- preserve source path, title, organisation, date, section, tags, and retrieval priority;
+- keep limitations and probability language intact;
+- never split a Markdown bullet in the middle;
+- remove Markdown URLs from embedding inputs while retaining source references separately.
+
+### Stage 5 — Generate deterministic case-study artifacts
+
+Status: pending
+
+Create:
+
+- `.tmp/rag/case-studies.generated.chunks.json`
+- `.tmp/human-readable-preview/case-studies-rag-preview.md`
+- `task rag:extract-case-studies`
+
+Validate:
+
+- all ten case IDs are represented;
+- chunk IDs are unique and deterministic;
+- repeated generation is byte-identical;
+- retrieval metadata is not included as answer content;
+- source paths and parent IDs are present;
+- all required vector inputs are non-empty.
+
+### Stage 6 — Unify generated public knowledge
+
+Status: pending
+
+Generalise resume-specific names:
+
+- `GeneratedResumeChunkBundle` → `GeneratedKnowledgeBundle`
+- `load_generated_resume_chunks` → `load_generated_knowledge_chunks`
+- resume-only artifact → `public-knowledge.generated.chunks.json`
+
+Combine:
+
+- existing resume chunks;
+- new case-study chunks.
+
+Preserve existing resume chunk behaviour and generated schema compatibility.
+
+### Stage 7 — Extend Qdrant payload and indexes
+
+Status: pending
+
+Use the existing collection.
+
+Add case-study payload fields:
+
+- `document_type`
+- `source_group`
+- `case_id`
+- `case_section`
+- `organization`
+- `parent_id`
+- `dataset_version`
+
+Add keyword indexes only for fields used by filtering, initially:
+
+- `document_type`
+- `source_group`
+- `case_id`
+- `case_section`
+
+### Stage 8 — Add safe versioned ingestion
+
+Status: pending
+
+Required order:
+
+1. validate and generate the complete dataset;
+2. generate all embeddings;
+3. derive `dataset_version` from the generated artifact hash;
+4. upsert the new dataset;
+5. delete stale points from the same `source_group` only after successful upsert.
+
+This avoids deleting the active dataset before embeddings or upload succeeds and removes
+stale points created by deleted or renamed sources.
+
+### Stage 9 — Add retrieval and answer evals
+
+Status: pending
+
+Extend the existing generated-RAG suites rather than creating a separate evaluator:
+
+- `backend/evals/retrieval_eval_cases_generated_rag.json`
+- `backend/evals/chat_eval_cases_generated_rag.json`
+
+Proposed retrieval questions:
+
+- How was WEEE reporting automated?
+- Give an example where additional automation was rejected because of poor ROI.
+- How were procurement and order-control errors reduced?
+- Give an example of BPMN-based process analysis.
+- How did telemetry analysis distinguish a software defect from a probable hardware issue?
+- What limitations applied to the corporate credit-risk analysis?
+- How was payment reconciliation automated?
+- How were practical skills verified before international placement?
+
+Expected checks:
+
+- correct case ID;
+- correct case section;
+- source attribution;
+- no cross-case or cross-organisation fact mixing;
+- limitations and probability language retained.
+
+### Stage 10 — Integrate checks and documentation
+
+Status: pending
+
+Update `task rag:check` to include:
+
+- case-source contract validation;
+- case-study extraction;
+- generated bundle validation;
+- existing retrieval checks.
+
+Update broader RAG documentation only after generated artifacts and ingestion behaviour exist.

@@ -3,13 +3,10 @@ schemaVersion: 1
 id: case-payment-reconciliation-back-office
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: dobra-praca-managing-director-2014-2022
-startDate: 2017
+parentEntryId: dobra-praca-managing-director-2014-2022
+date: 2017
 title: Payment Reconciliation and Back-Office Automation
 organization: Dobra Praca
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -17,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- The project demonstrates The Owner's ability to analyse back-office operations, map
+- The project demonstrates the Owner's ability to analyse back-office operations, map
   unstructured payment descriptions to structured customer data, automate routine
   reconciliation, and retain human control for exceptions.
 
@@ -67,7 +64,7 @@ retrievalPriority: normal
   semi-structured financial data.
 - Useful for questions about reducing bookkeeping workload through lightweight
   automation.
-- Useful as an example of practical automation created before The Owner's later Python
+- Useful as an example of practical automation created before the Owner's later Python
   and API work.
 
 ### Primary Tags

@@ -3,13 +3,10 @@ schemaVersion: 1
 id: case-kaizen-service-delivery-transformation
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: dobra-praca-managing-director-2014-2022
-startDate: 2015
+parentEntryId: dobra-praca-managing-director-2014-2022
+date: 2015
 title: Kaizen-Driven Service Delivery Transformation
 organization: Dobra Praca
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -17,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's experience in business analysis, Lean process
+- This case demonstrates the Owner's experience in business analysis, Lean process
   improvement, service design, customer research, workflow segmentation, automation,
   quality management, Gemba, customer self-service, operational scaling, and
   data-supported decision-making.

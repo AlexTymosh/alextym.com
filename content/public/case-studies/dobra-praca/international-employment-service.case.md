@@ -3,13 +3,10 @@ schemaVersion: 1
 id: case-end-to-end-international-employment-service
 documentType: case-study
 section: experience
-website: false
-parentExperienceId: dobra-praca-managing-director-2014-2022
-startDate: 2015
+parentEntryId: dobra-praca-managing-director-2014-2022
+date: 2015
 title: End-to-End International Employment Service
 organization: Dobra Praca
-visibility: public
-sourceConfidence: self-reported
 retrievalPriority: normal
 ---
 
@@ -17,7 +14,7 @@ retrievalPriority: normal
 
 ## Overview
 
-- This case demonstrates The Owner's experience in customer journey mapping, service
+- This case demonstrates the Owner's experience in customer journey mapping, service
   design, knowledge management, process analysis, customer self-service, workflow
   coordination, and operational risk reduction.
 
