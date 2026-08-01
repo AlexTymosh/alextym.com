@@ -64,7 +64,7 @@ jobs:
           version: "3.51.1"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version-file: backend/.python-version
 
@@ -123,7 +123,7 @@ jobs:
           version: "3.51.1"
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version-file: backend/.python-version
 
