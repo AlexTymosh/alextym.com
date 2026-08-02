@@ -185,10 +185,17 @@ tasks:
       - uv run python -m scripts.extract_public_knowledge_rag_source
 
   rag:check:
-    desc: Run free deterministic RAG checks without live OpenAI or Qdrant.
+    desc: Validate unified public knowledge and deterministic RAG contracts.
     cmds:
-      - task: rag:extract-resume
+      - task: rag:extract-public-knowledge
+      - task: rag:eval:cases:check
       - task: rag:eval:contract
+
+  rag:eval:cases:check:
+    desc: Validate generated answer and retrieval eval definitions against canonical sources.
+    dir: backend
+    cmds:
+      - uv run python -m pytest -q tests/test_generated_rag_eval_cases.py
 
   rag:eval:contract:
     desc: Run stateless deterministic contract evals without live OpenAI or Qdrant.
@@ -249,7 +256,7 @@ tasks:
         --comparison "../.tmp/evals/rag-comparison.md"
 
   rag:eval:generated:
-    desc: Compare structured generated-RAG quality before and after ingestion.
+    desc: Compare generated public-knowledge answer quality before and after ingestion.
     dir: backend
     env:
       UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
@@ -266,7 +273,7 @@ tasks:
         --allow-failures
 
   rag:eval:retrieval:
-    desc: Compare generated-RAG retrieval quality before and after changes.
+    desc: Compare generated public-knowledge retrieval quality before and after changes.
     dir: backend
     env:
       UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"

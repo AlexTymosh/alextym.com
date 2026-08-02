@@ -22,6 +22,9 @@ Current branch state reviewed on 2026-08-02:
   source-group metadata.
 - Qdrant ingestion uses versioned upsert-before-cleanup replacement for resume and
   case-study chunks.
+- Generated-RAG eval suites cover both resume and case-study retrieval and answer quality.
+- `task rag:check` rebuilds unified public knowledge and validates deterministic source,
+  bundle, eval-definition, and chat-policy contracts without live provider calls.
 
 ## Architectural decisions
 
@@ -39,8 +42,11 @@ Current branch state reviewed on 2026-08-02:
 10. Retrieval hints and tags are retrieval metadata, not answer content.
 11. Source parsing uses a shared contract module rather than duplicating validation between
     tests and production code.
-12. Case studies will use the existing Qdrant collection and a unified generated knowledge
+12. Case studies use the existing Qdrant collection and a unified generated knowledge
     dataset.
+13. Retrieval and answer quality are evaluated separately: deterministic metadata and source
+    contracts run in free CI, while provider-dependent retrieval and generation remain explicit
+    live tasks.
 
 ## Delivery plan
 
@@ -273,7 +279,7 @@ Impact analysis:
 
 ### Stage 7 — Extend Qdrant payload and indexes
 
-Status: **completed in this archive**
+Status: **completed in branch**
 
 Completed changes:
 
@@ -303,7 +309,7 @@ Impact analysis:
 
 ### Stage 8 — Add safe versioned ingestion
 
-Status: **completed in this archive**
+Status: **completed in branch**
 
 Completed changes:
 
@@ -355,41 +361,86 @@ Validation:
 
 ### Stage 9 — Add retrieval and answer evals
 
-Status: pending
+Status: **completed in this archive**
 
-Extend the existing generated-RAG suites rather than creating a separate evaluator:
+Completed changes:
 
-- `backend/evals/retrieval_eval_cases_generated_rag.json`
-- `backend/evals/chat_eval_cases_generated_rag.json`
+- Extended `backend/evals/retrieval_eval_cases_generated_rag.json` and
+  `backend/evals/chat_eval_cases_generated_rag.json` instead of creating a parallel eval
+  framework.
+- Added eight focused case-study questions covering:
+  - WEEE report automation;
+  - deliberate rejection of low-ROI automation;
+  - procurement and order-control workflow controls;
+  - BPMN-based process analysis;
+  - separation of a six-hour software defect from a probable hardware-layout issue;
+  - corporate credit-risk research limitations;
+  - payment reconciliation;
+  - practical skills verification before international placement.
+- Normalised generated eval prompts to use `Owner` language so the reusable project tests do
+  not depend on a personal name.
+- Added narrowly scoped reusable subject aliases (`the Owner`, `site owner`, and
+  `website owner`) so those prompts enter the existing profile-RAG path without treating the
+  bare word `owner` as a universal profile selector.
+- Extended retrieval snapshots with `document_type`, `source_group`, `case_id`,
+  `case_section`, `organization`, `parent_id`, `dataset_version`, and `source_file`.
+- Added retrieval assertions for the top case ID and semantic section, required source group,
+  document type, organisation, source title, and case metadata.
+- Added answer-level source-title and source-section assertions without changing the public
+  chat response schema.
+- Added deterministic tests proving that the eval definitions reference real canonical case
+  IDs, titles, organisations, resume sections, and generated semantic section slugs.
+- Added wording checks that preserve explicit limitations and probable-versus-proven findings
+  in the IoT and credit-risk cases.
 
-Proposed retrieval questions:
+Impact analysis:
 
-- How was WEEE reporting automated?
-- Give an example where additional automation was rejected because of poor ROI.
-- How were procurement and order-control errors reduced?
-- Give an example of BPMN-based process analysis.
-- How did telemetry analysis distinguish a software defect from a probable hardware issue?
-- What limitations applied to the corporate credit-risk analysis?
-- How was payment reconciliation automated?
-- How were practical skills verified before international placement?
-
-Expected checks:
-
-- correct case ID;
-- correct case section;
-- source attribution;
-- no cross-case or cross-organisation fact mixing;
-- limitations and probability language retained.
+- Existing resume eval IDs and evaluator behaviour remain compatible.
+- Generic owner aliases are limited to explicit portfolio phrases, reducing the risk of routing
+  unrelated uses of the bare word `owner` into profile retrieval.
+- Live retrieval may return additional related chunks, so case-study checks require the
+  correct case at rank one rather than forbidding all secondary results.
+- No LLM-as-judge dependency is introduced. The current project-scale deterministic checks
+  remain transparent and cheap, while live answer and retrieval cycles continue to measure
+  the deployed pipeline.
+- Live eval tasks still use OpenAI and Qdrant and remain outside free CI.
+- No new issue is required for Stage 9.
 
 ### Stage 10 — Integrate checks and documentation
 
-Status: pending
+Status: **completed in this archive**
 
-Update `task rag:check` to include:
+Completed changes:
 
-- case-source contract validation;
-- case-study extraction;
-- generated bundle validation;
-- existing retrieval checks.
+- Updated `task rag:check` to build the unified public-knowledge artifact instead of the
+  resume-only artifact.
+- Added `task rag:eval:cases:check` to validate the case-study answer and retrieval eval
+  definitions against canonical generated metadata.
+- Kept `task rag:check` provider-free: it performs unified extraction, static eval-contract
+  validation, and the existing isolated chat contract suite without OpenAI or Qdrant.
+- Kept live retrieval and answer cycles as explicit tasks:
+  - `task rag:eval:retrieval`;
+  - `task rag:eval:generated`.
+- Updated `docs/rag-pipeline.md` for the two canonical source types, unified artifacts,
+  versioned safe ingestion, expanded payload metadata, free checks, and separate live evals.
+- Updated the case-study authoring documentation with retrieval and answer eval coverage.
 
-Update broader RAG documentation only after generated artifacts and ingestion behaviour exist.
+Validation:
+
+- `task format`
+- targeted chat-eval, retrieval-eval, generated-eval-contract, case-study source, unified
+  bundle, and versioned-ingestion tests;
+- `task rag:extract-public-knowledge`
+- `task rag:check`
+- `task backend:check`
+- `task ci`
+
+Impact analysis:
+
+- `task rag:check` now detects case-source, semantic-generation, unified-bundle, and eval
+  definition regressions without external provider calls.
+- Free CI does not run paid or environment-dependent retrieval and generation requests.
+- The detailed RAG documentation now matches the production ingestion path and no longer
+  describes the knowledge dataset as resume-only.
+- No dependency, public API, frontend, or database migration is introduced.
+- No new issue is required for Stage 10.

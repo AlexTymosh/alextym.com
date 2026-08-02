@@ -121,8 +121,8 @@ The command writes:
 The JSON keeps generated schema version `2`, records source-group counts and
 canonical source files, rejects duplicate chunk IDs across source types, and
 requires all vector inputs to be non-empty. The existing resume-only and
-case-study-only artifacts remain available for focused debugging during the
-staged migration. Qdrant ingestion is not switched by this stage.
+case-study-only artifacts remain available for focused debugging. Normal Qdrant
+ingestion consumes the unified artifact.
 
 ## Unified Qdrant ingestion
 
@@ -148,3 +148,34 @@ legacy resume points only after the new dataset has been stored successfully.
 Keyword payload indexes are created for `document_type`, `source_group`,
 `case_id`, `case_section`, and `dataset_version`. `organization` and
 `parent_id` remain unindexed until retrieval starts filtering on those fields.
+
+## Evaluation coverage
+
+Case-study quality is measured at two separate levels:
+
+- `backend/evals/retrieval_eval_cases_generated_rag.json` checks that the correct
+  case, semantic section, source group, organisation, and attribution metadata
+  are retrieved;
+- `backend/evals/chat_eval_cases_generated_rag.json` checks grounded answer
+  content, source attribution, limitations, and responsible uncertainty.
+
+The focused cases cover WEEE automation and rejected low-ROI scope, procurement
+controls and BPMN analysis, IoT software-versus-probable-hardware diagnosis,
+credit-risk limitations, payment reconciliation, and practical skills
+verification.
+
+Free validation does not call OpenAI or Qdrant:
+
+```text
+task rag:check
+```
+
+It rebuilds the unified artifact, validates the eval definitions against the
+canonical case-study metadata, and runs deterministic chat contracts. Live
+retrieval and answer evaluation remain explicit because they use the configured
+OpenAI and Qdrant services:
+
+```text
+task rag:eval:retrieval
+task rag:eval:generated
+```
