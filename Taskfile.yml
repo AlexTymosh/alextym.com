@@ -195,7 +195,7 @@ tasks:
     desc: Validate generated answer and retrieval eval definitions against canonical sources.
     dir: backend
     cmds:
-      - uv run python -m pytest -q tests/test_generated_rag_eval_cases.py
+      - uv run --extra dev python -m pytest -q tests/test_generated_rag_eval_cases.py
 
   rag:eval:contract:
     desc: Run stateless deterministic contract evals without live OpenAI or Qdrant.
