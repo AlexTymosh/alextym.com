@@ -25,6 +25,10 @@ CASE_STUDY_COVERAGE_KEYS = {
     "credit_risk_limitations",
     "payment_reconciliation",
     "skills_verification",
+    "international_employment_service",
+    "kaizen_service_transformation",
+    "recruitment_document_automation",
+    "pricing_data_erp_governance",
 }
 CASE_STUDY_CHAT_CASE_IDS = {f"case_study_{key}" for key in CASE_STUDY_COVERAGE_KEYS}
 GENERATED_RAG_CASE_IDS = LEGACY_CHAT_CASE_IDS | CASE_STUDY_CHAT_CASE_IDS
@@ -36,7 +40,7 @@ def test_generated_rag_eval_cases_are_schema_valid() -> None:
 
     assert {case["id"] for case in cases} == GENERATED_RAG_CASE_IDS
     assert all(case["expected"] for case in cases)
-    assert all("Owner" in case["message"] for case in cases)
+    assert all("site owner" in str(case["message"]).casefold() for case in cases)
 
 
 def test_case_study_eval_coverage_matches_between_answer_and_retrieval() -> None:
@@ -46,11 +50,14 @@ def test_case_study_eval_coverage_matches_between_answer_and_retrieval() -> None
     assert {case["id"] for case in retrieval_cases} == CASE_STUDY_RETRIEVAL_CASE_IDS
     assert {case["coverage_key"] for case in chat_cases} == CASE_STUDY_COVERAGE_KEYS
     assert {case["coverage_key"] for case in retrieval_cases} == CASE_STUDY_COVERAGE_KEYS
-    assert all("Owner" in case["query"] for case in retrieval_cases)
+    assert all("site owner" in str(case["query"]).casefold() for case in retrieval_cases)
 
     chat_case_ids = {case["case_id"] for case in chat_cases}
     retrieval_case_ids = {case["case_id"] for case in retrieval_cases}
+    canonical_case_ids = set(_chunks_by_case())
+
     assert chat_case_ids == retrieval_case_ids
+    assert chat_case_ids == canonical_case_ids
 
 
 def test_case_study_eval_expectations_match_generated_source_metadata() -> None:

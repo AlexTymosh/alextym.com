@@ -44,7 +44,7 @@ def test_bundled_retrieval_eval_cases_are_schema_valid() -> None:
         suite="rag_retrieval_quality",
     )
 
-    assert len(cases) == 16
+    assert len(cases) == 20
     assert all(case["expected"] for case in cases)
 
 

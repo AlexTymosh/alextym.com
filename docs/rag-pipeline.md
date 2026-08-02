@@ -501,14 +501,21 @@ compare                  -> before/after Markdown comparison
 
 Retrieval and answer generation are evaluated separately. Retrieval cases inspect topic/tag metadata and, for case studies, the top case ID, semantic case section, document type, source group, source title, and organisation. Answer cases check grounded content, source attribution, limitations, and responsible uncertainty.
 
-The focused case-study coverage includes:
+The focused case-study coverage includes every canonical case ID:
 
 - WEEE automation and rejected low-ROI scope;
 - procurement controls and BPMN analysis;
 - IoT software-versus-probable-hardware diagnosis;
 - corporate credit-risk limitations;
 - payment reconciliation;
-- practical skills verification.
+- practical skills verification;
+- end-to-end international employment service design;
+- Kaizen-driven service transformation;
+- recruitment workflow and document automation;
+- pricing-data and ERP governance.
+
+The static eval-contract test requires every canonical case ID to appear in both
+the live retrieval suite and the live answer suite.
 
 Free checks validate definitions and generated artifacts only. Live retrieval and answer tasks require configured OpenAI/Qdrant access, write before/after reports under `.tmp/evals/`, and are intentionally not part of `task ci`.
 

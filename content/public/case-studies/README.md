@@ -159,10 +159,12 @@ Case-study quality is measured at two separate levels:
 - `backend/evals/chat_eval_cases_generated_rag.json` checks grounded answer
   content, source attribution, limitations, and responsible uncertainty.
 
-The focused cases cover WEEE automation and rejected low-ROI scope, procurement
-controls and BPMN analysis, IoT software-versus-probable-hardware diagnosis,
-credit-risk limitations, payment reconciliation, and practical skills
-verification.
+The focused cases cover all ten canonical case studies. They include WEEE
+automation and rejected low-ROI scope, procurement controls and BPMN analysis,
+IoT software-versus-probable-hardware diagnosis, credit-risk limitations,
+payment reconciliation, practical skills verification, international employment
+service design, Kaizen service transformation, recruitment document automation,
+and pricing-data and ERP governance.
 
 Free validation does not call OpenAI or Qdrant:
 

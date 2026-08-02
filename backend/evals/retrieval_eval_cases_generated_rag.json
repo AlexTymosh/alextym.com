@@ -6,7 +6,7 @@
       "id": "retrieval_generated_hard_skills",
       "suite": "rag_retrieval_quality",
       "category": "skills",
-      "query": "What are the Owner's hard skills?",
+      "query": "What are the site owner's hard skills?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -27,7 +27,7 @@
       "id": "retrieval_generated_soft_skills",
       "suite": "rag_retrieval_quality",
       "category": "skills",
-      "query": "What are the Owner's soft skills?",
+      "query": "What are the site owner's soft skills?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -47,7 +47,7 @@
       "id": "retrieval_generated_share_code",
       "suite": "rag_retrieval_quality",
       "category": "right_to_work",
-      "query": "Can the Owner provide a share code?",
+      "query": "Can the site owner provide a share code?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -64,7 +64,7 @@
       "id": "retrieval_generated_right_to_work",
       "suite": "rag_retrieval_quality",
       "category": "right_to_work",
-      "query": "Does the Owner have the right to work in the UK?",
+      "query": "Does the site owner have the right to work in the UK?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -84,7 +84,7 @@
       "id": "retrieval_generated_rag_portfolio_project",
       "suite": "rag_retrieval_quality",
       "category": "projects",
-      "query": "Tell me about the Owner's RAG portfolio project.",
+      "query": "Tell me about the site owner's RAG portfolio project.",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -102,7 +102,7 @@
       "id": "retrieval_generated_saas_project",
       "suite": "rag_retrieval_quality",
       "category": "projects",
-      "query": "Tell me about the Owner's GDPR-aware SaaS project.",
+      "query": "Tell me about the site owner's GDPR-aware SaaS project.",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -120,7 +120,7 @@
       "id": "retrieval_generated_ai_assisted_workflow",
       "suite": "rag_retrieval_quality",
       "category": "working_style",
-      "query": "How does the Owner use AI-assisted development?",
+      "query": "How does the site owner use AI-assisted development?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -138,7 +138,7 @@
       "id": "retrieval_generated_start_date",
       "suite": "rag_retrieval_quality",
       "category": "availability",
-      "query": "When can the Owner start a new job?",
+      "query": "When can the site owner start a new job?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -158,7 +158,7 @@
       "category": "automation",
       "coverage_key": "weee_automation",
       "case_id": "case-weee-reporting-automation",
-      "query": "How did the Owner automate WEEE reporting?",
+      "query": "How did the site owner automate WEEE reporting?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -196,7 +196,7 @@
       "category": "decision_quality",
       "coverage_key": "weee_poor_roi",
       "case_id": "case-weee-reporting-automation",
-      "query": "Give an example where the Owner rejected additional automation because the ROI was too low.",
+      "query": "Give an example where the site owner rejected additional automation because the ROI was too low.",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -232,7 +232,7 @@
       "category": "process_improvement",
       "coverage_key": "procurement_controls",
       "case_id": "case-procurement-order-control",
-      "query": "How did the Owner reduce procurement and order-control errors?",
+      "query": "How did the site owner reduce procurement and order-control errors?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -272,7 +272,7 @@
       "category": "business_analysis",
       "coverage_key": "procurement_bpmn",
       "case_id": "case-procurement-order-control",
-      "query": "Give an example of the Owner using BPMN for process analysis.",
+      "query": "Give an example of the site owner using BPMN for process analysis.",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -308,7 +308,7 @@
       "category": "technical_analysis",
       "coverage_key": "iot_fault_separation",
       "case_id": "case-iot-buoy-fault-diagnosis",
-      "query": "How did the Owner use telemetry analysis to distinguish a software defect from a probable hardware issue?",
+      "query": "How did the site owner use telemetry analysis to distinguish a software defect from a probable hardware issue?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -352,7 +352,7 @@
       "category": "limitations",
       "coverage_key": "credit_risk_limitations",
       "case_id": "case-corporate-borrower-credit-risk-process-analysis",
-      "query": "What limitations applied to the Owner's corporate credit-risk analysis?",
+      "query": "What limitations applied to the site owner's corporate credit-risk analysis?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -388,7 +388,7 @@
       "category": "automation",
       "coverage_key": "payment_reconciliation",
       "case_id": "case-payment-reconciliation-back-office",
-      "query": "How did the Owner automate payment reconciliation?",
+      "query": "How did the site owner automate payment reconciliation?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -426,7 +426,7 @@
       "category": "risk_management",
       "coverage_key": "skills_verification",
       "case_id": "case-cross-border-skills-verification",
-      "query": "How did the Owner verify practical skills before international placement?",
+      "query": "How did the site owner verify practical skills before international placement?",
       "limit": 6,
       "expected": {
         "min_results": 1,
@@ -457,6 +457,182 @@
         ],
         "must_include_organization_any": [
           "Dobra Praca"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_case_study_international_employment_service",
+      "suite": "rag_retrieval_quality",
+      "category": "service_design",
+      "coverage_key": "international_employment_service",
+      "case_id": "case-end-to-end-international-employment-service",
+      "query": "How did the site owner design an end-to-end international employment service?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_case_id_any": [
+          "case-end-to-end-international-employment-service"
+        ],
+        "top_case_section_any": [
+          "implementation-coordinated-service",
+          "implementation-knowledge-and-preparation",
+          "analysis",
+          "results"
+        ],
+        "must_include_case_id_any": [
+          "case-end-to-end-international-employment-service"
+        ],
+        "must_include_case_section_any": [
+          "implementation-coordinated-service",
+          "implementation-knowledge-and-preparation",
+          "analysis",
+          "results"
+        ],
+        "must_include_document_type_any": [
+          "case-study"
+        ],
+        "must_include_source_group_any": [
+          "case-studies"
+        ],
+        "must_include_source_any": [
+          "End-to-End International Employment Service"
+        ],
+        "must_include_organization_any": [
+          "Dobra Praca"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_case_study_kaizen_service_transformation",
+      "suite": "rag_retrieval_quality",
+      "category": "business_transformation",
+      "coverage_key": "kaizen_service_transformation",
+      "case_id": "case-kaizen-service-delivery-transformation",
+      "query": "How did the site owner use Kaizen to transform service delivery?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_case_id_any": [
+          "case-kaizen-service-delivery-transformation"
+        ],
+        "top_case_section_any": [
+          "analysis",
+          "implementation-customer-journey-and-self-service",
+          "implementation-work-segmentation-and-escalation",
+          "implementation-communication-and-gemba",
+          "implementation-quality-and-standardisation",
+          "implementation-scaling-and-remote-access",
+          "results"
+        ],
+        "must_include_case_id_any": [
+          "case-kaizen-service-delivery-transformation"
+        ],
+        "must_include_case_section_any": [
+          "analysis",
+          "implementation-customer-journey-and-self-service",
+          "implementation-work-segmentation-and-escalation",
+          "implementation-communication-and-gemba",
+          "implementation-quality-and-standardisation",
+          "implementation-scaling-and-remote-access",
+          "results"
+        ],
+        "must_include_document_type_any": [
+          "case-study"
+        ],
+        "must_include_source_group_any": [
+          "case-studies"
+        ],
+        "must_include_source_any": [
+          "Kaizen-Driven Service Delivery Transformation"
+        ],
+        "must_include_organization_any": [
+          "Dobra Praca"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_case_study_recruitment_document_automation",
+      "suite": "rag_retrieval_quality",
+      "category": "workflow_automation",
+      "coverage_key": "recruitment_document_automation",
+      "case_id": "case-recruitment-document-automation",
+      "query": "How did the site owner automate recruitment workflows and document generation?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_case_id_any": [
+          "case-recruitment-document-automation"
+        ],
+        "top_case_section_any": [
+          "implementation-customer-data-and-documents",
+          "implementation-screening-and-standardisation",
+          "validation",
+          "results"
+        ],
+        "must_include_case_id_any": [
+          "case-recruitment-document-automation"
+        ],
+        "must_include_case_section_any": [
+          "implementation-customer-data-and-documents",
+          "implementation-screening-and-standardisation",
+          "validation",
+          "results"
+        ],
+        "must_include_document_type_any": [
+          "case-study"
+        ],
+        "must_include_source_group_any": [
+          "case-studies"
+        ],
+        "must_include_source_any": [
+          "Recruitment Workflow and Document Automation"
+        ],
+        "must_include_organization_any": [
+          "Dobra Praca"
+        ]
+      }
+    },
+    {
+      "id": "retrieval_case_study_pricing_data_erp_governance",
+      "suite": "rag_retrieval_quality",
+      "category": "data_governance",
+      "coverage_key": "pricing_data_erp_governance",
+      "case_id": "case-pricing-data-erp-governance",
+      "query": "How did the site owner improve pricing-data governance and ERP product structures?",
+      "limit": 6,
+      "expected": {
+        "min_results": 1,
+        "top_case_id_any": [
+          "case-pricing-data-erp-governance"
+        ],
+        "top_case_section_any": [
+          "analysis",
+          "implementation",
+          "validation",
+          "results",
+          "limitations"
+        ],
+        "must_include_case_id_any": [
+          "case-pricing-data-erp-governance"
+        ],
+        "must_include_case_section_any": [
+          "analysis",
+          "implementation",
+          "validation",
+          "results",
+          "limitations"
+        ],
+        "must_include_document_type_any": [
+          "case-study"
+        ],
+        "must_include_source_group_any": [
+          "case-studies"
+        ],
+        "must_include_source_any": [
+          "Pricing Data and ERP Governance"
+        ],
+        "must_include_organization_any": [
+          "Hydrosphere UK Ltd"
         ]
       }
     }
