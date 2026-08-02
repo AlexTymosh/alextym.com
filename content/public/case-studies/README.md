@@ -59,3 +59,17 @@ parent period.
 Each case uses `parentEntryId` to link it to the relevant employment, education,
 or project entry in `../resume.md`. The case `section` must match the parent
 entry's `section`.
+
+## Validation implementation
+
+`backend/app/rag/case_study_contract.py` is the production source of truth for
+case-study discovery, front-matter validation, Markdown section parsing, tag
+validation, and parent-entry checks.
+
+The contract uses `yaml.safe_load` for YAML front matter and strict Pydantic v2
+models with unknown fields forbidden. Repository tests import the same contract
+instead of maintaining a separate test-only parser.
+
+Retrieval bullets may continue across indented lines. The parser preserves those
+continuation lines so later chunk generation does not silently truncate retrieval
+context.

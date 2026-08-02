@@ -7,12 +7,13 @@ Branch: `feat/case-study-rag-pipeline`
 Goal: add structured public case studies to the existing resume-based RAG pipeline without
 creating a parallel knowledge architecture or weakening source validation.
 
-Current branch state reviewed on 2026-08-01:
+Current branch state reviewed on 2026-08-02:
 
 - The branch is based on `main` and contains ten `**/*.case.md` source files.
 - `README.md` and `CASE_STUDY_TEMPLATE.md` are documentation-only files.
-- `backend/tests/test_case_study_structure.py` validates source structure.
-- No production case-study parser, generated case-study artifact, or Qdrant ingestion exists yet.
+- `backend/app/rag/case_study_contract.py` owns production source parsing and validation.
+- Repository and negative tests import the shared production contract.
+- No semantic chunk generator, generated case-study artifact, or Qdrant ingestion exists yet.
 - Existing production RAG ingestion is still resume-specific.
 
 ## Architectural decisions
@@ -29,8 +30,8 @@ Current branch state reviewed on 2026-08-01:
 9. Public availability and exclusion from website rendering are properties of this source
    directory, not repeated front-matter fields.
 10. Retrieval hints and tags are retrieval metadata, not answer content.
-11. Future parsing must use a shared contract module rather than duplicating validation
-    between tests and production code.
+11. Source parsing uses a shared contract module rather than duplicating validation between
+    tests and production code.
 12. Case studies will use the existing Qdrant collection and a unified generated knowledge
     dataset.
 
@@ -38,7 +39,7 @@ Current branch state reviewed on 2026-08-01:
 
 ### Stage 1 — Correct sources and define schema
 
-Status: **completed in this archive**
+Status: **completed in branch**
 
 Completed changes:
 
@@ -77,57 +78,73 @@ Impact analysis:
 
 ### Stage 2 — Centralise the source contract
 
-Status: pending
+Status: **completed in branch**
 
-Create:
+Completed changes:
 
-- `backend/app/rag/case_study_contract.py`
-- focused unit fixtures under `backend/tests/`
+- Added `backend/app/rag/case_study_contract.py` as the production source of truth.
+- Added strict Pydantic v2 metadata models with aliases matching canonical front matter and
+  `extra="forbid"` for unknown fields.
+- Added `yaml.safe_load` parsing with domain-level `CaseStudyContractError` messages.
+- Added deterministic `**/*.case.md` discovery that excludes documentation files.
+- Added fenced-code-aware H1/H2/H3 parsing without introducing a general-purpose Markdown
+  dependency for the intentionally narrow source format.
+- Added semantic section models, normalized section slugs, and multiline retrieval-bullet
+  preservation.
+- Added resume parent-entry parsing and collection-level validation for duplicate IDs,
+  parent existence, section consistency, date overlap, and the expected source set.
+- Declared PyYAML as a direct runtime dependency because production code imports it.
+- Reduced `backend/tests/test_case_study_structure.py` to repository integration checks that
+  call the shared production contract.
 
-Responsibilities:
+Impact analysis:
 
-- discover `**/*.case.md`;
-- parse YAML front matter with `yaml.safe_load`;
-- validate typed metadata;
-- parse H1/H2/H3 sections;
-- preserve multiline bullets;
-- normalise dates and section identifiers;
-- validate retrieval metadata;
-- validate collection-level uniqueness and parent relationships.
-
-Implementation direction:
-
-- Use existing Pydantic v2 for typed models and `extra="forbid"`.
-- Declare PyYAML as a direct runtime dependency when production parsing is introduced and
-  refresh `uv.lock` in the same change.
-- Do not retain parsing logic only inside tests.
+- The new module is additive and is not yet called by live chat, embeddings, Qdrant, or the
+  existing resume ingestion path.
+- Existing case-study source files and `resume.md` are unchanged.
+- The only runtime dependency change makes an existing transitive PyYAML installation
+  explicit; no additional package is introduced into the resolved environment.
+- Stage 4 can consume `CaseStudyDocument` directly without duplicating source parsing.
+- No new issue is required for Stage 2.
 
 Completion criteria:
 
-- structural tests call the shared contract module;
-- invalid metadata and malformed Markdown fixtures fail deterministically;
-- production code contains no `pytest` assertions or test-specific exceptions.
+- production parsing and tests use one contract;
+- production code contains no pytest assertions or test-only exceptions;
+- repository case studies validate through the shared contract;
+- multiline retrieval bullets are preserved.
 
 ### Stage 3 — Add negative contract tests
 
-Status: pending
+Status: **completed in branch**
 
-Cover:
+Completed coverage:
 
-- missing or malformed front matter;
-- unknown metadata fields;
-- invalid IDs and dates;
-- duplicate case IDs;
-- missing required sections;
-- `Retrieval` not last;
-- missing `case-study` tag;
-- duplicate or overlapping tags;
-- missing parent entry;
-- parent section mismatch;
-- case date outside the parent period;
+- missing, unclosed, malformed, or non-mapping front matter;
+- unknown metadata fields, invalid IDs, invalid dates, and empty required values;
+- missing or mismatched H1 titles;
+- missing, empty, misplaced, or duplicate-normalized H2 sections;
+- `Retrieval` ordering and exact H3 structure;
+- missing `case-study`, invalid tags, duplicate tags, and cross-group overlap;
+- H3 headings outside `Retrieval`;
 - unresolved template placeholders;
-- duplicate normalised section slugs;
-- multiline bullet preservation.
+- headings inside fenced code blocks;
+- multiline retrieval-bullet preservation;
+- deterministic source discovery;
+- duplicate resume and case-study IDs;
+- missing parents, parent-section mismatch, and case dates outside parent periods;
+- expected collection ID mismatch.
+
+Validation:
+
+- `task format`
+- `uv lock`
+- `uv run python -m pytest tests/test_case_study_contract.py tests/test_case_study_structure.py`
+- `task backend:check`
+- `task rag:check`
+- `task ci`
+
+No new issue is required for Stage 3.
 
 ### Stage 4 — Parse case studies into semantic chunks
 
