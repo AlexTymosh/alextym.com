@@ -73,3 +73,29 @@ instead of maintaining a separate test-only parser.
 Retrieval bullets may continue across indented lines. The parser preserves those
 continuation lines so later chunk generation does not silently truncate retrieval
 context.
+
+## Semantic chunk generation
+
+`backend/app/rag/case_study_rag_source.py` converts each validated answer H2
+section into one deterministic semantic chunk. The final `Retrieval` section is
+metadata only and never becomes answer content.
+
+Chunk IDs use `case:<case-id>:<section-slug>` and share the parent ID
+`case:<case-id>`. Generated chunks preserve the repository-relative source path,
+case title, organisation, date, resume parent, case section, retrieval priority,
+and explicit tags. Markdown links and raw URLs are removed from embedding inputs
+while their targets remain available in `source.links`.
+
+Generate the local artifacts from the repository root with:
+
+```text
+task rag:extract-case-studies
+```
+
+The command writes deterministic, LF-normalised files under `.tmp/`:
+
+- `.tmp/rag/case-studies.generated.chunks.json`
+- `.tmp/human-readable-preview/case-studies-rag-preview.md`
+
+These files are generated review artifacts, not canonical sources, and must not
+be committed. Repeated generation from unchanged sources must be byte-identical.

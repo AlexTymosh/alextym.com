@@ -13,8 +13,10 @@ Current branch state reviewed on 2026-08-02:
 - `README.md` and `CASE_STUDY_TEMPLATE.md` are documentation-only files.
 - `backend/app/rag/case_study_contract.py` owns production source parsing and validation.
 - Repository and negative tests import the shared production contract.
-- No semantic chunk generator, generated case-study artifact, or Qdrant ingestion exists yet.
-- Existing production RAG ingestion is still resume-specific.
+- `backend/app/rag/case_study_rag_source.py` builds deterministic semantic chunks from
+  validated case studies.
+- `task rag:extract-case-studies` writes review artifacts under `.tmp/`.
+- Qdrant ingestion and the generated public-knowledge bundle are still resume-specific.
 
 ## Architectural decisions
 
@@ -148,42 +150,74 @@ No new issue is required for Stage 3.
 
 ### Stage 4 — Parse case studies into semantic chunks
 
-Status: pending
+Status: **completed in this archive**
 
-Create:
+Completed changes:
 
-- `backend/app/rag/case_study_rag_source.py`
-- `backend/tests/test_case_study_rag_source.py`
+- Added `backend/app/rag/case_study_rag_source.py` and reused the validated
+  `CaseStudyCollection` instead of introducing another source parser.
+- Added one answer chunk per non-`Retrieval` H2 section and preserved semantic section order.
+- Added stable IDs in the form `case:<case-id>:<section-slug>` with the shared parent ID
+  `case:<case-id>`.
+- Preserved repository-relative source path, case title, organisation, location, date,
+  resume parent, source section, semantic case section, retrieval priority, and tags.
+- Preserved limitations and probability language as ordinary answer content.
+- Normalised multiline Markdown bullets as intact logical facts without applying fixed-size
+  splitting.
+- Removed inline Markdown links and raw web URLs from answer and vector text while retaining
+  their targets in `source.links`.
+- Added dense, sparse, rerank, and compression inputs compatible with the existing generated
+  resume retrieval shape.
+- Added focused unit and repository-integration coverage in
+  `backend/tests/test_case_study_rag_source.py`.
 
-Rules:
+Impact analysis:
 
-- one answer chunk per semantic H2 section;
-- no answer chunk for `Retrieval`;
-- stable IDs such as `case:<case-id>:analysis`;
-- shared parent ID `case:<case-id>`;
-- preserve source path, title, organisation, date, section, tags, and retrieval priority;
-- keep limitations and probability language intact;
-- never split a Markdown bullet in the middle;
-- remove Markdown URLs from embedding inputs while retaining source references separately.
+- The implementation is additive and does not change live chat, the resume extractor,
+  embeddings, Qdrant, or current ingestion commands.
+- Case-study chunks already carry the metadata required by the planned unified bundle and
+  Qdrant payload mapping, but they are not ingested yet.
+- Section-based chunks avoid arbitrary text boundaries and keep each documented business
+  concept coherent.
+- No new dependency or issue is required for Stage 4.
 
 ### Stage 5 — Generate deterministic case-study artifacts
 
-Status: pending
+Status: **completed in this archive**
 
-Create:
+Completed changes:
 
-- `.tmp/rag/case-studies.generated.chunks.json`
-- `.tmp/human-readable-preview/case-studies-rag-preview.md`
+- Added `backend/scripts/extract_case_study_rag_source.py` as the CLI entry point.
+- Added `task rag:extract-case-studies` without changing `task rag:check`; automatic inclusion
+  remains part of Stage 10.
+- Added deterministic JSON generation at
+  `.tmp/rag/case-studies.generated.chunks.json`.
+- Added a human-readable preview at
+  `.tmp/human-readable-preview/case-studies-rag-preview.md`.
+- Sorted source documents by canonical case ID, preserved section order, sorted JSON object
+  keys, rejected non-finite JSON values, and forced LF output for cross-platform stability.
+- Wrote generated artifacts atomically so an interrupted run does not leave a partial target.
+- Added validation for complete source coverage, unique chunk IDs, non-empty content and
+  vector inputs, valid parent IDs, and exclusion of `Retrieval` answer chunks.
+- Added repeat-generation tests that compare output bytes.
+
+Validation:
+
+- `task format`
+- `uv run python -m pytest tests/test_case_study_contract.py tests/test_case_study_structure.py tests/test_case_study_rag_source.py`
 - `task rag:extract-case-studies`
+- `task backend:check`
+- `task rag:check`
+- `task ci`
 
-Validate:
+Impact analysis:
 
-- all ten case IDs are represented;
-- chunk IDs are unique and deterministic;
-- repeated generation is byte-identical;
-- retrieval metadata is not included as answer content;
-- source paths and parent IDs are present;
-- all required vector inputs are non-empty.
+- Generated files remain under the already ignored `.tmp/` directory and are not repository
+  artifacts.
+- The new extraction task performs no network calls and does not require OpenAI or Qdrant.
+- `rag:check` is intentionally unchanged until Stage 10 to keep this commit scoped and avoid
+  changing the established CI contract before the unified bundle exists.
+- No new issue is required for Stage 5.
 
 ### Stage 6 — Unify generated public knowledge
 
