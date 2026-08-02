@@ -99,3 +99,27 @@ The command writes deterministic, LF-normalised files under `.tmp/`:
 
 These files are generated review artifacts, not canonical sources, and must not
 be committed. Repeated generation from unchanged sources must be byte-identical.
+
+## Unified public-knowledge artifact
+
+`backend/app/rag/public_knowledge_rag_source.py` combines the existing resume
+chunks and case-study chunks in memory without modifying either source-specific
+chunk shape. Resume chunks remain first and retain their existing IDs, content,
+metadata, and vector inputs; case-study chunks follow in deterministic order.
+
+Generate the unified review artifacts from the repository root with:
+
+```text
+task rag:extract-public-knowledge
+```
+
+The command writes:
+
+- `.tmp/rag/public-knowledge.generated.chunks.json`
+- `.tmp/human-readable-preview/public-knowledge-rag-preview.md`
+
+The JSON keeps generated schema version `2`, records source-group counts and
+canonical source files, rejects duplicate chunk IDs across source types, and
+requires all vector inputs to be non-empty. The existing resume-only and
+case-study-only artifacts remain available for focused debugging during the
+staged migration. Qdrant ingestion is not switched by this stage.

@@ -3,27 +3,62 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.core.confidence import Confidence
 from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.public_resume_source import get_public_resume_source_file
-from app.core.confidence import Confidence
 
 GENERATED_RESUME_CHUNKS_FILE = "resume.generated.chunks.json"
-DEFAULT_GENERATED_CHUNKS_PATH = Path(".tmp/rag/resume.generated.chunks.json")
+GENERATED_CASE_STUDY_CHUNKS_FILE = "case-studies.generated.chunks.json"
+GENERATED_PUBLIC_KNOWLEDGE_CHUNKS_FILE = "public-knowledge.generated.chunks.json"
+DEFAULT_GENERATED_RESUME_CHUNKS_PATH = Path(".tmp/rag/resume.generated.chunks.json")
+DEFAULT_GENERATED_CHUNKS_PATH = DEFAULT_GENERATED_RESUME_CHUNKS_PATH
+DEFAULT_GENERATED_KNOWLEDGE_PATH = Path(".tmp/rag/public-knowledge.generated.chunks.json")
 SUPPORTED_SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
-class GeneratedResumeChunkBundle:
+class GeneratedKnowledgeBundle:
     chunks: list[KnowledgeChunk]
     embedding_texts: list[str]
     source_files: tuple[str, ...]
 
 
+GeneratedResumeChunkBundle = GeneratedKnowledgeBundle
+
+
+def load_generated_knowledge_chunks(
+    chunks_path: Path | None = None,
+) -> GeneratedKnowledgeBundle:
+    resolved_path = chunks_path or _repository_root() / DEFAULT_GENERATED_KNOWLEDGE_PATH
+    return _load_generated_chunks(
+        resolved_path,
+        missing_command="task rag:extract-public-knowledge",
+    )
+
+
 def load_generated_resume_chunks(
     chunks_path: Path | None = None,
-) -> GeneratedResumeChunkBundle:
-    resolved_path = chunks_path or _repository_root() / DEFAULT_GENERATED_CHUNKS_PATH
-    payload = _load_json_payload(resolved_path)
+) -> GeneratedKnowledgeBundle:
+    """Load the legacy resume-only artifact during the staged migration.
+
+    New code should use ``load_generated_knowledge_chunks``. The compatibility
+    wrapper keeps current ingestion and tests stable until versioned public-
+    knowledge ingestion is introduced.
+    """
+
+    resolved_path = chunks_path or _repository_root() / DEFAULT_GENERATED_RESUME_CHUNKS_PATH
+    return _load_generated_chunks(
+        resolved_path,
+        missing_command="task rag:extract-resume",
+    )
+
+
+def _load_generated_chunks(
+    resolved_path: Path,
+    *,
+    missing_command: str,
+) -> GeneratedKnowledgeBundle:
+    payload = _load_json_payload(resolved_path, missing_command=missing_command)
     schema_version = _require_int(payload, "schema_version")
 
     if schema_version != SUPPORTED_SCHEMA_VERSION:
@@ -32,6 +67,7 @@ def load_generated_resume_chunks(
     raw_chunks = _require_list(payload, "chunks")
     chunks: list[KnowledgeChunk] = []
     embedding_texts: list[str] = []
+    chunk_ids: set[str] = set()
 
     for raw_chunk in raw_chunks:
         chunk_payload = _require_dict_value(raw_chunk, "chunk")
@@ -39,13 +75,16 @@ def load_generated_resume_chunks(
             chunk_payload,
             schema_version=schema_version,
         )
+        if knowledge_chunk.id in chunk_ids:
+            raise ValueError(f"Duplicate generated RAG chunk id: {knowledge_chunk.id}")
+        chunk_ids.add(knowledge_chunk.id)
         chunks.append(knowledge_chunk)
         embedding_texts.append(embedding_text)
 
-    return GeneratedResumeChunkBundle(
+    return GeneratedKnowledgeBundle(
         chunks=chunks,
         embedding_texts=embedding_texts,
-        source_files=_source_files_for_replacement(payload),
+        source_files=_source_files_for_replacement(payload, resolved_path=resolved_path),
     )
 
 
@@ -92,10 +131,10 @@ def _chunk_from_payload(
     return chunk, embedding_text
 
 
-def _load_json_payload(path: Path) -> dict[str, Any]:
+def _load_json_payload(path: Path, *, missing_command: str) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(
-            f"Generated RAG chunks file was not found: {path}. Run `task rag:extract-resume` first."
+            f"Generated RAG chunks file was not found: {path}. Run `{missing_command}` first."
         )
 
     with path.open(encoding="utf-8") as stream:
@@ -107,11 +146,27 @@ def _load_json_payload(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _source_files_for_replacement(payload: dict[str, Any]) -> tuple[str, ...]:
-    source_files = [
-        _optional_text(payload.get("source_path")) or get_public_resume_source_file(),
-        GENERATED_RESUME_CHUNKS_FILE,
-    ]
+def _source_files_for_replacement(
+    payload: dict[str, Any],
+    *,
+    resolved_path: Path,
+) -> tuple[str, ...]:
+    explicit_source_files = payload.get("source_files")
+    if explicit_source_files is not None:
+        source_files = _required_list_of_texts(explicit_source_files, "source_files")
+    else:
+        source_files = [
+            _optional_text(payload.get("source_path")) or get_public_resume_source_file()
+        ]
+
+    source_files.append(resolved_path.name)
+    if _optional_text(payload.get("purpose")) == "public_knowledge_rag_extraction":
+        source_files.extend(
+            (
+                GENERATED_RESUME_CHUNKS_FILE,
+                GENERATED_CASE_STUDY_CHUNKS_FILE,
+            )
+        )
     return tuple(dict.fromkeys(source_files))
 
 
@@ -166,6 +221,15 @@ def _list_of_texts(value: object) -> list[str]:
         return []
 
     return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+
+
+def _required_list_of_texts(value: object, field_name: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"Generated RAG field must be a list: {field_name}")
+    result = _list_of_texts(value)
+    if len(result) != len(value) or not result:
+        raise ValueError(f"Generated RAG field must contain only non-empty strings: {field_name}")
+    return result
 
 
 def _tuple_of_texts(value: object) -> tuple[str, ...]:

@@ -178,6 +178,12 @@ tasks:
     cmds:
       - uv run python -m scripts.extract_case_study_rag_source
 
+  rag:extract-public-knowledge:
+    desc: Build one deterministic generated artifact from resume and case-study sources.
+    dir: backend
+    cmds:
+      - uv run python -m scripts.extract_public_knowledge_rag_source
+
   rag:check:
     desc: Run free deterministic RAG checks without live OpenAI or Qdrant.
     cmds:

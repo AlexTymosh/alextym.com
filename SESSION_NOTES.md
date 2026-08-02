@@ -15,8 +15,10 @@ Current branch state reviewed on 2026-08-02:
 - Repository and negative tests import the shared production contract.
 - `backend/app/rag/case_study_rag_source.py` builds deterministic semantic chunks from
   validated case studies.
-- `task rag:extract-case-studies` writes review artifacts under `.tmp/`.
-- Qdrant ingestion and the generated public-knowledge bundle are still resume-specific.
+- `task rag:extract-case-studies` writes case-study review artifacts under `.tmp/`.
+- `task rag:extract-public-knowledge` combines resume and case-study chunks into one
+  deterministic generated artifact without changing either source-specific chunk shape.
+- Qdrant ingestion remains resume-specific pending Stages 7 and 8.
 
 ## Architectural decisions
 
@@ -150,7 +152,7 @@ No new issue is required for Stage 3.
 
 ### Stage 4 — Parse case studies into semantic chunks
 
-Status: **completed in this archive**
+Status: **completed in branch**
 
 Completed changes:
 
@@ -183,7 +185,7 @@ Impact analysis:
 
 ### Stage 5 — Generate deterministic case-study artifacts
 
-Status: **completed in this archive**
+Status: **completed in branch**
 
 Completed changes:
 
@@ -221,20 +223,50 @@ Impact analysis:
 
 ### Stage 6 — Unify generated public knowledge
 
-Status: pending
+Status: **completed in this archive**
 
-Generalise resume-specific names:
+Completed changes:
 
-- `GeneratedResumeChunkBundle` → `GeneratedKnowledgeBundle`
-- `load_generated_resume_chunks` → `load_generated_knowledge_chunks`
-- resume-only artifact → `public-knowledge.generated.chunks.json`
+- Added `backend/app/rag/public_knowledge_rag_source.py` as the deterministic composer for
+  resume and case-study generated chunks.
+- Added `backend/scripts/extract_public_knowledge_rag_source.py` and
+  `task rag:extract-public-knowledge`.
+- Added `.tmp/rag/public-knowledge.generated.chunks.json` as the unified generated artifact
+  and `.tmp/human-readable-preview/public-knowledge-rag-preview.md` as its review view.
+- Preserved the existing resume chunk order and serialized chunk shape exactly before
+  appending deterministic case-study chunks.
+- Added top-level `source_groups` and `source_files` metadata without modifying individual
+  resume or case-study payloads.
+- Added cross-source validation for duplicate IDs, empty groups, inconsistent source files,
+  missing content, and missing vector inputs.
+- Generalised `GeneratedResumeChunkBundle` to `GeneratedKnowledgeBundle` and added
+  `load_generated_knowledge_chunks` for the unified artifact.
+- Retained `GeneratedResumeChunkBundle` and `load_generated_resume_chunks` as compatibility
+  aliases during the staged ingestion migration.
+- Kept generated schema version `2`; existing source-specific artifacts remain available for
+  focused debugging and regression comparison.
 
-Combine:
+Validation:
 
-- existing resume chunks;
-- new case-study chunks.
+- `task format`
+- targeted pytest coverage for public composition, generated loading, resume and case-study
+  sources, and existing ingestion compatibility;
+- `task rag:extract-resume`
+- `task rag:extract-case-studies`
+- `task rag:extract-public-knowledge`
+- repeat-generation SHA-256 comparison for the unified JSON and preview;
+- `task backend:check`
+- `task rag:check`
+- `task ci`
 
-Preserve existing resume chunk behaviour and generated schema compatibility.
+Impact analysis:
+
+- Live chat, Qdrant payloads, indexes, deletion order, and ingestion commands are unchanged.
+- The unified loader is additive; current resume ingestion continues through the explicit
+  compatibility wrapper until Stages 7 and 8 replace the ingestion path safely.
+- No new dependency is introduced.
+- Generated artifacts remain under `.tmp/` and are not committed.
+- No new issue is required for Stage 6.
 
 ### Stage 7 — Extend Qdrant payload and indexes
 
