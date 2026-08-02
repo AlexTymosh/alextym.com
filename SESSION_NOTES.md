@@ -18,7 +18,10 @@ Current branch state reviewed on 2026-08-02:
 - `task rag:extract-case-studies` writes case-study review artifacts under `.tmp/`.
 - `task rag:extract-public-knowledge` combines resume and case-study chunks into one
   deterministic generated artifact without changing either source-specific chunk shape.
-- Qdrant ingestion remains resume-specific pending Stages 7 and 8.
+- Generated public knowledge now carries a SHA-256 dataset version and normalized
+  source-group metadata.
+- Qdrant ingestion uses versioned upsert-before-cleanup replacement for resume and
+  case-study chunks.
 
 ## Architectural decisions
 
@@ -223,7 +226,7 @@ Impact analysis:
 
 ### Stage 6 — Unify generated public knowledge
 
-Status: **completed in this archive**
+Status: **completed in branch**
 
 Completed changes:
 
@@ -270,41 +273,85 @@ Impact analysis:
 
 ### Stage 7 — Extend Qdrant payload and indexes
 
-Status: pending
+Status: **completed in this archive**
 
-Use the existing collection.
+Completed changes:
 
-Add case-study payload fields:
+- Added top-level Qdrant payload fields for `document_type`, `source_group`, `case_id`,
+  `case_section`, `organization`, `parent_id`, and `dataset_version` while retaining the
+  existing structured payload fields.
+- Normalized resume chunks to `document_type: resume` and `source_group: resume` during
+  generated-artifact loading without changing their serialized source shape.
+- Preserved case-study IDs, semantic sections, organisation, parent ID, and source metadata
+  as filterable or attributable Qdrant payload values.
+- Added exact-match retrieval selectors for document type, source group, case ID, and case
+  section; existing topic, tag, and section routing behaviour remains unchanged.
+- Added keyword indexes for `document_type`, `source_group`, `case_id`, `case_section`, and
+  `dataset_version` in addition to the existing payload indexes.
+- Included `dataset_version` in the indexed fields because safe stale-point cleanup filters on
+  it. `organization` and `parent_id` remain unindexed because current retrieval does not
+  filter on them.
+- Payload index creation now waits for completion before ingestion begins.
 
-- `document_type`
-- `source_group`
-- `case_id`
-- `case_section`
-- `organization`
-- `parent_id`
-- `dataset_version`
+Impact analysis:
 
-Add keyword indexes only for fields used by filtering, initially:
-
-- `document_type`
-- `source_group`
-- `case_id`
-- `case_section`
+- Existing resume topic/tag/section filters and payload round-tripping remain compatible.
+- New selectors are optional and do not change queries produced by the current query router.
+- No collection recreation or new Qdrant collection is required.
+- No dependency or schema-version change is required.
+- No new issue is required for Stage 7.
 
 ### Stage 8 — Add safe versioned ingestion
 
-Status: pending
+Status: **completed in this archive**
 
-Required order:
+Completed changes:
 
-1. validate and generate the complete dataset;
-2. generate all embeddings;
-3. derive `dataset_version` from the generated artifact hash;
-4. upsert the new dataset;
-5. delete stale points from the same `source_group` only after successful upsert.
+- Derived `dataset_version` from the SHA-256 hash of the exact deterministic generated
+  public-knowledge artifact bytes.
+- Added normalized source groups and the dataset version to `GeneratedKnowledgeBundle` and
+  every loaded chunk.
+- Added `backend/app/rag/generated_ingestion.py` as the shared ingestion service for unified
+  public knowledge and the legacy resume-only compatibility path.
+- Added `backend/scripts/ingest_generated_public_knowledge.py` as the production CLI and
+  retained `ingest_generated_resume_chunks.py` as an explicit compatibility entry point.
+- Updated `task rag:ingest:generated` to generate and ingest
+  `public-knowledge.generated.chunks.json`.
+- Changed the unified ingestion order to:
+  1. load and validate the complete deterministic artifact;
+  2. generate every required embedding;
+  3. validate source groups and dataset-version consistency;
+  4. create required payload indexes;
+  5. upsert the complete new dataset with `wait=True`;
+  6. delete stale versions from each source group;
+  7. remove legacy resume points only after the successful upsert.
+- Added first-migration cleanup for legacy points that do not yet carry `source_group` or
+  `dataset_version`, protected by a `must_not dataset_version=<current>` condition.
+- Kept deterministic point IDs, so unchanged chunks are overwritten rather than duplicated.
+- Added failure-order tests proving that embedding or upsert failures do not trigger cleanup.
+- Applied the same safe order to single-vector and named-vector ingestion.
 
-This avoids deleting the active dataset before embeddings or upload succeeds and removes
-stale points created by deleted or renamed sources.
+Impact analysis:
+
+- The active dataset is no longer deleted before embeddings or Qdrant upload succeed.
+- A cleanup failure can leave old points temporarily present, but cannot remove the newly
+  upserted current dataset; rerunning ingestion is idempotent.
+- The legacy resume-only function remains available for compatibility tests and emergency
+  rollback, but normal tasks now use unified public knowledge.
+- Live chat and retrieval automatically consume the expanded dataset after the explicit
+  ingestion command is run; no runtime API changes are required.
+- No new dependency is introduced.
+- No new issue is required for Stage 8.
+
+Validation:
+
+- `task format`
+- targeted generated-loader, ingestion, Qdrant payload, filter, single-vector, named-vector,
+  and compatibility tests;
+- `task rag:extract-public-knowledge`
+- `task backend:check`
+- `task rag:check`
+- `task ci`
 
 ### Stage 9 — Add retrieval and answer evals
 

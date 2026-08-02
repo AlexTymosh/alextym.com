@@ -10,10 +10,22 @@ class RetrievalFilter:
     topic_any: tuple[str, ...] = ()
     tag_any: tuple[str, ...] = ()
     section_any: tuple[str, ...] = ()
+    document_type_any: tuple[str, ...] = ()
+    source_group_any: tuple[str, ...] = ()
+    case_id_any: tuple[str, ...] = ()
+    case_section_any: tuple[str, ...] = ()
 
     @property
     def has_selectors(self) -> bool:
-        return bool(self.topic_any or self.tag_any or self.section_any)
+        return bool(
+            self.topic_any
+            or self.tag_any
+            or self.section_any
+            or self.document_type_any
+            or self.source_group_any
+            or self.case_id_any
+            or self.case_section_any
+        )
 
 
 @dataclass(frozen=True)

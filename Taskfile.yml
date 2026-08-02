@@ -203,21 +203,21 @@ tasks:
         --report-json "../.tmp/evals/contract.json"
 
   rag:ingest:
-    desc: Rebuild Qdrant vectors from the canonical structured resume source.
+    desc: Safely ingest the generated public-knowledge dataset into Qdrant.
     cmds:
       - task: rag:ingest:generated
 
   rag:ingest:generated:
-    desc: Rebuild Qdrant vectors from generated structured resume chunks.
+    desc: Generate and safely ingest versioned resume and case-study chunks.
     dir: backend
     env:
       UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
       UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
     cmds:
-      - uv run python -m scripts.extract_resume_rag_source
+      - uv run python -m scripts.extract_public_knowledge_rag_source
       - >-
         uv run --isolated --env-file .env
-        python -m scripts.ingest_generated_resume_chunks
+        python -m scripts.ingest_generated_public_knowledge
 
   rag:eval:free:
     desc: Run local before/after contract eval cycle without live OpenAI/Qdrant.

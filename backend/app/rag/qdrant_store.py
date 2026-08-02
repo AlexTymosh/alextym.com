@@ -4,15 +4,31 @@ from typing import Any
 
 from qdrant_client import QdrantClient, models
 
+from app.core.confidence import Confidence
 from app.core.config import Settings
 from app.llm.client import ProviderConfigurationError, ProviderRequestError
 from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
 from app.rag.vector_config import DenseVectorName, NAMED_DENSE_VECTOR_NAMES
 from app.rag.vector_config import VectorMode, normalise_query_vector_name
 from app.rag.vector_config import normalise_vector_mode
-from app.core.confidence import Confidence
 
 NamedEmbeddings = dict[DenseVectorName, list[float]]
+
+_VERSIONED_PAYLOAD_INDEXES = (
+    "document_type",
+    "source_group",
+    "case_id",
+    "case_section",
+    "dataset_version",
+)
+_BASE_PAYLOAD_INDEXES = (
+    "source",
+    "source_file",
+    "section",
+    "topic",
+    "visibility",
+    "tags",
+)
 
 
 class QdrantKnowledgeStore:
@@ -46,7 +62,13 @@ class QdrantKnowledgeStore:
             query_vector_name=settings.qdrant_query_vector_name,
         )
 
-    def ensure_collection(self, *, vector_size: int) -> None:
+    def ensure_collection(
+        self,
+        *,
+        vector_size: int,
+        include_versioned_indexes: bool = False,
+        wait_for_indexes: bool = False,
+    ) -> None:
         if vector_size <= 0:
             raise ProviderConfigurationError("Qdrant vector size must be positive.")
 
@@ -62,28 +84,35 @@ class QdrantKnowledgeStore:
                         vector_mode=self._vector_mode,
                     ),
                 )
-            self._ensure_payload_indexes()
+            self._ensure_payload_indexes(
+                include_versioned_indexes=include_versioned_indexes,
+                wait=wait_for_indexes,
+            )
         except Exception as exc:
             raise ProviderRequestError(f"Qdrant collection setup failed: {exc}") from exc
 
-    def _ensure_payload_indexes(self) -> None:
-        for field_name in (
-            "source",
-            "source_file",
-            "section",
-            "topic",
-            "visibility",
-            "tags",
-        ):
-            self._ensure_payload_index(field_name)
+    def _ensure_payload_indexes(
+        self,
+        *,
+        include_versioned_indexes: bool,
+        wait: bool,
+    ) -> None:
+        fields = _BASE_PAYLOAD_INDEXES
+        if include_versioned_indexes:
+            fields = (*fields, *_VERSIONED_PAYLOAD_INDEXES)
+        for field_name in fields:
+            self._ensure_payload_index(field_name, wait=wait)
 
-    def _ensure_payload_index(self, field_name: str) -> None:
+    def _ensure_payload_index(self, field_name: str, *, wait: bool) -> None:
+        kwargs: dict[str, Any] = {
+            "collection_name": self._collection_name,
+            "field_name": field_name,
+            "field_schema": models.PayloadSchemaType.KEYWORD,
+        }
+        if wait:
+            kwargs["wait"] = True
         try:
-            self._client.create_payload_index(
-                collection_name=self._collection_name,
-                field_name=field_name,
-                field_schema=models.PayloadSchemaType.KEYWORD,
-            )
+            self._client.create_payload_index(**kwargs)
         except Exception as exc:
             if "already" in str(exc).lower():
                 return
@@ -129,36 +158,180 @@ class QdrantKnowledgeStore:
                 named_embeddings=named_embeddings,
             )
 
+    def replace_versioned_chunks(
+        self,
+        *,
+        chunks: list[KnowledgeChunk],
+        embeddings: list[list[float]],
+        source_groups: Iterable[str],
+        dataset_version: str,
+        legacy_source_files: Iterable[str],
+        vector_size: int,
+    ) -> None:
+        if self._vector_mode == "named":
+            raise ProviderConfigurationError(
+                "Single-vector ingestion cannot target a named-vector collection. "
+                "Use replace_versioned_named_vector_chunks instead."
+            )
+        if len(chunks) != len(embeddings):
+            raise ValueError("Chunks and embeddings must have the same length.")
+
+        groups = _validate_versioned_chunks(
+            chunks,
+            source_groups=source_groups,
+            dataset_version=dataset_version,
+        )
+        self.ensure_collection(
+            vector_size=vector_size,
+            include_versioned_indexes=True,
+            wait_for_indexes=True,
+        )
+        self.upsert_chunks(chunks=chunks, embeddings=embeddings, wait=True)
+        self.delete_stale_versions(
+            source_groups=groups,
+            dataset_version=dataset_version,
+        )
+        self.delete_legacy_sources(
+            legacy_source_files,
+            dataset_version=dataset_version,
+        )
+
+    def replace_versioned_named_vector_chunks(
+        self,
+        *,
+        chunks: list[KnowledgeChunk],
+        named_embeddings: list[NamedEmbeddings],
+        source_groups: Iterable[str],
+        dataset_version: str,
+        legacy_source_files: Iterable[str],
+        vector_size: int,
+    ) -> None:
+        if len(chunks) != len(named_embeddings):
+            raise ValueError("Chunks and named embeddings must have the same length.")
+
+        groups = _validate_versioned_chunks(
+            chunks,
+            source_groups=source_groups,
+            dataset_version=dataset_version,
+        )
+        self.ensure_collection(
+            vector_size=vector_size,
+            include_versioned_indexes=True,
+            wait_for_indexes=True,
+        )
+        self.upsert_named_vector_chunks(
+            chunks=chunks,
+            named_embeddings=named_embeddings,
+            wait=True,
+        )
+        self.delete_stale_versions(
+            source_groups=groups,
+            dataset_version=dataset_version,
+        )
+        self.delete_legacy_sources(
+            legacy_source_files,
+            dataset_version=dataset_version,
+        )
+
     def delete_sources(self, source_files: Iterable[str]) -> None:
         for source_file in source_files:
             self._delete_by_payload_field(field_name="source_file", value=source_file)
             self._delete_by_payload_field(field_name="source", value=source_file)
 
-    def _delete_by_payload_field(self, *, field_name: str, value: str) -> None:
-        try:
-            self._client.delete(
-                collection_name=self._collection_name,
-                points_selector=models.FilterSelector(
-                    filter=models.Filter(
-                        must=[
-                            models.FieldCondition(
-                                key=field_name,
-                                match=models.MatchValue(value=value),
-                            )
-                        ]
-                    ),
-                ),
+    def delete_stale_versions(
+        self,
+        *,
+        source_groups: Iterable[str],
+        dataset_version: str,
+    ) -> None:
+        for source_group in source_groups:
+            filter_value = models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="source_group",
+                        match=models.MatchValue(value=source_group),
+                    )
+                ],
+                must_not=[
+                    models.FieldCondition(
+                        key="dataset_version",
+                        match=models.MatchValue(value=dataset_version),
+                    )
+                ],
             )
+            self._delete_by_filter(
+                filter_value,
+                operation_name=f"stale cleanup for source_group={source_group!r}",
+                wait=True,
+            )
+
+    def delete_legacy_sources(
+        self,
+        source_files: Iterable[str],
+        *,
+        dataset_version: str,
+    ) -> None:
+        for source_file in dict.fromkeys(source_files):
+            for field_name in ("source_file", "source"):
+                filter_value = models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key=field_name,
+                            match=models.MatchValue(value=source_file),
+                        )
+                    ],
+                    must_not=[
+                        models.FieldCondition(
+                            key="dataset_version",
+                            match=models.MatchValue(value=dataset_version),
+                        )
+                    ],
+                )
+                self._delete_by_filter(
+                    filter_value,
+                    operation_name=(f"legacy cleanup for {field_name}={source_file!r}"),
+                    wait=True,
+                )
+
+    def _delete_by_payload_field(self, *, field_name: str, value: str) -> None:
+        filter_value = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key=field_name,
+                    match=models.MatchValue(value=value),
+                )
+            ]
+        )
+        self._delete_by_filter(
+            filter_value,
+            operation_name=f"source cleanup for {field_name}={value!r}",
+            wait=False,
+        )
+
+    def _delete_by_filter(
+        self,
+        filter_value: models.Filter,
+        *,
+        operation_name: str,
+        wait: bool,
+    ) -> None:
+        kwargs: dict[str, Any] = {
+            "collection_name": self._collection_name,
+            "points_selector": models.FilterSelector(filter=filter_value),
+        }
+        if wait:
+            kwargs["wait"] = True
+        try:
+            self._client.delete(**kwargs)
         except Exception as exc:
-            raise ProviderRequestError(
-                f"Qdrant source cleanup failed for {field_name}={value!r}: {exc}"
-            ) from exc
+            raise ProviderRequestError(f"Qdrant {operation_name} failed: {exc}") from exc
 
     def upsert_chunks(
         self,
         *,
         chunks: list[KnowledgeChunk],
         embeddings: list[list[float]],
+        wait: bool = False,
     ) -> None:
         if len(chunks) != len(embeddings):
             raise ValueError("Chunks and embeddings must have the same length.")
@@ -174,8 +347,14 @@ class QdrantKnowledgeStore:
             for chunk, embedding in zip(chunks, embeddings, strict=True)
         ]
 
+        kwargs: dict[str, Any] = {
+            "collection_name": self._collection_name,
+            "points": points,
+        }
+        if wait:
+            kwargs["wait"] = True
         try:
-            self._client.upsert(collection_name=self._collection_name, points=points)
+            self._client.upsert(**kwargs)
         except Exception as exc:
             raise ProviderRequestError(f"Qdrant upsert failed: {exc}") from exc
 
@@ -184,6 +363,7 @@ class QdrantKnowledgeStore:
         *,
         chunks: list[KnowledgeChunk],
         named_embeddings: list[NamedEmbeddings],
+        wait: bool = False,
     ) -> None:
         if len(chunks) != len(named_embeddings):
             raise ValueError("Chunks and named embeddings must have the same length.")
@@ -199,8 +379,14 @@ class QdrantKnowledgeStore:
             for chunk, named_embedding in zip(chunks, named_embeddings, strict=True)
         ]
 
+        kwargs: dict[str, Any] = {
+            "collection_name": self._collection_name,
+            "points": points,
+        }
+        if wait:
+            kwargs["wait"] = True
         try:
-            self._client.upsert(collection_name=self._collection_name, points=points)
+            self._client.upsert(**kwargs)
         except Exception as exc:
             raise ProviderRequestError(f"Qdrant upsert failed: {exc}") from exc
 
@@ -267,6 +453,11 @@ def _build_query_filter(
             )
         )
 
+    must.extend(_match_any_conditions("document_type", payload_filter.document_type_any))
+    must.extend(_match_any_conditions("source_group", payload_filter.source_group_any))
+    must.extend(_match_any_conditions("case_id", payload_filter.case_id_any))
+    must.extend(_match_any_conditions("case_section", payload_filter.case_section_any))
+
     should.extend(_match_any_conditions("topic", payload_filter.topic_any))
     should.extend(_match_any_conditions("tags", payload_filter.tag_any))
     should.extend(_match_any_conditions("section", payload_filter.section_any))
@@ -315,6 +506,12 @@ def _payload_from_chunk(chunk: KnowledgeChunk) -> dict[str, Any]:
     optional_payload = {
         "parent_id": extra.get("parent_id"),
         "schema_version": extra.get("schema_version"),
+        "document_type": extra.get("document_type"),
+        "source_group": extra.get("source_group"),
+        "case_id": extra.get("case_id"),
+        "case_section": extra.get("case_section"),
+        "organization": extra.get("organization"),
+        "dataset_version": extra.get("dataset_version"),
         "source_details": extra.get("source"),
         "rag_payload": extra.get("payload"),
         "answer_facts": extra.get("answer_facts"),
@@ -353,6 +550,12 @@ def _extra_from_payload(payload: dict[str, Any], *, point: Any) -> dict[str, Any
         "source_file",
         "parent_id",
         "schema_version",
+        "document_type",
+        "source_group",
+        "case_id",
+        "case_section",
+        "organization",
+        "dataset_version",
         "source_details",
         "rag_payload",
         "answer_facts",
@@ -371,8 +574,42 @@ def _extra_from_payload(payload: dict[str, Any], *, point: Any) -> dict[str, Any
     return extra
 
 
+def _validate_versioned_chunks(
+    chunks: list[KnowledgeChunk],
+    *,
+    source_groups: Iterable[str],
+    dataset_version: str,
+) -> tuple[str, ...]:
+    if not dataset_version.strip():
+        raise ValueError("Dataset version must be a non-empty string.")
+    groups = tuple(dict.fromkeys(group.strip() for group in source_groups if group.strip()))
+    if not groups:
+        raise ValueError("At least one source group is required for versioned ingestion.")
+    if not chunks:
+        raise ValueError("Versioned ingestion requires at least one chunk.")
+
+    actual_groups: set[str] = set()
+    for chunk in chunks:
+        extra = chunk.metadata.extra
+        chunk_version = _optional_text(extra.get("dataset_version"))
+        source_group = _optional_text(extra.get("source_group"))
+        if chunk_version != dataset_version:
+            raise ValueError(f"Generated chunk {chunk.id!r} has an inconsistent dataset version.")
+        if not source_group:
+            raise ValueError(f"Generated chunk {chunk.id!r} is missing source_group.")
+        actual_groups.add(source_group)
+
+    if actual_groups != set(groups):
+        raise ValueError("Generated chunk source groups do not match the ingestion source groups.")
+    return groups
+
+
 def _text_or_default(value: object, default: str) -> str:
     return value.strip() if isinstance(value, str) and value.strip() else default
+
+
+def _optional_text(value: object) -> str | None:
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
 
 def _source_confidence(value: object) -> Confidence:

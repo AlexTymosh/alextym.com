@@ -9,7 +9,7 @@ def test_qdrant_store_search_builds_payload_filter() -> None:
     store = QdrantKnowledgeStore(
         url="",
         api_key="",
-        collection_name="alex_public_knowledge",
+        collection_name="public_knowledge",
         client=fake_qdrant,
     )
 
@@ -18,23 +18,37 @@ def test_qdrant_store_search_builds_payload_filter() -> None:
         limit=5,
         score_threshold=0.7,
         payload_filter=RetrievalFilter(
-            topic_any=("right-to-work-uk-location",),
-            tag_any=("share-code", "right-to-work"),
+            topic_any=("procurement-order-control-analysis",),
+            tag_any=("bpmn", "procurement"),
             section_any=("experience",),
+            document_type_any=("case-study",),
+            source_group_any=("case-studies",),
+            case_id_any=("case-procurement-order-control",),
+            case_section_any=("analysis",),
         ),
     )
 
     query_filter = fake_qdrant.last_query_kwargs["query_filter"]
 
     assert query_filter is not None
-    assert [condition.key for condition in query_filter.must] == ["visibility"]
+    assert [condition.key for condition in query_filter.must] == [
+        "visibility",
+        "document_type",
+        "source_group",
+        "case_id",
+        "case_section",
+    ]
     assert [condition.key for condition in query_filter.should] == [
         "topic",
         "tags",
         "section",
     ]
-    assert query_filter.should[0].match.any == ["right-to-work-uk-location"]
-    assert query_filter.should[1].match.any == ["share-code", "right-to-work"]
+    assert query_filter.must[1].match.any == ["case-study"]
+    assert query_filter.must[2].match.any == ["case-studies"]
+    assert query_filter.must[3].match.any == ["case-procurement-order-control"]
+    assert query_filter.must[4].match.any == ["analysis"]
+    assert query_filter.should[0].match.any == ["procurement-order-control-analysis"]
+    assert query_filter.should[1].match.any == ["bpmn", "procurement"]
     assert query_filter.should[2].match.any == ["experience"]
 
 
@@ -43,7 +57,7 @@ def test_qdrant_store_search_omits_filter_when_not_requested() -> None:
     store = QdrantKnowledgeStore(
         url="",
         api_key="",
-        collection_name="alex_public_knowledge",
+        collection_name="public_knowledge",
         client=fake_qdrant,
     )
 

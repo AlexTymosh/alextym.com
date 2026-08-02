@@ -123,3 +123,28 @@ canonical source files, rejects duplicate chunk IDs across source types, and
 requires all vector inputs to be non-empty. The existing resume-only and
 case-study-only artifacts remain available for focused debugging during the
 staged migration. Qdrant ingestion is not switched by this stage.
+
+## Unified Qdrant ingestion
+
+Case-study chunks are combined with resume chunks in
+`.tmp/rag/public-knowledge.generated.chunks.json`. The unified artifact is the
+only input used by the normal Qdrant ingestion task:
+
+```text
+task rag:ingest:generated
+```
+
+The loader derives one SHA-256 `dataset_version` from the exact generated JSON
+bytes and adds normalized `document_type` and `source_group` metadata to every
+chunk. Case-study points also expose `case_id`, `case_section`, `organization`,
+and `parent_id` for filtering and attribution.
+
+Ingestion validates and embeds the complete dataset before writing to Qdrant.
+It then upserts the new version and waits for completion before deleting stale
+points from the same source groups. This prevents an embedding or upload
+failure from deleting the active dataset. The first unified run also removes
+legacy resume points only after the new dataset has been stored successfully.
+
+Keyword payload indexes are created for `document_type`, `source_group`,
+`case_id`, `case_section`, and `dataset_version`. `organization` and
+`parent_id` remain unindexed until retrieval starts filtering on those fields.

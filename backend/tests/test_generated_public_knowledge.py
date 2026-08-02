@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -22,6 +23,8 @@ def test_load_generated_knowledge_chunks_combines_source_types(tmp_path: Path) -
         "case:case-sample:analysis",
     ]
     assert bundle.embedding_texts == ["Resume body dense.", "Case body dense."]
+    assert bundle.source_groups == ("resume", "case-studies")
+    assert bundle.dataset_version == hashlib.sha256(chunks_path.read_bytes()).hexdigest()
     assert bundle.source_files == (
         "content/public/resume.md",
         "content/public/case-studies/sample.case.md",
@@ -29,18 +32,35 @@ def test_load_generated_knowledge_chunks_combines_source_types(tmp_path: Path) -
         GENERATED_RESUME_CHUNKS_FILE,
         GENERATED_CASE_STUDY_CHUNKS_FILE,
     )
-    case_chunk = bundle.chunks[1]
+
+    resume_chunk, case_chunk = bundle.chunks
+    assert resume_chunk.metadata.extra["document_type"] == "resume"
+    assert resume_chunk.metadata.extra["source_group"] == "resume"
+    assert resume_chunk.metadata.extra["dataset_version"] == bundle.dataset_version
     assert case_chunk.metadata.extra["source_file"] == (
         "content/public/case-studies/sample.case.md"
     )
-    assert case_chunk.metadata.extra["payload"]["case_id"] == "case-sample"
-    assert case_chunk.metadata.extra["payload"]["source_group"] == "case-studies"
+    assert case_chunk.metadata.extra["document_type"] == "case-study"
+    assert case_chunk.metadata.extra["source_group"] == "case-studies"
+    assert case_chunk.metadata.extra["case_id"] == "case-sample"
+    assert case_chunk.metadata.extra["case_section"] == "analysis"
+    assert case_chunk.metadata.extra["organization"] == "Example Ltd"
+    assert case_chunk.metadata.extra["dataset_version"] == bundle.dataset_version
 
 
 def test_load_generated_knowledge_chunks_rejects_duplicate_chunk_ids(
     tmp_path: Path,
 ) -> None:
     chunks_path = _write_public_knowledge(tmp_path, duplicate_id=True)
+    payload = json.loads(chunks_path.read_text(encoding="utf-8"))
+    payload["chunks"][1]["payload"] = {
+        "topic": "duplicate-summary",
+        "visibility": "public",
+        "confidence": "self-reported",
+        "source_confidence": "medium",
+        "tags": ["resume"],
+    }
+    chunks_path.write_text(json.dumps(payload), encoding="utf-8")
 
     with pytest.raises(ValueError, match="Duplicate generated RAG chunk id"):
         load_generated_knowledge_chunks(chunks_path)
@@ -55,6 +75,28 @@ def test_load_generated_knowledge_chunks_requires_valid_source_files(
     chunks_path.write_text(json.dumps(payload), encoding="utf-8")
 
     with pytest.raises(ValueError, match="source_files"):
+        load_generated_knowledge_chunks(chunks_path)
+
+
+def test_load_generated_knowledge_chunks_rejects_group_mismatch(tmp_path: Path) -> None:
+    chunks_path = _write_public_knowledge(tmp_path)
+    payload = json.loads(chunks_path.read_text(encoding="utf-8"))
+    payload["source_groups"] = [{"id": "resume", "chunk_count": 2}]
+    chunks_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="source_groups do not match"):
+        load_generated_knowledge_chunks(chunks_path)
+
+
+def test_load_generated_knowledge_chunks_rejects_source_group_id_mismatch(
+    tmp_path: Path,
+) -> None:
+    chunks_path = _write_public_knowledge(tmp_path)
+    payload = json.loads(chunks_path.read_text(encoding="utf-8"))
+    payload["chunks"][1]["payload"]["source_group"] = "resume"
+    chunks_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="does not match chunk ID"):
         load_generated_knowledge_chunks(chunks_path)
 
 
@@ -76,6 +118,8 @@ def test_legacy_resume_loader_remains_compatible(tmp_path: Path) -> None:
 
     assert len(bundle.chunks) == 1
     assert bundle.embedding_texts == ["Resume body dense."]
+    assert bundle.source_groups == ("resume",)
+    assert bundle.dataset_version == hashlib.sha256(chunks_path.read_bytes()).hexdigest()
     assert bundle.source_files == (
         "content/public/resume.md",
         GENERATED_RESUME_CHUNKS_FILE,
@@ -110,6 +154,7 @@ def _write_public_knowledge(
                         source_path="content/public/case-studies/sample.case.md",
                         source_title="Sample Case",
                         source_section="experience",
+                        organization="Example Ltd",
                         payload={
                             "topic": "sample-analysis",
                             "visibility": "public",
@@ -137,6 +182,7 @@ def _chunk(
     source_path: str = "content/public/resume.md",
     source_title: str = "Summary",
     source_section: str = "summary",
+    organization: str | None = None,
     payload: dict[str, object] | None = None,
 ) -> dict[str, object]:
     resolved_payload = payload or {
@@ -146,15 +192,19 @@ def _chunk(
         "source_confidence": "medium",
         "tags": ["automation"],
     }
+    source: dict[str, object] = {
+        "path": source_path,
+        "id": "source-id",
+        "title": source_title,
+        "section": source_section,
+    }
+    if organization:
+        source["organization"] = organization
+
     return {
         "id": chunk_id,
         "parent_id": chunk_id.rsplit(":", 1)[0],
-        "source": {
-            "path": source_path,
-            "id": "source-id",
-            "title": source_title,
-            "section": source_section,
-        },
+        "source": source,
         "payload": resolved_payload,
         "answer_facts": ["The Owner has a documented fact."],
         "retrieval_hints": ["Useful for relevant questions."],
