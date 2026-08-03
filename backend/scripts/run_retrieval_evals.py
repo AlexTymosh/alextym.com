@@ -165,12 +165,57 @@ def evaluate_case(
     failures: list[RetrievalEvalFailure] = []
 
     _check_min_results(expected, retrieved, failures)
-    _check_top_topic(expected, retrieved, failures)
-    _check_topic_any(expected, retrieved, failures)
+    _check_top_value(expected, retrieved, failures, "top_topic_any", "topic")
+    _check_top_value(expected, retrieved, failures, "top_case_id_any", "case_id")
+    _check_top_value(expected, retrieved, failures, "top_case_section_any", "case_section")
+    _check_any_value(expected, retrieved, failures, "must_include_topic_any", "topic")
     _check_tag_any(expected, retrieved, failures)
-    _check_section_any(expected, retrieved, failures)
-    _check_source_any(expected, retrieved, failures)
-    _check_forbidden_topics(expected, retrieved, failures)
+    _check_any_value(expected, retrieved, failures, "must_include_section_any", "section")
+    _check_any_value(expected, retrieved, failures, "must_include_source_any", "source")
+    _check_any_value(
+        expected,
+        retrieved,
+        failures,
+        "must_include_document_type_any",
+        "document_type",
+    )
+    _check_any_value(
+        expected,
+        retrieved,
+        failures,
+        "must_include_source_group_any",
+        "source_group",
+    )
+    _check_any_value(expected, retrieved, failures, "must_include_case_id_any", "case_id")
+    _check_any_value(
+        expected,
+        retrieved,
+        failures,
+        "must_include_case_section_any",
+        "case_section",
+    )
+    _check_any_value(
+        expected,
+        retrieved,
+        failures,
+        "must_include_organization_any",
+        "organization",
+    )
+    _check_forbidden_values(expected, retrieved, failures, "must_not_include_topic", "topic")
+    _check_forbidden_values(
+        expected,
+        retrieved,
+        failures,
+        "must_not_include_case_id",
+        "case_id",
+    )
+    _check_forbidden_values(
+        expected,
+        retrieved,
+        failures,
+        "must_not_include_organization",
+        "organization",
+    )
 
     return RetrievalEvalResult(
         case_id=str(case["id"]),
@@ -299,45 +344,52 @@ def _check_min_results(
         failures.append(
             RetrievalEvalFailure(
                 check="min_results",
-                detail=(f"Expected at least {min_results} result(s), got {len(retrieved)}."),
+                detail=f"Expected at least {min_results} result(s), got {len(retrieved)}.",
             )
         )
 
 
-def _check_top_topic(
+def _check_top_value(
     expected: dict[str, Any],
     retrieved: tuple[dict[str, object], ...],
     failures: list[RetrievalEvalFailure],
+    expected_key: str,
+    actual_key: str,
 ) -> None:
-    expected_topics = _string_list(expected.get("top_topic_any"))
-    if not expected_topics or not retrieved:
+    expected_values = _string_list(expected.get(expected_key))
+    if not expected_values or not retrieved:
         return
 
-    actual_topic = str(retrieved[0].get("topic") or "")
-    if actual_topic not in expected_topics:
+    actual_value = str(retrieved[0].get(actual_key) or "")
+    if actual_value not in expected_values:
         failures.append(
             RetrievalEvalFailure(
-                check="top_topic_any",
-                detail=(f"Expected top topic in {expected_topics}, got {actual_topic!r}."),
+                check=expected_key,
+                detail=f"Expected top {actual_key} in {expected_values}, got {actual_value!r}.",
             )
         )
 
 
-def _check_topic_any(
+def _check_any_value(
     expected: dict[str, Any],
     retrieved: tuple[dict[str, object], ...],
     failures: list[RetrievalEvalFailure],
+    expected_key: str,
+    actual_key: str,
 ) -> None:
-    expected_topics = _string_list(expected.get("must_include_topic_any"))
-    if not expected_topics:
+    expected_values = _string_list(expected.get(expected_key))
+    if not expected_values:
         return
 
-    actual_topics = {str(chunk.get("topic") or "") for chunk in retrieved}
-    if not actual_topics.intersection(expected_topics):
+    actual_values = {str(chunk.get(actual_key) or "") for chunk in retrieved}
+    if not actual_values.intersection(expected_values):
         failures.append(
             RetrievalEvalFailure(
-                check="must_include_topic_any",
-                detail=(f"Expected any topic from {expected_topics}, got {sorted(actual_topics)}."),
+                check=expected_key,
+                detail=(
+                    f"Expected any {actual_key} from {expected_values}, "
+                    f"got {sorted(actual_values)}."
+                ),
             )
         )
 
@@ -356,74 +408,35 @@ def _check_tag_any(
         failures.append(
             RetrievalEvalFailure(
                 check="must_include_tag_any",
-                detail=(f"Expected any tag from {expected_tags}, got {sorted(actual_tags)}."),
+                detail=f"Expected any tag from {expected_tags}, got {sorted(actual_tags)}.",
             )
         )
 
 
-def _check_section_any(
+def _check_forbidden_values(
     expected: dict[str, Any],
     retrieved: tuple[dict[str, object], ...],
     failures: list[RetrievalEvalFailure],
+    expected_key: str,
+    actual_key: str,
 ) -> None:
-    expected_sections = _string_list(expected.get("must_include_section_any"))
-    if not expected_sections:
+    forbidden_values = set(_string_list(expected.get(expected_key)))
+    if not forbidden_values:
         return
 
-    actual_sections = {str(chunk.get("section") or "") for chunk in retrieved}
-    if not actual_sections.intersection(expected_sections):
+    actual_values = {str(chunk.get(actual_key) or "") for chunk in retrieved}
+    found_values = sorted(actual_values.intersection(forbidden_values))
+    if found_values:
         failures.append(
             RetrievalEvalFailure(
-                check="must_include_section_any",
-                detail=(
-                    f"Expected any section from {expected_sections}, got {sorted(actual_sections)}."
-                ),
-            )
-        )
-
-
-def _check_source_any(
-    expected: dict[str, Any],
-    retrieved: tuple[dict[str, object], ...],
-    failures: list[RetrievalEvalFailure],
-) -> None:
-    expected_sources = _string_list(expected.get("must_include_source_any"))
-    if not expected_sources:
-        return
-
-    actual_sources = {str(chunk.get("source") or "") for chunk in retrieved}
-    if not actual_sources.intersection(expected_sources):
-        failures.append(
-            RetrievalEvalFailure(
-                check="must_include_source_any",
-                detail=(
-                    f"Expected any source from {expected_sources}, got {sorted(actual_sources)}."
-                ),
-            )
-        )
-
-
-def _check_forbidden_topics(
-    expected: dict[str, Any],
-    retrieved: tuple[dict[str, object], ...],
-    failures: list[RetrievalEvalFailure],
-) -> None:
-    forbidden_topics = set(_string_list(expected.get("must_not_include_topic")))
-    if not forbidden_topics:
-        return
-
-    actual_topics = {str(chunk.get("topic") or "") for chunk in retrieved}
-    found_topics = sorted(actual_topics.intersection(forbidden_topics))
-    if found_topics:
-        failures.append(
-            RetrievalEvalFailure(
-                check="must_not_include_topic",
-                detail=f"Found forbidden topic(s): {found_topics}.",
+                check=expected_key,
+                detail=f"Found forbidden {actual_key} value(s): {found_values}.",
             )
         )
 
 
 def _chunk_snapshot(chunk: KnowledgeChunk, *, rank: int) -> dict[str, object]:
+    extra = chunk.metadata.extra
     return {
         "rank": rank,
         "id": chunk.id,
@@ -432,8 +445,46 @@ def _chunk_snapshot(chunk: KnowledgeChunk, *, rank: int) -> dict[str, object]:
         "topic": chunk.metadata.topic,
         "visibility": chunk.metadata.visibility,
         "tags": list(chunk.metadata.tags),
+        "document_type": _structured_metadata_text(extra, "document_type"),
+        "source_group": _structured_metadata_text(extra, "source_group"),
+        "case_id": _structured_metadata_text(extra, "case_id"),
+        "case_section": _structured_metadata_text(extra, "case_section"),
+        "organization": _structured_metadata_text(extra, "organization"),
+        "parent_id": _structured_metadata_text(extra, "parent_id"),
+        "dataset_version": _structured_metadata_text(extra, "dataset_version"),
+        "source_file": _structured_metadata_text(extra, "source_file"),
         "content_preview": chunk.content[:240],
     }
+
+
+def _structured_metadata_text(extra: dict[str, Any], key: str) -> str:
+    direct = _optional_text(extra.get(key))
+    if direct:
+        return direct
+
+    for payload_key in ("payload", "rag_payload"):
+        payload = extra.get(payload_key)
+        if isinstance(payload, dict):
+            value = _optional_text(payload.get(key))
+            if value:
+                return value
+
+    if key == "organization":
+        for source_key in ("source", "source_details"):
+            source = extra.get(source_key)
+            if isinstance(source, dict):
+                value = _optional_text(source.get(key))
+                if value:
+                    return value
+
+    return ""
+
+
+def _optional_text(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
 
 
 def _all_retrieved_tags(retrieved: tuple[dict[str, object], ...]) -> set[str]:

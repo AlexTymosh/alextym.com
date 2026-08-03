@@ -9,25 +9,35 @@ def test_qdrant_store_preserves_structured_rag_payload() -> None:
     store = QdrantKnowledgeStore(
         url="",
         api_key="",
-        collection_name="alex_public_knowledge",
+        collection_name="public_knowledge",
         client=fake_qdrant,
     )
     chunk = KnowledgeChunk(
-        id="resume:hard-skills:rag",
-        content="- Alex uses Python.",
+        id="case:case-sample:analysis",
+        content="- The Owner analysed a process.",
         metadata=ChunkMetadata(
-            source="Hard Skills",
+            source="Sample Case",
             section="experience",
-            topic="hard-skills",
-            tags=("python", "automation"),
+            topic="sample-analysis",
+            tags=("analysis", "case-study"),
             extra={
-                "source_file": "resume.generated.chunks.json",
-                "parent_id": "resume:hard-skills",
-                "source": {"title": "Hard Skills", "section": "experience"},
-                "payload": {"topic": "hard-skills"},
-                "answer_facts": ["Alex uses Python."],
-                "retrieval_hints": ["Useful for skill questions."],
-                "vector_inputs": {"body_dense": "Hard Skills\n\nAlex uses Python."},
+                "source_file": "content/public/case-studies/sample.case.md",
+                "parent_id": "case:case-sample",
+                "document_type": "case-study",
+                "source_group": "case-studies",
+                "case_id": "case-sample",
+                "case_section": "analysis",
+                "organization": "Example Ltd",
+                "dataset_version": "a" * 64,
+                "source": {
+                    "title": "Sample Case",
+                    "section": "experience",
+                    "organization": "Example Ltd",
+                },
+                "payload": {"topic": "sample-analysis"},
+                "answer_facts": ["The Owner analysed a process."],
+                "retrieval_hints": ["Useful for process-analysis questions."],
+                "vector_inputs": {"body_dense": "Sample Case\n\nProcess analysis."},
                 "retrieval": {"modes": ["dense"]},
             },
         ),
@@ -36,22 +46,23 @@ def test_qdrant_store_preserves_structured_rag_payload() -> None:
     store.replace_source_chunks(
         chunks=[chunk],
         embeddings=[[0.1, 0.2]],
-        source_files=("resume.md", "resume.generated.chunks.json"),
+        source_files=("content/public/case-studies/sample.case.md",),
         vector_size=2,
     )
 
     payload = fake_qdrant.upserted_points[0].payload
 
-    assert payload["source"] == "Hard Skills"
-    assert payload["source_file"] == "resume.generated.chunks.json"
-    assert payload["parent_id"] == "resume:hard-skills"
-    assert payload["source_details"] == {
-        "title": "Hard Skills",
-        "section": "experience",
-    }
-    assert payload["rag_payload"] == {"topic": "hard-skills"}
-    assert payload["answer_facts"] == ["Alex uses Python."]
-    assert payload["vector_inputs"] == {"body_dense": "Hard Skills\n\nAlex uses Python."}
+    assert payload["source"] == "Sample Case"
+    assert payload["source_file"] == "content/public/case-studies/sample.case.md"
+    assert payload["parent_id"] == "case:case-sample"
+    assert payload["document_type"] == "case-study"
+    assert payload["source_group"] == "case-studies"
+    assert payload["case_id"] == "case-sample"
+    assert payload["case_section"] == "analysis"
+    assert payload["organization"] == "Example Ltd"
+    assert payload["dataset_version"] == "a" * 64
+    assert payload["source_details"]["organization"] == "Example Ltd"
+    assert payload["rag_payload"] == {"topic": "sample-analysis"}
 
 
 def test_qdrant_store_deletes_legacy_and_generated_sources_separately() -> None:
@@ -59,7 +70,7 @@ def test_qdrant_store_deletes_legacy_and_generated_sources_separately() -> None:
     store = QdrantKnowledgeStore(
         url="",
         api_key="",
-        collection_name="alex_public_knowledge",
+        collection_name="public_knowledge",
         client=fake_qdrant,
     )
 
@@ -80,17 +91,23 @@ def test_qdrant_store_maps_structured_payload_back_to_chunk() -> None:
                 id="point-1",
                 score=0.87,
                 payload={
-                    "chunk_id": "resume:hard-skills:rag",
-                    "content": "- Alex uses Python.",
-                    "source": "Hard Skills",
-                    "source_file": "resume.generated.chunks.json",
+                    "chunk_id": "case:case-sample:analysis",
+                    "content": "- The Owner analysed a process.",
+                    "source": "Sample Case",
+                    "source_file": "content/public/case-studies/sample.case.md",
                     "section": "experience",
-                    "topic": "hard-skills",
+                    "topic": "sample-analysis",
                     "visibility": "public",
                     "confidence": "self-reported",
                     "source_confidence": "medium",
-                    "tags": ["python", "automation"],
-                    "parent_id": "resume:hard-skills",
+                    "tags": ["analysis", "case-study"],
+                    "parent_id": "case:case-sample",
+                    "document_type": "case-study",
+                    "source_group": "case-studies",
+                    "case_id": "case-sample",
+                    "case_section": "analysis",
+                    "organization": "Example Ltd",
+                    "dataset_version": "a" * 64,
                     "vector_inputs": {"body_dense": "text"},
                 },
             )
@@ -99,17 +116,19 @@ def test_qdrant_store_maps_structured_payload_back_to_chunk() -> None:
     store = QdrantKnowledgeStore(
         url="",
         api_key="",
-        collection_name="alex_public_knowledge",
+        collection_name="public_knowledge",
         client=fake_qdrant,
     )
 
     chunks = store.search(embedding=[0.1, 0.2], limit=1, score_threshold=0.7)
 
     assert len(chunks) == 1
-    assert chunks[0].metadata.source == "Hard Skills"
-    assert chunks[0].metadata.extra["source_file"] == "resume.generated.chunks.json"
-    assert chunks[0].metadata.extra["parent_id"] == "resume:hard-skills"
-    assert chunks[0].metadata.extra["retrieval_score"] == 0.87
+    extra = chunks[0].metadata.extra
+    assert extra["source_group"] == "case-studies"
+    assert extra["case_id"] == "case-sample"
+    assert extra["case_section"] == "analysis"
+    assert extra["dataset_version"] == "a" * 64
+    assert extra["retrieval_score"] == 0.87
 
 
 class FakeQdrantClient:
@@ -137,6 +156,7 @@ class FakeQdrantClient:
         collection_name: str,
         field_name: str,
         field_schema: object,
+        wait: bool | None = None,
     ) -> None:
         self.operations.append("create_payload_index")
 
@@ -146,7 +166,13 @@ class FakeQdrantClient:
         condition = filter_conditions[0]
         self.delete_filters.append((condition.key, condition.match.value))
 
-    def upsert(self, *, collection_name: str, points: list[object]) -> None:
+    def upsert(
+        self,
+        *,
+        collection_name: str,
+        points: list[object],
+        wait: bool | None = None,
+    ) -> None:
         self.operations.append("upsert")
         self.upserted_points = points
 

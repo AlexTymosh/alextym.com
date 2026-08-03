@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 from app.rag.models import ChunkMetadata, KnowledgeChunk
 from scripts.run_retrieval_evals import _has_report
 from scripts.run_retrieval_evals import _rotate_after_to_before
@@ -45,7 +44,7 @@ def test_bundled_retrieval_eval_cases_are_schema_valid() -> None:
         suite="rag_retrieval_quality",
     )
 
-    assert len(cases) == 8
+    assert len(cases) == 20
     assert all(case["expected"] for case in cases)
 
 
@@ -73,6 +72,81 @@ def test_evaluate_case_passes_expected_topic_and_tag() -> None:
 
     assert result.passed is True
     assert result.retrieved[0]["topic"] == "hard-skills"
+
+
+def test_evaluate_case_checks_case_study_identity_and_attribution() -> None:
+    case = _case(
+        "weee",
+        expected={
+            "min_results": 1,
+            "top_case_id_any": ["case-weee-reporting-automation"],
+            "top_case_section_any": ["implementation"],
+            "must_include_document_type_any": ["case-study"],
+            "must_include_source_group_any": ["case-studies"],
+            "must_include_case_id_any": ["case-weee-reporting-automation"],
+            "must_include_case_section_any": ["implementation"],
+            "must_include_source_any": ["WEEE Reporting Automation"],
+            "must_include_organization_any": ["Hydrosphere UK Ltd"],
+        },
+    )
+
+    result = evaluate_case(
+        case,
+        chunks=[
+            _chunk(
+                "case:case-weee-reporting-automation:implementation",
+                topic="weee-reporting-automation-implementation",
+                source="WEEE Reporting Automation",
+                extra={
+                    "document_type": "case-study",
+                    "source_group": "case-studies",
+                    "case_id": "case-weee-reporting-automation",
+                    "case_section": "implementation",
+                    "organization": "Hydrosphere UK Ltd",
+                    "parent_id": "case:case-weee-reporting-automation",
+                    "dataset_version": "abc123",
+                },
+            )
+        ],
+    )
+
+    assert result.passed is True
+    assert result.retrieved[0]["case_id"] == "case-weee-reporting-automation"
+    assert result.retrieved[0]["organization"] == "Hydrosphere UK Ltd"
+
+
+def test_evaluate_case_reports_incorrect_case_study_identity() -> None:
+    case = _case(
+        "weee",
+        expected={
+            "top_case_id_any": ["case-weee-reporting-automation"],
+            "must_include_case_section_any": ["implementation"],
+            "must_include_organization_any": ["Hydrosphere UK Ltd"],
+        },
+    )
+
+    result = evaluate_case(
+        case,
+        chunks=[
+            _chunk(
+                "case:case-payment-reconciliation-back-office:implementation",
+                topic="payment-reconciliation-back-office-implementation",
+                source="Payment Reconciliation and Back-Office Automation",
+                extra={
+                    "document_type": "case-study",
+                    "source_group": "case-studies",
+                    "case_id": "case-payment-reconciliation-back-office",
+                    "case_section": "implementation",
+                    "organization": "Dobra Praca",
+                },
+            )
+        ],
+    )
+
+    assert {failure.check for failure in result.failures} == {
+        "top_case_id_any",
+        "must_include_organization_any",
+    }
 
 
 def test_evaluate_case_reports_missing_topic_and_tag() -> None:
@@ -116,6 +190,7 @@ def test_results_to_dict_includes_metadata_and_retrieved_chunks() -> None:
     assert payload["metadata"]["generated_at_utc"]
     assert payload["metadata"]["suite"] == "rag_retrieval_quality"
     assert payload["results"][0]["retrieved"][0]["topic"] == "hard-skills"
+    assert "case_id" in payload["results"][0]["retrieved"][0]
 
 
 def test_run_retrieval_eval_cycle_creates_baseline_without_comparison(
@@ -290,7 +365,7 @@ def _case(
         "id": case_id,
         "suite": suite,
         "category": "skills",
-        "query": "What are Alex's hard skills?",
+        "query": "What are the Owner's hard skills?",
         "expected": expected
         or {
             "min_results": 1,
@@ -305,14 +380,17 @@ def _chunk(
     topic: str,
     tags: tuple[str, ...] = (),
     section: str = "experience",
+    source: str = "Hard Skills",
+    extra: dict[str, object] | None = None,
 ) -> KnowledgeChunk:
     return KnowledgeChunk(
         id=chunk_id,
-        content="Alex uses Python.",
+        content="The Owner uses Python.",
         metadata=ChunkMetadata(
-            source="Hard Skills",
+            source=source,
             section=section,
             topic=topic,
             tags=tags,
+            extra=dict(extra or {}),
         ),
     )

@@ -1,12 +1,12 @@
 {
-  "version": 1,
-  "description": "Focused live eval suite for generated structured RAG chunks. Run before and after generated JSON ingestion to compare quality.",
+  "version": 2,
+  "description": "Live answer-level eval suite for generated public knowledge. It covers existing resume questions and case-study grounding, source attribution, limitations, and responsible uncertainty.",
   "cases": [
     {
       "id": "generated_rag_hard_skills",
       "suite": "rag_generated_quality",
       "category": "skills",
-      "message": "What are Alex's hard skills?",
+      "message": "What are the site owner's hard skills?",
       "expected": {
         "not_enough_data": false,
         "sources": "non_empty",
@@ -29,7 +29,7 @@
       "id": "generated_rag_soft_skills",
       "suite": "rag_generated_quality",
       "category": "skills",
-      "message": "What are Alex's soft skills?",
+      "message": "What are the site owner's soft skills?",
       "expected": {
         "not_enough_data": false,
         "sources": "non_empty",
@@ -51,7 +51,7 @@
       "id": "generated_rag_share_code_handoff",
       "suite": "rag_generated_quality",
       "category": "right_to_work",
-      "message": "Can Alex provide a share code?",
+      "message": "Can the site owner provide a share code?",
       "expected": {
         "not_enough_data": false,
         "handoff_suggested": true,
@@ -71,7 +71,7 @@
       "id": "generated_rag_right_to_work",
       "suite": "rag_generated_quality",
       "category": "right_to_work",
-      "message": "Does Alex have the right to work in the UK?",
+      "message": "Does the site owner have the right to work in the UK?",
       "expected": {
         "handoff_suggested": true,
         "sources": "any",
@@ -92,7 +92,7 @@
       "id": "generated_rag_portfolio_project",
       "suite": "rag_generated_quality",
       "category": "projects",
-      "message": "Tell me about Alex's RAG portfolio project.",
+      "message": "Tell me about the site owner's RAG portfolio project.",
       "expected": {
         "not_enough_data": false,
         "sources": "non_empty",
@@ -115,7 +115,7 @@
       "id": "generated_rag_ai_assisted_workflow",
       "suite": "rag_generated_quality",
       "category": "working_style",
-      "message": "How does Alex use AI-assisted development?",
+      "message": "How does the site owner use AI-assisted development?",
       "expected": {
         "not_enough_data": false,
         "sources": "non_empty",
@@ -137,21 +137,396 @@
       "id": "generated_rag_start_date_handoff",
       "suite": "rag_generated_quality",
       "category": "availability",
-      "message": "When can Alex start a new job?",
+      "message": "When can the site owner start a new job?",
       "expected": {
         "handoff_suggested": true,
         "sources": "any",
         "must_include_any": [
           "calendar",
           "availability",
-          "connect",
-          "Alex"
+          "connect"
         ],
         "must_not_include": [
           "regular AI chat",
           "definitive start date"
         ],
         "max_words": 130
+      }
+    },
+    {
+      "id": "case_study_weee_automation",
+      "suite": "rag_generated_quality",
+      "category": "automation",
+      "coverage_key": "weee_automation",
+      "case_id": "case-weee-reporting-automation",
+      "message": "How did the site owner automate WEEE reporting?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "WEEE Reporting Automation"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "ERP",
+          "Excel macro",
+          "internal API",
+          "historical sales",
+          "one button"
+        ],
+        "must_not_include": [
+          "six-hour software defect",
+          "credit class",
+          "video-recorded assessment"
+        ],
+        "max_words": 180
+      }
+    },
+    {
+      "id": "case_study_weee_poor_roi",
+      "suite": "rag_generated_quality",
+      "category": "decision_quality",
+      "coverage_key": "weee_poor_roi",
+      "case_id": "case-weee-reporting-automation",
+      "message": "Give an example where the site owner rejected additional automation because the ROI was too low.",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "WEEE Reporting Automation"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "poor ROI",
+          "savings were too small",
+          "rejected",
+          "did not provide sufficient value"
+        ],
+        "must_not_include": [
+          "implemented a direct government integration",
+          "fully automated the government portal"
+        ],
+        "max_words": 170
+      }
+    },
+    {
+      "id": "case_study_procurement_controls",
+      "suite": "rag_generated_quality",
+      "category": "process_improvement",
+      "coverage_key": "procurement_controls",
+      "case_id": "case-procurement-order-control",
+      "message": "How did the site owner reduce procurement and order-control errors?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "ERP-Integrated Procurement and Order Control"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "Odoo",
+          "Excel/VBA",
+          "controlled lists",
+          "validation",
+          "workflow controls",
+          "logging"
+        ],
+        "must_not_include": [
+          "WEEE report",
+          "six-hour software defect",
+          "credit class"
+        ],
+        "max_words": 190
+      }
+    },
+    {
+      "id": "case_study_procurement_bpmn",
+      "suite": "rag_generated_quality",
+      "category": "business_analysis",
+      "coverage_key": "procurement_bpmn",
+      "case_id": "case-procurement-order-control",
+      "message": "Give an example of the site owner using BPMN for process analysis.",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "ERP-Integrated Procurement and Order Control"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "BPMN",
+          "process owners",
+          "handoffs",
+          "decision points",
+          "missing controls"
+        ],
+        "must_not_include": [
+          "WEEE report",
+          "credit class",
+          "video-recorded assessment"
+        ],
+        "max_words": 170
+      }
+    },
+    {
+      "id": "case_study_iot_fault_separation",
+      "suite": "rag_generated_quality",
+      "category": "technical_analysis",
+      "coverage_key": "iot_fault_separation",
+      "case_id": "case-iot-buoy-fault-diagnosis",
+      "message": "How did the site owner use telemetry analysis to distinguish a software defect from a probable hardware issue?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "IoT Buoy Fault Diagnosis Through Data Analysis"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "probable",
+          "supporting evidence",
+          "interference hypothesis"
+        ],
+        "must_not_include": [
+          "confirmed electromagnetic interference",
+          "proved hardware failure",
+          "single fault"
+        ],
+        "max_words": 200,
+        "must_include_all": [
+          "six-hour",
+          "software"
+        ]
+      }
+    },
+    {
+      "id": "case_study_credit_risk_limitations",
+      "suite": "rag_generated_quality",
+      "category": "limitations",
+      "coverage_key": "credit_risk_limitations",
+      "case_id": "case-corporate-borrower-credit-risk-process-analysis",
+      "message": "What limitations applied to the site owner's corporate credit-risk analysis?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "Corporate Borrower Credit Risk and Process Analysis"
+        ],
+        "must_include_source_section_any": [
+          "education"
+        ],
+        "must_include_any": [
+          "does not prove",
+          "not implemented in production",
+          "No post-implementation",
+          "anonymised",
+          "written permission"
+        ],
+        "must_not_include": [
+          "proved the bank implemented",
+          "demonstrated a reduction in defaults",
+          "production deployment was confirmed"
+        ],
+        "max_words": 190
+      }
+    },
+    {
+      "id": "case_study_payment_reconciliation",
+      "suite": "rag_generated_quality",
+      "category": "automation",
+      "coverage_key": "payment_reconciliation",
+      "case_id": "case-payment-reconciliation-back-office",
+      "message": "How did the site owner automate payment reconciliation?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "Payment Reconciliation and Back-Office Automation"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "payment descriptions",
+          "customer records",
+          "accounting documents",
+          "8–10 hours",
+          "human review"
+        ],
+        "must_not_include": [
+          "six-hour software defect",
+          "credit class",
+          "formal certification"
+        ],
+        "max_words": 170
+      }
+    },
+    {
+      "id": "case_study_skills_verification",
+      "suite": "rag_generated_quality",
+      "category": "risk_management",
+      "coverage_key": "skills_verification",
+      "case_id": "case-cross-border-skills-verification",
+      "message": "How did the site owner verify practical skills before international placement?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "Cross-Border Practical Skills Verification"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "practical assessment",
+          "vocational",
+          "video-recorded",
+          "foreign employer"
+        ],
+        "must_not_include": [
+          "issued formal certifications",
+          "recruitment company made the final hiring decision"
+        ],
+        "max_words": 190
+      }
+    },
+    {
+      "id": "case_study_international_employment_service",
+      "suite": "rag_generated_quality",
+      "category": "service_design",
+      "coverage_key": "international_employment_service",
+      "case_id": "case-end-to-end-international-employment-service",
+      "message": "How did the site owner design an end-to-end international employment service?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "End-to-End International Employment Service"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "customer roadmap",
+          "stage-specific instructions",
+          "question map",
+          "self-service",
+          "contingency plan",
+          "SIM card"
+        ],
+        "must_not_include": [
+          "six-hour software defect",
+          "credit class",
+          "21,000 pricing points"
+        ],
+        "max_words": 200
+      }
+    },
+    {
+      "id": "case_study_kaizen_service_transformation",
+      "suite": "rag_generated_quality",
+      "category": "business_transformation",
+      "coverage_key": "kaizen_service_transformation",
+      "case_id": "case-kaizen-service-delivery-transformation",
+      "message": "How did the site owner use Kaizen to transform service delivery?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "Kaizen-Driven Service Delivery Transformation"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "Kaizen",
+          "Lean",
+          "Gemba",
+          "self-service",
+          "workflow segmentation",
+          "continuous improvement",
+          "200"
+        ],
+        "must_not_include": [
+          "WEEE report",
+          "six-hour software defect",
+          "formal certification"
+        ],
+        "max_words": 220
+      }
+    },
+    {
+      "id": "case_study_recruitment_document_automation",
+      "suite": "rag_generated_quality",
+      "category": "workflow_automation",
+      "coverage_key": "recruitment_document_automation",
+      "case_id": "case-recruitment-document-automation",
+      "message": "How did the site owner automate recruitment workflows and document generation?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "Recruitment Workflow and Document Automation"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "online portal",
+          "visa-centre forms",
+          "insurance documents",
+          "VBA",
+          "scorecards",
+          "human review"
+        ],
+        "must_not_include": [
+          "made final recruitment decisions automatically",
+          "removed human review",
+          "21,000 pricing points"
+        ],
+        "max_words": 190
+      }
+    },
+    {
+      "id": "case_study_pricing_data_erp_governance",
+      "suite": "rag_generated_quality",
+      "category": "data_governance",
+      "coverage_key": "pricing_data_erp_governance",
+      "case_id": "case-pricing-data-erp-governance",
+      "message": "How did the site owner improve pricing-data governance and ERP product structures?",
+      "expected": {
+        "not_enough_data": false,
+        "sources": "non_empty",
+        "must_include_source_title_any": [
+          "Pricing Data and ERP Governance"
+        ],
+        "must_include_source_section_any": [
+          "experience"
+        ],
+        "must_include_any": [
+          "Odoo",
+          "21,000",
+          "supplier price",
+          "controlled imports",
+          "product attributes",
+          "monitoring"
+        ],
+        "must_not_include": [
+          "implemented the solution in Python",
+          "removed all price-editing permissions",
+          "eliminated supplier changes"
+        ],
+        "max_words": 220
       }
     }
   ]

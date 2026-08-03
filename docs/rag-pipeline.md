@@ -10,31 +10,37 @@ The assistant must not invent facts. If retrieved context is insufficient, it sh
 
 ## Current public knowledge sources
 
-The current structured RAG flow is built around the canonical public resume source:
+The structured RAG flow uses two reviewed canonical source types:
 
 ```text
 content/public/resume.md
+content/public/case-studies/**/*.case.md
 ```
 
-This file contains public resume content and structured RAG sections.
-The backend resolves this path from `content.publicResumePath` in
-`config/project.config.json`, so executable RAG code should not carry a second
-hardcoded public resume path.
+The resume contains public profile content and structured RAG sections. The backend resolves its path from `content.publicResumePath` in `config/project.config.json`, so executable RAG code should not carry a second hardcoded public resume path.
 
-Generated structured RAG output path:
+Case studies remain separate canonical Markdown documents. Only files matching `**/*.case.md` are parsed; documentation and templates in the case-study directory are excluded.
+
+Generated source-specific review artifacts:
 
 ```text
 .tmp/rag/resume.generated.chunks.json
+.tmp/rag/case-studies.generated.chunks.json
 ```
 
-This generated file is intentionally ignored by Git:
+Unified generated artifact used by normal ingestion:
 
 ```text
-.tmp/rag/resume.generated.chunks.json
+.tmp/rag/public-knowledge.generated.chunks.json
 ```
 
-The old `backend/knowledge/` directory has been removed. Do not add new
-backend-local public knowledge sources.
+Human-readable previews are written under:
+
+```text
+.tmp/human-readable-preview/
+```
+
+Generated artifacts are intentionally ignored by Git. The old `backend/knowledge/` directory has been removed. Do not add new backend-local public knowledge sources.
 
 Ignored private / unreviewed paths:
 
@@ -71,19 +77,19 @@ If a fact is useful but self-reported, keep that status clear in metadata or wor
 
 ```mermaid
 flowchart TD
-    A["content/public/resume.md"] --> B["Extract ## RAG and ### RAG sections"]
-    B --> C["Parse Answer Facts"]
-    B --> D["Parse Retrieval Hints"]
-    B --> E["Parse Primary / Secondary Tags"]
-    C --> F["Build generated chunk"]
-    D --> F
-    E --> F
-    F --> G["Build vector_inputs"]
-    G --> H["Write .tmp/rag/resume.generated.chunks.json"]
-    G --> I["Write .tmp/human-readable-preview/resume-rag-preview.md"]
+    A["content/public/resume.md"] --> B["Resume RAG parser"]
+    C["content/public/case-studies/**/*.case.md"] --> D["Strict case-study contract"]
+    D --> E["H2 semantic chunks"]
+    B --> F["Resume chunks"]
+    E --> G["Case-study chunks"]
+    F --> H["Unified public-knowledge composer"]
+    G --> H
+    H --> I["Validate IDs, source groups, metadata, vector inputs"]
+    I --> J["Write public-knowledge.generated.chunks.json"]
+    I --> K["Write public-knowledge-rag-preview.md"]
 ```
 
-Generated RAG sections support:
+Resume RAG sections support:
 
 ```text
 Answer Facts
@@ -91,6 +97,8 @@ Retrieval Hints
 Primary Tags
 Secondary Tags
 ```
+
+Each validated case study creates one answer chunk per non-`Retrieval` H2 section. The final `Retrieval` section remains metadata and is not answer content.
 
 Generated chunks include:
 
@@ -126,21 +134,26 @@ It is not a true Qdrant sparse-vector index.
 
 ---
 
-## Ingestion commands
+## Extraction and ingestion commands
 
-Extract generated RAG chunks:
+Build the unified generated artifact without external calls:
+
+```bash
+task rag:extract-public-knowledge
+```
+
+Source-specific extraction remains available for focused debugging:
 
 ```bash
 task rag:extract-resume
+task rag:extract-case-studies
 ```
 
-Index generated RAG chunks into Qdrant:
+Safely generate and ingest the unified dataset into Qdrant:
 
 ```bash
 task rag:ingest:generated
 ```
-
-The generated ingestion task runs extraction first, then ingests the generated chunks.
 
 Compatibility alias:
 
@@ -148,8 +161,9 @@ Compatibility alias:
 task rag:ingest
 ```
 
-This currently runs the generated ingestion path. Do not reintroduce
-`backend/knowledge/` as a source of truth.
+Normal ingestion loads `public-knowledge.generated.chunks.json`, derives a SHA-256 `dataset_version` from the exact artifact bytes, generates all embeddings, upserts the complete new version, waits for completion, and only then deletes stale or legacy points. Do not reintroduce `backend/knowledge/` as a source of truth.
+
+`task rag:ingest:generated` uses configured OpenAI and Qdrant services and may incur API cost. It is not part of free CI checks.
 
 ---
 
@@ -199,7 +213,7 @@ Qdrant distance:
 Cosine
 ```
 
-Payload indexes created by the store:
+Base payload indexes:
 
 ```text
 source
@@ -209,6 +223,18 @@ topic
 visibility
 tags
 ```
+
+Versioned public-knowledge indexes:
+
+```text
+document_type
+source_group
+case_id
+case_section
+dataset_version
+```
+
+Case-study payloads also expose `organization` and `parent_id` for attribution. They remain unindexed until runtime retrieval filters need them.
 
 ---
 
@@ -280,7 +306,13 @@ topic
 tags
 section
 visibility
+document_type
+source_group
+case_id
+case_section
 ```
+
+The case-study selectors are optional exact-match filters. Existing topic, tag, section, and visibility routing remains unchanged.
 
 Contact, out-of-scope, and general profile routes do not apply strict payload filtering by default.
 
@@ -292,6 +324,8 @@ The chat service resolves whether the question is about the site owner before re
 
 Supported cases:
 
+- configured public owner references and narrowly scoped reusable phrases such as
+  `the Owner`, `site owner`, and `website owner`;
 - explicit owner/profile terms;
 - second-person profile questions such as “your FastAPI experience”;
 - short follow-ups after owner-related context;
@@ -443,6 +477,7 @@ Current eval-related tasks:
 
 ```bash
 task rag:check
+task rag:eval:cases:check
 task rag:eval:contract
 task rag:eval:free
 task rag:eval:paid
@@ -454,14 +489,35 @@ task rag:eval:compare
 Eval modes:
 
 ```text
-contract / isolated      -> deterministic eval without live OpenAI/Qdrant
-rag:check                -> CI-friendly extraction + stateless contract eval
+rag:check                -> unified extraction + static eval contract + isolated chat contract
+rag:eval:cases:check     -> free case-study eval definitions vs canonical source metadata
+contract / isolated      -> deterministic behaviour checks without live OpenAI/Qdrant
 rag:eval:free            -> local before/after contract eval cycle
-rag_quality / live       -> live RAG eval cycle with real retrieval
-rag_generated_quality    -> generated RAG quality evals
-rag_retrieval_quality    -> retrieval quality evals
+rag_quality / live       -> general live RAG answer cycle
+rag_generated_quality    -> live resume and case-study answer quality
+rag_retrieval_quality    -> live retrieval ranking and metadata attribution
 compare                  -> before/after Markdown comparison
 ```
+
+Retrieval and answer generation are evaluated separately. Retrieval cases inspect topic/tag metadata and, for case studies, the top case ID, semantic case section, document type, source group, source title, and organisation. Answer cases check grounded content, source attribution, limitations, and responsible uncertainty.
+
+The focused case-study coverage includes every canonical case ID:
+
+- WEEE automation and rejected low-ROI scope;
+- procurement controls and BPMN analysis;
+- IoT software-versus-probable-hardware diagnosis;
+- corporate credit-risk limitations;
+- payment reconciliation;
+- practical skills verification;
+- end-to-end international employment service design;
+- Kaizen-driven service transformation;
+- recruitment workflow and document automation;
+- pricing-data and ERP governance.
+
+The static eval-contract test requires every canonical case ID to appear in both
+the live retrieval suite and the live answer suite.
+
+Free checks validate definitions and generated artifacts only. Live retrieval and answer tasks require configured OpenAI/Qdrant access, write before/after reports under `.tmp/evals/`, and are intentionally not part of `task ci`.
 
 Evals should be used after changes to:
 
@@ -480,11 +536,12 @@ Evals should be used after changes to:
 A RAG change is ready when:
 
 - public source content is reviewed;
-- generated chunks build successfully;
-- ingestion succeeds;
-- Qdrant retrieval returns relevant chunks;
+- the unified generated artifact builds successfully;
+- source and eval contracts pass without external calls;
+- ingestion succeeds in the intended Qdrant collection;
+- Qdrant retrieval returns the expected case and semantic section;
 - weak context triggers insufficient-data behaviour;
-- response includes source metadata;
+- answers retain source attribution, limitations, and uncertainty;
 - prompt-injection attempts are safely handled;
 - private data is not indexed;
-- eval reports show no obvious regression.
+- live eval reports show no obvious regression.

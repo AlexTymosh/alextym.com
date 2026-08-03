@@ -7,6 +7,8 @@ ALEX_TERMS = tuple(
     dict.fromkeys(
         [
             OWNER_REFERENCE.casefold(),
+            "site owner",
+            "website owner",
             *(alias.casefold() for alias in _PROJECT_CONFIG.owner.public_aliases),
         ]
     )

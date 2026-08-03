@@ -61,6 +61,7 @@ def evaluate_response(case: dict[str, Any], response: dict[str, Any]) -> EvalRes
     _check_exact(case, response, expected, "handoff_reason", failures)
     _check_exact(case, response, expected, "confidence", failures)
     _check_sources(case, response, expected, failures)
+    _check_source_metadata(case, response, expected, failures)
 
     answer_equals = expected.get("answer_equals")
     if isinstance(answer_equals, str) and answer != answer_equals:
@@ -312,6 +313,70 @@ def _check_sources(
         failures.append(_failure(case, "sources", "Expected no sources."))
     elif source_expectation == "non_empty" and not sources:
         failures.append(_failure(case, "sources", "Expected at least one source."))
+
+
+def _check_source_metadata(
+    case: dict[str, Any],
+    response: dict[str, Any],
+    expected: dict[str, Any],
+    failures: list[EvalFailure],
+) -> None:
+    _check_source_field_any(
+        case,
+        response,
+        expected,
+        expected_key="must_include_source_title_any",
+        source_key="title",
+        failures=failures,
+    )
+    _check_source_field_any(
+        case,
+        response,
+        expected,
+        expected_key="must_include_source_section_any",
+        source_key="section",
+        failures=failures,
+    )
+
+
+def _check_source_field_any(
+    case: dict[str, Any],
+    response: dict[str, Any],
+    expected: dict[str, Any],
+    *,
+    expected_key: str,
+    source_key: str,
+    failures: list[EvalFailure],
+) -> None:
+    expected_values = _string_list(expected.get(expected_key))
+    if not expected_values:
+        return
+
+    actual_values = _source_text_values(response.get("sources"), source_key)
+    expected_normalized = {value.casefold() for value in expected_values}
+    actual_normalized = {value.casefold() for value in actual_values}
+    if not actual_normalized.intersection(expected_normalized):
+        failures.append(
+            _failure(
+                case,
+                expected_key,
+                f"Expected any of {expected_values}, got {sorted(actual_values)}.",
+            )
+        )
+
+
+def _source_text_values(raw_sources: object, field: str) -> set[str]:
+    if not isinstance(raw_sources, list):
+        return set()
+
+    values: set[str] = set()
+    for source in raw_sources:
+        if not isinstance(source, dict):
+            continue
+        value = source.get(field)
+        if isinstance(value, str) and value.strip():
+            values.add(value.strip())
+    return values
 
 
 def _report_metadata(metadata: dict[str, object] | None) -> dict[str, object]:

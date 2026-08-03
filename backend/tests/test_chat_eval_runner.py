@@ -40,6 +40,73 @@ def test_evaluate_response_passes_matching_expectations() -> None:
     assert result.failures == ()
 
 
+def test_evaluate_response_checks_source_attribution() -> None:
+    case = {
+        "id": "case-source",
+        "suite": "rag_generated_quality",
+        "category": "automation",
+        "message": "How was WEEE reporting automated?",
+        "expected": {
+            "sources": "non_empty",
+            "must_include_source_title_any": ["WEEE Reporting Automation"],
+            "must_include_source_section_any": ["experience"],
+        },
+    }
+    response = {
+        "answer": "The workflow used ERP data and an Excel macro.",
+        "sources": [
+            {
+                "title": "WEEE Reporting Automation",
+                "section": "experience",
+                "confidence": "medium",
+            }
+        ],
+        "confidence": "medium",
+        "not_enough_data": False,
+        "handoff_suggested": False,
+        "handoff_reason": None,
+    }
+
+    result = evaluate_response(case, response)
+
+    assert result.passed is True
+
+
+def test_evaluate_response_reports_incorrect_source_attribution() -> None:
+    case = {
+        "id": "case-source",
+        "suite": "rag_generated_quality",
+        "category": "automation",
+        "message": "How was WEEE reporting automated?",
+        "expected": {
+            "sources": "non_empty",
+            "must_include_source_title_any": ["WEEE Reporting Automation"],
+            "must_include_source_section_any": ["experience"],
+        },
+    }
+    response = {
+        "answer": "An unrelated answer.",
+        "sources": [
+            {
+                "title": "Corporate Borrower Credit Risk and Process Analysis",
+                "section": "education",
+                "confidence": "medium",
+            }
+        ],
+        "confidence": "medium",
+        "not_enough_data": False,
+        "handoff_suggested": False,
+        "handoff_reason": None,
+    }
+
+    result = evaluate_response(case, response)
+
+    assert {failure.check for failure in result.failures} == {
+        "must_include_source_title_any",
+        "must_include_source_section_any",
+    }
+
+
 def test_evaluate_response_reports_failed_expectations() -> None:
     case = {
         "id": "case-2",
