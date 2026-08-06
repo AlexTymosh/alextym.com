@@ -774,14 +774,18 @@ title: Hard Skills
 - Alex works with process automation, workflow optimisation, reporting
   automation, data pipelines, Excel-to-database migration, and operational
   bottleneck analysis.
+- Alex works with data analysis, KPI reporting, dashboard development,
+  data validation, trend analysis, and large-volume data processing.
+- Alex's data analysis and business intelligence tools include Excel, SQL,
+  Python, Pandas, Power BI, DAX, VBA macros, and PostgreSQL.
 - Alex works with LLM workflows, RAG, structured outputs and validation,
   human-in-the-loop review, and token/cost awareness.
-- Alex's tools and stack include Python, SQL, VBA macros, FastAPI, REST APIs,
-  API integration, PostgreSQL, Redis, Pandas, Git, GitHub, Codex, Prometheus,
-  and Grafana.
+- Alex's software development and integration stack includes Python,
+  FastAPI, REST APIs, API integration, Redis, Git, GitHub, and Codex.
 - Alex has experience with Odoo, Bitrix24, ERP/CRM integration, and internal
   business tools.
-- Alex uses Pytest, CI/CD, Docker Compose, Prometheus, Grafana, and GDPR-aware automation.
+- Alex uses Pytest, CI/CD, Docker Compose, Prometheus, and Grafana, and
+  applies GDPR-aware practices to automation and data handling.
 
 #### Retrieval Hints
 
