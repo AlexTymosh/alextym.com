@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Protocol
 
 from app.core.config import Settings
@@ -120,6 +121,29 @@ LINK_QUERY_TERMS = {
     "repository",
     "website",
 }
+_CURRENT_PUBLIC_SOURCE_GROUPS = ("resume", "case-studies")
+_CASE_STUDY_SOURCE_GROUP = "case-studies"
+_CASE_EXAMPLE_MIN_CANDIDATES = 12
+_CASE_EXAMPLE_CANDIDATE_MULTIPLIER = 3
+_SINGLE_CASE_EXAMPLE_PATTERNS = (
+    "give me an example",
+    "give me example",
+    "give an example",
+    "show me an example",
+    "show me example",
+    "provide an example",
+    "tell me an example",
+    "one example",
+    "single example",
+    "specific example",
+    "concrete example",
+    "an example of",
+    "give me any case",
+    "show me any case",
+    "one case study",
+    "a case study",
+    "tell me about one case",
+)
 
 
 class QdrantRetriever:
@@ -152,8 +176,18 @@ class QdrantRetriever:
 
         effective_limit = limit or self._default_limit
         route = route_query(normalized_query)
+
+        if _is_single_case_example_request(normalized_query):
+            case_chunks = self._retrieve_single_case_example(
+                query=normalized_query,
+                route=route,
+                limit=effective_limit,
+            )
+            if case_chunks:
+                return case_chunks
+
         routed_query = route.retrieval_text(normalized_query)
-        payload_filter = route.payload_filter()
+        payload_filter = _with_current_public_source_groups(route.payload_filter())
         query_embedding = self._embedding_client.embed_text(_expand_query(routed_query))
         chunks = _search_store(
             store=self._store,
@@ -164,6 +198,47 @@ class QdrantRetriever:
         )
         filtered_chunks = _filter_sections_for_query(normalized_query, chunks)
         return _rerank_chunks(filtered_chunks, query=normalized_query, route=route)
+
+    def _retrieve_single_case_example(
+        self,
+        *,
+        query: str,
+        route: QueryRoute,
+        limit: int,
+    ) -> list[KnowledgeChunk]:
+        query_embedding = self._embedding_client.embed_text(_expand_query(query))
+        candidate_limit = max(
+            _CASE_EXAMPLE_MIN_CANDIDATES,
+            limit * _CASE_EXAMPLE_CANDIDATE_MULTIPLIER,
+        )
+        candidate_chunks = _search_store(
+            store=self._store,
+            embedding=query_embedding,
+            limit=candidate_limit,
+            score_threshold=self._score_threshold,
+            payload_filter=_case_study_filter(),
+        )
+        ranked_candidates = _rerank_chunks(
+            _filter_sections_for_query(query, candidate_chunks),
+            query=query,
+            route=route,
+        )
+        selected_case_id = _first_case_id(ranked_candidates)
+        if selected_case_id is None:
+            return []
+
+        case_chunks = _search_store(
+            store=self._store,
+            embedding=query_embedding,
+            limit=limit,
+            score_threshold=self._score_threshold,
+            payload_filter=_case_study_filter(case_id=selected_case_id),
+        )
+        return _rerank_chunks(
+            _filter_sections_for_query(query, case_chunks),
+            query=query,
+            route=route,
+        )
 
 
 class KnowledgeSearchStore(Protocol):
@@ -191,6 +266,37 @@ def _search_store(
         score_threshold=score_threshold,
         payload_filter=payload_filter,
     )
+
+
+def _with_current_public_source_groups(
+    payload_filter: RetrievalFilter | None,
+) -> RetrievalFilter:
+    return replace(
+        payload_filter or RetrievalFilter(),
+        source_group_any=_CURRENT_PUBLIC_SOURCE_GROUPS,
+    )
+
+
+def _case_study_filter(*, case_id: str | None = None) -> RetrievalFilter:
+    return RetrievalFilter(
+        source_group_any=(_CASE_STUDY_SOURCE_GROUP,),
+        case_id_any=(case_id,) if case_id else (),
+    )
+
+
+def _is_single_case_example_request(query: str) -> bool:
+    normalized_query = " ".join(query.casefold().replace("/", " ").replace("-", " ").split())
+    if "examples" in normalized_query or "case studies" in normalized_query:
+        return False
+    return any(pattern in normalized_query for pattern in _SINGLE_CASE_EXAMPLE_PATTERNS)
+
+
+def _first_case_id(chunks: list[KnowledgeChunk]) -> str | None:
+    for chunk in chunks:
+        case_id = chunk.metadata.extra.get("case_id")
+        if isinstance(case_id, str) and case_id.strip():
+            return case_id.strip()
+    return None
 
 
 def _expand_query(query: str) -> str:

@@ -370,7 +370,24 @@ function DelayedMessageSources({
 }: Readonly<{
   message: Message;
 }>) {
-  const sourceCount = message.sources?.length ?? 0;
+  const uniqueSources = useMemo(() => {
+    const sourcesByKey = new Map<
+      string,
+      NonNullable<Message["sources"]>[number]
+    >();
+
+    for (const source of message.sources ?? []) {
+      const sourceKey = `${source.title}\u0000${source.section ?? ""}`;
+
+      if (!sourcesByKey.has(sourceKey)) {
+        sourcesByKey.set(sourceKey, source);
+      }
+    }
+
+    return Array.from(sourcesByKey.values());
+  }, [message.sources]);
+
+  const sourceCount = uniqueSources.length;
   const [visibleCount, setVisibleCount] = useState(0);
 
   useEffect(() => {
@@ -389,7 +406,7 @@ function DelayedMessageSources({
     };
   }, [sourceCount]);
 
-  const visibleSources = message.sources?.slice(0, visibleCount) ?? [];
+  const visibleSources = uniqueSources.slice(0, visibleCount);
 
   if (!visibleSources.length) {
     return null;
