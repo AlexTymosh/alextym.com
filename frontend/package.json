@@ -22,19 +22,19 @@
     "sync:project-config": "node scripts/sync-project-config.mjs"
   },
   "dependencies": {
-    "next": "^16.2.11",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
-    "@types/node": "^26.1.1",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10.5.4",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.2.10",
-    "postcss": "^8.5.22",
+    "eslint-config-next": "^16.3.0",
+    "postcss": "^8.5.26",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0"
   },
