@@ -126,8 +126,6 @@ def format_conversation_context(history: list[ChatHistoryMessage]) -> str:
     lines = []
     for item in history:
         content = " ".join(item.content.split())
-        if len(content) > 500:
-            content = content[:497].rstrip() + "..."
         lines.append(f"{item.role}: {content}")
     return "\n".join(lines)
 
