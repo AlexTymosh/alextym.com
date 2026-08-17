@@ -204,7 +204,35 @@ history item count: max 10
 history total content: max 6000 characters
 ```
 
+The frontend builds `history` from the latest visible `user` and `assistant` messages. A frontend-scripted assistant response and a backend/model-generated assistant response both use `role: "assistant"` and follow the same backend processing path. Owner replies from a human handoff use the separate `alex` frontend role and are not included in AI chat history.
+
+The current user message is sent separately in `message` and is not duplicated in `history`. The frontend compacts whitespace, caps each entry at 2000 characters, and retains the newest entries that fit the count and total limits above. After request validation, the backend does not apply another per-message truncation.
+
 `history` is used only for conversational context, such as pronoun resolution and follow-up understanding. It is not a source of factual claims.
+
+### Follow-up resolution
+
+`POST /api/chat` and `POST /api/chat/stream` use the same question-resolution flow before retrieval:
+
+1. Clear owner/profile, services, and third-party questions are resolved by deterministic rules.
+2. An owner-related ambiguous follow-up may be passed to the LLM contextualizer. Its JSON output is validated against a closed intent set and a standalone question contract.
+3. A resolved standalone question is used consistently for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains separate prompt context.
+4. If a short continuation cannot be resolved reliably, the backend asks the visitor to clarify before retrieval.
+
+Clarification response shape:
+
+```json
+{
+  "answer": "Could you clarify what you would like me to continue with?\nFor example, you can ask for a specific project, skill, or work experience example.",
+  "sources": [],
+  "confidence": "low",
+  "not_enough_data": false,
+  "handoff_suggested": false,
+  "handoff_reason": null
+}
+```
+
+Clarification is distinct from the insufficient-data response below. Clarification means that no reliable standalone question was available, so retrieval did not run. Insufficient data means that a standalone question was resolved but retrieval failed or returned no useful chunks.
 
 Response:
 
@@ -229,7 +257,7 @@ Insufficient-data response shape:
 
 ```json
 {
-  "answer": "I do not have enough reliable information in Alex's public knowledge base to answer that accurately.",
+  "answer": "I do not have enough reliable information in the public knowledge base to answer that accurately.\nWould you like me to connect you with Alex?",
   "sources": [],
   "confidence": "low",
   "not_enough_data": true,
@@ -255,6 +283,8 @@ Purpose:
 - primary endpoint for typed chat messages;
 - Server-Sent Events response;
 - progressive answer display in the frontend.
+
+The request schema, history limits, follow-up resolution, and response semantics are the same as for `POST /api/chat`.
 
 Content type:
 
