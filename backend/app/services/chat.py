@@ -211,14 +211,14 @@ class ChatService:
             return policy_result
 
         resolution = resolve_question(request, llm_client=self._llm_client)
-        if resolution.is_out_of_scope_subject or not resolution.is_alex_specific:
+        if not resolution.requires_retrieval:
             return ChatPolicyResult(
                 intent="out_of_scope",
                 response=self._out_of_scope_response(),
             )
 
         try:
-            chunks = self._retriever.retrieve(resolution.retrieval_query)
+            chunks = self._retriever.retrieve(resolution.standalone_question)
         except (ProviderConfigurationError, ProviderRequestError):
             return ChatPolicyResult(
                 intent="insufficient_data",

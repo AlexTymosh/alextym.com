@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from typing import Literal
 
 from app.core.project_config import get_project_config
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
@@ -34,12 +35,29 @@ _OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
 _OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
 
 
+QuestionIntent = Literal[
+    "alex_profile_question",
+    "alex_services_question",
+    "third_party_question",
+    "out_of_scope_question",
+]
+QuestionResolutionMethod = Literal["rules", "llm"]
+
+
 @dataclass(frozen=True)
 class QuestionResolution:
-    is_alex_specific: bool
-    retrieval_query: str
+    intent: QuestionIntent
+    original_question: str
+    standalone_question: str
     conversational_context: str
-    is_out_of_scope_subject: bool = False
+    resolution_method: QuestionResolutionMethod
+
+    @property
+    def requires_retrieval(self) -> bool:
+        return self.intent in {
+            "alex_profile_question",
+            "alex_services_question",
+        }
 
 
 def resolve_question(
@@ -52,24 +70,29 @@ def resolve_question(
 
     if is_direct_third_party_subject(normalized_message):
         return QuestionResolution(
-            is_alex_specific=False,
-            retrieval_query=request.message,
+            intent="third_party_question",
+            original_question=request.message,
+            standalone_question=request.message,
             conversational_context=conversational_context,
-            is_out_of_scope_subject=True,
+            resolution_method="rules",
         )
 
     if is_alex_specific_question(request.message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=_rewrite_alex_retrieval_query(request.message),
+            intent="alex_profile_question",
+            original_question=request.message,
+            standalone_question=_rewrite_alex_retrieval_query(request.message),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     if is_service_request(request.message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=_services_retrieval_query(),
+            intent="alex_services_question",
+            original_question=request.message,
+            standalone_question=_services_retrieval_query(),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     subject = _last_explicit_user_subject(request.history)
@@ -86,39 +109,48 @@ def resolve_question(
     if _is_follow_up_profile_question(normalized_message):
         if subject == "third_party":
             return QuestionResolution(
-                is_alex_specific=False,
-                retrieval_query=request.message,
+                intent="third_party_question",
+                original_question=request.message,
+                standalone_question=request.message,
                 conversational_context=conversational_context,
-                is_out_of_scope_subject=True,
+                resolution_method="rules",
             )
         if subject == "alex" or has_alex_context:
             return QuestionResolution(
-                is_alex_specific=True,
-                retrieval_query=_rewrite_alex_retrieval_query(request.message),
+                intent="alex_profile_question",
+                original_question=request.message,
+                standalone_question=_rewrite_alex_retrieval_query(request.message),
                 conversational_context=conversational_context,
+                resolution_method="rules",
             )
 
     if has_alex_context and _looks_like_short_continuation(normalized_message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=(
+            intent="alex_profile_question",
+            original_question=request.message,
+            standalone_question=(
                 f"Continue answering about {_OWNER_POSSESSIVE} professional "
                 f"profile based on the previous {_OWNER_REFERENCE}-related question."
             ),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     if has_alex_context and _looks_like_short_profile_follow_up(normalized_message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=_rewrite_alex_retrieval_query(request.message),
+            intent="alex_profile_question",
+            original_question=request.message,
+            standalone_question=_rewrite_alex_retrieval_query(request.message),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     return QuestionResolution(
-        is_alex_specific=False,
-        retrieval_query=request.message,
+        intent="out_of_scope_question",
+        original_question=request.message,
+        standalone_question=request.message,
         conversational_context=conversational_context,
+        resolution_method="rules",
     )
 
 
@@ -228,8 +260,8 @@ def _try_llm_intent_resolution(
 
     if not isinstance(payload, dict):
         return None
-    supported_intents = {"alex_profile_question", "alex_services_question"}
-    if payload.get("intent") not in supported_intents:
+    intent = payload.get("intent")
+    if intent not in {"alex_profile_question", "alex_services_question"}:
         return None
 
     rewritten_query = payload.get("rewritten_query")
@@ -237,9 +269,11 @@ def _try_llm_intent_resolution(
         return None
 
     return QuestionResolution(
-        is_alex_specific=True,
-        retrieval_query=rewritten_query.strip(),
+        intent=intent,
+        original_question=request.message,
+        standalone_question=rewritten_query.strip(),
         conversational_context=conversational_context,
+        resolution_method="llm",
     )
 
 
