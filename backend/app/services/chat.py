@@ -18,6 +18,7 @@ from app.schemas.sse import ServerSentEvent
 from app.services.chat_confidence import confidence_from_chunks
 from app.services.chat_copy import (
     ASSISTANT_INTRO_ANSWER,
+    CLARIFICATION_ANSWER,
     GREETING_ANSWER,
     HANDOFF_PROMPT_TITLE,
     HANDOFF_REQUEST_ANSWER,
@@ -49,6 +50,7 @@ from app.services.chat_safety import is_unsafe_chat_output
 
 __all__ = [
     "ASSISTANT_INTRO_ANSWER",
+    "CLARIFICATION_ANSWER",
     "ChatService",
     "GREETING_ANSWER",
     "HANDOFF_REQUEST_ANSWER",
@@ -211,14 +213,26 @@ class ChatService:
             return policy_result
 
         resolution = resolve_question(request, llm_client=self._llm_client)
+        if resolution.requires_clarification:
+            return ChatPolicyResult(
+                intent="clarification_required",
+                response=self._clarification_response(),
+            )
         if not resolution.requires_retrieval:
             return ChatPolicyResult(
                 intent="out_of_scope",
                 response=self._out_of_scope_response(),
             )
 
+        standalone_question = resolution.standalone_question
+        if standalone_question is None:
+            return ChatPolicyResult(
+                intent="clarification_required",
+                response=self._clarification_response(),
+            )
+
         try:
-            chunks = self._retriever.retrieve(resolution.standalone_question)
+            chunks = self._retriever.retrieve(standalone_question)
         except (ProviderConfigurationError, ProviderRequestError):
             return ChatPolicyResult(
                 intent="insufficient_data",
@@ -232,14 +246,14 @@ class ChatService:
             )
 
         prompt = self._prompt_builder.build(
-            question=request.message,
+            question=standalone_question,
             chunks=chunks,
             conversational_context=resolution.conversational_context,
         )
         return RagAnswerContext(
             prompt=prompt,
             chunks=chunks,
-            confidence=confidence_from_chunks(chunks, request.message),
+            confidence=confidence_from_chunks(chunks, standalone_question),
             handoff_suggested=should_offer_handoff_after_answer(request.message),
             handoff_reason=handoff_reason_after_answer(request.message),
         )
@@ -477,6 +491,16 @@ class ChatService:
             not_enough_data=True,
             handoff_suggested=True,
             handoff_reason="insufficient_data",
+        )
+
+    @staticmethod
+    def _clarification_response() -> ChatResponse:
+        return ChatResponse(
+            answer=CLARIFICATION_ANSWER,
+            sources=[],
+            confidence="low",
+            not_enough_data=False,
+            handoff_suggested=False,
         )
 
     @staticmethod

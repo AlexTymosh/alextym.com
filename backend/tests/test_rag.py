@@ -5,10 +5,11 @@ from app.llm.client import ProviderRequestError
 from app.rag.chunker import chunk_markdown
 from app.rag.knowledge_base import PLACEHOLDER_MARKER, load_public_knowledge
 from app.rag.models import ChunkMetadata, KnowledgeChunk
-from app.rag.prompt_builder import PromptBuilder
+from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import InMemoryRetriever
 from app.schemas.chat import ChatRequest
 from app.services.chat import (
+    CLARIFICATION_ANSWER,
     ChatService,
     GREETING_ANSWER,
     OUT_OF_SCOPE_ANSWER,
@@ -246,7 +247,9 @@ def test_chat_service_resolves_alex_follow_up_from_short_history() -> None:
     ]
     assert response.answer == "Grounded Alex follow-up answer."
     assert response.not_enough_data is False
-    assert llm_client.prompt.question == "Tell me about him"
+    assert llm_client.prompt.question == (
+        "Tell me about Alex's professional background, experience, skills, and projects."
+    )
     assert "Do not treat it as a source of factual claims about Alex." in llm_client.prompt.context
 
 
@@ -275,30 +278,58 @@ def test_chat_service_resolves_pronoun_profile_question_after_russian_language_p
     assert response.not_enough_data is False
 
 
-def test_chat_service_resolves_short_continuation_from_previous_alex_question() -> None:
-    chunk = _chunk("public-1", "Alex has backend and automation experience.")
+def test_chat_service_contextualizes_frontend_scripted_confirmation() -> None:
+    chunk = _chunk(
+        "public-1",
+        "Alex used systems thinking to improve an automation workflow.",
+        tags=("strengths", "experience"),
+    )
     retriever = RecordingRetriever([chunk])
+    standalone_question = (
+        "Give a concrete example from Alex's work experience that demonstrates "
+        "his main professional strengths."
+    )
+    llm_client = SequenceLLMClient(
+        [
+            (
+                '{"intent":"alex_profile_question","standalone_question":'
+                "\"Give a concrete example from Alex's work experience that demonstrates "
+                'his main professional strengths.","confidence":"high",'
+                '"reason":"yes accepts the preceding offer"}'
+            ),
+            "Alex applied systems thinking to improve an automation workflow.",
+        ]
+    )
 
     response = ChatService(
         retriever=retriever,
-        llm_client=StaticLLMClient("More Alex context."),
+        llm_client=llm_client,
     ).answer(
         ChatRequest(
-            message="so tell me!",
+            message="yes",
             history=[
-                {"role": "user", "content": "Let me know about his work experience"},
-                {"role": "assistant", "content": "Alex has work experience in automation."},
+                {"role": "user", "content": "What are Alex's main strengths?"},
+                {
+                    "role": "assistant",
+                    "content": (
+                        "Alex's main strengths are systems thinking and experience at "
+                        "the intersection of business analysis, data analysis and "
+                        "software automation. Would you like to see an example from "
+                        "his experience?"
+                    ),
+                },
             ],
         )
     )
 
-    assert retriever.queries == [
-        (
-            "Continue answering about Alex's professional profile based on the "
-            "previous Alex-related question."
-        )
-    ]
-    assert response.answer == "More Alex context."
+    assert retriever.queries == [standalone_question]
+    assert len(llm_client.prompts) == 2
+    answer_prompt = llm_client.prompts[1]
+    assert isinstance(answer_prompt, PromptBundle)
+    assert answer_prompt.question == standalone_question
+    assert "Would you like to see an example from his experience?" in answer_prompt.context
+    assert response.answer == ("Alex applied systems thinking to improve an automation workflow.")
+    assert response.confidence == "high"
     assert response.not_enough_data is False
 
 
@@ -329,13 +360,13 @@ def test_chat_service_resolves_short_soft_skills_follow_up_from_alex_context() -
     assert response.not_enough_data is False
 
 
-def test_chat_service_uses_llm_intent_classifier_for_ambiguous_profile_question() -> None:
+def test_chat_service_uses_llm_contextualizer_for_ambiguous_profile_question() -> None:
     chunk = _chunk("public-1", "Alex has UK work experience.")
     retriever = RecordingRetriever([chunk])
     llm_client = SequenceLLMClient(
         [
             (
-                '{"intent":"alex_profile_question","rewritten_query":"Tell me about '
+                '{"intent":"alex_profile_question","standalone_question":"Tell me about '
                 'Alex work experience","confidence":"high","reason":"his refers to '
                 'Alex from context"}'
             ),
@@ -348,14 +379,41 @@ def test_chat_service_uses_llm_intent_classifier_for_ambiguous_profile_question(
         llm_client=llm_client,
     ).answer(
         ChatRequest(
-            message="Let me know about his work experience",
-            history=[{"role": "assistant", "content": "Ask about Alex's profile."}],
+            message="What about him?",
+            history=[
+                {
+                    "role": "assistant",
+                    "content": "Alex has UK work experience. Would you like more detail?",
+                }
+            ],
         )
     )
 
     assert retriever.queries == ["Tell me about Alex work experience"]
     assert response.answer == "Classified and grounded answer."
     assert response.not_enough_data is False
+
+
+def test_chat_service_requests_clarification_when_contextualizer_fails() -> None:
+    response = ChatService(
+        retriever=FailingRetriever(),
+        llm_client=FailingLLMClient(),
+    ).answer(
+        ChatRequest(
+            message="yes",
+            history=[
+                {"role": "user", "content": "What are Alex's main strengths?"},
+                {
+                    "role": "assistant",
+                    "content": "Would you like to see an example from his experience?",
+                },
+            ],
+        )
+    )
+
+    assert response.answer == CLARIFICATION_ANSWER
+    assert response.not_enough_data is False
+    assert response.handoff_suggested is False
 
 
 def test_chat_service_rewrites_what_he_does_follow_up_for_retrieval() -> None:
@@ -450,6 +508,7 @@ def _chunk(
     content: str,
     *,
     visibility: str = "public",
+    tags: tuple[str, ...] = (),
 ) -> KnowledgeChunk:
     return KnowledgeChunk(
         id=chunk_id,
@@ -459,6 +518,7 @@ def _chunk(
             section="Summary",
             topic="summary",
             visibility=visibility,
+            tags=tags,
         ),
     )
 
