@@ -113,6 +113,46 @@ test("renders the chat shell without requiring the live backend", async ({
   ).toBeVisible();
 });
 
+test("includes frontend-scripted messages in the next chat request", async ({
+  page,
+}) => {
+  const quickPrompt = chatConfig.quickPrompts.find(
+    (prompt) => prompt.label === "What are Alex's main strengths?",
+  );
+  if (!quickPrompt) {
+    throw new Error("Expected the strengths quick prompt to be configured.");
+  }
+
+  let chatPayload: unknown = null;
+  await page.route("**/api/chat/stream", async (route) => {
+    chatPayload = await route.request().postDataJSON();
+    await fulfillChatStream(route, "A grounded follow-up answer.");
+  });
+
+  await gotoAndExpectOk(page, "/chat");
+  await page.getByRole("button", { name: quickPrompt.label }).click();
+  await expect(
+    page.getByText("Would you like to see an example from his experience?"),
+  ).toBeVisible({ timeout: 10_000 });
+
+  await page
+    .getByRole("textbox", { name: chatShellCopy.inputAriaLabel })
+    .fill("yes");
+  await page.getByRole("button", { name: chatShellCopy.sendLabel }).click();
+
+  await expect.poll(() => chatPayload).not.toBeNull();
+  expect(chatPayload).toEqual({
+    message: "yes",
+    history: [
+      { role: "user", content: quickPrompt.label },
+      {
+        role: "assistant",
+        content: quickPrompt.responses[0].replace(/\s+/g, " ").trim(),
+      },
+    ],
+  });
+});
+
 async function gotoAndExpectOk(page: Page, path: string): Promise<void> {
   const response = await page.goto(path);
 
@@ -139,5 +179,32 @@ async function fulfillJson(
       "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify(body),
+  });
+}
+
+async function fulfillChatStream(route: Route, answer: string): Promise<void> {
+  const body = [
+    "event: meta",
+    'data: {"request_id":"req_history_e2e","status":"started"}',
+    "",
+    "event: token",
+    `data: ${JSON.stringify({ text: answer })}`,
+    "",
+    "event: sources",
+    'data: {"sources":[]}',
+    "",
+    "event: done",
+    'data: {"request_id":"req_history_e2e","confidence":"low","not_enough_data":false,"handoff_suggested":false,"handoff_reason":null}',
+    "",
+    "",
+  ].join("\n");
+
+  await route.fulfill({
+    status: 200,
+    headers: {
+      "Cache-Control": "no-cache",
+      "Content-Type": "text/event-stream",
+    },
+    body,
   });
 }

@@ -8,6 +8,10 @@ _OWNER_UKRAINIAN_NAME = _PROJECT_CONFIG.owner.ukrainian_name
 
 HANDOFF_PROMPT_TITLE = f"Would you like to connect with {OWNER_REFERENCE}?"
 
+CLARIFICATION_ANSWER = (
+    "Could you clarify what you would like me to continue with?\n"
+    "For example, you can ask for a specific project, skill, or work experience example."
+)
 INSUFFICIENT_DATA_ANSWER = (
     "I do not have enough reliable information in the public knowledge base "
     "to answer that accurately. \n"

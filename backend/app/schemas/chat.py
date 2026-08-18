@@ -16,12 +16,17 @@ HandoffReason = Literal[
 ]
 
 MAX_CHAT_HISTORY_ITEMS = 10
+MAX_CHAT_HISTORY_ITEM_CHARS = 2000
 MAX_CHAT_HISTORY_TOTAL_CHARS = 6000
 
 
 class ChatHistoryMessage(BaseModel):
     role: ChatHistoryRole = Field(examples=["user"])
-    content: str = Field(min_length=1, max_length=2000, examples=["Hi"])
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_CHAT_HISTORY_ITEM_CHARS,
+        examples=["Hi"],
+    )
 
     @field_validator("content", mode="before")
     @classmethod

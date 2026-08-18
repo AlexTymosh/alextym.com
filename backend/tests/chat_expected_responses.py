@@ -12,6 +12,11 @@ INSUFFICIENT_DATA_ANSWER = (
     "Would you like me to connect you with Alex?"
 )
 
+CLARIFICATION_ANSWER = (
+    "Could you clarify what you would like me to continue with?\n"
+    "For example, you can ask for a specific project, skill, or work experience example."
+)
+
 GREETING_ANSWER = "Hi. I\u2019m Alex's digital assistant. How can I help you today?"
 
 ASSISTANT_INTRO_ANSWER = (

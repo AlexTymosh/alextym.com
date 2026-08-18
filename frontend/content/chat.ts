@@ -80,8 +80,8 @@ export const thinkingMessages = [
   "Preparing a grounded answer",
 ] as const;
 
-export const CHAT_HISTORY_LIMIT = 8;
-export const CHAT_HISTORY_ITEM_MAX_CHARS = 1000;
+export const CHAT_HISTORY_LIMIT = 10;
+export const CHAT_HISTORY_ITEM_MAX_CHARS = 2000;
 export const CHAT_HISTORY_TOTAL_MAX_CHARS = 6000;
 export const SCRIPTED_RESPONSE_DELAY_MS = 3000;
 export const ESCALATION_TRANSCRIPT_LIMIT = 20;
