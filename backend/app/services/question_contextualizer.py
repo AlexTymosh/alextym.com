@@ -1,9 +1,8 @@
-from typing import Literal
+from typing import Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.project_config import get_project_config
-from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
 from app.rag.prompt_builder import PromptBundle
 
 ContextualizedIntent = Literal[
@@ -29,10 +28,6 @@ _SYSTEM_INSTRUCTIONS = "\n".join(
             f"{_OWNER_POSSESSIVE} public professional profile or software services."
         ),
         (
-            "Return only one compact JSON object with exactly these keys: "
-            "intent, standalone_question, confidence, reason."
-        ),
-        (
             "Allowed intents: alex_profile_question, alex_services_question, "
             "third_party_question, out_of_scope_question, clarification_required."
         ),
@@ -41,6 +36,10 @@ _SYSTEM_INSTRUCTIONS = "\n".join(
             "self-contained retrieval question that preserves the user's meaning."
         ),
         ("Resolve confirmations such as 'yes' from the assistant's immediately preceding offer."),
+        (
+            "Use high confidence when an immediately preceding offer determines one clear "
+            "follow-up question. Use low confidence only when the conversation remains ambiguous."
+        ),
         (
             "If the conversation does not determine one clear meaning, use "
             "clarification_required and set standalone_question to null."
@@ -57,7 +56,7 @@ class ContextualizedQuestion(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     intent: ContextualizedIntent
-    standalone_question: str | None = Field(default=None, max_length=2000)
+    standalone_question: str | None = Field(max_length=2000)
     confidence: ResolutionConfidence
     reason: str = Field(min_length=1, max_length=500)
 
@@ -66,30 +65,28 @@ class ContextualizedQuestion(BaseModel):
         if self.intent in _RAG_QUESTION_INTENTS:
             if self.standalone_question is None or not self.standalone_question.strip():
                 raise ValueError("A retrieval intent requires a standalone question.")
+        elif self.standalone_question is not None:
+            raise ValueError("A non-retrieval intent must not include a standalone question.")
         return self
 
 
-class LLMQuestionContextualizer:
-    def __init__(self, llm_client: LLMClient) -> None:
-        self._llm_client = llm_client
-
+class QuestionContextualizer(Protocol):
     def contextualize(
         self,
         *,
         message: str,
         conversational_context: str,
-    ) -> ContextualizedQuestion | None:
-        prompt = PromptBundle(
-            system=_SYSTEM_INSTRUCTIONS,
-            context=conversational_context or "No conversation context.",
-            question=message,
-        )
-        try:
-            raw_answer = self._llm_client.answer(prompt)
-        except (ProviderConfigurationError, ProviderRequestError):
-            return None
+    ) -> ContextualizedQuestion:
+        """Resolve an ambiguous message into the validated routing contract."""
 
-        try:
-            return ContextualizedQuestion.model_validate_json(raw_answer)
-        except ValidationError:
-            return None
+
+def build_question_contextualization_prompt(
+    *,
+    message: str,
+    conversational_context: str,
+) -> PromptBundle:
+    return PromptBundle(
+        system=_SYSTEM_INSTRUCTIONS,
+        context=conversational_context or "No conversation context.",
+        question=message,
+    )

@@ -221,7 +221,7 @@ The current user message is sent separately in `message` and is not duplicated i
 `POST /api/chat` and `POST /api/chat/stream` use the same question-resolution flow before retrieval:
 
 1. Clear owner/profile, services, and third-party questions are resolved by deterministic rules.
-2. An owner-related ambiguous follow-up may be passed to the LLM contextualizer. Its JSON output is validated against a closed intent set and a standalone question contract.
+2. An owner-related ambiguous follow-up may be passed to the dedicated LLM contextualizer. Provider-enforced structured output must match the closed `ContextualizedQuestion` contract before routing uses it; free-form answer text is not parsed as routing JSON.
 3. A resolved standalone question is used consistently for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains separate prompt context.
 4. If a short continuation cannot be resolved reliably, the backend asks the visitor to clarify before retrieval.
 

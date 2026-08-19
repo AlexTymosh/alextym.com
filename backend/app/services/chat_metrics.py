@@ -15,7 +15,7 @@ from app.core.domain_metrics import (
     start_timer,
 )
 from app.llm.client import LLMClient
-from app.llm.factory import get_configured_llm_client
+from app.llm.factory import get_configured_llm_clients
 from app.rag.factory import get_configured_retriever
 from app.rag.errors import RetrievalError
 from app.rag.models import KnowledgeChunk
@@ -25,6 +25,10 @@ from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.sse import ServerSentEvent
 from app.services.chat import ChatService
 from app.services.chat_safety import is_prompt_injection_attempt
+from app.services.question_contextualizer import (
+    ContextualizedQuestion,
+    QuestionContextualizer,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -127,6 +131,38 @@ class MetricsLLMClient:
         )
 
 
+class MetricsQuestionContextualizer:
+    def __init__(self, contextualizer: QuestionContextualizer) -> None:
+        self._contextualizer = contextualizer
+
+    def contextualize(
+        self,
+        *,
+        message: str,
+        conversational_context: str,
+    ) -> ContextualizedQuestion:
+        start_time = start_timer()
+        try:
+            resolution = self._contextualizer.contextualize(
+                message=message,
+                conversational_context=conversational_context,
+            )
+        except Exception:
+            record_llm_request(
+                operation="contextualize",
+                outcome="error",
+                duration_seconds=elapsed_seconds(start_time),
+            )
+            raise
+
+        record_llm_request(
+            operation="contextualize",
+            outcome="success",
+            duration_seconds=elapsed_seconds(start_time),
+        )
+        return resolution
+
+
 class MetricsChatService:
     def __init__(self, service: ChatService) -> None:
         self._service = service
@@ -170,12 +206,18 @@ class MetricsChatService:
 
 def build_metrics_chat_service(settings: Settings) -> MetricsChatService:
     retriever = MetricsRetriever(get_configured_retriever(settings))
-    llm_client = get_configured_llm_client(settings)
-    instrumented_llm_client = MetricsLLMClient(llm_client) if llm_client is not None else None
+    clients = get_configured_llm_clients(settings)
+    instrumented_llm_client = MetricsLLMClient(clients.answer) if clients is not None else None
+    instrumented_contextualizer = (
+        MetricsQuestionContextualizer(clients.question_contextualizer)
+        if clients is not None
+        else None
+    )
     return MetricsChatService(
         ChatService(
             retriever=retriever,
             llm_client=instrumented_llm_client,
+            question_contextualizer=instrumented_contextualizer,
         )
     )
 

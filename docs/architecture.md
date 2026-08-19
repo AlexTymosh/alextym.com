@@ -313,6 +313,13 @@ POST /api/chat or POST /api/chat/stream
 
 The resolved standalone question is used for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains a separate context input.
 
+The ambiguous-follow-up path uses a dedicated `QuestionContextualizer` dependency,
+separate from the final-answer client contract. Its OpenAI adapter calls
+`responses.parse` with the `ContextualizedQuestion` Pydantic model, so intent,
+standalone question, confidence, and reason are enforced by provider structured
+output before routing consumes them. Production adapters share one Responses API
+client, while tests can replace answer generation and contextualization independently.
+
 If an ambiguous short continuation cannot be resolved reliably, the chat asks for clarification before retrieval and does not suggest handoff. A successful empty retrieval returns the insufficient-data response. A provider or collection-contract failure returns a distinct temporary-unavailable response, with no unsupported knowledge claim and no automatic handoff suggestion.
 
 `/api/health/ready` uses a cached read-only Qdrant contract probe. It validates

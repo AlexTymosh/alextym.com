@@ -5,15 +5,15 @@ from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.confidence import Confidence
 from app.core.project_config import get_project_config
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
-from app.llm.factory import get_configured_llm_client
+from app.llm.factory import get_configured_llm_clients
 from app.rag.errors import RetrievalError
 from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import Retriever
-from app.core.confidence import Confidence
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.sse import ServerSentEvent
 from app.services.chat_confidence import confidence_from_chunks
@@ -49,6 +49,7 @@ from app.services.chat_policy import (
     prompt_injection_response,
 )
 from app.services.chat_safety import is_unsafe_chat_output
+from app.services.question_contextualizer import QuestionContextualizer
 
 __all__ = [
     "ASSISTANT_INTRO_ANSWER",
@@ -165,13 +166,28 @@ class ChatService:
         self,
         retriever: Retriever | None = None,
         llm_client: LLMClient | None = None,
+        question_contextualizer: QuestionContextualizer | None = None,
         prompt_builder: PromptBuilder | None = None,
     ) -> None:
+        configured_clients = (
+            get_configured_llm_clients()
+            if retriever is None and llm_client is None and question_contextualizer is None
+            else None
+        )
         self._retriever = retriever or get_configured_retriever()
         self._llm_client = (
             llm_client
             if llm_client is not None
-            else (get_configured_llm_client() if retriever is None else None)
+            else (configured_clients.answer if configured_clients is not None else None)
+        )
+        self._question_contextualizer = (
+            question_contextualizer
+            if question_contextualizer is not None
+            else (
+                configured_clients.question_contextualizer
+                if configured_clients is not None
+                else None
+            )
         )
         self._prompt_builder = prompt_builder or PromptBuilder()
 
@@ -215,7 +231,10 @@ class ChatService:
         if policy_result is not None:
             return policy_result
 
-        resolution = resolve_question(request, llm_client=self._llm_client)
+        resolution = resolve_question(
+            request,
+            question_contextualizer=self._question_contextualizer,
+        )
         if resolution.requires_clarification:
             return ChatPolicyResult(
                 intent="clarification_required",

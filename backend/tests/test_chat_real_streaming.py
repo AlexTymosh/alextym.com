@@ -9,6 +9,7 @@ from app.rag.retriever import InMemoryRetriever
 from app.schemas.chat import ChatRequest
 from app.schemas.sse import ServerSentEvent
 from app.services.chat import ChatService, PROMPT_INJECTION_ANSWER
+from app.services.question_contextualizer import ContextualizedQuestion
 
 
 def test_chat_stream_uses_llm_streaming_for_rag_answers() -> None:
@@ -30,16 +31,21 @@ def test_chat_stream_uses_llm_streaming_for_rag_answers() -> None:
 
 def test_chat_stream_contextualizes_short_follow_up_before_retrieval() -> None:
     standalone_question = "Give an example from Alex's experience that demonstrates his strengths."
-    llm_client = ContextualizingStreamingLLM(
-        contextualization=(
-            '{"intent":"alex_profile_question","standalone_question":'
-            '"Give an example from Alex\'s experience that demonstrates his strengths.",'
-            '"confidence":"high","reason":"yes accepts the preceding offer"}'
-        ),
-        tokens=["Alex", " applied", " systems thinking."],
+    llm_client = FakeStreamingLLM(["Alex", " applied", " systems thinking."])
+    contextualizer = StaticQuestionContextualizer(
+        ContextualizedQuestion(
+            intent="alex_profile_question",
+            standalone_question=standalone_question,
+            confidence="high",
+            reason="yes accepts the preceding offer",
+        )
     )
     retriever = RecordingRetriever([_streaming_chunk()])
-    service = ChatService(retriever=retriever, llm_client=llm_client)
+    service = ChatService(
+        retriever=retriever,
+        llm_client=llm_client,
+        question_contextualizer=contextualizer,
+    )
 
     events = asyncio.run(
         _collect_events(
@@ -62,8 +68,8 @@ def test_chat_stream_contextualizes_short_follow_up_before_retrieval() -> None:
     )
 
     assert retriever.queries == [standalone_question]
-    assert llm_client.answer_prompt is not None
-    assert llm_client.answer_prompt.question == standalone_question
+    assert llm_client.stream_prompt is not None
+    assert llm_client.stream_prompt.question == standalone_question
     assert "Alex applied systems thinking." in _joined_token_text(events)
     assert _done_payload(events)["not_enough_data"] is False
 
@@ -173,6 +179,7 @@ class FakeStreamingLLM:
         self._tokens = tokens
         self.answer_called = False
         self.stream_called = False
+        self.stream_prompt: PromptBundle | None = None
 
     def answer(self, prompt: PromptBundle) -> str:
         self.answer_called = True
@@ -180,21 +187,21 @@ class FakeStreamingLLM:
 
     def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
         self.stream_called = True
+        self.stream_prompt = prompt
         yield from self._tokens
 
 
-class ContextualizingStreamingLLM:
-    def __init__(self, *, contextualization: str, tokens: list[str]) -> None:
-        self._contextualization = contextualization
-        self._tokens = tokens
-        self.answer_prompt: PromptBundle | None = None
+class StaticQuestionContextualizer:
+    def __init__(self, resolution: ContextualizedQuestion) -> None:
+        self._resolution = resolution
 
-    def answer(self, prompt: PromptBundle) -> str:
-        return self._contextualization
-
-    def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
-        self.answer_prompt = prompt
-        yield from self._tokens
+    def contextualize(
+        self,
+        *,
+        message: str,
+        conversational_context: str,
+    ) -> ContextualizedQuestion:
+        return self._resolution
 
 
 class RecordingRetriever:

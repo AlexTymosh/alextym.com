@@ -15,6 +15,7 @@ from app.services.chat import (
     OUT_OF_SCOPE_ANSWER,
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
 )
+from app.services.question_contextualizer import ContextualizedQuestion
 
 
 def test_chunk_markdown_uses_headings_and_metadata() -> None:
@@ -289,21 +290,22 @@ def test_chat_service_contextualizes_frontend_scripted_confirmation() -> None:
         "Give a concrete example from Alex's work experience that demonstrates "
         "his main professional strengths."
     )
-    llm_client = SequenceLLMClient(
-        [
-            (
-                '{"intent":"alex_profile_question","standalone_question":'
-                "\"Give a concrete example from Alex's work experience that demonstrates "
-                'his main professional strengths.","confidence":"high",'
-                '"reason":"yes accepts the preceding offer"}'
-            ),
-            "Alex applied systems thinking to improve an automation workflow.",
-        ]
+    llm_client = CapturingLLMClient(
+        "Alex applied systems thinking to improve an automation workflow."
+    )
+    contextualizer = StaticQuestionContextualizer(
+        ContextualizedQuestion(
+            intent="alex_profile_question",
+            standalone_question=standalone_question,
+            confidence="high",
+            reason="yes accepts the preceding offer",
+        )
     )
 
     response = ChatService(
         retriever=retriever,
         llm_client=llm_client,
+        question_contextualizer=contextualizer,
     ).answer(
         ChatRequest(
             message="yes",
@@ -323,8 +325,7 @@ def test_chat_service_contextualizes_frontend_scripted_confirmation() -> None:
     )
 
     assert retriever.queries == [standalone_question]
-    assert len(llm_client.prompts) == 2
-    answer_prompt = llm_client.prompts[1]
+    answer_prompt = llm_client.prompt
     assert isinstance(answer_prompt, PromptBundle)
     assert answer_prompt.question == standalone_question
     assert "Would you like to see an example from his experience?" in answer_prompt.context
@@ -363,20 +364,20 @@ def test_chat_service_resolves_short_soft_skills_follow_up_from_alex_context() -
 def test_chat_service_uses_llm_contextualizer_for_ambiguous_profile_question() -> None:
     chunk = _chunk("public-1", "Alex has UK work experience.")
     retriever = RecordingRetriever([chunk])
-    llm_client = SequenceLLMClient(
-        [
-            (
-                '{"intent":"alex_profile_question","standalone_question":"Tell me about '
-                'Alex work experience","confidence":"high","reason":"his refers to '
-                'Alex from context"}'
-            ),
-            "Classified and grounded answer.",
-        ]
+    llm_client = StaticLLMClient("Classified and grounded answer.")
+    contextualizer = StaticQuestionContextualizer(
+        ContextualizedQuestion(
+            intent="alex_profile_question",
+            standalone_question="Tell me about Alex work experience",
+            confidence="high",
+            reason="him refers to Alex from context",
+        )
     )
 
     response = ChatService(
         retriever=retriever,
         llm_client=llm_client,
+        question_contextualizer=contextualizer,
     ).answer(
         ChatRequest(
             message="What about him?",
@@ -397,7 +398,8 @@ def test_chat_service_uses_llm_contextualizer_for_ambiguous_profile_question() -
 def test_chat_service_requests_clarification_when_contextualizer_fails() -> None:
     response = ChatService(
         retriever=FailingRetriever(),
-        llm_client=FailingLLMClient(),
+        llm_client=StaticLLMClient("This answer must not be used."),
+        question_contextualizer=FailingQuestionContextualizer(),
     ).answer(
         ChatRequest(
             message="yes",
@@ -531,18 +533,6 @@ class StaticLLMClient:
         return self._answer
 
 
-class SequenceLLMClient:
-    def __init__(self, answers: list[str]) -> None:
-        self._answers = answers
-        self.prompts: list[object] = []
-
-    def answer(self, prompt: object) -> str:
-        self.prompts.append(prompt)
-        if not self._answers:
-            raise AssertionError("No LLM answers left.")
-        return self._answers.pop(0)
-
-
 class CapturingLLMClient:
     def __init__(self, answer: str) -> None:
         self._answer = answer
@@ -555,6 +545,29 @@ class CapturingLLMClient:
 
 class FailingLLMClient:
     def answer(self, prompt: object) -> str:
+        raise ProviderRequestError("Provider failed.")
+
+
+class StaticQuestionContextualizer:
+    def __init__(self, resolution: ContextualizedQuestion) -> None:
+        self._resolution = resolution
+
+    def contextualize(
+        self,
+        *,
+        message: str,
+        conversational_context: str,
+    ) -> ContextualizedQuestion:
+        return self._resolution
+
+
+class FailingQuestionContextualizer:
+    def contextualize(
+        self,
+        *,
+        message: str,
+        conversational_context: str,
+    ) -> ContextualizedQuestion:
         raise ProviderRequestError("Provider failed.")
 
 

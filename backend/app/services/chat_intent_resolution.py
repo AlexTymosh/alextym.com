@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from app.core.project_config import get_project_config
-from app.llm.client import LLMClient
+from app.llm.client import ProviderConfigurationError, ProviderRequestError
 from app.schemas.chat import ChatHistoryMessage, ChatRequest
 from app.services.chat_copy import (
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
@@ -27,7 +27,7 @@ from app.services.chat_intent_terms import (
     WEAKNESS_REQUEST_TERMS,
 )
 from app.services.chat_language import normalize_message
-from app.services.question_contextualizer import LLMQuestionContextualizer
+from app.services.question_contextualizer import QuestionContextualizer
 
 _PROJECT_CONFIG = get_project_config()
 _OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
@@ -73,7 +73,7 @@ class QuestionResolution:
 def resolve_question(
     request: ChatRequest,
     *,
-    llm_client: LLMClient | None,
+    question_contextualizer: QuestionContextualizer | None,
 ) -> QuestionResolution:
     conversational_context = format_conversation_context(request.history)
     normalized_message = normalize_message(request.message)
@@ -128,7 +128,7 @@ def resolve_question(
 
     contextualized_resolution = _try_llm_question_resolution(
         request=request,
-        llm_client=llm_client,
+        question_contextualizer=question_contextualizer,
         conversational_context=conversational_context,
     )
     if contextualized_resolution is not None:
@@ -236,19 +236,20 @@ def history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> boo
 def _try_llm_question_resolution(
     *,
     request: ChatRequest,
-    llm_client: LLMClient | None,
+    question_contextualizer: QuestionContextualizer | None,
     conversational_context: str,
 ) -> QuestionResolution | None:
-    if llm_client is None:
+    if question_contextualizer is None:
         return None
     if not _should_contextualize_with_llm(request):
         return None
 
-    contextualized = LLMQuestionContextualizer(llm_client).contextualize(
-        message=request.message,
-        conversational_context=conversational_context,
-    )
-    if contextualized is None:
+    try:
+        contextualized = question_contextualizer.contextualize(
+            message=request.message,
+            conversational_context=conversational_context,
+        )
+    except (ProviderConfigurationError, ProviderRequestError):
         return None
 
     if contextualized.intent == "clarification_required" or contextualized.confidence == "low":

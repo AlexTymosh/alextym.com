@@ -391,11 +391,11 @@ Supported cases:
 - pronoun follow-ups after owner-related context;
 - direct third-party subjects are treated as out of scope.
 
-Direct and otherwise unambiguous questions use deterministic rules. For an ambiguous short continuation or pronoun reference with owner-related assistant history, the service may call the LLM contextualizer. The contextualizer returns a JSON object with a closed intent, `standalone_question`, confidence, and reason; Pydantic rejects malformed or incomplete output.
+Direct and otherwise unambiguous questions use deterministic rules. For an ambiguous short continuation or pronoun reference with owner-related assistant history, the service may call the dedicated `QuestionContextualizer`. The OpenAI adapter uses `responses.parse` with `ContextualizedQuestion`, so the provider is constrained by a JSON Schema with a closed intent set, nullable `standalone_question`, `low|medium|high` confidence, and a bounded reason. Routing receives a validated object rather than parsing free-form text from the final-answer client.
 
 An accepted standalone question is used consistently for query routing, retrieval, prompt construction, and answer-confidence calculation. The original conversation history is passed separately as conversational context. This prevents a fragment such as `yes` from becoming the retrieval query or final user question.
 
-Low-confidence or explicit `clarification_required` contextualizer output produces a clarification response before retrieval. If contextualization is unavailable or invalid, deterministic fallback rules still apply; an unresolved short continuation also produces clarification rather than a generic owner-profile query.
+Low-confidence or explicit `clarification_required` contextualizer output produces a clarification response before retrieval. A provider failure, refusal, or missing parsed output is mapped to the existing deterministic fallback; an unresolved short continuation also produces clarification rather than a generic owner-profile query. Answer generation and contextualization are separate injected interfaces even though their production adapters share one OpenAI Responses client.
 
 The conversation history is used only to resolve meaning and preserve conversational context. It is not treated as a factual source. Frontend-scripted and model-generated assistant messages use the same history role and the backend does not branch on their origin.
 

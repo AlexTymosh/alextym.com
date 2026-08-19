@@ -14,8 +14,13 @@ from app.llm.client import ProviderRequestError
 from app.rag.errors import RetrievalError
 from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
-from app.services.chat_metrics import MetricsLLMClient, MetricsRetriever
+from app.services.chat_metrics import (
+    MetricsLLMClient,
+    MetricsQuestionContextualizer,
+    MetricsRetriever,
+)
 from app.services.rate_limit import get_rate_limiter
+from app.services.question_contextualizer import ContextualizedQuestion
 
 
 def test_chat_policy_metrics_are_recorded(monkeypatch):
@@ -53,14 +58,20 @@ def test_chat_policy_metrics_are_recorded(monkeypatch):
 def test_rag_and_llm_wrapper_metrics_are_recorded():
     retriever = MetricsRetriever(_FakeRetriever())
     llm_client = MetricsLLMClient(_FakeLLMClient())
+    contextualizer = MetricsQuestionContextualizer(_FakeQuestionContextualizer())
 
     chunks = retriever.retrieve("Tell me about the owner")
     answer = llm_client.answer(_prompt())
     streamed_answer = "".join(llm_client.stream_answer(_prompt()))
+    resolution = contextualizer.contextualize(
+        message="yes",
+        conversational_context="assistant: Would you like an example?",
+    )
 
     assert len(chunks) == 1
     assert answer == "Grounded answer."
     assert streamed_answer == "Streamed answer."
+    assert resolution.standalone_question == "Give an example from Alex's experience"
 
     metrics = _latest_domain_metrics_text()
     assert _has_sample(
@@ -84,13 +95,26 @@ def test_rag_and_llm_wrapper_metrics_are_recorded():
         "portfolio_llm_requests_total",
         {"operation": "stream", "outcome": "success"},
     )
+    assert _has_sample(
+        metrics,
+        "portfolio_llm_requests_total",
+        {"operation": "contextualize", "outcome": "success"},
+    )
 
 
 def test_llm_wrapper_error_metrics_are_recorded():
     llm_client = MetricsLLMClient(_FailingLLMClient())
+    contextualizer = MetricsQuestionContextualizer(_FailingQuestionContextualizer())
 
     try:
         llm_client.answer(_prompt())
+    except ProviderRequestError:
+        pass
+    try:
+        contextualizer.contextualize(
+            message="yes",
+            conversational_context="assistant: Would you like an example?",
+        )
     except ProviderRequestError:
         pass
 
@@ -99,6 +123,11 @@ def test_llm_wrapper_error_metrics_are_recorded():
         metrics,
         "portfolio_llm_requests_total",
         {"operation": "answer", "outcome": "error"},
+    )
+    assert _has_sample(
+        metrics,
+        "portfolio_llm_requests_total",
+        {"operation": "contextualize", "outcome": "error"},
     )
 
 
@@ -285,3 +314,28 @@ class _FailingLLMClient:
     def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
         raise ProviderRequestError("provider failed")
         yield "unreachable"
+
+
+class _FakeQuestionContextualizer:
+    def contextualize(
+        self,
+        *,
+        message: str,
+        conversational_context: str,
+    ) -> ContextualizedQuestion:
+        return ContextualizedQuestion(
+            intent="alex_profile_question",
+            standalone_question="Give an example from Alex's experience",
+            confidence="high",
+            reason="yes accepts the preceding offer",
+        )
+
+
+class _FailingQuestionContextualizer:
+    def contextualize(
+        self,
+        *,
+        message: str,
+        conversational_context: str,
+    ) -> ContextualizedQuestion:
+        raise ProviderRequestError("provider failed")
