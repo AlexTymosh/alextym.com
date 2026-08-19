@@ -105,7 +105,7 @@ Give me a short overview of his work experience.
 When is Alex ready to start work?
 ```
 
-These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint.
+These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint when selected, but their user and assistant messages remain in the visible conversation and can be included in the next AI request's `history`.
 
 ### Typed message flow
 
@@ -120,7 +120,9 @@ Visitor types a message
   -> if streaming fails before any text arrives, frontend falls back to POST /api/chat
 ```
 
-The frontend sends only a short conversation history for follow-up and pronoun handling. This history is not treated as a source of factual claims.
+The frontend sends the newest `user` and `assistant` messages for follow-up and pronoun handling, up to 10 items, 2000 characters per item, and 6000 characters in total. Scripted and model-generated assistant messages use the same history representation; the backend does not depend on where an assistant message was produced. Owner replies with the separate `alex` frontend role are excluded from this AI history.
+
+The current typed message is sent separately from history. History is conversational context only and is not treated as a source of factual claims.
 
 ---
 
@@ -299,15 +301,19 @@ POST /api/chat or POST /api/chat/stream
   -> unsupported-language check
   -> private-data request check
   -> greeting/help/assistant-intro/social acknowledgement shortcut checks
-  -> question resolution
-  -> retrieval query rewrite when needed
+  -> deterministic question and subject resolution
+  -> optional structured LLM contextualization for ambiguous owner-related follow-ups
+  -> clarification or scope response when no retrieval question is available
+  -> standalone retrieval question
   -> Qdrant retrieval
   -> prompt building with separated system/context/question
   -> OpenAI Responses API answer
   -> structured ChatResponse or SSE events
 ```
 
-If no useful chunks are retrieved or provider calls fail, the chat returns an insufficient-data response instead of exposing provider errors or fabricating an answer.
+The resolved standalone question is used for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains a separate context input.
+
+If an ambiguous short continuation cannot be resolved reliably, the chat asks for clarification before retrieval and does not suggest handoff. If retrieval for a resolved standalone question fails or returns no useful chunks, the chat returns an insufficient-data response instead of exposing retrieval-provider errors or fabricating an answer.
 
 The current runtime RAG path is:
 
