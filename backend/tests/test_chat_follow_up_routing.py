@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
-from tests.chat_expected_responses import INSUFFICIENT_DATA_ANSWER
+from tests.chat_expected_responses import CLARIFICATION_ANSWER, INSUFFICIENT_DATA_ANSWER
 
 
-def test_chat_treats_yes_after_alex_follow_up_as_continuation(
+def test_chat_requests_clarification_when_follow_up_cannot_be_contextualized(
     empty_chat_client: TestClient,
 ) -> None:
     response = empty_chat_client.post(
@@ -26,12 +26,12 @@ def test_chat_treats_yes_after_alex_follow_up_as_continuation(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["answer"] == INSUFFICIENT_DATA_ANSWER
+    assert body["answer"] == CLARIFICATION_ANSWER
     assert body["sources"] == []
     assert body["confidence"] == "low"
-    assert body["not_enough_data"] is True
-    assert body["handoff_suggested"] is True
-    assert body["handoff_reason"] == "insufficient_data"
+    assert body["not_enough_data"] is False
+    assert body["handoff_suggested"] is False
+    assert body["handoff_reason"] is None
 
 
 def test_chat_routes_mba_follow_up_to_alex_context(

@@ -8,6 +8,7 @@ from app.api.chat import get_chat_service
 from app.main import app
 from app.rag.retriever import EmptyRetriever
 from app.services.chat import ChatService, GREETING_ANSWER
+from tests.chat_expected_responses import CLARIFICATION_ANSWER
 
 client = TestClient(app)
 
@@ -34,6 +35,30 @@ def test_chat_stream_returns_sse_policy_response() -> None:
     assert "event: done" in body
     assert _joined_token_text(body) == GREETING_ANSWER
     assert _last_payload(body, "done")["confidence"] == "high"
+
+
+def test_chat_stream_returns_clarification_without_handoff() -> None:
+    app.dependency_overrides[get_chat_service] = lambda: ChatService(retriever=EmptyRetriever())
+
+    response, body = _post_stream(
+        {
+            "message": "yes",
+            "history": [
+                {"role": "user", "content": "What are Alex's main strengths?"},
+                {
+                    "role": "assistant",
+                    "content": "Would you like to see an example from his experience?",
+                },
+            ],
+        }
+    )
+
+    assert response.status_code == 200
+    assert _joined_token_text(body) == CLARIFICATION_ANSWER
+    done = _last_payload(body, "done")
+    assert done["not_enough_data"] is False
+    assert done["handoff_suggested"] is False
+    assert done["handoff_reason"] is None
 
 
 def test_chat_stream_returns_safe_error_event_for_service_failure() -> None:
