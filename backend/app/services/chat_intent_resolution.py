@@ -1,9 +1,8 @@
-import json
 from dataclasses import dataclass
+from typing import Literal
 
 from app.core.project_config import get_project_config
-from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
-from app.rag.prompt_builder import PromptBundle
+from app.llm.client import LLMClient
 from app.schemas.chat import ChatHistoryMessage, ChatRequest
 from app.services.chat_copy import (
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
@@ -28,18 +27,47 @@ from app.services.chat_intent_terms import (
     WEAKNESS_REQUEST_TERMS,
 )
 from app.services.chat_language import normalize_message
+from app.services.question_contextualizer import LLMQuestionContextualizer
 
 _PROJECT_CONFIG = get_project_config()
 _OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
 _OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
 
 
+QuestionIntent = Literal[
+    "alex_profile_question",
+    "alex_services_question",
+    "third_party_question",
+    "out_of_scope_question",
+    "clarification_required",
+]
+QuestionResolutionMethod = Literal["rules", "llm", "fallback"]
+
+_RAG_QUESTION_INTENTS = {
+    "alex_profile_question",
+    "alex_services_question",
+}
+
+
 @dataclass(frozen=True)
 class QuestionResolution:
-    is_alex_specific: bool
-    retrieval_query: str
+    intent: QuestionIntent
+    original_question: str
+    standalone_question: str | None
     conversational_context: str
-    is_out_of_scope_subject: bool = False
+    resolution_method: QuestionResolutionMethod
+
+    def __post_init__(self) -> None:
+        if self.requires_retrieval and not self.standalone_question:
+            raise ValueError("A retrieval resolution requires a standalone question.")
+
+    @property
+    def requires_retrieval(self) -> bool:
+        return self.intent in _RAG_QUESTION_INTENTS
+
+    @property
+    def requires_clarification(self) -> bool:
+        return self.intent == "clarification_required"
 
 
 def resolve_question(
@@ -52,73 +80,82 @@ def resolve_question(
 
     if is_direct_third_party_subject(normalized_message):
         return QuestionResolution(
-            is_alex_specific=False,
-            retrieval_query=request.message,
+            intent="third_party_question",
+            original_question=request.message,
+            standalone_question=None,
             conversational_context=conversational_context,
-            is_out_of_scope_subject=True,
+            resolution_method="rules",
         )
 
     if is_alex_specific_question(request.message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=_rewrite_alex_retrieval_query(request.message),
+            intent="alex_profile_question",
+            original_question=request.message,
+            standalone_question=_rewrite_alex_retrieval_query(request.message),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     if is_service_request(request.message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=_services_retrieval_query(),
+            intent="alex_services_question",
+            original_question=request.message,
+            standalone_question=_services_retrieval_query(),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     subject = _last_explicit_user_subject(request.history)
     has_alex_context = history_has_alex_assistant_context(request.history)
 
-    classifier_resolution = _try_llm_intent_resolution(
+    if _is_follow_up_profile_question(normalized_message):
+        if subject == "third_party":
+            return QuestionResolution(
+                intent="third_party_question",
+                original_question=request.message,
+                standalone_question=None,
+                conversational_context=conversational_context,
+                resolution_method="rules",
+            )
+        if subject == "alex" or has_alex_context:
+            return QuestionResolution(
+                intent="alex_profile_question",
+                original_question=request.message,
+                standalone_question=_rewrite_alex_retrieval_query(request.message),
+                conversational_context=conversational_context,
+                resolution_method="rules",
+            )
+
+    contextualized_resolution = _try_llm_question_resolution(
         request=request,
         llm_client=llm_client,
         conversational_context=conversational_context,
     )
-    if classifier_resolution is not None:
-        return classifier_resolution
+    if contextualized_resolution is not None:
+        return contextualized_resolution
 
-    if _is_follow_up_profile_question(normalized_message):
-        if subject == "third_party":
-            return QuestionResolution(
-                is_alex_specific=False,
-                retrieval_query=request.message,
-                conversational_context=conversational_context,
-                is_out_of_scope_subject=True,
-            )
-        if subject == "alex" or has_alex_context:
-            return QuestionResolution(
-                is_alex_specific=True,
-                retrieval_query=_rewrite_alex_retrieval_query(request.message),
-                conversational_context=conversational_context,
-            )
-
-    if has_alex_context and _looks_like_short_continuation(normalized_message):
-        return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=(
-                f"Continue answering about {_OWNER_POSSESSIVE} professional "
-                f"profile based on the previous {_OWNER_REFERENCE}-related question."
-            ),
+    if _looks_like_short_continuation(normalized_message):
+        return _clarification_resolution(
+            request=request,
             conversational_context=conversational_context,
+            resolution_method="fallback",
         )
 
     if has_alex_context and _looks_like_short_profile_follow_up(normalized_message):
         return QuestionResolution(
-            is_alex_specific=True,
-            retrieval_query=_rewrite_alex_retrieval_query(request.message),
+            intent="alex_profile_question",
+            original_question=request.message,
+            standalone_question=_rewrite_alex_retrieval_query(request.message),
             conversational_context=conversational_context,
+            resolution_method="rules",
         )
 
     return QuestionResolution(
-        is_alex_specific=False,
-        retrieval_query=request.message,
+        intent="out_of_scope_question",
+        original_question=request.message,
+        standalone_question=None,
         conversational_context=conversational_context,
+        resolution_method="rules",
     )
 
 
@@ -126,8 +163,6 @@ def format_conversation_context(history: list[ChatHistoryMessage]) -> str:
     lines = []
     for item in history:
         content = " ".join(item.content.split())
-        if len(content) > 500:
-            content = content[:497].rstrip() + "..."
         lines.append(f"{item.role}: {content}")
     return "\n".join(lines)
 
@@ -198,7 +233,7 @@ def history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> boo
     return False
 
 
-def _try_llm_intent_resolution(
+def _try_llm_question_resolution(
     *,
     request: ChatRequest,
     llm_client: LLMClient | None,
@@ -206,42 +241,48 @@ def _try_llm_intent_resolution(
 ) -> QuestionResolution | None:
     if llm_client is None:
         return None
-    if not _should_use_intent_classifier(request):
+    if not _should_contextualize_with_llm(request):
         return None
 
-    prompt = PromptBundle(
-        system=(
-            f"Classify whether the user is asking about {_OWNER_POSSESSIVE} public "
-            "professional profile or software services. Return only compact "
-            "JSON with keys: intent, rewritten_query, confidence, reason."
-        ),
-        context=conversational_context or "No conversation context.",
-        question=request.message,
+    contextualized = LLMQuestionContextualizer(llm_client).contextualize(
+        message=request.message,
+        conversational_context=conversational_context,
     )
-    try:
-        raw_answer = llm_client.answer(prompt)
-    except (ProviderConfigurationError, ProviderRequestError):
+    if contextualized is None:
         return None
 
-    try:
-        payload = json.loads(raw_answer)
-    except json.JSONDecodeError:
-        return None
-
-    if not isinstance(payload, dict):
-        return None
-    supported_intents = {"alex_profile_question", "alex_services_question"}
-    if payload.get("intent") not in supported_intents:
-        return None
-
-    rewritten_query = payload.get("rewritten_query")
-    if not isinstance(rewritten_query, str) or not rewritten_query.strip():
-        return None
+    if contextualized.intent == "clarification_required" or contextualized.confidence == "low":
+        return _clarification_resolution(
+            request=request,
+            conversational_context=conversational_context,
+            resolution_method="llm",
+        )
 
     return QuestionResolution(
-        is_alex_specific=True,
-        retrieval_query=rewritten_query.strip(),
+        intent=contextualized.intent,
+        original_question=request.message,
+        standalone_question=(
+            contextualized.standalone_question.strip()
+            if contextualized.standalone_question
+            else None
+        ),
         conversational_context=conversational_context,
+        resolution_method="llm",
+    )
+
+
+def _clarification_resolution(
+    *,
+    request: ChatRequest,
+    conversational_context: str,
+    resolution_method: QuestionResolutionMethod,
+) -> QuestionResolution:
+    return QuestionResolution(
+        intent="clarification_required",
+        original_question=request.message,
+        standalone_question=None,
+        conversational_context=conversational_context,
+        resolution_method=resolution_method,
     )
 
 
@@ -279,11 +320,14 @@ def _looks_like_profile_topic(normalized_message: str) -> bool:
     )
 
 
-def _should_use_intent_classifier(request: ChatRequest) -> bool:
+def _should_contextualize_with_llm(request: ChatRequest) -> bool:
     normalized_message = normalize_message(request.message)
     if any(term in normalized_message for term in ALEX_TERMS):
         return False
-    if not any(term in normalized_message for term in FOLLOW_UP_PRONOUN_TERMS):
+    is_ambiguous_follow_up = _looks_like_short_continuation(normalized_message) or any(
+        term in normalized_message for term in FOLLOW_UP_PRONOUN_TERMS
+    )
+    if not is_ambiguous_follow_up:
         return False
     return history_has_alex_assistant_context(request.history)
 

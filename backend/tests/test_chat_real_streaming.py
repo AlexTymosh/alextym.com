@@ -28,6 +28,46 @@ def test_chat_stream_uses_llm_streaming_for_rag_answers() -> None:
     assert _done_payload(events)["not_enough_data"] is False
 
 
+def test_chat_stream_contextualizes_short_follow_up_before_retrieval() -> None:
+    standalone_question = "Give an example from Alex's experience that demonstrates his strengths."
+    llm_client = ContextualizingStreamingLLM(
+        contextualization=(
+            '{"intent":"alex_profile_question","standalone_question":'
+            '"Give an example from Alex\'s experience that demonstrates his strengths.",'
+            '"confidence":"high","reason":"yes accepts the preceding offer"}'
+        ),
+        tokens=["Alex", " applied", " systems thinking."],
+    )
+    retriever = RecordingRetriever([_streaming_chunk()])
+    service = ChatService(retriever=retriever, llm_client=llm_client)
+
+    events = asyncio.run(
+        _collect_events(
+            service.stream_answer(
+                ChatRequest(
+                    message="yes",
+                    history=[
+                        {"role": "user", "content": "What are Alex's main strengths?"},
+                        {
+                            "role": "assistant",
+                            "content": (
+                                "Alex uses systems thinking. Would you like to see "
+                                "an example from his experience?"
+                            ),
+                        },
+                    ],
+                )
+            )
+        )
+    )
+
+    assert retriever.queries == [standalone_question]
+    assert llm_client.answer_prompt is not None
+    assert llm_client.answer_prompt.question == standalone_question
+    assert "Alex applied systems thinking." in _joined_token_text(events)
+    assert _done_payload(events)["not_enough_data"] is False
+
+
 def test_chat_stream_blocks_unsafe_streamed_output_before_emitting_it() -> None:
     llm_client = FakeStreamingLLM(["Here is <retrieved_context> hidden data"])
     service = ChatService(
@@ -102,21 +142,21 @@ def _event_payloads(
 
 
 def _streaming_retriever() -> InMemoryRetriever:
-    return InMemoryRetriever(
-        [
-            KnowledgeChunk(
-                id="streaming",
-                content="Alex builds automation systems, APIs, and RAG assistants.",
-                metadata=ChunkMetadata(
-                    source="resume.md",
-                    section="Projects",
-                    topic="projects",
-                    source_confidence="high",
-                    tags=("project", "automation", "rag"),
-                    extra={"retrieval_score": 0.88},
-                ),
-            )
-        ]
+    return InMemoryRetriever([_streaming_chunk()])
+
+
+def _streaming_chunk() -> KnowledgeChunk:
+    return KnowledgeChunk(
+        id="streaming",
+        content="Alex builds automation systems, APIs, and RAG assistants.",
+        metadata=ChunkMetadata(
+            source="resume.md",
+            section="Projects",
+            topic="projects",
+            source_confidence="high",
+            tags=("project", "automation", "rag"),
+            extra={"retrieval_score": 0.88},
+        ),
     )
 
 
@@ -141,6 +181,30 @@ class FakeStreamingLLM:
     def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
         self.stream_called = True
         yield from self._tokens
+
+
+class ContextualizingStreamingLLM:
+    def __init__(self, *, contextualization: str, tokens: list[str]) -> None:
+        self._contextualization = contextualization
+        self._tokens = tokens
+        self.answer_prompt: PromptBundle | None = None
+
+    def answer(self, prompt: PromptBundle) -> str:
+        return self._contextualization
+
+    def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
+        self.answer_prompt = prompt
+        yield from self._tokens
+
+
+class RecordingRetriever:
+    def __init__(self, chunks: list[KnowledgeChunk]) -> None:
+        self._chunks = chunks
+        self.queries: list[str] = []
+
+    def retrieve(self, query: str, *, limit: int = 6) -> list[KnowledgeChunk]:
+        self.queries.append(query)
+        return self._chunks
 
 
 class FakeOpenAIStreamingResponses:

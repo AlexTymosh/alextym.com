@@ -243,9 +243,10 @@ Case-study payloads also expose `organization` and `parent_id` for attribution. 
 ```text
 user question
   -> chat safety checks
-  -> subject resolution
-  -> optional LLM-based intent classification for ambiguous cases
-  -> retrieval query rewrite when needed
+  -> deterministic question and subject resolution
+  -> optional structured LLM contextualization for ambiguous owner-related follow-ups
+  -> clarification or scope response when no retrieval question is available
+  -> standalone retrieval question
   -> query routing
   -> payload filter hints
   -> query expansion
@@ -318,7 +319,7 @@ Contact, out-of-scope, and general profile routes do not apply strict payload fi
 
 ---
 
-## Query rewriting and subject resolution
+## Question contextualization and subject resolution
 
 The chat service resolves whether the question is about the site owner before retrieval.
 
@@ -332,7 +333,13 @@ Supported cases:
 - pronoun follow-ups after owner-related context;
 - direct third-party subjects are treated as out of scope.
 
-The conversation history is used only for context. It is not treated as a factual source.
+Direct and otherwise unambiguous questions use deterministic rules. For an ambiguous short continuation or pronoun reference with owner-related assistant history, the service may call the LLM contextualizer. The contextualizer returns a JSON object with a closed intent, `standalone_question`, confidence, and reason; Pydantic rejects malformed or incomplete output.
+
+An accepted standalone question is used consistently for query routing, retrieval, prompt construction, and answer-confidence calculation. The original conversation history is passed separately as conversational context. This prevents a fragment such as `yes` from becoming the retrieval query or final user question.
+
+Low-confidence or explicit `clarification_required` contextualizer output produces a clarification response before retrieval. If contextualization is unavailable or invalid, deterministic fallback rules still apply; an unresolved short continuation also produces clarification rather than a generic owner-profile query.
+
+The conversation history is used only to resolve meaning and preserve conversational context. It is not treated as a factual source. Frontend-scripted and model-generated assistant messages use the same history role and the backend does not branch on their origin.
 
 Non-English input currently triggers unsupported-language handling rather than multilingual RAG.
 
@@ -433,12 +440,13 @@ The assistant must not invent:
 - links;
 - personal stories.
 
-If context is insufficient, use the insufficient-data path.
+Use the insufficient-data path only after a standalone retrieval question has been resolved and retrieval fails or returns no useful chunks. Failure to determine what an ambiguous short continuation means uses the clarification path instead, with `not_enough_data=false` and no handoff suggestion.
 
 Current insufficient-data answer:
 
 ```text
 I do not have enough reliable information in the public knowledge base to answer that accurately.
+Would you like me to connect you with Alex?
 ```
 
 ---
