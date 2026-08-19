@@ -8,6 +8,7 @@ from typing import Any
 from app.core.project_config import get_project_config
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
 from app.llm.factory import get_configured_llm_client
+from app.rag.errors import RetrievalError
 from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
@@ -28,6 +29,7 @@ from app.services.chat_copy import (
     PRIVATE_DATA_ANSWER,
     PROMPT_INJECTION_ANSWER,
     PUBLIC_BOUNDARY_WEAKNESSES_ANSWER,
+    RETRIEVAL_UNAVAILABLE_ANSWER,
     SOCIAL_ACKNOWLEDGEMENT_ANSWER,
     UNSUPPORTED_NON_ENGLISH_ANSWER,
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
@@ -60,6 +62,7 @@ __all__ = [
     "PRIVATE_DATA_ANSWER",
     "PROMPT_INJECTION_ANSWER",
     "PUBLIC_BOUNDARY_WEAKNESSES_ANSWER",
+    "RETRIEVAL_UNAVAILABLE_ANSWER",
     "SOCIAL_ACKNOWLEDGEMENT_ANSWER",
     "UNSUPPORTED_NON_ENGLISH_ANSWER",
     "UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER",
@@ -233,10 +236,15 @@ class ChatService:
 
         try:
             chunks = self._retriever.retrieve(standalone_question)
+        except RetrievalError:
+            return ChatPolicyResult(
+                intent="retrieval_unavailable",
+                response=self._retrieval_unavailable_response(),
+            )
         except (ProviderConfigurationError, ProviderRequestError):
             return ChatPolicyResult(
-                intent="insufficient_data",
-                response=self._insufficient_data_response(),
+                intent="retrieval_unavailable",
+                response=self._retrieval_unavailable_response(),
             )
 
         if not chunks:
@@ -414,6 +422,7 @@ class ChatService:
             ],
             confidence=context.confidence,
             not_enough_data=False,
+            retrieval_status="success",
             handoff_suggested=context.handoff_suggested,
             handoff_reason=context.handoff_reason,
             language_unsupported=False,
@@ -433,6 +442,7 @@ class ChatService:
                 "request_id": request_id,
                 "confidence": response.confidence,
                 "not_enough_data": response.not_enough_data,
+                "retrieval_status": response.retrieval_status,
                 "handoff_suggested": response.handoff_suggested,
                 "handoff_reason": response.handoff_reason,
                 "language_unsupported": response.language_unsupported,
@@ -489,8 +499,20 @@ class ChatService:
             sources=[],
             confidence="low",
             not_enough_data=True,
+            retrieval_status="empty",
             handoff_suggested=True,
             handoff_reason="insufficient_data",
+        )
+
+    @staticmethod
+    def _retrieval_unavailable_response() -> ChatResponse:
+        return ChatResponse(
+            answer=RETRIEVAL_UNAVAILABLE_ANSWER,
+            sources=[],
+            confidence="low",
+            not_enough_data=False,
+            retrieval_status="unavailable",
+            handoff_suggested=False,
         )
 
     @staticmethod

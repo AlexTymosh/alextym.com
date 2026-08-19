@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.domain_metrics import DOMAIN_METRICS_REGISTRY
 from app.core.metrics import configure_metrics
 from app.llm.client import ProviderRequestError
+from app.rag.errors import RetrievalError
 from app.rag.models import ChunkMetadata, KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
 from app.services.chat_metrics import MetricsLLMClient, MetricsRetriever
@@ -98,6 +99,26 @@ def test_llm_wrapper_error_metrics_are_recorded():
         metrics,
         "portfolio_llm_requests_total",
         {"operation": "answer", "outcome": "error"},
+    )
+
+
+def test_retrieval_error_metrics_use_bounded_stage_and_code() -> None:
+    retriever = MetricsRetriever(_FailingRetriever())
+
+    try:
+        retriever.retrieve("Tell me about the owner")
+    except RetrievalError:
+        pass
+
+    metrics = _latest_domain_metrics_text()
+    assert _has_sample(
+        metrics,
+        "portfolio_rag_retrievals_total",
+        {
+            "outcome": "error",
+            "stage": "vector_search",
+            "error_code": "vector_search_failed",
+        },
     )
 
 
@@ -245,6 +266,16 @@ class _FakeLLMClient:
     def stream_answer(self, prompt: PromptBundle) -> Iterator[str]:
         yield "Streamed "
         yield "answer."
+
+
+class _FailingRetriever:
+    def retrieve(self, query: str) -> list[KnowledgeChunk]:
+        raise RetrievalError(
+            "provider detail",
+            stage="vector_search",
+            code="vector_search_failed",
+            retryable=True,
+        )
 
 
 class _FailingLLMClient:

@@ -21,6 +21,7 @@ def test_chat_returns_clarification_response_for_insufficient_data(
     assert body["sources"] == []
     assert body["confidence"] == "low"
     assert body["not_enough_data"] is True
+    assert body["retrieval_status"] == "empty"
     assert body["handoff_suggested"] is True
     assert body["handoff_reason"] == "insufficient_data"
     assert body["language_unsupported"] is False
@@ -37,6 +38,7 @@ def test_chat_handles_greeting_without_insufficient_data(
     assert body["answer"] == GREETING_ANSWER
     assert body["confidence"] == "high"
     assert body["not_enough_data"] is False
+    assert body["retrieval_status"] == "not_requested"
     assert body["handoff_suggested"] is False
     assert body["handoff_reason"] is None
     assert body["language_unsupported"] is False

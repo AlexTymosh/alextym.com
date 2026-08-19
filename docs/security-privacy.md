@@ -454,6 +454,8 @@ Backend must:
 - sanitize/log safely;
 - keep provider clients server-side;
 - return safe errors;
+- log retrieval failures only with bounded stage/error codes, never query text,
+  prompts, provider response bodies, or collection credentials;
 - avoid local persistent secrets;
 - avoid long-term storage of active handoff messages.
 

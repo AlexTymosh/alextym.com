@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 
+import structlog
+
 from app.core.config import Settings
 from app.core.domain_metrics import (
     elapsed_seconds,
@@ -15,6 +17,7 @@ from app.core.domain_metrics import (
 from app.llm.client import LLMClient
 from app.llm.factory import get_configured_llm_client
 from app.rag.factory import get_configured_retriever
+from app.rag.errors import RetrievalError
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
 from app.rag.retriever import Retriever
@@ -22,6 +25,8 @@ from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.sse import ServerSentEvent
 from app.services.chat import ChatService
 from app.services.chat_safety import is_prompt_injection_attempt
+
+logger = structlog.get_logger(__name__)
 
 
 class MetricsRetriever:
@@ -32,11 +37,38 @@ class MetricsRetriever:
         start_time = start_timer()
         try:
             chunks = self._retriever.retrieve(query)
-        except Exception:
+        except RetrievalError as exc:
             record_rag_retrieval(
                 outcome="error",
                 chunks_count=0,
                 duration_seconds=elapsed_seconds(start_time),
+                stage=exc.stage,
+                error_code=exc.code,
+            )
+            logger.warning(
+                "rag.retrieval.failed",
+                message="RAG retrieval failed.",
+                retrieval_stage=exc.stage,
+                error_code=exc.code,
+                error_type=type(exc).__name__,
+                retryable=exc.retryable,
+            )
+            raise
+        except Exception as exc:
+            record_rag_retrieval(
+                outcome="error",
+                chunks_count=0,
+                duration_seconds=elapsed_seconds(start_time),
+                stage="unknown",
+                error_code="unexpected_error",
+            )
+            logger.exception(
+                "rag.retrieval.failed",
+                message="Unexpected RAG retrieval failure.",
+                retrieval_stage="unknown",
+                error_code="unexpected_error",
+                error_type=type(exc).__name__,
+                retryable=True,
             )
             raise
 
@@ -168,6 +200,7 @@ def _record_chat_response_metrics(
         confidence=response.confidence,
         not_enough_data=response.not_enough_data,
         handoff_suggested=response.handoff_suggested,
+        retrieval_status=response.retrieval_status,
     )
 
 
@@ -181,6 +214,10 @@ def _record_stream_done_metrics(
         sources=[],
         confidence=_string_value(payload.get("confidence"), default="low"),
         not_enough_data=payload.get("not_enough_data") is True,
+        retrieval_status=_string_value(
+            payload.get("retrieval_status"),
+            default="not_requested",
+        ),
         handoff_suggested=payload.get("handoff_suggested") is True,
         handoff_reason=_optional_string_value(payload.get("handoff_reason")),
         language_unsupported=payload.get("language_unsupported") is True,
@@ -203,6 +240,8 @@ def _classify_chat_response(
         return "policy", "private_data"
     if response.handoff_reason == "public_boundary":
         return "policy", "public_boundary"
+    if response.retrieval_status == "unavailable":
+        return "retrieval_unavailable", "none"
     if response.not_enough_data:
         return "insufficient_data", response.handoff_reason or "insufficient_data"
     if response.sources:

@@ -93,15 +93,19 @@ GET /api/health/ready
 
 Purpose:
 
-- configuration readiness check;
+- application and Qdrant contract readiness check;
 - deploy smoke test;
 - manual debugging.
 
 Current behaviour:
 
-- checks whether required configuration values are present;
-- does not perform live Qdrant/OpenAI/Resend network calls;
-- currently returns HTTP 200 with configuration status fields.
+- keeps application liveness separate from dependency readiness;
+- validates the configured Qdrant collection through a cached read-only probe;
+- checks collection status, vector mode/dimensions/distance, required payload
+  indexes, non-empty points, and the expected public source groups;
+- does not call OpenAI, Resend, Telegram, or Redis;
+- returns HTTP 503 when the configured Qdrant contract is not ready;
+- does not expose the internal contract error code in the public response.
 
 Response shape:
 
@@ -110,17 +114,19 @@ Response shape:
   "status": "ready",
   "app": "ready",
   "environment": "local",
-  "vector_db": "configured",
+  "vector_db": "ready",
   "llm_config": "configured",
   "contact_email": "configured"
 }
 ```
 
-Possible field values for provider configuration fields:
+Possible values:
 
 ```text
-configured
-not_configured
+status: ready | not_ready
+vector_db: ready | not_ready | not_configured
+llm_config: configured | not_configured
+contact_email: configured | not_configured
 ```
 
 ---
@@ -227,12 +233,13 @@ Clarification response shape:
   "sources": [],
   "confidence": "low",
   "not_enough_data": false,
+  "retrieval_status": "not_requested",
   "handoff_suggested": false,
   "handoff_reason": null
 }
 ```
 
-Clarification is distinct from the insufficient-data response below. Clarification means that no reliable standalone question was available, so retrieval did not run. Insufficient data means that a standalone question was resolved but retrieval failed or returned no useful chunks.
+Clarification is distinct from the insufficient-data response below. Clarification means that no reliable standalone question was available, so retrieval did not run. Insufficient data means that a standalone question was resolved and retrieval completed successfully but returned no useful chunks.
 
 Response:
 
@@ -248,6 +255,7 @@ Response:
   ],
   "confidence": "medium",
   "not_enough_data": false,
+  "retrieval_status": "success",
   "handoff_suggested": false,
   "handoff_reason": null
 }
@@ -261,10 +269,29 @@ Insufficient-data response shape:
   "sources": [],
   "confidence": "low",
   "not_enough_data": true,
+  "retrieval_status": "empty",
   "handoff_suggested": true,
   "handoff_reason": "insufficient_data"
 }
 ```
+
+Technical retrieval failures are not knowledge claims and do not trigger a
+handoff suggestion:
+
+```json
+{
+  "answer": "I cannot access the public knowledge base right now. Please try again in a moment.",
+  "sources": [],
+  "confidence": "low",
+  "not_enough_data": false,
+  "retrieval_status": "unavailable",
+  "handoff_suggested": false,
+  "handoff_reason": null
+}
+```
+
+`retrieval_status` is one of `not_requested`, `success`, `empty`, or
+`unavailable`.
 
 Out-of-scope questions return a scope-boundary answer rather than a general AI answer. The assistant is focused on the public professional profile, projects, skills, CV, availability, and contact options.
 
@@ -315,7 +342,7 @@ event: sources
 data: {"sources":[{"title":"Summary","section":"summary","confidence":"medium"}]}
 
 event: done
-data: {"request_id":"...","confidence":"medium","not_enough_data":false,"handoff_suggested":false,"handoff_reason":null}
+data: {"request_id":"...","confidence":"medium","not_enough_data":false,"retrieval_status":"success","handoff_suggested":false,"handoff_reason":null}
 ```
 
 Error event:

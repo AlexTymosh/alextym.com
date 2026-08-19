@@ -186,7 +186,7 @@ RAG_TOP_K=6
 RAG_SCORE_THRESHOLD=0.4
 ```
 
-Supported vector modes:
+Supported ingestion vector modes:
 
 ```text
 single
@@ -206,6 +206,11 @@ title_dense
 body_dense
 summary_dense
 ```
+
+Production runtime retrieval is intentionally restricted to the evaluated
+single-vector `body_dense` contract. Named-vector ingestion remains available for
+controlled experiments, but it must not be activated in production until vector
+fusion is implemented and demonstrates an evaluation benefit.
 
 Qdrant distance:
 
@@ -236,6 +241,20 @@ dataset_version
 
 Case-study payloads also expose `organization` and `parent_id` for attribution. They remain unindexed until runtime retrieval filters need them.
 
+### Runtime collection contract
+
+The shared runtime contract validates, without mutation:
+
+- readable collection status;
+- single-vector mode, 1536 dimensions, and Cosine distance;
+- every base and versioned keyword payload index;
+- at least one indexed point;
+- public points for both `resume` and `case-studies` source groups.
+
+The cached readiness probe uses this contract. A mismatch makes
+`/api/health/ready` return HTTP 503 and causes chat retrieval to use a typed
+temporary-unavailable response instead of the insufficient-data path.
+
 ---
 
 ## Runtime retrieval flow
@@ -258,7 +277,7 @@ user question
   -> keyword scoring
   -> prompt building
   -> OpenAI Responses API answer
-  -> response with sources, confidence, not_enough_data and handoff metadata
+  -> response with sources, confidence, retrieval_status, not_enough_data and handoff metadata
 ```
 
 Current query expansion is intentionally small and focused on employer-facing questions, including:
@@ -440,7 +459,7 @@ The assistant must not invent:
 - links;
 - personal stories.
 
-Use the insufficient-data path only after a standalone retrieval question has been resolved and retrieval fails or returns no useful chunks. Failure to determine what an ambiguous short continuation means uses the clarification path instead, with `not_enough_data=false` and no handoff suggestion.
+Use the insufficient-data path only after a standalone retrieval question has been resolved and retrieval completes successfully with no useful chunks. Provider, embedding, vector-search, and collection-contract failures use `retrieval_status=unavailable`, `not_enough_data=false`, and no handoff suggestion. Failure to determine what an ambiguous short continuation means uses the clarification path instead, with `retrieval_status=not_requested`, `not_enough_data=false`, and no handoff suggestion.
 
 Current insufficient-data answer:
 

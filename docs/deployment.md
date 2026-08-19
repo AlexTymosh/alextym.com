@@ -451,9 +451,11 @@ GET /api/warmup
 Current behaviour:
 
 - `/api/health/live` returns `{"status":"alive"}`;
-- `/api/health/ready` returns configuration presence statuses, not real provider connectivity checks;
+- `/api/health/ready` performs a cached read-only Qdrant collection-contract
+  check and returns HTTP 503 when that configured contract is not ready;
 - `/api/warmup` returns lightweight app/environment readiness metadata;
-- none of these endpoints call OpenAI, Qdrant, Resend, Telegram, or Redis.
+- liveness and warmup call no providers; readiness calls only Qdrant and does not
+  generate embeddings or mutate collection data.
 
 Current readiness fields:
 
@@ -466,11 +468,13 @@ llm_config
 contact_email
 ```
 
-Current configuration status values:
+Current readiness status values:
 
 ```text
-configured
-not_configured
+status: ready | not_ready
+vector_db: ready | not_ready | not_configured
+llm_config: configured | not_configured
+contact_email: configured | not_configured
 ```
 
 ---
@@ -632,7 +636,7 @@ Expected readiness shape:
 status: ready
 app: ready
 environment: <environment>
-vector_db: configured | not_configured
+vector_db: ready | not_ready | not_configured
 llm_config: configured | not_configured
 contact_email: configured | not_configured
 ```

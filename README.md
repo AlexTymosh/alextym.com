@@ -506,7 +506,7 @@ flowchart LR
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/api/health/live` | lightweight check that the backend is alive |
-| `GET` | `/api/health/ready` | configuration readiness check |
+| `GET` | `/api/health/ready` | cached Qdrant contract readiness check |
 | `GET` | `/api/warmup` | lightweight backend warm-up before chat |
 | `POST` | `/api/chat` | JSON fallback for chat |
 | `POST` | `/api/chat/stream` | SSE chat stream for policy and RAG-backed answers |
@@ -526,7 +526,7 @@ flowchart LR
 The project is prepared to work on free / low-cost hosting where the backend may go to sleep:
 
 - `/api/health/live` — lightweight liveness endpoint;
-- `/api/health/ready` — configuration readiness check;
+- `/api/health/ready` - cached read-only Qdrant contract readiness check;
 - `/api/warmup` — lightweight warm-up endpoint;
 - the frontend calls `/api/warmup` when `/chat` is opened;
 - `/api/health/live` can be used as a target for an external keep-alive monitor.

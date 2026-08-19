@@ -313,7 +313,11 @@ POST /api/chat or POST /api/chat/stream
 
 The resolved standalone question is used for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains a separate context input.
 
-If an ambiguous short continuation cannot be resolved reliably, the chat asks for clarification before retrieval and does not suggest handoff. If retrieval for a resolved standalone question fails or returns no useful chunks, the chat returns an insufficient-data response instead of exposing retrieval-provider errors or fabricating an answer.
+If an ambiguous short continuation cannot be resolved reliably, the chat asks for clarification before retrieval and does not suggest handoff. A successful empty retrieval returns the insufficient-data response. A provider or collection-contract failure returns a distinct temporary-unavailable response, with no unsupported knowledge claim and no automatic handoff suggestion.
+
+`/api/health/ready` uses a cached read-only Qdrant contract probe. It validates
+the canonical runtime vector schema, required keyword indexes, point availability,
+and expected public source groups. `/api/health/live` remains provider-free.
 
 The current runtime RAG path is:
 

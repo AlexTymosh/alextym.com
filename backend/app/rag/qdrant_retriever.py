@@ -2,8 +2,9 @@ from dataclasses import replace
 from typing import Protocol
 
 from app.core.config import Settings
-from app.llm.client import EmbeddingClient
+from app.llm.client import EmbeddingClient, ProviderConfigurationError, ProviderRequestError
 from app.llm.openai_client import OpenAIEmbeddingClient
+from app.rag.errors import RetrievalError
 from app.rag.keyword_scoring import build_keyword_terms, keyword_score_chunk
 from app.rag.models import KnowledgeChunk, RetrievalFilter
 from app.rag.qdrant_store import QdrantKnowledgeStore
@@ -188,7 +189,10 @@ class QdrantRetriever:
 
         routed_query = route.retrieval_text(normalized_query)
         payload_filter = _with_current_public_source_groups(route.payload_filter())
-        query_embedding = self._embedding_client.embed_text(_expand_query(routed_query))
+        query_embedding = _embed_query(
+            self._embedding_client,
+            _expand_query(routed_query),
+        )
         chunks = _search_store(
             store=self._store,
             embedding=query_embedding,
@@ -206,7 +210,7 @@ class QdrantRetriever:
         route: QueryRoute,
         limit: int,
     ) -> list[KnowledgeChunk]:
-        query_embedding = self._embedding_client.embed_text(_expand_query(query))
+        query_embedding = _embed_query(self._embedding_client, _expand_query(query))
         candidate_limit = max(
             _CASE_EXAMPLE_MIN_CANDIDATES,
             limit * _CASE_EXAMPLE_CANDIDATE_MULTIPLIER,
@@ -266,6 +270,28 @@ def _search_store(
         score_threshold=score_threshold,
         payload_filter=payload_filter,
     )
+
+
+def _embed_query(
+    embedding_client: EmbeddingClient,
+    query: str,
+) -> list[float]:
+    try:
+        return embedding_client.embed_text(query)
+    except ProviderConfigurationError as exc:
+        raise RetrievalError(
+            "Embedding provider is not configured for retrieval.",
+            stage="embedding",
+            code="embedding_not_configured",
+            retryable=False,
+        ) from exc
+    except ProviderRequestError as exc:
+        raise RetrievalError(
+            "Embedding request failed during retrieval.",
+            stage="embedding",
+            code="embedding_request_failed",
+            retryable=True,
+        ) from exc
 
 
 def _with_current_public_source_groups(

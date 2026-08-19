@@ -1,4 +1,9 @@
 export type Confidence = "low" | "medium" | "high";
+export type RetrievalStatus =
+  | "not_requested"
+  | "success"
+  | "empty"
+  | "unavailable";
 
 export type MessageRole = "user" | "assistant" | "alex";
 
@@ -29,6 +34,7 @@ export type ChatResponse = {
   sources: ChatSource[];
   confidence: Confidence;
   not_enough_data: boolean;
+  retrieval_status: RetrievalStatus;
   handoff_suggested?: boolean;
   handoff_reason?: HandoffReason | null;
   language_unsupported?: boolean;
@@ -80,6 +86,7 @@ export type Message = {
   sources?: ChatSource[];
   confidence?: Confidence;
   notEnoughData?: boolean;
+  retrievalStatus?: RetrievalStatus;
   handoffSuggested?: boolean;
   handoffReason?: HandoffReason | null;
   languageUnsupported?: boolean;

@@ -344,6 +344,7 @@ export function useChatController({
           updateAssistantMessage(assistantId, {
             confidence: done.confidence,
             notEnoughData: done.not_enough_data,
+            retrievalStatus: done.retrieval_status,
             handoffSuggested: done.handoff_suggested,
             handoffReason: done.handoff_reason ?? null,
             languageUnsupported: done.language_unsupported,
@@ -372,6 +373,7 @@ export function useChatController({
             sources: fallbackResponse.sources,
             confidence: fallbackResponse.confidence,
             notEnoughData: fallbackResponse.not_enough_data,
+            retrievalStatus: fallbackResponse.retrieval_status,
             handoffSuggested: fallbackResponse.handoff_suggested,
             handoffReason: fallbackResponse.handoff_reason ?? null,
             languageUnsupported: fallbackResponse.language_unsupported,

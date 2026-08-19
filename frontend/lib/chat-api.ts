@@ -4,6 +4,7 @@ import type {
   ChatSource,
   Confidence,
   HandoffReason,
+  RetrievalStatus,
 } from "../types/chat";
 
 type SseEvent = {
@@ -14,6 +15,7 @@ type SseEvent = {
 type ChatStreamDone = {
   confidence: Confidence;
   not_enough_data: boolean;
+  retrieval_status: RetrievalStatus;
   handoff_suggested?: boolean;
   handoff_reason?: HandoffReason | null;
   language_unsupported?: boolean;
@@ -160,6 +162,7 @@ function handleSseEvent(
     handlers.onDone({
       confidence,
       not_enough_data: parsedPayload.not_enough_data === true,
+      retrieval_status: parseRetrievalStatus(parsedPayload.retrieval_status),
       handoff_suggested:
         typeof parsedPayload.handoff_suggested === "boolean"
           ? parsedPayload.handoff_suggested
@@ -194,6 +197,18 @@ function parseConfidence(value: unknown): Confidence {
     return value;
   }
   return "low";
+}
+
+function parseRetrievalStatus(value: unknown): RetrievalStatus {
+  if (
+    value === "success" ||
+    value === "empty" ||
+    value === "unavailable" ||
+    value === "not_requested"
+  ) {
+    return value;
+  }
+  return "not_requested";
 }
 
 function parseHandoffReason(value: unknown): HandoffReason | null {
