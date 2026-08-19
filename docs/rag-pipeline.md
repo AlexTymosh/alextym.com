@@ -266,15 +266,16 @@ user question
   -> optional structured LLM contextualization for ambiguous owner-related follow-ups
   -> clarification or scope response when no retrieval question is available
   -> standalone retrieval question
-  -> query routing
-  -> payload filter hints
+  -> query routing by intent, source scope and requested case section
   -> query expansion
   -> OpenAI query embedding
-  -> Qdrant dense search
+  -> broad Qdrant candidate search with strict source filters
+  -> optional case selection and selected-case section retrieval
   -> score threshold filtering
   -> section filtering
   -> heuristic reranking
   -> keyword scoring
+  -> final result limit
   -> prompt building
   -> OpenAI Responses API answer
   -> response with sources, confidence, retrieval_status, not_enough_data and handoff metadata
@@ -292,19 +293,35 @@ Current query expansion is intentionally small and focused on employer-facing qu
 
 ## Query routing
 
-Query routing classifies questions by intent and adds topic/tag/section hints.
+Query routing classifies independent dimensions instead of forcing every query
+into one exclusionary intent:
+
+```text
+subject intent
+source scope: all | resume | case_studies
+requested case sections
+single-case vs multi-case request
+handoff policy
+```
+
+Phrase matching is token-boundary-aware. Broad words do not match inside longer
+unrelated words, and commercial-service phrases are distinct from questions
+about a service-design case study.
 
 Implemented intents include:
 
 ```text
 hard_skills
 soft_skills
+strengths
+services
 projects
 availability
 right_to_work
 experience
 education
 contact
+public_boundary
 out_of_scope
 general_profile
 ```
@@ -315,6 +332,9 @@ The route may provide:
 topic_hints
 tag_hints
 section_hints
+source_scope
+case_section_hints
+select_single_case
 should_offer_handoff
 payload_filter
 ```
@@ -332,9 +352,28 @@ case_id
 case_section
 ```
 
-The case-study selectors are optional exact-match filters. Existing topic, tag, section, and visibility routing remains unchanged.
+Topic, tag, and section hints are used for query expansion and reranking. They
+are not sent to Qdrant as mandatory payload conditions. Strict runtime filters
+are reserved for visibility, source scope, and the selected `case_id`; the store
+still supports the other exact selectors for explicit callers.
 
-Contact, out-of-scope, and general profile routes do not apply strict payload filtering by default.
+Personal development-area questions and explicit commercial-service questions
+use resume scope. High-confidence case-study language such as `how did`, a
+singular example request, or `what limitations applied` uses case-study scope.
+
+### Two-stage case-study retrieval
+
+Single-case questions use two separate ranking stages:
+
+1. Retrieve at least 36 case-study chunks and score their subject relevance.
+2. Group evidence by `case_id` and select the strongest case without applying
+   requested-section bonuses.
+3. Retrieve at least 18 chunks from that case.
+4. Apply requested-section, topic, tag, dense, and keyword scores.
+5. Apply the caller's final result limit only after section reranking.
+
+Ordinary retrieval also fetches at least 18 candidates before reranking and
+truncation. This keeps candidate recall separate from response size.
 
 ---
 
@@ -373,8 +412,14 @@ dense retrieval score
 topic bonus
 tag bonus
 section bonus
+requested case-section bonus
 keyword score
 ```
+
+Requested case-section bonuses are deliberately excluded from the first-stage
+case selection score. A case with more implementation sections must not beat a
+more relevant case merely because the question asks how something was
+implemented.
 
 Keyword scoring uses:
 

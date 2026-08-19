@@ -31,7 +31,9 @@ VERSIONED_PAYLOAD_INDEXES = (
     "case_section",
     "dataset_version",
 )
-PUBLIC_SOURCE_GROUPS = ("resume", "case-studies")
+RESUME_SOURCE_GROUP = "resume"
+CASE_STUDY_SOURCE_GROUP = "case-studies"
+PUBLIC_SOURCE_GROUPS = (RESUME_SOURCE_GROUP, CASE_STUDY_SOURCE_GROUP)
 RUNTIME_VECTOR_MODE: VectorMode = "single"
 READABLE_COLLECTION_STATUSES = {"green", "yellow"}
 

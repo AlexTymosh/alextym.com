@@ -182,9 +182,9 @@ Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 | 1.1 | Implement shared collection contract | COMPLETE | Shared contract validates canonical vector schema, required keyword indexes, points, and public source groups | Preserve contract in later retrieval changes |
 | 1.2 | Add cached readiness contract check | COMPLETE | Read-only Qdrant probe returns `not_ready` and HTTP 503 on contract failure; liveness remains provider-free | Add the production deployment gate in Phase 5 |
 | 1.3 | Add typed retrieval failure semantics and observability | COMPLETE | JSON/SSE expose `empty` vs `unavailable`; bounded stage/error metrics and safe logs added | Preserve status parity in later chat changes |
-| 2.1 | Redesign query routing dimensions | PENDING | Two false-positive routes reproduced | Complete Phase 1 |
-| 2.2 | Implement two-stage case/section retrieval | PENDING | Current candidate and output limit are both 6 | Complete 2.1 |
-| 2.3 | Pass live retrieval evaluation | PENDING | Baseline 15/20 | Complete 2.2 |
+| 2.1 | Redesign query routing dimensions | COMPLETE | Boundary-aware phrase routing separates subject hints, source scope, and case-section intent; targeted regressions pass | Preserve dimensions through retrieval eval |
+| 2.2 | Implement two-stage case/section retrieval | COMPLETE | Subject-only case selection groups at least 36 candidates; selected-case retrieval reranks at least 18 sections before final limit | Preserve stage separation in later changes |
+| 2.3 | Pass live retrieval evaluation | COMPLETE | Final live suite passes 20/20, up from 15/20, with zero regressions | Re-run as a release gate in Phase 5 |
 | 3.1 | Implement structured contextualizer adapter | PENDING | Numeric confidence validation failure reproduced | Complete Phase 2 |
 | 3.2 | Verify ambiguous follow-up scenarios | PENDING | Existing `yes` scenario fails | Complete 3.1 |
 | 4.1 | Make handoff metadata authoritative | PENDING | Frontend false positive reproduced | Complete Phase 3 |
@@ -209,6 +209,10 @@ Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 | 2026-08-19 | `task backend:check` | Ruff, format, compile, and all 399 backend tests passed; one existing Starlette deprecation warning |
 | 2026-08-19 | `task frontend:check` | ESLint, TypeScript, resume parser, production build, and all 62 Playwright tests passed |
 | 2026-08-19 | `task ci` | All eight local gates passed, including 27/27 chat eval, free RAG checks, and Docker build |
+| 2026-08-19 | Phase 2 targeted retrieval tests | 32 passed initially; broader retrieval suite passed after using workspace-local pytest temp storage |
+| 2026-08-19 | Phase 2 live retrieval evaluation | Improved 15/20 to 18/20, then 20/20 after separating subject-level case selection from section intent; zero regressions |
+| 2026-08-19 | Phase 2 `task backend:check` | Ruff, format, compile, and all 407 backend tests passed; one existing Starlette deprecation warning |
+| 2026-08-19 | Phase 2 `task ci` | All eight local gates passed: repository/config checks, backend, frontend, free RAG, and Docker build |
 
 Update the status table and verification log as each phase progresses. Do not mark
 an item complete until its implementation and stated verification gate both pass.

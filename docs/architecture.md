@@ -322,17 +322,21 @@ and expected public source groups. `/api/health/live` remains provider-free.
 The current runtime RAG path is:
 
 ```text
-query routing
+query routing by subject intent, source scope, and requested case section
   -> query expansion
   -> OpenAI query embedding
-  -> Qdrant dense vector search
-  -> payload filters
-  -> score threshold
-  -> section filtering
-  -> heuristic reranking
-  -> keyword scoring
+  -> broad Qdrant candidate search with strict source filters only
+  -> case-study queries: group candidates by case_id and select one case
+  -> case-study queries: retrieve a broad section pool inside the selected case
+  -> heuristic and keyword reranking with requested-section bonuses
+  -> final result limit
   -> prompt context with compressed answer facts where available
 ```
+
+Topic, tag, and section hints influence embedding and reranking but are not
+mandatory Qdrant filters. This prevents a broad phrase such as `service` or
+`limitations` from excluding the relevant source before ranking. Exact
+`source_group` and `case_id` selectors remain strict payload filters.
 
 ---
 

@@ -130,9 +130,10 @@ The chat also includes a deterministic policy layer before RAG: greetings, unsup
 - RAG-backed answers stream through `POST /api/chat/stream` using Server-Sent Events and OpenAI Responses API streaming.
 - The frontend does not display incoming chunks immediately; it buffers SSE tokens and renders them gradually through a typewriter-style UI layer.
 - If streaming is unavailable before text is received, the frontend falls back to the JSON endpoint `POST /api/chat`.
-- The response includes structured metadata: `answer`, `sources`, `confidence`, `not_enough_data`, `handoff_suggested`, `handoff_reason`, `language_unsupported`, and `user_requested_human`.
+- The response includes structured metadata: `answer`, `sources`, `confidence`, `retrieval_status`, `not_enough_data`, `handoff_suggested`, `handoff_reason`, `language_unsupported`, and `user_requested_human`.
 - The frontend sends the newest bounded user/assistant history for follow-up questions and pronoun resolution, including frontend-scripted assistant messages. History is not treated as a source of factual claims.
 - Ambiguous follow-ups are converted into validated standalone questions before RAG. If their meaning cannot be resolved reliably, the assistant asks for clarification before retrieval; if a resolved retrieval returns no useful context, it uses the separate insufficient-data response.
+- Case-study retrieval first selects a case from a broad candidate pool and then reranks sections inside that case before applying the final response limit.
 
 ### 🔁 Bridge between the visitor and the website owner
 

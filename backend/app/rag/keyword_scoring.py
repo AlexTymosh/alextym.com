@@ -62,6 +62,7 @@ def build_keyword_terms(query: str, *, route: QueryRoute) -> frozenset[str]:
                 " ".join(route.topic_hints),
                 " ".join(route.tag_hints),
                 " ".join(route.section_hints),
+                " ".join(route.case_section_hints),
             ]
         )
 
