@@ -131,8 +131,8 @@ The chat also includes a deterministic policy layer before RAG: greetings, unsup
 - The frontend does not display incoming chunks immediately; it buffers SSE tokens and renders them gradually through a typewriter-style UI layer.
 - If streaming is unavailable before text is received, the frontend falls back to the JSON endpoint `POST /api/chat`.
 - The response includes structured metadata: `answer`, `sources`, `confidence`, `not_enough_data`, `handoff_suggested`, `handoff_reason`, `language_unsupported`, and `user_requested_human`.
-- A short conversation history is used for follow-up questions and pronoun resolution, but it is not treated as a source of factual claims.
-- If context is insufficient, the assistant should return a clarification-style response instead of inventing facts.
+- The frontend sends the newest bounded user/assistant history for follow-up questions and pronoun resolution, including frontend-scripted assistant messages. History is not treated as a source of factual claims.
+- Ambiguous follow-ups are converted into validated standalone questions before RAG. If their meaning cannot be resolved reliably, the assistant asks for clarification before retrieval; if a resolved retrieval returns no useful context, it uses the separate insufficient-data response.
 
 ### 🔁 Bridge between the visitor and the website owner
 
@@ -220,7 +220,7 @@ The project implements a basic protection layer:
 - output guard for unsafe generated content, including hidden prompts, retrieved context markers, internal rules, and secret-like values;
 - scope routing: the chat answers questions about the public professional profile, projects, services, availability, and contact/collaboration options of the website owner;
 - private-data boundary: phone numbers, personal email, home address, and private details are not disclosed;
-- no-hallucination policy: if context is insufficient, an insufficient-data / clarification response is returned;
+- no-hallucination policy: unresolved ambiguous follow-ups receive clarification before retrieval, while retrieval with no useful public context receives the separate insufficient-data response;
 - rate limiting for chat, contact, escalation, and handoff messages;
 - honeypot fields for contact and escalation flows;
 - Telegram webhook is protected by a secret token;
@@ -358,10 +358,11 @@ Visitor opens /chat
 ```text
 Visitor sends a message
   -> frontend sends POST /api/chat/stream
-  -> backend validates message and short history
+  -> backend validates the current message and bounded user/assistant history
   -> backend applies deterministic pre-RAG policy checks
   -> backend decides whether RAG is needed
-  -> retrieval query is built or rewritten
+  -> backend resolves a standalone question, using structured LLM contextualization only for ambiguous owner-related follow-ups
+  -> unresolved short continuations receive a clarification response before retrieval
   -> query is routed by intent and metadata hints
   -> query expansion adds domain-specific retrieval terms
   -> OpenAI embeddings are generated for the query
@@ -457,7 +458,7 @@ flowchart TD
 | **Parent-child-style metadata** | Generated chunks store `parent_id`, and retrieval metadata includes `parent_child`; this creates a structure for linking a chunk with its parent entity. |
 | **Metadata / payload filters** | Fields such as `source`, `source_file`, `section`, `topic`, `visibility`, `tags` are used; retrieval can filter by topic/tag/section hints. |
 | **Query routing** | A question is classified by intent: skills, projects, services, availability, right_to_work, experience, education, contact, strengths, public_boundary, etc. |
-| **Query rewriting / subject resolution** | Short follow-up questions and pronouns are rewritten into standalone Owner-focused retrieval queries. |
+| **Question contextualization / subject resolution** | Deterministic rules handle clear questions. Ambiguous owner-related follow-ups may use a schema-validated LLM result; the accepted standalone question is used throughout retrieval, prompting, and confidence calculation. |
 | **Query expansion** | For topics such as FastAPI, SQL, RAG, projects, services, strengths, and experience, additional retrieval terms are added. |
 | **Score thresholding** | Weak vector matches are discarded through `RAG_SCORE_THRESHOLD`. |
 | **Heuristic reranking** | After Qdrant search, chunks are sorted using dense score, topic bonus, tag bonus, section bonus, and keyword score. |
