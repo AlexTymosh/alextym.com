@@ -100,12 +100,12 @@ The current UI starts with an assistant intro, a short explanation, and quick-pr
 Quick prompt labels currently implemented in the frontend:
 
 ```text
-Give me your 1-minute intro.
-Give me a short overview of his work experience.
-When is Alex ready to start work?
+Give me Alex's 30-second intro
+What are Alex's main strengths?
+Why hire Alex?
 ```
 
-These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint when selected, but their user and assistant messages remain in the visible conversation and can be included in the next AI request's `history`.
+These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint when selected, but their user and assistant messages remain in the visible conversation and can be included in the next AI request's `history`. Each scripted assistant message also carries explicit handoff metadata from project config; the current prompts set `handoffSuggested=false` and `handoffReason=null`.
 
 ### Typed message flow
 
@@ -115,14 +115,16 @@ Typed messages follow this path:
 Visitor types a message
   -> frontend checks whether an active handoff session exists
   -> if handoff is active, message goes to the handoff message endpoint
-  -> otherwise frontend checks local handoff request / confirmation patterns
-  -> if not handled locally, frontend calls POST /api/chat/stream
+  -> otherwise frontend calls POST /api/chat/stream
   -> if streaming fails before any text arrives, frontend falls back to POST /api/chat
+  -> frontend reads structured handoff metadata from the completed response
 ```
 
 The frontend sends the newest `user` and `assistant` messages for follow-up and pronoun handling, up to 10 items, 2000 characters per item, and 6000 characters in total. Scripted and model-generated assistant messages use the same history representation; the backend does not depend on where an assistant message was produced. Owner replies with the separate `alex` frontend role are excluded from this AI history.
 
 The current typed message is sent separately from history. History is conversational context only and is not treated as a source of factual claims.
+
+The frontend does not infer handoff intent from user text, assistant text, or `not_enough_data`. For typed messages, `handoff_suggested` and `handoff_reason` from the backend are authoritative. A handoff card can be dismissed with `Not now`; that dismissal is stored against the triggering assistant message ID, so a later independently suggested handoff can still be shown.
 
 ---
 
@@ -358,8 +360,12 @@ sequenceDiagram
     participant TG as Telegram Bot API
     participant O as Owner
 
-    V->>UI: asks for contact / confirms handoff
-    UI->>API: POST /api/escalations with transcript
+    V->>UI: asks for contact
+    UI->>API: POST /api/chat/stream
+    API-->>UI: handoff_suggested + handoff_reason
+    UI-->>V: show consent card
+    V->>UI: chooses Connect me with Alex
+    UI->>API: POST /api/escalations with transcript and consent
     API->>API: validate consent, honeypot, availability, rate limit
     API->>R: create temporary handoff session with TTL
     API->>TG: send control message + transcript

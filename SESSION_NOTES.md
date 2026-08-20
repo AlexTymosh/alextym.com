@@ -172,6 +172,9 @@ commits before any optional squash.
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
+Current stage: Phase 4 is complete and awaiting the user's local commit. Phase 5
+has not started.
+
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
 | 0.1 | Create local work branch | COMPLETE | `codex/fix-rag-chat-reliability` created from clean `main` | Keep work local until push approval |
@@ -187,10 +190,10 @@ Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 | 2.3 | Pass live retrieval evaluation | COMPLETE | Final live suite passes 20/20, up from 15/20, with zero regressions | Re-run as a release gate in Phase 5 |
 | 3.1 | Implement structured contextualizer adapter | COMPLETE | Dedicated dependency uses OpenAI `responses.parse` with the closed `ContextualizedQuestion` schema; answer generation remains separate | Preserve provider contract and metrics |
 | 3.2 | Verify ambiguous follow-up scenarios | COMPLETE | `yes`, pronouns, low confidence, invalid output, and provider failure pass; live `yes` returns retrieval success with six experience sources | Commit Phase 3 before starting Phase 4 |
-| 4.1 | Make handoff metadata authoritative | PENDING | Frontend false positive reproduced | Start only after the Phase 3 commit is confirmed |
-| 4.2 | Correct dismissal semantics and label | PENDING | Current control only dismisses/focuses | Complete 4.1 |
-| 4.3 | Add end-to-end chat/handoff coverage | PENDING | Required regressions are not covered | Complete 4.2 |
-| 5.1 | Run complete local verification | PENDING | Phase 1 checks pass; release-wide verification waits for Phases 2-4 | Complete Phases 1-4 |
+| 4.1 | Make handoff metadata authoritative | COMPLETE | Typed and scripted assistant messages carry explicit metadata; typed handoff requests always route through backend JSON/SSE metadata; text and `not_enough_data` inference removed | Preserve the contract in release controls |
+| 4.2 | Correct dismissal semantics and label | COMPLETE | `Not now` dismisses only the triggering assistant message ID; a later independent suggestion remains eligible | Preserve message identity across UI changes |
+| 4.3 | Add end-to-end chat/handoff coverage | COMPLETE | Desktop/mobile tests cover the 30-second intro, metadata true/false, direct request routing, message-scoped dismissal, frontend history, JSON fallback, SSE, and active handoff | Commit Phase 4 before starting Phase 5 |
+| 5.1 | Run complete local verification | PENDING | Phase 4 `task ci` passes; Phase 5 release probes and canaries are not implemented | Start only after the Phase 4 commit is confirmed |
 | 5.2 | Validate target Qdrant collection and canaries | PENDING | Production change not authorized | Explicit deployment approval |
 | 5.3 | Prepare commit and PR text | PENDING | Commits remain user-managed | Complete verification |
 
@@ -219,6 +222,9 @@ Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 | 2026-08-19 | Phase 3 live end-to-end follow-up | Contextualization, embedding, Qdrant retrieval, and answer generation completed with `retrieval_status: success`, six experience sources, and no clarification |
 | 2026-08-19 | Phase 3 `task backend:check` | Ruff, format, compile, and all 411 backend tests passed; one existing Starlette deprecation warning |
 | 2026-08-19 | Phase 3 `task ci` | All eight local gates passed: backend 411/411, frontend Playwright 62/62, chat eval 27/27, free RAG, and Docker build |
+| 2026-08-19 | Phase 4 targeted frontend checks | Project config, ESLint, TypeScript, and 28 desktop/mobile handoff/history scenarios passed |
+| 2026-08-19 | Phase 4 `task frontend:check` | ESLint, TypeScript, resume parser, production build, and all 70 Playwright tests passed; npm audit reports one existing high-severity dependency finding |
+| 2026-08-19 | Phase 4 `task ci` | All eight local gates passed: backend 411/411, frontend 70/70, chat eval 27/27, free RAG, and Docker build |
 
 Update the status table and verification log as each phase progresses. Do not mark
 an item complete until its implementation and stated verification gate both pass.

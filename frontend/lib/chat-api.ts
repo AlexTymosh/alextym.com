@@ -16,8 +16,8 @@ type ChatStreamDone = {
   confidence: Confidence;
   not_enough_data: boolean;
   retrieval_status: RetrievalStatus;
-  handoff_suggested?: boolean;
-  handoff_reason?: HandoffReason | null;
+  handoff_suggested: boolean;
+  handoff_reason: HandoffReason | null;
   language_unsupported?: boolean;
   user_requested_human?: boolean;
 };
@@ -97,7 +97,12 @@ export async function fetchJsonChatResponse(
     throw new Error("JSON fallback response unavailable.");
   }
 
-  return (await response.json()) as ChatResponse;
+  const payload = (await response.json()) as ChatResponse;
+  return {
+    ...payload,
+    handoff_suggested: payload.handoff_suggested === true,
+    handoff_reason: parseHandoffReason(payload.handoff_reason),
+  };
 }
 
 function parseSseEvent(rawEvent: string): SseEvent | null {
@@ -163,10 +168,7 @@ function handleSseEvent(
       confidence,
       not_enough_data: parsedPayload.not_enough_data === true,
       retrieval_status: parseRetrievalStatus(parsedPayload.retrieval_status),
-      handoff_suggested:
-        typeof parsedPayload.handoff_suggested === "boolean"
-          ? parsedPayload.handoff_suggested
-          : undefined,
+      handoff_suggested: parsedPayload.handoff_suggested === true,
       handoff_reason: handoffReason,
       language_unsupported:
         typeof parsedPayload.language_unsupported === "boolean"

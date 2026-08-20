@@ -35,8 +35,8 @@ export type ChatResponse = {
   confidence: Confidence;
   not_enough_data: boolean;
   retrieval_status: RetrievalStatus;
-  handoff_suggested?: boolean;
-  handoff_reason?: HandoffReason | null;
+  handoff_suggested: boolean;
+  handoff_reason: HandoffReason | null;
   language_unsupported?: boolean;
   user_requested_human?: boolean;
 };
@@ -79,21 +79,32 @@ export type EscalationStreamClosedReason =
   | "session_expired"
   | "unknown";
 
-export type Message = {
+type BaseMessage = {
   id: string;
-  role: MessageRole;
   text: string;
+};
+
+export type AssistantMessage = BaseMessage & {
+  role: "assistant";
   sources?: ChatSource[];
   confidence?: Confidence;
   notEnoughData?: boolean;
   retrievalStatus?: RetrievalStatus;
-  handoffSuggested?: boolean;
-  handoffReason?: HandoffReason | null;
+  handoffSuggested: boolean;
+  handoffReason: HandoffReason | null;
   languageUnsupported?: boolean;
   userRequestedHuman?: boolean;
 };
 
+type ParticipantMessage = BaseMessage & {
+  role: Exclude<MessageRole, "assistant">;
+};
+
+export type Message = AssistantMessage | ParticipantMessage;
+
 export type QuickPrompt = {
   label: string;
   responses: readonly string[];
+  handoffSuggested: boolean;
+  handoffReason: HandoffReason | null;
 };

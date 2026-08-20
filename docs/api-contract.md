@@ -293,6 +293,8 @@ handoff suggestion:
 `retrieval_status` is one of `not_requested`, `success`, `empty`, or
 `unavailable`.
 
+`handoff_suggested` and `handoff_reason` are required structured fields in both the JSON response and the SSE `done` event. `handoff_reason` is null when no handoff is suggested. The frontend treats these fields as authoritative and does not derive handoff state from answer text, user text, or `not_enough_data`. Frontend-scripted assistant messages use the equivalent camel-case metadata declared in project config.
+
 Out-of-scope questions return a scope-boundary answer rather than a general AI answer. The assistant is focused on the public professional profile, projects, skills, CV, availability, and contact options.
 
 ---
@@ -312,6 +314,8 @@ Purpose:
 - progressive answer display in the frontend.
 
 The request schema, history limits, follow-up resolution, and response semantics are the same as for `POST /api/chat`.
+
+If streaming fails before the first answer token, the frontend calls `POST /api/chat` and consumes the same structured handoff fields. A partial stream is not replayed through the JSON endpoint.
 
 Content type:
 
