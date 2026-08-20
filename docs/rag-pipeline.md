@@ -556,6 +556,9 @@ task rag:eval:paid
 task rag:eval:generated
 task rag:eval:retrieval
 task rag:eval:compare
+task rag:release:predeploy
+task rag:release:postdeploy -- --base-url https://alextym.com
+task rag:release:metrics -- --base-url https://<backend-host>
 ```
 
 Eval modes:
@@ -590,6 +593,31 @@ The static eval-contract test requires every canonical case ID to appear in both
 the live retrieval suite and the live answer suite.
 
 Free checks validate definitions and generated artifacts only. Live retrieval and answer tasks require configured OpenAI/Qdrant access, write before/after reports under `.tmp/evals/`, and are intentionally not part of `task ci`.
+
+### Release canaries
+
+`backend/evals/rag_release_canaries.json` is a selection manifest, not a second
+eval suite. Each entry references one canonical retrieval case and its matching
+canonical answer case. Loading fails if their questions, public case IDs, or
+semantic section expectations disagree.
+
+The release flow has three boundaries:
+
+1. `rag:release:predeploy` runs free CI, the shared read-only collection
+   contract, selected direct retrieval canaries, and both complete live eval
+   suites. It uses the configured backend `.env`, may call OpenAI and Qdrant,
+   and must finish before deployment.
+2. `rag:release:postdeploy` checks readiness and sends every selected canary to
+   both `/api/chat` and `/api/chat/stream`. Both transports must return grounded
+   answers, non-empty sources, the expected public `case_id` / `case_section`,
+   and identical structured response metadata.
+3. `rag:release:metrics` reads the protected metrics endpoint and requires the
+   RAG retrieval metric to be present with zero collection-contract and
+   vector-search errors.
+
+All verifier operations are read-only with respect to Qdrant. Generated reports
+under `.tmp/evals/` contain statuses, public IDs, and counts, not chat answers or
+retrieved text.
 
 Evals should be used after changes to:
 

@@ -29,6 +29,28 @@ def test_chat_stream_uses_llm_streaming_for_rag_answers() -> None:
     assert _done_payload(events)["not_enough_data"] is False
 
 
+def test_chat_stream_preserves_case_attribution_in_sources_event() -> None:
+    chunk = _streaming_chunk()
+    chunk.metadata.extra.update(
+        {
+            "case_id": "case-target",
+            "case_section": "implementation",
+        }
+    )
+    service = ChatService(
+        retriever=InMemoryRetriever([chunk]),
+        llm_client=FakeStreamingLLM(["Grounded answer."]),
+    )
+
+    events = asyncio.run(
+        _collect_events(service.stream_answer(ChatRequest(message="Tell me about Alex projects")))
+    )
+
+    sources = _event_payloads(events, event_name="sources")[-1]["sources"]
+    assert sources[0]["case_id"] == "case-target"
+    assert sources[0]["case_section"] == "implementation"
+
+
 def test_chat_stream_contextualizes_short_follow_up_before_retrieval() -> None:
     standalone_question = "Give an example from Alex's experience that demonstrates his strengths."
     llm_client = FakeStreamingLLM(["Alex", " applied", " systems thinking."])

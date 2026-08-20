@@ -1,6 +1,6 @@
 # RAG and chat reliability work
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
 
 Branch: `codex/fix-rag-chat-reliability`
 
@@ -172,8 +172,10 @@ commits before any optional squash.
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Phase 4 is complete and awaiting the user's local commit. Phase 5
-has not started.
+Current stage: Phase 5 implementation and free local verification are complete
+and awaiting the user's local commit. The target collection, deployed JSON/SSE
+canaries, and protected production metrics have not been called; those gates
+remain pending until the verified revision is deployed with explicit approval.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
@@ -192,10 +194,10 @@ has not started.
 | 3.2 | Verify ambiguous follow-up scenarios | COMPLETE | `yes`, pronouns, low confidence, invalid output, and provider failure pass; live `yes` returns retrieval success with six experience sources | Commit Phase 3 before starting Phase 4 |
 | 4.1 | Make handoff metadata authoritative | COMPLETE | Typed and scripted assistant messages carry explicit metadata; typed handoff requests always route through backend JSON/SSE metadata; text and `not_enough_data` inference removed | Preserve the contract in release controls |
 | 4.2 | Correct dismissal semantics and label | COMPLETE | `Not now` dismisses only the triggering assistant message ID; a later independent suggestion remains eligible | Preserve message identity across UI changes |
-| 4.3 | Add end-to-end chat/handoff coverage | COMPLETE | Desktop/mobile tests cover the 30-second intro, metadata true/false, direct request routing, message-scoped dismissal, frontend history, JSON fallback, SSE, and active handoff | Commit Phase 4 before starting Phase 5 |
-| 5.1 | Run complete local verification | PENDING | Phase 4 `task ci` passes; Phase 5 release probes and canaries are not implemented | Start only after the Phase 4 commit is confirmed |
-| 5.2 | Validate target Qdrant collection and canaries | PENDING | Production change not authorized | Explicit deployment approval |
-| 5.3 | Prepare commit and PR text | PENDING | Commits remain user-managed | Complete verification |
+| 4.3 | Add end-to-end chat/handoff coverage | COMPLETE | Desktop/mobile tests cover the 30-second intro, metadata true/false, direct request routing, message-scoped dismissal, frontend history, JSON fallback, SSE, and active handoff | Preserved by the Phase 5 full CI gate |
+| 5.1 | Implement release controls and run complete local verification | COMPLETE | Shared read-only contract probe, canonical canary selector, JSON/SSE parity and case attribution, strict metrics verification, Taskfile gates, tests, and documentation are implemented; `task ci` passes | Commit Phase 5 locally |
+| 5.2 | Validate target Qdrant collection and deployed canaries | PENDING | Live release tasks are implemented but were not called; no production change or paid check was authorized | Run pre-deploy, deploy the verified revision, then run post-deploy and metrics gates with explicit approval |
+| 5.3 | Prepare commit and PR text | COMPLETE | Phase 5 commit scope is isolated and verified; commits remain user-managed | Commit locally, then prepare the final PR update after live gates pass |
 
 ## Verification log
 
@@ -225,6 +227,10 @@ has not started.
 | 2026-08-19 | Phase 4 targeted frontend checks | Project config, ESLint, TypeScript, and 28 desktop/mobile handoff/history scenarios passed |
 | 2026-08-19 | Phase 4 `task frontend:check` | ESLint, TypeScript, resume parser, production build, and all 70 Playwright tests passed; npm audit reports one existing high-severity dependency finding |
 | 2026-08-19 | Phase 4 `task ci` | All eight local gates passed: backend 411/411, frontend 70/70, chat eval 27/27, free RAG, and Docker build |
+| 2026-08-20 | Phase 4 commit verification | `ddb98bd` has the correct `fix(chat-ui): make handoff suggestions explicit` scope; the previous duplicate Phase 2 subject is resolved |
+| 2026-08-20 | Phase 5 targeted release tests | 49 passed across canary selection, collection contract, retrieval attribution, JSON/SSE verification, metrics failure semantics, chat eval metadata, and streaming source propagation |
+| 2026-08-20 | Phase 5 task and CLI contract | All `rag:release:*` tasks load successfully; verifier subcommands expose collection, retrieval, API, and metrics checks without executing a live call |
+| 2026-08-20 | Phase 5 `task ci` | All eight free gates passed: backend 419/419, frontend Playwright 70/70, chat eval 27/27, free RAG, and Docker build; one existing npm high-severity finding remains |
 
 Update the status table and verification log as each phase progresses. Do not mark
 an item complete until its implementation and stated verification gate both pass.

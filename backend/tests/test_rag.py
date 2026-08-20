@@ -161,6 +161,31 @@ def test_chat_service_returns_sources_from_retrieved_public_chunks() -> None:
     assert len(response.sources) == 1
     assert response.sources[0].title == "resume.md"
     assert response.sources[0].section == "Summary"
+    assert response.sources[0].case_id is None
+    assert response.sources[0].case_section is None
+
+
+def test_chat_service_preserves_public_case_attribution_in_sources() -> None:
+    chunk = KnowledgeChunk(
+        id="case:case-target:implementation",
+        content="Alex automated the target workflow.",
+        metadata=ChunkMetadata(
+            source="Target Case",
+            section="experience",
+            topic="target-case-implementation",
+            extra={
+                "case_id": "case-target",
+                "case_section": "implementation",
+            },
+        ),
+    )
+
+    response = ChatService(retriever=RecordingRetriever([chunk])).answer(
+        ChatRequest(message="How did Alex implement the target workflow?")
+    )
+
+    assert response.sources[0].case_id == "case-target"
+    assert response.sources[0].case_section == "implementation"
 
 
 def test_chat_service_uses_configured_llm_client() -> None:

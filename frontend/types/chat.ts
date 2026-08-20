@@ -27,6 +27,8 @@ export type ChatSource = {
   title: string;
   section?: string | null;
   confidence: Confidence;
+  case_id?: string | null;
+  case_section?: string | null;
 };
 
 export type ChatResponse = {

@@ -210,6 +210,17 @@ Do not log:
 
 If detailed logs are temporarily needed, keep them local and remove before deploy.
 
+Release verification follows the same data-minimization rules. Canary questions
+come only from committed public eval definitions. JSON reports may contain check
+names, bounded status values, public case IDs, and counts, but never answer text,
+retrieved chunks, prompts, provider response bodies, visitor history, or secret
+values. The protected metrics bearer token is read from an environment variable,
+is not accepted as a command-line value, and is never written to a report.
+
+The deployed verifier accepts only an HTTP(S) origin without credentials and
+does not follow redirects. This prevents a configured metrics token from being
+forwarded to an unexpected host.
+
 ---
 
 ## Contact form security

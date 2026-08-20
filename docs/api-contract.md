@@ -248,9 +248,11 @@ Response:
   "answer": "According to the public knowledge base...",
   "sources": [
     {
-      "title": "Summary",
-      "section": "summary",
-      "confidence": "medium"
+      "title": "Corporate Borrower Credit Risk and Process Analysis",
+      "section": "experience",
+      "confidence": "medium",
+      "case_id": "case-corporate-borrower-credit-risk-process-analysis",
+      "case_section": "limitations"
     }
   ],
   "confidence": "medium",
@@ -292,6 +294,12 @@ handoff suggestion:
 
 `retrieval_status` is one of `not_requested`, `success`, `empty`, or
 `unavailable`.
+
+Each source always contains `title`, `section`, and `confidence`. Case-study
+sources also expose nullable `case_id` and `case_section` fields. These are
+stable identifiers from reviewed public source metadata; they provide
+machine-verifiable attribution without exposing retrieved chunk text. Resume
+sources return null for both case fields.
 
 `handoff_suggested` and `handoff_reason` are required structured fields in both the JSON response and the SSE `done` event. `handoff_reason` is null when no handoff is suggested. The frontend treats these fields as authoritative and does not derive handoff state from answer text, user text, or `not_enough_data`. Frontend-scripted assistant messages use the equivalent camel-case metadata declared in project config.
 
@@ -343,7 +351,7 @@ event: token
 data: {"text":"..."}
 
 event: sources
-data: {"sources":[{"title":"Summary","section":"summary","confidence":"medium"}]}
+data: {"sources":[{"title":"Corporate Borrower Credit Risk and Process Analysis","section":"experience","confidence":"medium","case_id":"case-corporate-borrower-credit-risk-process-analysis","case_section":"limitations"}]}
 
 event: done
 data: {"request_id":"...","confidence":"medium","not_enough_data":false,"retrieval_status":"success","handoff_suggested":false,"handoff_reason":null}

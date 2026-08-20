@@ -347,6 +347,34 @@ mandatory Qdrant filters. This prevents a broad phrase such as `service` or
 `limitations` from excluding the relevant source before ranking. Exact
 `source_group` and `case_id` selectors remain strict payload filters.
 
+### RAG release verification boundary
+
+Release verification reuses production contracts instead of maintaining a
+second retrieval implementation:
+
+```text
+RagCollectionContract
+  -> runtime search
+  -> readiness
+  -> read-only pre-deploy collection probe
+
+canonical retrieval and answer eval cases
+  -> small committed canary selection manifest
+  -> direct retrieval canaries
+  -> deployed JSON and SSE canaries
+```
+
+The pre-deploy gate runs free CI, the read-only collection probe, focused direct
+retrieval canaries, and the complete live retrieval and answer suites. It does
+not ingest, delete, or activate Qdrant data. After backend deployment, the same
+selected questions are sent through both public chat transports; their source
+attribution and structured response fields must agree. The final operational
+gate requires the protected metrics endpoint to expose the RAG retrieval metric
+and report no collection-contract or vector-search errors.
+
+Release reports contain check names, public case IDs, counts, and status only.
+They do not contain prompts, answer text, retrieved context, or credentials.
+
 ---
 
 ## Human handoff architecture

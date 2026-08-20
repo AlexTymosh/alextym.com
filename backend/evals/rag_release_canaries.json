@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "retrieval_cases": "retrieval_eval_cases_generated_rag.json",
+  "retrieval_suite": "rag_retrieval_quality",
+  "answer_cases": "chat_eval_cases_generated_rag.json",
+  "answer_suite": "rag_generated_quality",
+  "canaries": [
+    {
+      "id": "credit-risk-limitations",
+      "retrieval_case_id": "retrieval_case_study_credit_risk_limitations",
+      "answer_case_id": "case_study_credit_risk_limitations"
+    },
+    {
+      "id": "international-employment-service",
+      "retrieval_case_id": "retrieval_case_study_international_employment_service",
+      "answer_case_id": "case_study_international_employment_service"
+    }
+  ]
+}

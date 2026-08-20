@@ -436,6 +436,8 @@ class ChatService:
                     "title": chunk.metadata.source,
                     "section": chunk.metadata.section,
                     "confidence": chunk.metadata.source_confidence,
+                    "case_id": chunk.metadata.extra.get("case_id"),
+                    "case_section": chunk.metadata.extra.get("case_section"),
                 }
                 for chunk in context.chunks
             ],

@@ -95,6 +95,16 @@ class ChatSource(BaseModel):
     title: str = Field(examples=["resume.md"])
     section: str | None = Field(default=None, examples=["Summary"])
     confidence: Confidence = Field(examples=["medium"])
+    case_id: str | None = Field(
+        default=None,
+        description="Stable public case-study identifier, when the source is a case study.",
+        examples=["case-pricing-data-erp-governance"],
+    )
+    case_section: str | None = Field(
+        default=None,
+        description="Semantic case-study section, when the source is a case study.",
+        examples=["implementation"],
+    )
 
 
 class ChatResponse(BaseModel):

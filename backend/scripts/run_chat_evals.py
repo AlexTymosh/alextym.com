@@ -337,6 +337,22 @@ def _check_source_metadata(
         source_key="section",
         failures=failures,
     )
+    _check_source_field_any(
+        case,
+        response,
+        expected,
+        expected_key="must_include_source_case_id_any",
+        source_key="case_id",
+        failures=failures,
+    )
+    _check_source_field_any(
+        case,
+        response,
+        expected,
+        expected_key="must_include_source_case_section_any",
+        source_key="case_section",
+        failures=failures,
+    )
 
 
 def _check_source_field_any(
