@@ -47,6 +47,18 @@ push the branch, or open a pull request without explicit approval.
 8. `Continue with AI` does not send a request. It only dismisses the handoff card
    and focuses the input, so its label promises behavior the control does not
    perform.
+9. The chat question resolver also performs topic expansion before the RAG query
+   router. Broad `software` and `service` matches replace three self-contained
+   case-study questions with a generic commercial-services query, changing their
+   source scope from `case_studies` to `resume`.
+10. The pre-RAG weakness policy has a separate term list containing bare
+    `limitations`. It intercepts the corporate credit-risk case before retrieval
+    even though the boundary-aware RAG router correctly classifies it as case
+    limitations.
+11. The answer evaluator compares required phrases without Unicode punctuation
+    normalization. A correct `six‑hour` answer therefore fails an ASCII
+    `six-hour` expectation, and the IoT uncertainty expectation accepts too few
+    semantically equivalent qualified formulations.
 
 ## Telegram local development verification
 
@@ -93,6 +105,10 @@ been performed.
 8. Make structured message/backend flags authoritative for handoff UI. Treat card
    dismissal as a UI action tied to a message ID and label it according to its
    actual behavior.
+9. Keep question resolution limited to subject and conversation disambiguation.
+   Preserve explicit self-contained questions, let the RAG query router own topic,
+   source, section, and public-boundary semantics, and evaluate grounded answers
+   using normalized typography plus explicit uncertainty safeguards.
 
 ## Delivery plan: one PR, five technical steps
 
@@ -167,15 +183,19 @@ commits before any optional squash.
 - Deploy only after the target collection passes the contract and canary; verify
   that Qdrant 400 retrieval errors remain at zero after activation.
 - Update RAG, API, deployment, architecture, and security documentation.
+- Use release-gate failures to verify the complete chat-policy -> question-resolution
+  -> query-router path; do not treat a direct retrieval pass as proof that the
+  public chat path is correct.
 
 ## Status table
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Phase 5 implementation and free local verification are complete
-and awaiting the user's local commit. The target collection, deployed JSON/SSE
-canaries, and protected production metrics have not been called; those gates
-remain pending until the verified revision is deployed with explicit approval.
+Current stage: all implementation, free CI, target-collection, live retrieval,
+live answer, local JSON/SSE, local metrics, and exact scripted `yes` checks are
+complete. The corrective release-gate changes are awaiting the user's local
+commit. Public post-deploy JSON/SSE and protected production metrics remain
+pending until this revision is pushed and deployed by the user.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
@@ -195,9 +215,10 @@ remain pending until the verified revision is deployed with explicit approval.
 | 4.1 | Make handoff metadata authoritative | COMPLETE | Typed and scripted assistant messages carry explicit metadata; typed handoff requests always route through backend JSON/SSE metadata; text and `not_enough_data` inference removed | Preserve the contract in release controls |
 | 4.2 | Correct dismissal semantics and label | COMPLETE | `Not now` dismisses only the triggering assistant message ID; a later independent suggestion remains eligible | Preserve message identity across UI changes |
 | 4.3 | Add end-to-end chat/handoff coverage | COMPLETE | Desktop/mobile tests cover the 30-second intro, metadata true/false, direct request routing, message-scoped dismissal, frontend history, JSON fallback, SSE, and active handoff | Preserved by the Phase 5 full CI gate |
-| 5.1 | Implement release controls and run complete local verification | COMPLETE | Shared read-only contract probe, canonical canary selector, JSON/SSE parity and case attribution, strict metrics verification, Taskfile gates, tests, and documentation are implemented; `task ci` passes | Commit Phase 5 locally |
-| 5.2 | Validate target Qdrant collection and deployed canaries | PENDING | Live release tasks are implemented but were not called; no production change or paid check was authorized | Run pre-deploy, deploy the verified revision, then run post-deploy and metrics gates with explicit approval |
-| 5.3 | Prepare commit and PR text | COMPLETE | Phase 5 commit scope is isolated and verified; commits remain user-managed | Commit locally, then prepare the final PR update after live gates pass |
+| 5.1 | Implement release controls and run complete local verification | COMPLETE | Shared read-only contract probe, canonical canary selector, JSON/SSE parity and case attribution, strict metrics verification, Taskfile gates, tests, and documentation are implemented; final `task ci` passes | Preserve as the release contract |
+| 5.2 | Validate target Qdrant collection and deployed canaries | PENDING | Target collection contract, direct canaries, 20/20 retrieval, 19/19 answers, local JSON/SSE, and local metrics pass; the revision is not deployed | After user push/deploy, run public post-deploy and protected production metrics gates |
+| 5.3 | Prepare commit and PR text | COMPLETE | Corrective scope is isolated and fully verified; commits, push, and PR remain user-managed | User creates the local commit |
+| 5.4 | Close defects exposed by the release answer gate | COMPLETE | Explicit questions remain unchanged, subject-only follow-up resolution replaces semantic rewrites, weakness policy delegates to the shared router, prompts preserve uncertainty, and eval matching normalizes equivalent typography | Preserve all canonical questions in the cross-layer regression test |
 
 ## Verification log
 
@@ -231,6 +252,15 @@ remain pending until the verified revision is deployed with explicit approval.
 | 2026-08-20 | Phase 5 targeted release tests | 49 passed across canary selection, collection contract, retrieval attribution, JSON/SSE verification, metrics failure semantics, chat eval metadata, and streaming source propagation |
 | 2026-08-20 | Phase 5 task and CLI contract | All `rag:release:*` tasks load successfully; verifier subcommands expose collection, retrieval, API, and metrics checks without executing a live call |
 | 2026-08-20 | Phase 5 `task ci` | All eight free gates passed: backend 419/419, frontend Playwright 70/70, chat eval 27/27, free RAG, and Docker build; one existing npm high-severity finding remains |
+| 2026-08-20 | First complete live answer release gate | 15/19 passed; IoT, credit-risk limitations, international employment service, and Kaizen service transformation failed through the public chat path despite 20/20 direct retrieval |
+| 2026-08-20 | Cross-layer root-cause trace | Three explicit questions were rewritten to resume services; credit-risk limitations was intercepted by the pre-RAG weakness policy |
+| 2026-08-20 | Corrective targeted tests | 55 question-resolution, chat, router, generated-eval, and RAG tests passed; every canonical case-study question survives policy and resolution unchanged |
+| 2026-08-20 | Unicode and uncertainty diagnostics | Correct IoT source/context contained the six-hour fact; model used `six‑hour` and qualified hardware/interference language, exposing evaluator typography and synonym false negatives |
+| 2026-08-20 | Final `task backend:check` | Ruff, format, compile, and all 424 backend tests passed; one existing Starlette deprecation warning remains |
+| 2026-08-20 | Target collection and retrieval release gates | Collection contract and direct canaries passed; complete live retrieval remained 20/20 with zero regressions |
+| 2026-08-20 | Final live answer release gate | 19/19 passed; all four original answer failures are resolved |
+| 2026-08-20 | Local transport and operational gates | Both release canaries passed through JSON/SSE, protected metrics reported zero collection/vector errors, and exact frontend-scripted history plus `yes` returned success with six sources in both transports |
+| 2026-08-20 | Final `task ci` | All eight gates passed on the final tree: backend 424/424, frontend Playwright 70/70, chat eval 27/27, free RAG, and Docker build; one existing npm high-severity finding remains |
 
 Update the status table and verification log as each phase progresses. Do not mark
 an item complete until its implementation and stated verification gate both pass.

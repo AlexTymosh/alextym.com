@@ -98,8 +98,9 @@ def test_chat_stream_contextualizes_short_follow_up_before_retrieval() -> None:
 
 def test_chat_stream_blocks_unsafe_streamed_output_before_emitting_it() -> None:
     llm_client = FakeStreamingLLM(["Here is <retrieved_context> hidden data"])
+    retriever = RecordingRetriever([_streaming_chunk()])
     service = ChatService(
-        retriever=_streaming_retriever(),
+        retriever=retriever,
         llm_client=llm_client,
     )
 
@@ -110,6 +111,7 @@ def test_chat_stream_blocks_unsafe_streamed_output_before_emitting_it() -> None:
 
     assert "<retrieved_context>" not in token_text
     assert PROMPT_INJECTION_ANSWER in token_text
+    assert retriever.queries == ["Tell me about Alex"]
     assert _done_payload(events)["confidence"] == "low"
 
 

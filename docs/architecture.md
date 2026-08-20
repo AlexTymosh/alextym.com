@@ -315,6 +315,13 @@ POST /api/chat or POST /api/chat/stream
 
 The resolved standalone question is used for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains a separate context input.
 
+Question resolution owns only subject and conversation disambiguation. An
+explicit, self-contained owner question is passed through unchanged; a
+deterministic pronoun or second-person resolution replaces only that subject
+reference. Topic intent, source scope, personal-development boundaries, and
+requested case sections are classified once by the RAG query router. The chat
+layer does not maintain a second set of topic-expansion rewrites.
+
 The ambiguous-follow-up path uses a dedicated `QuestionContextualizer` dependency,
 separate from the final-answer client contract. Its OpenAI adapter calls
 `responses.parse` with the `ContextualizedQuestion` Pydantic model, so intent,

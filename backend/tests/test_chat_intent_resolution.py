@@ -1,6 +1,10 @@
 from app.llm.client import ProviderRequestError
 from app.schemas.chat import ChatRequest
-from app.services.chat_intent_resolution import QuestionResolution, resolve_question
+from app.services.chat_intent_resolution import (
+    QuestionResolution,
+    is_weakness_request,
+    resolve_question,
+)
 from app.services.question_contextualizer import ContextualizedQuestion
 
 
@@ -15,10 +19,7 @@ def test_rule_resolution_exposes_explicit_question_model() -> None:
     assert resolution == QuestionResolution(
         intent="alex_profile_question",
         original_question=question,
-        standalone_question=(
-            "Tell me about Alex's professional strengths, working style, "
-            "automation-first thinking, and collaboration approach."
-        ),
+        standalone_question=question,
         conversational_context="",
         resolution_method="rules",
     )
@@ -166,8 +167,20 @@ def test_explicit_pronoun_follow_up_uses_rules_before_contextualizer() -> None:
         question_contextualizer=UnexpectedQuestionContextualizer(),
     )
 
-    assert resolution.standalone_question == "Tell me about Alex's work experience."
+    assert resolution.standalone_question == "Tell me about Alex's work experience"
     assert resolution.resolution_method == "rules"
+
+
+def test_weakness_policy_distinguishes_personal_and_case_limitations() -> None:
+    assert is_weakness_request("What are Alex's professional limitations?", []) is True
+    assert is_weakness_request("What are your weaknesses?", []) is True
+    assert (
+        is_weakness_request(
+            "What limitations applied to the site owner's corporate credit-risk analysis?",
+            [],
+        )
+        is False
+    )
 
 
 class StaticQuestionContextualizer:

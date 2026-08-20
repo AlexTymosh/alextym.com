@@ -151,6 +151,27 @@ def test_evaluate_response_reports_failed_expectations() -> None:
     }
 
 
+def test_evaluate_response_normalizes_equivalent_unicode_punctuation() -> None:
+    case = {
+        "id": "case-unicode-punctuation",
+        "suite": "rag_generated_quality",
+        "category": "technical_analysis",
+        "message": "How were the faults distinguished?",
+        "expected": {
+            "must_include_all": ["six-hour", "hardware-layout"],
+            "must_not_include": ["proved hardware failure"],
+        },
+    }
+    response = {
+        "answer": "A six\u2011hour pattern indicated software; hardware\u2013layout remained probable.",
+        "sources": [],
+    }
+
+    result = evaluate_response(case, response)
+
+    assert result.passed is True
+
+
 def test_load_eval_cases_filters_by_suite(tmp_path: Path) -> None:
     eval_file = tmp_path / "cases.json"
     eval_file.write_text(

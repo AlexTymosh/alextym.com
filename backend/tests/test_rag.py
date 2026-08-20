@@ -268,14 +268,10 @@ def test_chat_service_resolves_alex_follow_up_from_short_history() -> None:
         )
     )
 
-    assert retriever.queries == [
-        "Tell me about Alex's professional background, experience, skills, and projects."
-    ]
+    assert retriever.queries == ["Tell me about Alex"]
     assert response.answer == "Grounded Alex follow-up answer."
     assert response.not_enough_data is False
-    assert llm_client.prompt.question == (
-        "Tell me about Alex's professional background, experience, skills, and projects."
-    )
+    assert llm_client.prompt.question == "Tell me about Alex"
     assert "Do not treat it as a source of factual claims about Alex." in llm_client.prompt.context
 
 
@@ -299,7 +295,7 @@ def test_chat_service_resolves_pronoun_profile_question_after_russian_language_p
         )
     )
 
-    assert retriever.queries == ["Tell me about Alex's work experience."]
+    assert retriever.queries == ["Let me know about Alex's work experience"]
     assert response.answer == "Grounded work experience answer."
     assert response.not_enough_data is False
 
@@ -376,12 +372,7 @@ def test_chat_service_resolves_short_soft_skills_follow_up_from_alex_context() -
         )
     )
 
-    assert retriever.queries == [
-        (
-            "Tell me about Alex's soft skills, working style, collaboration, "
-            "communication, and problem-solving."
-        )
-    ]
+    assert retriever.queries == ["About Alex: Soft skills?"]
     assert response.answer == "Grounded soft skills answer."
     assert response.not_enough_data is False
 
@@ -443,7 +434,7 @@ def test_chat_service_requests_clarification_when_contextualizer_fails() -> None
     assert response.handoff_suggested is False
 
 
-def test_chat_service_rewrites_what_he_does_follow_up_for_retrieval() -> None:
+def test_chat_service_resolves_owner_pronoun_without_rewriting_topic() -> None:
     chunk = _chunk("public-1", "Alex works on backend services and AI-assisted workflows.")
     retriever = RecordingRetriever([chunk])
 
@@ -460,11 +451,11 @@ def test_chat_service_rewrites_what_he_does_follow_up_for_retrieval() -> None:
         )
     )
 
-    assert retriever.queries == ["What does Alex do professionally?"]
+    assert retriever.queries == ["What does Alex do?"]
     assert response.not_enough_data is False
 
 
-def test_chat_service_rewrites_second_person_project_question_for_retrieval() -> None:
+def test_chat_service_resolves_second_person_without_rewriting_topic() -> None:
     chunk = _chunk("public-1", "Alex has built RAG and automation projects.")
     retriever = RecordingRetriever([chunk])
 
@@ -473,7 +464,7 @@ def test_chat_service_rewrites_second_person_project_question_for_retrieval() ->
         llm_client=StaticLLMClient("Grounded project answer."),
     ).answer(ChatRequest(message="Tell me about your projects"))
 
-    assert retriever.queries == ["Tell me about Alex's professional projects and software work."]
+    assert retriever.queries == ["Tell me about Alex's projects"]
     assert response.not_enough_data is False
 
 

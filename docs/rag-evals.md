@@ -152,6 +152,11 @@ The release tasks do not use `--allow-failures`. The pre-deploy task is
 read-only for Qdrant but may incur OpenAI embedding and answer-generation cost.
 The post-deploy task sends two canonical canaries through both JSON and SSE.
 
+Answer phrase checks normalize Unicode compatibility forms, equivalent dash and
+quote characters, case, and whitespace before matching. This prevents a
+typographic non-breaking hyphen such as `six‑hour` from failing an expectation
+written as `six-hour`; required and forbidden factual phrases remain unchanged.
+
 ## Manual comparison
 
 Use this only when you want custom report names.

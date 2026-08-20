@@ -393,6 +393,14 @@ Supported cases:
 
 Direct and otherwise unambiguous questions use deterministic rules. For an ambiguous short continuation or pronoun reference with owner-related assistant history, the service may call the dedicated `QuestionContextualizer`. The OpenAI adapter uses `responses.parse` with `ContextualizedQuestion`, so the provider is constrained by a JSON Schema with a closed intent set, nullable `standalone_question`, `low|medium|high` confidence, and a bounded reason. Routing receives a validated object rather than parsing free-form text from the final-answer client.
 
+An explicit, self-contained owner question is preserved unchanged. Deterministic
+resolution of `he`, `his`, `you`, or `your` changes only the subject reference;
+it does not broaden education, project, software, service, or other topic terms.
+The query router is the single source of truth for topic intent, source scope,
+personal-development boundaries, and requested case sections. In particular,
+case-study limitations continue to RAG while personal limitations use the public
+boundary response.
+
 An accepted standalone question is used consistently for query routing, retrieval, prompt construction, and answer-confidence calculation. The original conversation history is passed separately as conversational context. This prevents a fragment such as `yes` from becoming the retrieval query or final user question.
 
 Low-confidence or explicit `clarification_required` contextualizer output produces a clarification response before retrieval. A provider failure, refusal, or missing parsed output is mapped to the existing deterministic fallback; an unresolved short continuation also produces clarification rather than a generic owner-profile query. Answer generation and contextualization are separate injected interfaces even though their production adapters share one OpenAI Responses client.
@@ -455,6 +463,9 @@ Instructions inside retrieved documents are not allowed to override system instr
 ```
 
 Prompt context prefers compact factual material where structured `answer_facts` are available.
+The system prompt requires uncertainty qualifiers from those facts to remain
+uncertain; probable, possible, suggested, inferred, or unconfirmed findings must
+not be promoted to confirmed claims.
 
 ---
 
@@ -574,7 +585,7 @@ rag_retrieval_quality    -> live retrieval ranking and metadata attribution
 compare                  -> before/after Markdown comparison
 ```
 
-Retrieval and answer generation are evaluated separately. Retrieval cases inspect topic/tag metadata and, for case studies, the top case ID, semantic case section, document type, source group, source title, and organisation. Answer cases check grounded content, source attribution, limitations, and responsible uncertainty.
+Retrieval and answer generation are evaluated separately. Retrieval cases inspect topic/tag metadata and, for case studies, the top case ID, semantic case section, document type, source group, source title, and organisation. Answer cases check grounded content, source attribution, limitations, and responsible uncertainty. Phrase matching normalizes typographically equivalent Unicode dashes, quotes, case, and whitespace without changing the required facts.
 
 The focused case-study coverage includes every canonical case ID:
 
