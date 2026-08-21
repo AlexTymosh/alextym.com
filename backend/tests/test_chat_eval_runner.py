@@ -50,6 +50,8 @@ def test_evaluate_response_checks_source_attribution() -> None:
             "sources": "non_empty",
             "must_include_source_title_any": ["WEEE Reporting Automation"],
             "must_include_source_section_any": ["experience"],
+            "must_include_source_case_id_any": ["case-weee-reporting-automation"],
+            "must_include_source_case_section_any": ["implementation"],
         },
     }
     response = {
@@ -59,6 +61,8 @@ def test_evaluate_response_checks_source_attribution() -> None:
                 "title": "WEEE Reporting Automation",
                 "section": "experience",
                 "confidence": "medium",
+                "case_id": "case-weee-reporting-automation",
+                "case_section": "implementation",
             }
         ],
         "confidence": "medium",
@@ -82,6 +86,8 @@ def test_evaluate_response_reports_incorrect_source_attribution() -> None:
             "sources": "non_empty",
             "must_include_source_title_any": ["WEEE Reporting Automation"],
             "must_include_source_section_any": ["experience"],
+            "must_include_source_case_id_any": ["case-weee-reporting-automation"],
+            "must_include_source_case_section_any": ["implementation"],
         },
     }
     response = {
@@ -91,6 +97,8 @@ def test_evaluate_response_reports_incorrect_source_attribution() -> None:
                 "title": "Corporate Borrower Credit Risk and Process Analysis",
                 "section": "education",
                 "confidence": "medium",
+                "case_id": "case-corporate-borrower-credit-risk-process-analysis",
+                "case_section": "analysis",
             }
         ],
         "confidence": "medium",
@@ -104,6 +112,8 @@ def test_evaluate_response_reports_incorrect_source_attribution() -> None:
     assert {failure.check for failure in result.failures} == {
         "must_include_source_title_any",
         "must_include_source_section_any",
+        "must_include_source_case_id_any",
+        "must_include_source_case_section_any",
     }
 
 
@@ -139,6 +149,27 @@ def test_evaluate_response_reports_failed_expectations() -> None:
         "must_not_include",
         "max_words",
     }
+
+
+def test_evaluate_response_normalizes_equivalent_unicode_punctuation() -> None:
+    case = {
+        "id": "case-unicode-punctuation",
+        "suite": "rag_generated_quality",
+        "category": "technical_analysis",
+        "message": "How were the faults distinguished?",
+        "expected": {
+            "must_include_all": ["six-hour", "hardware-layout"],
+            "must_not_include": ["proved hardware failure"],
+        },
+    }
+    response = {
+        "answer": "A six\u2011hour pattern indicated software; hardware\u2013layout remained probable.",
+        "sources": [],
+    }
+
+    result = evaluate_response(case, response)
+
+    assert result.passed is True
 
 
 def test_load_eval_cases_filters_by_suite(tmp_path: Path) -> None:

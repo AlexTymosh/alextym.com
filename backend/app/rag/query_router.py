@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from app.core.project_config import get_project_config
+from app.rag.collection_contract import CASE_STUDY_SOURCE_GROUP, RESUME_SOURCE_GROUP
 from app.rag.models import RetrievalFilter
 
 _OWNER_REFERENCE = get_project_config().assistant.owner_reference.casefold()
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+(?:'[a-z0-9]+)?", re.IGNORECASE)
 
 QueryIntent = Literal[
     "hard_skills",
@@ -23,6 +26,15 @@ QueryIntent = Literal[
     "out_of_scope",
     "general_profile",
 ]
+SourceScope = Literal["all", "resume", "case_studies"]
+CaseSectionIntent = Literal[
+    "problem",
+    "analysis",
+    "implementation",
+    "validation",
+    "results",
+    "limitations",
+]
 
 
 @dataclass(frozen=True)
@@ -31,6 +43,9 @@ class QueryRoute:
     topic_hints: tuple[str, ...] = ()
     tag_hints: tuple[str, ...] = ()
     section_hints: tuple[str, ...] = ()
+    source_scope: SourceScope = "all"
+    case_section_hints: tuple[CaseSectionIntent, ...] = ()
+    select_single_case: bool = False
     should_offer_handoff: bool = False
 
     def retrieval_text(self, query: str) -> str:
@@ -41,15 +56,14 @@ class QueryRoute:
         return " ".join([query, "retrieval hints:", *hints])
 
     def payload_filter(self) -> RetrievalFilter | None:
-        if self.intent in {"contact", "out_of_scope", "general_profile"}:
+        if self.source_scope == "all":
             return None
-        if not (self.topic_hints or self.tag_hints or self.section_hints):
-            return None
-
         return RetrievalFilter(
-            topic_any=self.topic_hints,
-            tag_any=self.tag_hints,
-            section_any=self.section_hints,
+            source_group_any=(
+                (RESUME_SOURCE_GROUP,)
+                if self.source_scope == "resume"
+                else (CASE_STUDY_SOURCE_GROUP,)
+            ),
         )
 
 
@@ -112,37 +126,49 @@ ROUTING_RULES: tuple[tuple[QueryIntent, tuple[str, ...], QueryRoute], ...] = (
             "development area",
             "development areas",
             "areas to improve",
-            "limitations",
+            "professional limitations",
+            "personal limitations",
+            "his limitations",
+            "her limitations",
+            "your limitations",
+            f"{_OWNER_REFERENCE}'s limitations",
+            "site owner limitations",
+            "site owner's limitations",
         ),
         QueryRoute(
             intent="public_boundary",
             topic_hints=("public-boundary-development-areas",),
             tag_hints=("public-boundary", "development-areas", "contact"),
             section_hints=("public-boundary-development-areas",),
+            source_scope="resume",
             should_offer_handoff=True,
         ),
     ),
     (
         "services",
         (
-            "service",
-            "services",
+            "what services",
+            "which services",
+            "services does",
+            "services do",
+            "services can",
+            "offer services",
+            "offers services",
             "software service",
             "software services",
             "build a website",
             "create a website",
             "make a website",
             "need a website",
-            "website",
-            "web app",
+            "build a web app",
+            "create a web app",
+            "need a web app",
             "internal tool",
             "business automation",
             "automation project",
             "api integration",
             "integrate api",
             "rag chatbot",
-            "ai assistant",
-            "collaboration",
             "build software",
             "build an app",
             "create an app",
@@ -170,6 +196,7 @@ ROUTING_RULES: tuple[tuple[QueryIntent, tuple[str, ...], QueryRoute], ...] = (
                 "typical project types",
                 "service fit and boundaries",
             ),
+            source_scope="resume",
             should_offer_handoff=True,
         ),
     ),
@@ -368,6 +395,150 @@ OUT_OF_SCOPE_TERMS = (
     "elon musk",
 )
 
+CASE_STUDY_PATTERNS = (
+    "case study",
+    "case studies",
+    "case example",
+    "case examples",
+    "a case study",
+    "one case study",
+    "tell me about one case",
+    "give an example",
+    "give me an example",
+    "give example",
+    "give me example",
+    "give examples",
+    "give me examples",
+    "show an example",
+    "show me an example",
+    "show example",
+    "show me example",
+    "show examples",
+    "show me examples",
+    "provide an example",
+    "tell me an example",
+    "one example",
+    "single example",
+    "specific example",
+    "concrete example",
+    "an example of",
+    "give me any case",
+    "show me any case",
+    "example where",
+    "how did",
+    "what limitations applied",
+)
+PLURAL_CASE_STUDY_PATTERNS = (
+    "examples",
+    "case studies",
+    "case examples",
+    "several cases",
+    "multiple cases",
+)
+CASE_SECTION_RULES: tuple[
+    tuple[CaseSectionIntent, tuple[str, ...]],
+    ...,
+] = (
+    (
+        "limitations",
+        (
+            "limitation",
+            "limitations",
+            "constraint",
+            "constraints",
+            "rejected",
+            "too low",
+            "low roi",
+            "roi",
+        ),
+    ),
+    (
+        "validation",
+        (
+            "verify",
+            "verified",
+            "verification",
+            "validate",
+            "validated",
+            "validation",
+            "testing",
+            "quality assurance",
+        ),
+    ),
+    (
+        "analysis",
+        (
+            "analysis",
+            "analyse",
+            "analysed",
+            "analyze",
+            "analyzed",
+            "diagnosis",
+            "diagnose",
+            "distinguish",
+            "telemetry",
+            "bpmn",
+            "investigate",
+            "investigation",
+            "assess",
+            "assessment",
+        ),
+    ),
+    (
+        "implementation",
+        (
+            "automate",
+            "automated",
+            "automation",
+            "implement",
+            "implemented",
+            "implementation",
+            "design",
+            "designed",
+            "build",
+            "built",
+            "create",
+            "created",
+            "workflow",
+            "integration",
+            "integrate",
+            "coordinated",
+        ),
+    ),
+    (
+        "results",
+        (
+            "result",
+            "results",
+            "outcome",
+            "outcomes",
+            "impact",
+            "reduce",
+            "reduced",
+            "improve",
+            "improved",
+            "transform",
+            "transformed",
+            "benefit",
+            "benefits",
+            "achieved",
+        ),
+    ),
+    (
+        "problem",
+        (
+            "problem",
+            "problems",
+            "challenge",
+            "challenges",
+            "bottleneck",
+            "bottlenecks",
+            "error",
+            "errors",
+        ),
+    ),
+)
+
 
 def route_query(query: str) -> QueryRoute:
     normalized_query = _normalize(query)
@@ -379,17 +550,52 @@ def route_query(query: str) -> QueryRoute:
 
     for _intent, triggers, route in ROUTING_RULES:
         if _contains_any(normalized_query, triggers):
-            return route
+            return _enrich_route(normalized_query, route)
 
-    return QueryRoute(
-        intent="general_profile",
-        tag_hints=("profile", "summary", "experience", "skills"),
+    return _enrich_route(
+        normalized_query,
+        QueryRoute(
+            intent="general_profile",
+            tag_hints=("profile", "summary", "experience", "skills"),
+        ),
     )
 
 
 def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
-    return any(term in text for term in terms)
+    return any(_contains_phrase(text, term) for term in terms)
+
+
+def _contains_phrase(text: str, phrase: str) -> bool:
+    text_tokens = text.split()
+    phrase_tokens = _normalize(phrase).split()
+    if not phrase_tokens or len(phrase_tokens) > len(text_tokens):
+        return False
+    width = len(phrase_tokens)
+    return any(
+        text_tokens[index : index + width] == phrase_tokens
+        for index in range(len(text_tokens) - width + 1)
+    )
+
+
+def _enrich_route(normalized_query: str, route: QueryRoute) -> QueryRoute:
+    case_sections = tuple(
+        section
+        for section, triggers in CASE_SECTION_RULES
+        if _contains_any(normalized_query, triggers)
+    )
+    if not _contains_any(normalized_query, CASE_STUDY_PATTERNS):
+        return replace(route, case_section_hints=case_sections)
+
+    return replace(
+        route,
+        source_scope="case_studies",
+        case_section_hints=case_sections,
+        select_single_case=not _contains_any(
+            normalized_query,
+            PLURAL_CASE_STUDY_PATTERNS,
+        ),
+    )
 
 
 def _normalize(value: str) -> str:
-    return " ".join(value.casefold().replace("/", " ").replace("-", " ").split())
+    return " ".join(_TOKEN_PATTERN.findall(value.casefold()))

@@ -5,14 +5,15 @@ from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.confidence import Confidence
 from app.core.project_config import get_project_config
 from app.llm.client import LLMClient, ProviderConfigurationError, ProviderRequestError
-from app.llm.factory import get_configured_llm_client
+from app.llm.factory import get_configured_llm_clients
+from app.rag.errors import RetrievalError
 from app.rag.factory import get_configured_retriever
 from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import Retriever
-from app.core.confidence import Confidence
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.sse import ServerSentEvent
 from app.services.chat_confidence import confidence_from_chunks
@@ -28,6 +29,7 @@ from app.services.chat_copy import (
     PRIVATE_DATA_ANSWER,
     PROMPT_INJECTION_ANSWER,
     PUBLIC_BOUNDARY_WEAKNESSES_ANSWER,
+    RETRIEVAL_UNAVAILABLE_ANSWER,
     SOCIAL_ACKNOWLEDGEMENT_ANSWER,
     UNSUPPORTED_NON_ENGLISH_ANSWER,
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
@@ -47,6 +49,7 @@ from app.services.chat_policy import (
     prompt_injection_response,
 )
 from app.services.chat_safety import is_unsafe_chat_output
+from app.services.question_contextualizer import QuestionContextualizer
 
 __all__ = [
     "ASSISTANT_INTRO_ANSWER",
@@ -60,6 +63,7 @@ __all__ = [
     "PRIVATE_DATA_ANSWER",
     "PROMPT_INJECTION_ANSWER",
     "PUBLIC_BOUNDARY_WEAKNESSES_ANSWER",
+    "RETRIEVAL_UNAVAILABLE_ANSWER",
     "SOCIAL_ACKNOWLEDGEMENT_ANSWER",
     "UNSUPPORTED_NON_ENGLISH_ANSWER",
     "UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER",
@@ -162,13 +166,28 @@ class ChatService:
         self,
         retriever: Retriever | None = None,
         llm_client: LLMClient | None = None,
+        question_contextualizer: QuestionContextualizer | None = None,
         prompt_builder: PromptBuilder | None = None,
     ) -> None:
+        configured_clients = (
+            get_configured_llm_clients()
+            if retriever is None and llm_client is None and question_contextualizer is None
+            else None
+        )
         self._retriever = retriever or get_configured_retriever()
         self._llm_client = (
             llm_client
             if llm_client is not None
-            else (get_configured_llm_client() if retriever is None else None)
+            else (configured_clients.answer if configured_clients is not None else None)
+        )
+        self._question_contextualizer = (
+            question_contextualizer
+            if question_contextualizer is not None
+            else (
+                configured_clients.question_contextualizer
+                if configured_clients is not None
+                else None
+            )
         )
         self._prompt_builder = prompt_builder or PromptBuilder()
 
@@ -212,7 +231,10 @@ class ChatService:
         if policy_result is not None:
             return policy_result
 
-        resolution = resolve_question(request, llm_client=self._llm_client)
+        resolution = resolve_question(
+            request,
+            question_contextualizer=self._question_contextualizer,
+        )
         if resolution.requires_clarification:
             return ChatPolicyResult(
                 intent="clarification_required",
@@ -233,10 +255,15 @@ class ChatService:
 
         try:
             chunks = self._retriever.retrieve(standalone_question)
+        except RetrievalError:
+            return ChatPolicyResult(
+                intent="retrieval_unavailable",
+                response=self._retrieval_unavailable_response(),
+            )
         except (ProviderConfigurationError, ProviderRequestError):
             return ChatPolicyResult(
-                intent="insufficient_data",
-                response=self._insufficient_data_response(),
+                intent="retrieval_unavailable",
+                response=self._retrieval_unavailable_response(),
             )
 
         if not chunks:
@@ -409,11 +436,14 @@ class ChatService:
                     "title": chunk.metadata.source,
                     "section": chunk.metadata.section,
                     "confidence": chunk.metadata.source_confidence,
+                    "case_id": chunk.metadata.extra.get("case_id"),
+                    "case_section": chunk.metadata.extra.get("case_section"),
                 }
                 for chunk in context.chunks
             ],
             confidence=context.confidence,
             not_enough_data=False,
+            retrieval_status="success",
             handoff_suggested=context.handoff_suggested,
             handoff_reason=context.handoff_reason,
             language_unsupported=False,
@@ -433,6 +463,7 @@ class ChatService:
                 "request_id": request_id,
                 "confidence": response.confidence,
                 "not_enough_data": response.not_enough_data,
+                "retrieval_status": response.retrieval_status,
                 "handoff_suggested": response.handoff_suggested,
                 "handoff_reason": response.handoff_reason,
                 "language_unsupported": response.language_unsupported,
@@ -489,8 +520,20 @@ class ChatService:
             sources=[],
             confidence="low",
             not_enough_data=True,
+            retrieval_status="empty",
             handoff_suggested=True,
             handoff_reason="insufficient_data",
+        )
+
+    @staticmethod
+    def _retrieval_unavailable_response() -> ChatResponse:
+        return ChatResponse(
+            answer=RETRIEVAL_UNAVAILABLE_ANSWER,
+            sources=[],
+            confidence="low",
+            not_enough_data=False,
+            retrieval_status="unavailable",
+            handoff_suggested=False,
         )
 
     @staticmethod

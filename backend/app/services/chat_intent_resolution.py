@@ -1,8 +1,10 @@
+import re
 from dataclasses import dataclass
 from typing import Literal
 
 from app.core.project_config import get_project_config
-from app.llm.client import LLMClient
+from app.llm.client import ProviderConfigurationError, ProviderRequestError
+from app.rag.query_router import route_query
 from app.schemas.chat import ChatHistoryMessage, ChatRequest
 from app.services.chat_copy import (
     UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER,
@@ -11,27 +13,23 @@ from app.services.chat_copy import (
 from app.services.chat_intent_terms import (
     ALEX_PROFILE_TERMS,
     ALEX_TERMS,
-    BROAD_EDUCATION_REWRITE_TERMS,
     CONTACT_OR_AVAILABILITY_TERMS,
     EDUCATION_PROFILE_TERMS,
     FOLLOW_UP_PROFILE_TERMS,
     FOLLOW_UP_PRONOUN_TERMS,
     KNOWN_THIRD_PARTY_SUBJECTS,
-    OBSERVABILITY_REWRITE_TERMS,
     RAG_PROJECT_TERMS,
-    RAG_REWRITE_TERMS,
     SECOND_PERSON_TERMS,
     SERVICE_REQUEST_TERMS,
-    SERVICE_REWRITE_TERMS,
     SHORT_CONTINUATION_PATTERNS,
-    WEAKNESS_REQUEST_TERMS,
 )
 from app.services.chat_language import normalize_message
-from app.services.question_contextualizer import LLMQuestionContextualizer
+from app.services.question_contextualizer import QuestionContextualizer
 
 _PROJECT_CONFIG = get_project_config()
 _OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
 _OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
+_OWNER_PRONOUN_PATTERN = re.compile(r"\b(his|him|he|yours|your|you)\b", re.IGNORECASE)
 
 
 QuestionIntent = Literal[
@@ -73,7 +71,7 @@ class QuestionResolution:
 def resolve_question(
     request: ChatRequest,
     *,
-    llm_client: LLMClient | None,
+    question_contextualizer: QuestionContextualizer | None,
 ) -> QuestionResolution:
     conversational_context = format_conversation_context(request.history)
     normalized_message = normalize_message(request.message)
@@ -91,7 +89,7 @@ def resolve_question(
         return QuestionResolution(
             intent="alex_profile_question",
             original_question=request.message,
-            standalone_question=_rewrite_alex_retrieval_query(request.message),
+            standalone_question=_resolve_alex_subject(request.message),
             conversational_context=conversational_context,
             resolution_method="rules",
         )
@@ -121,14 +119,14 @@ def resolve_question(
             return QuestionResolution(
                 intent="alex_profile_question",
                 original_question=request.message,
-                standalone_question=_rewrite_alex_retrieval_query(request.message),
+                standalone_question=_resolve_alex_subject(request.message),
                 conversational_context=conversational_context,
                 resolution_method="rules",
             )
 
     contextualized_resolution = _try_llm_question_resolution(
         request=request,
-        llm_client=llm_client,
+        question_contextualizer=question_contextualizer,
         conversational_context=conversational_context,
     )
     if contextualized_resolution is not None:
@@ -145,7 +143,7 @@ def resolve_question(
         return QuestionResolution(
             intent="alex_profile_question",
             original_question=request.message,
-            standalone_question=_rewrite_alex_retrieval_query(request.message),
+            standalone_question=_resolve_alex_subject(request.message),
             conversational_context=conversational_context,
             resolution_method="rules",
         )
@@ -172,17 +170,15 @@ def is_weakness_request(
     history: list[ChatHistoryMessage],
 ) -> bool:
     normalized_message = normalize_message(message)
-    if _looks_like_profile_topic(normalized_message):
-        return False
-    if not any(term in normalized_message for term in WEAKNESS_REQUEST_TERMS):
+    if route_query(message).intent != "public_boundary":
         return False
     if is_direct_third_party_subject(normalized_message):
         return False
-    if any(term in normalized_message for term in ALEX_TERMS):
+    if _contains_any_phrase(normalized_message, ALEX_TERMS):
         return True
-    if any(term in normalized_message for term in SECOND_PERSON_TERMS):
+    if _contains_any_phrase(normalized_message, SECOND_PERSON_TERMS):
         return True
-    if any(term in normalized_message for term in FOLLOW_UP_PRONOUN_TERMS):
+    if _contains_any_phrase(normalized_message, FOLLOW_UP_PRONOUN_TERMS):
         return history_has_alex_assistant_context(history)
     return False
 
@@ -236,19 +232,20 @@ def history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> boo
 def _try_llm_question_resolution(
     *,
     request: ChatRequest,
-    llm_client: LLMClient | None,
+    question_contextualizer: QuestionContextualizer | None,
     conversational_context: str,
 ) -> QuestionResolution | None:
-    if llm_client is None:
+    if question_contextualizer is None:
         return None
     if not _should_contextualize_with_llm(request):
         return None
 
-    contextualized = LLMQuestionContextualizer(llm_client).contextualize(
-        message=request.message,
-        conversational_context=conversational_context,
-    )
-    if contextualized is None:
+    try:
+        contextualized = question_contextualizer.contextualize(
+            message=request.message,
+            conversational_context=conversational_context,
+        )
+    except (ProviderConfigurationError, ProviderRequestError):
         return None
 
     if contextualized.intent == "clarification_required" or contextualized.confidence == "low":
@@ -375,68 +372,44 @@ def _services_retrieval_query() -> str:
     )
 
 
-def _rewrite_alex_retrieval_query(message: str) -> str:
+def _resolve_alex_subject(message: str) -> str:
     normalized_message = normalize_message(message)
-    if normalized_message == "tell me about him" or any(
-        normalized_message == f"tell me about {owner_term}" for owner_term in ALEX_TERMS
-    ):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} professional background, "
-            "experience, skills, and projects."
-        )
-    if normalized_message == "what does he do":
-        return f"What does {_OWNER_REFERENCE} do professionally?"
-    if any(term in normalized_message for term in EDUCATION_PROFILE_TERMS):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} education, Master's Degree in Finance, "
-            "Banking and Insurance, university, honours, academic "
-            "scholarship, and analytical background."
-        )
-    if any(term in normalized_message for term in RAG_PROJECT_TERMS):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} AI portfolio website, RAG architecture, "
-            "retrieval pipeline, Qdrant vector search, Prometheus, Grafana, "
-            "observability, evals, and production-oriented safeguards."
-        )
-    if "work" in normalized_message and "experience" in normalized_message:
-        return f"Tell me about {_OWNER_POSSESSIVE} work experience."
-    if any(term in normalized_message for term in BROAD_EDUCATION_REWRITE_TERMS):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} education, university degree, finance "
-            "background, and academic achievements."
-        )
-    if any(term in normalized_message for term in RAG_REWRITE_TERMS):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} RAG portfolio website, architecture, "
-            "retrieval system, safeguards, evaluations, and AI assistant."
-        )
-    if any(term in normalized_message for term in OBSERVABILITY_REWRITE_TERMS):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} observability work with Prometheus, "
-            "Grafana, metrics, dashboards, and monitoring."
-        )
-    if "soft" in normalized_message and "skill" in normalized_message:
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} soft skills, working style, collaboration, "
-            "communication, and problem-solving."
-        )
-    if "hard" in normalized_message and "skill" in normalized_message:
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} hard skills, technical stack, tools, "
-            "and software engineering capabilities."
-        )
-    if any(term in normalized_message for term in SERVICE_REWRITE_TERMS):
-        return _services_retrieval_query()
-    if "strength" in normalized_message or "different" in normalized_message:
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} professional strengths, working style, "
-            "automation-first thinking, and collaboration approach."
-        )
-    if "your" in normalized_message and "project" in normalized_message:
-        return f"Tell me about {_OWNER_POSSESSIVE} professional projects and software work."
-    if _is_follow_up_profile_question(normalized_message):
-        return (
-            f"Tell me about {_OWNER_POSSESSIVE} professional background, "
-            "experience, skills, and projects."
-        )
-    return message
+    if _contains_any_phrase(normalized_message, ALEX_TERMS):
+        return message
+
+    replacements = {
+        "he": _OWNER_REFERENCE,
+        "him": _OWNER_REFERENCE,
+        "his": _OWNER_POSSESSIVE,
+        "you": _OWNER_REFERENCE,
+        "your": _OWNER_POSSESSIVE,
+        "yours": _OWNER_POSSESSIVE,
+    }
+    resolved = _OWNER_PRONOUN_PATTERN.sub(
+        lambda match: replacements[match.group(0).casefold()],
+        message,
+    )
+    if resolved != message:
+        return resolved
+    return f"About {_OWNER_REFERENCE}: {message}"
+
+
+def _contains_any_phrase(text: str, phrases: tuple[str, ...]) -> bool:
+    text_tokens = text.split()
+    for phrase in phrases:
+        phrase_tokens = normalize_message(phrase).split()
+        width = len(phrase_tokens)
+        if width and any(
+            _tokens_match_phrase(text_tokens[index : index + width], phrase_tokens)
+            for index in range(len(text_tokens) - width + 1)
+        ):
+            return True
+    return False
+
+
+def _tokens_match_phrase(text_tokens: list[str], phrase_tokens: list[str]) -> bool:
+    if text_tokens == phrase_tokens:
+        return True
+    return bool(
+        text_tokens[:-1] == phrase_tokens[:-1] and text_tokens[-1] == f"{phrase_tokens[-1]}'s"
+    )
