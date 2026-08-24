@@ -221,6 +221,8 @@
     "quickPrompts": [
       {
         "label": "Give me Alex's 30-second intro",
+        "handoffSuggested": false,
+        "handoffReason": null,
         "responses": [
           "Alex is an Automation Engineer with a strong business analysis background.\nHe analyses raw technical data and business processes, genuinely enjoys identifying bottlenecks, and turns them into clear automation solutions with well-defined acceptance criteria.\nHe has a strong understanding of the challenges, limitations and practical realities of modern tools, from Excel dependencies to AI hype.\nHe prefers a S.M.A.R.T. approach to task-setting and follows the Kaizen philosophy: improvement is not a one-off task, but a continuous process guided by clearly defined metrics.\n\nWould you like to see details about his latest work experience?",
           "Alex is an Automation Engineer with a strong understanding of end-to-end workflows.\nHe understands both the technical side of automation and the business context: how processes work, how roles are distributed, where bottlenecks appear, and what limitations exist in ERP systems, AI tools and API integrations.\nHis focus is not simply to implement IT solutions, but to improve operational processes and demonstrate business impact through clear metrics.\n\nWould you like to see details about his latest work experience?",
@@ -229,12 +231,16 @@
       },
       {
         "label": "What are Alex's main strengths?",
+        "handoffSuggested": false,
+        "handoffReason": null,
         "responses": [
           "Alex\u2019s main strengths are systems thinking and experience at the intersection of business analysis, data analysis and software automation.\nHe can communicate with technical specialists in their own language, while explaining solution options, strengths and weaknesses, risks and opportunities to non-technical stakeholders in plain business terms.\nWhen needed, Alex can support the full end-to-end cycle: from process analysis through to measurable results.\nWould you like to see an example from his experience?"
         ]
       },
       {
         "label": "Why hire Alex?",
+        "handoffSuggested": false,
+        "handoffReason": null,
         "responses": [
           "Alex combines the skills needed for end-to-end solutions.\n\n- he can carry out data analysis;\n- he can perform business analysis;\n- he can implement technical automation solutions;\n- he can run quality checks and provide measurable metrics.\n\nFor example, in his latest role at Hydrosphere, withon his first 60 days Alex analysed supplier product data, assessed its impact on internal processes, and then automated the workflow by creating a tool that generated product matrices from suppliers' Excel price lists, mapped them into the ERP system, and monitored pricing anomalies."
         ]

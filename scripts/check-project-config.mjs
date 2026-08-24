@@ -329,6 +329,16 @@ function assertChatConfig(config) {
   assertNonEmptyArray(config, "chat.quickPrompts");
   assertObject(config, "chat.languageRestrictions");
 
+  const allowedHandoffReasons = new Set([
+    "insufficient_data",
+    "private_data",
+    "language_unsupported",
+    "user_requested_human",
+    "availability_or_contact",
+    "service_enquiry",
+    "public_boundary",
+  ]);
+
   const quickPrompts = getPath(config, "chat.quickPrompts");
   if (Array.isArray(quickPrompts)) {
     const introPrompt = quickPrompts.find((prompt) =>
@@ -348,6 +358,22 @@ function assertChatConfig(config) {
       }
       if (!Array.isArray(prompt.responses) || prompt.responses.length === 0) {
         fail(`chat.quickPrompts[${index}].responses must be a non-empty array.`);
+      }
+      if (typeof prompt.handoffSuggested !== "boolean") {
+        fail(`chat.quickPrompts[${index}].handoffSuggested must be a boolean.`);
+      }
+      if (
+        prompt.handoffReason !== null &&
+        !allowedHandoffReasons.has(prompt.handoffReason)
+      ) {
+        fail(
+          `chat.quickPrompts[${index}].handoffReason must be null or a supported reason.`,
+        );
+      }
+      if (prompt.handoffSuggested !== (prompt.handoffReason !== null)) {
+        fail(
+          `chat.quickPrompts[${index}] must set handoffReason exactly when handoffSuggested is true.`,
+        );
       }
     });
   }

@@ -295,7 +295,15 @@
         "must_include_any": [
           "probable",
           "supporting evidence",
-          "interference hypothesis"
+          "interference hypothesis",
+          "likely hardware",
+          "possible hardware",
+          "suggested a hardware",
+          "suggested hardware",
+          "consistent with a hardware",
+          "consistent with hardware",
+          "supported a hardware",
+          "supported the hardware"
         ],
         "must_not_include": [
           "confirmed electromagnetic interference",

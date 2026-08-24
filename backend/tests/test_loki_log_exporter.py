@@ -103,6 +103,9 @@ def test_loki_exporter_sends_warning_payload_with_safe_fields() -> None:
             "method": "POST",
             "status_code": 500,
             "error_type": "ProviderRequestError",
+            "retrieval_stage": "vector_search",
+            "error_code": "vector_search_failed",
+            "retryable": True,
         }
     )
     exporter.close(timeout_seconds=1.0)
@@ -120,6 +123,9 @@ def test_loki_exporter_sends_warning_payload_with_safe_fields() -> None:
     assert log_line["event"] == "chat.request.failed"
     assert log_line["request_id"] == "req_1234567890"
     assert log_line["route"] == "/api/chat"
+    assert log_line["retrieval_stage"] == "vector_search"
+    assert log_line["error_code"] == "vector_search_failed"
+    assert log_line["retryable"] is True
     assert "Authorization" not in json.dumps(payload)
 
 

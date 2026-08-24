@@ -7,11 +7,8 @@ import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
 import { isAbortError } from "../lib/chat-errors";
 import { buildChatHistory } from "../lib/chat-history";
 import {
-  hasPendingHandoffSuggestion,
-  isHandoffConfirmationText,
-  isHandoffRequestText,
+  getPendingHandoffSuggestion,
   isHumanHandoffActive,
-  shouldAssistantSuggestHandoff,
 } from "../lib/chat-handoff";
 import { createMessageId } from "../lib/chat-message-id";
 import {
@@ -29,6 +26,7 @@ import {
 } from "../lib/escalation-api";
 import { createStreamTextRenderer } from "../lib/stream-text-renderer";
 import type {
+  AssistantMessage,
   EscalationStreamClosedReason,
   HandoffState,
   Message,
@@ -63,8 +61,9 @@ export function useChatController({
   const [escalationSent, setEscalationSent] = useState(false);
   const [handoffId, setHandoffId] = useState<string | null>(null);
   const [handoffState, setHandoffState] = useState<HandoffState>("idle");
-  const [dismissedHandoffMessageCount, setDismissedHandoffMessageCount] =
-    useState<number | null>(null);
+  const [dismissedHandoffMessageId, setDismissedHandoffMessageId] = useState<
+    string | null
+  >(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleEscalationStreamMeta = useCallback(() => {
@@ -97,6 +96,8 @@ export function useChatController({
           id: createMessageId("assistant"),
           role: "assistant",
           text: getHandoffClosedMessage(reason),
+          handoffSuggested: false,
+          handoffReason: null,
         },
       ]);
     },
@@ -170,41 +171,37 @@ export function useChatController({
     return chatShellCopy.defaultInputPlaceholder;
   }, [handoffId, handoffState]);
 
+  const pendingHandoffSuggestion = useMemo(
+    () => getPendingHandoffSuggestion(messages),
+    [messages],
+  );
+
   const shouldShowHandoffPrompt = useMemo(() => {
     if (
       isThinking ||
       isEscalating ||
       isSendingHandoffMessage ||
       isClosingHandoff ||
-      escalationSent ||
-      !messages.length
+      escalationSent
     ) {
       return false;
     }
-    if (dismissedHandoffMessageCount === messages.length) {
+    if (
+      !pendingHandoffSuggestion ||
+      dismissedHandoffMessageId === pendingHandoffSuggestion.id
+    ) {
       return false;
     }
 
-    const latestAssistantMessage = [...messages]
-      .reverse()
-      .find((message) => message.role === "assistant" && message.text.trim());
-    const latestUserMessage = [...messages]
-      .reverse()
-      .find((message) => message.role === "user" && message.text.trim());
-
-    return Boolean(
-      (latestAssistantMessage &&
-        shouldAssistantSuggestHandoff(latestAssistantMessage)) ||
-        (latestUserMessage && isHandoffRequestText(latestUserMessage.text)),
-    );
+    return true;
   }, [
-    dismissedHandoffMessageCount,
+    dismissedHandoffMessageId,
     escalationSent,
     isClosingHandoff,
     isEscalating,
     isSendingHandoffMessage,
     isThinking,
-    messages,
+    pendingHandoffSuggestion,
   ]);
 
   const isInputDisabled =
@@ -227,7 +224,7 @@ export function useChatController({
     setEscalationSent(false);
     setHandoffId(null);
     setHandoffState("idle");
-    setDismissedHandoffMessageCount(null);
+    setDismissedHandoffMessageId(null);
     focusMessageInputSoon();
   }
 
@@ -245,13 +242,18 @@ export function useChatController({
     setMessages((currentMessages) => [
       ...currentMessages,
       { id: createMessageId("user"), role: "user", text: prompt.label },
-      { id: assistantId, role: "assistant", text: "" },
+      {
+        id: assistantId,
+        role: "assistant",
+        text: "",
+        handoffSuggested: prompt.handoffSuggested,
+        handoffReason: prompt.handoffReason,
+      },
     ]);
     setInput("");
     setIsThinking(true);
     setNotice(null);
     setHandoffUnavailableMessage(null);
-    setDismissedHandoffMessageCount(null);
 
     try {
       await waitForScriptedResponse(abortController.signal);
@@ -264,6 +266,8 @@ export function useChatController({
           text: chatNoticeCopy.assistantErrorMessage,
           confidence: "low",
           notEnoughData: true,
+          handoffSuggested: false,
+          handoffReason: null,
         });
         setNotice(chatNoticeCopy.assistantUnavailable);
       }
@@ -290,23 +294,10 @@ export function useChatController({
       return;
     }
 
-    if (
-      hasPendingHandoffSuggestion(messages) &&
-      isHandoffConfirmationText(trimmedInput)
-    ) {
-      appendLocalUserMessage(trimmedInput);
-      return;
-    }
-
-    if (isHandoffRequestText(trimmedInput)) {
-      appendLocalUserMessage(trimmedInput);
-      return;
-    }
-
     const assistantId = createMessageId("assistant");
     const history = buildChatHistory(messages);
     let rawStreamText = "";
-    let pendingSources: Message["sources"] | undefined;
+    let pendingSources: AssistantMessage["sources"] | undefined;
 
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
@@ -320,13 +311,18 @@ export function useChatController({
     setMessages((currentMessages) => [
       ...currentMessages,
       { id: createMessageId("user"), role: "user", text: trimmedInput },
-      { id: assistantId, role: "assistant", text: "" },
+      {
+        id: assistantId,
+        role: "assistant",
+        text: "",
+        handoffSuggested: false,
+        handoffReason: null,
+      },
     ]);
     setInput("");
     setIsThinking(true);
     setNotice(null);
     setHandoffUnavailableMessage(null);
-    setDismissedHandoffMessageCount(null);
 
     try {
       await streamChatResponse({
@@ -344,6 +340,7 @@ export function useChatController({
           updateAssistantMessage(assistantId, {
             confidence: done.confidence,
             notEnoughData: done.not_enough_data,
+            retrievalStatus: done.retrieval_status,
             handoffSuggested: done.handoff_suggested,
             handoffReason: done.handoff_reason ?? null,
             languageUnsupported: done.language_unsupported,
@@ -372,6 +369,7 @@ export function useChatController({
             sources: fallbackResponse.sources,
             confidence: fallbackResponse.confidence,
             notEnoughData: fallbackResponse.not_enough_data,
+            retrievalStatus: fallbackResponse.retrieval_status,
             handoffSuggested: fallbackResponse.handoff_suggested,
             handoffReason: fallbackResponse.handoff_reason ?? null,
             languageUnsupported: fallbackResponse.language_unsupported,
@@ -384,6 +382,8 @@ export function useChatController({
               text: chatNoticeCopy.assistantErrorMessage,
               confidence: "low",
               notEnoughData: true,
+              handoffSuggested: false,
+              handoffReason: null,
             });
             setNotice(chatNoticeCopy.assistantUnavailable);
           }
@@ -402,24 +402,15 @@ export function useChatController({
     }
   }
 
-  function appendLocalUserMessage(messageText: string) {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      { id: createMessageId("user"), role: "user", text: messageText },
-    ]);
-    setInput("");
-    setNotice(null);
-    setHandoffUnavailableMessage(null);
-    setDismissedHandoffMessageCount(null);
-    focusMessageInputSoon();
-  }
-
-  function updateAssistantMessage(messageId: string, patch: Partial<Message>) {
+  function updateAssistantMessage(
+    messageId: string,
+    patch: Partial<Omit<AssistantMessage, "id" | "role">>,
+  ) {
     setMessages((currentMessages) =>
       currentMessages.map((message) =>
-        message.id === messageId ? { ...message, ...patch } : message,
+        message.id === messageId && message.role === "assistant"
+          ? { ...message, ...patch }
+          : message,
       ),
     );
   }
@@ -440,7 +431,6 @@ export function useChatController({
         { id: createMessageId("user"), role: "user", text: messageText },
       ]);
       setInput("");
-      setDismissedHandoffMessageCount(null);
     } catch (error) {
       if (isHandoffUnavailableError(error)) {
         showHandoffUnavailableMessage(error.message);
@@ -474,7 +464,7 @@ export function useChatController({
       const nextState = normaliseHandoffState(response.state);
 
       setEscalationSent(true);
-      setDismissedHandoffMessageCount(messages.length);
+      setDismissedHandoffMessageId(pendingHandoffSuggestion?.id ?? null);
       setHandoffId(nextHandoffId);
       setHandoffState(nextHandoffId ? nextState : "idle");
 
@@ -490,12 +480,14 @@ export function useChatController({
           text: nextHandoffId
             ? HANDOFF_NAME_REQUEST_MESSAGE
             : chatHandoffCopy.notificationSentMessage,
+          handoffSuggested: false,
+          handoffReason: null,
         },
       ]);
     } catch (error) {
       if (isHandoffUnavailableError(error)) {
         showHandoffUnavailableMessage(error.message);
-        setDismissedHandoffMessageCount(messages.length);
+        setDismissedHandoffMessageId(pendingHandoffSuggestion?.id ?? null);
         return;
       }
       if (error instanceof EscalationApiError && error.status === 429) {
@@ -528,6 +520,8 @@ export function useChatController({
           id: createMessageId("assistant"),
           role: "assistant",
           text: getHandoffClosedMessage("session_closed"),
+          handoffSuggested: false,
+          handoffReason: null,
         },
       ]);
     } catch {
@@ -538,8 +532,10 @@ export function useChatController({
     }
   }
 
-  function continueWithAi() {
-    setDismissedHandoffMessageCount(messages.length);
+  function dismissHandoffSuggestion() {
+    if (pendingHandoffSuggestion) {
+      setDismissedHandoffMessageId(pendingHandoffSuggestion.id);
+    }
     setNotice(null);
     setHandoffUnavailableMessage(null);
     focusMessageInputSoon();
@@ -567,7 +563,7 @@ export function useChatController({
   return {
     closeHandoff,
     connectWithAlex,
-    continueWithAi,
+    dismissHandoffSuggestion,
     handleInputKeyDown,
     handleSubmit,
     handoffId,

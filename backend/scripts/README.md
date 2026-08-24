@@ -25,3 +25,26 @@ The old `backend/knowledge/` directory has been removed. Do not use it as a
 new source location.
 
 Private drafts under `private/knowledge/` are not indexed.
+
+## RAG release verification
+
+Run the complete pre-deploy RAG gate from the repository root:
+
+```powershell
+task rag:release:predeploy
+```
+
+This runs free CI plus read-only collection/retrieval verification and complete
+live retrieval and answer evals. It may call OpenAI and Qdrant, but it does not
+ingest or delete data.
+
+After deploying the backend, verify both public chat transports through the
+frontend rewrite and then inspect protected backend metrics:
+
+```powershell
+task rag:release:postdeploy -- --base-url https://alextym.com
+task rag:release:metrics -- --base-url https://<backend-host>
+```
+
+`METRICS_TOKEN` is read from the backend environment. Reports are written only
+under the ignored `.tmp/evals/` directory.

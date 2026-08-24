@@ -1,8 +1,12 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from app.core.config import Settings
+from app.llm.client import ProviderRequestError
 from app.llm.openai_client import OpenAIEmbeddingClient, OpenAIResponsesClient
+from app.rag.errors import RetrievalError
 from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
 from app.rag.public_resume_source import get_public_resume_source_file_for_path
 from app.rag.qdrant_retriever import QdrantRetriever
@@ -161,6 +165,22 @@ def test_qdrant_store_search_maps_payload_to_chunks() -> None:
     assert chunks[0].metadata.tags == ("backend",)
 
 
+def test_qdrant_store_maps_search_failure_to_typed_retrieval_error() -> None:
+    store = QdrantKnowledgeStore(
+        url="",
+        api_key="",
+        collection_name="alex_public_knowledge",
+        client=FakeQdrantClient(search_error=RuntimeError("connection refused")),
+    )
+
+    with pytest.raises(RetrievalError) as exc_info:
+        store.search(embedding=[0.1, 0.2], limit=1, score_threshold=0.72)
+
+    assert exc_info.value.stage == "vector_search"
+    assert exc_info.value.code == "vector_search_failed"
+    assert exc_info.value.retryable is True
+
+
 def test_qdrant_retriever_filters_link_sections_for_professional_queries() -> None:
     retriever = QdrantRetriever(
         embedding_client=FakeEmbeddingClient(),
@@ -234,6 +254,22 @@ def test_qdrant_retriever_expands_short_sql_queries() -> None:
     assert fake_embedding_client.last_text is not None
     assert "PostgreSQL SQLAlchemy Alembic" in fake_embedding_client.last_text
     assert "experience skills practical work" in fake_embedding_client.last_text
+
+
+def test_qdrant_retriever_maps_embedding_failure_to_typed_retrieval_error() -> None:
+    retriever = QdrantRetriever(
+        embedding_client=FailingEmbeddingClient(),
+        store=FakeSearchStore([]),
+        default_limit=6,
+        score_threshold=0.4,
+    )
+
+    with pytest.raises(RetrievalError) as exc_info:
+        retriever.retrieve("Tell me about Alex's backend experience")
+
+    assert exc_info.value.stage == "embedding"
+    assert exc_info.value.code == "embedding_request_failed"
+    assert exc_info.value.retryable is True
 
 
 def test_ingestion_replaces_vectors_from_reviewed_public_knowledge() -> None:
@@ -319,6 +355,7 @@ class FakeQdrantClient:
         self,
         search_points: list[SimpleNamespace] | None = None,
         collection_exists: bool = False,
+        search_error: Exception | None = None,
     ) -> None:
         self.operations: list[str] = []
         self.upserted_points: list[object] = []
@@ -326,6 +363,7 @@ class FakeQdrantClient:
         self.deleted_filters: list[tuple[str, object]] = []
         self._search_points = search_points or []
         self._collection_exists = collection_exists
+        self._search_error = search_error
 
     def collection_exists(self, *, collection_name: str) -> bool:
         self.operations.append("collection_exists")
@@ -355,6 +393,8 @@ class FakeQdrantClient:
         self.upserted_points = points
 
     def query_points(self, **kwargs: object) -> SimpleNamespace:
+        if self._search_error is not None:
+            raise self._search_error
         return SimpleNamespace(points=self._search_points)
 
 
@@ -370,6 +410,14 @@ class FakeEmbeddingClient:
     def embed_text(self, text: str) -> list[float]:
         self.last_text = text
         return [1.0, 0.0] if text else []
+
+
+class FailingEmbeddingClient:
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        raise ProviderRequestError("embedding provider unavailable")
+
+    def embed_text(self, text: str) -> list[float]:
+        raise ProviderRequestError("embedding provider unavailable")
 
 
 class FakeVectorStore:
