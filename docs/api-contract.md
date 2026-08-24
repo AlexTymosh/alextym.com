@@ -93,15 +93,19 @@ GET /api/health/ready
 
 Purpose:
 
-- configuration readiness check;
+- application and Qdrant contract readiness check;
 - deploy smoke test;
 - manual debugging.
 
 Current behaviour:
 
-- checks whether required configuration values are present;
-- does not perform live Qdrant/OpenAI/Resend network calls;
-- currently returns HTTP 200 with configuration status fields.
+- keeps application liveness separate from dependency readiness;
+- validates the configured Qdrant collection through a cached read-only probe;
+- checks collection status, vector mode/dimensions/distance, required payload
+  indexes, non-empty points, and the expected public source groups;
+- does not call OpenAI, Resend, Telegram, or Redis;
+- returns HTTP 503 when the configured Qdrant contract is not ready;
+- does not expose the internal contract error code in the public response.
 
 Response shape:
 
@@ -110,17 +114,19 @@ Response shape:
   "status": "ready",
   "app": "ready",
   "environment": "local",
-  "vector_db": "configured",
+  "vector_db": "ready",
   "llm_config": "configured",
   "contact_email": "configured"
 }
 ```
 
-Possible field values for provider configuration fields:
+Possible values:
 
 ```text
-configured
-not_configured
+status: ready | not_ready
+vector_db: ready | not_ready | not_configured
+llm_config: configured | not_configured
+contact_email: configured | not_configured
 ```
 
 ---
@@ -215,9 +221,11 @@ The current user message is sent separately in `message` and is not duplicated i
 `POST /api/chat` and `POST /api/chat/stream` use the same question-resolution flow before retrieval:
 
 1. Clear owner/profile, services, and third-party questions are resolved by deterministic rules.
-2. An owner-related ambiguous follow-up may be passed to the LLM contextualizer. Its JSON output is validated against a closed intent set and a standalone question contract.
-3. A resolved standalone question is used consistently for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains separate prompt context.
-4. If a short continuation cannot be resolved reliably, the backend asks the visitor to clarify before retrieval.
+2. A self-contained question with an explicit owner reference is preserved unchanged. Deterministic follow-up resolution may replace only an owner pronoun or second-person reference; it does not replace the requested topic with a broader retrieval query.
+3. An owner-related ambiguous follow-up may be passed to the dedicated LLM contextualizer. Provider-enforced structured output must match the closed `ContextualizedQuestion` contract before routing uses it; free-form answer text is not parsed as routing JSON.
+4. The RAG query router is the single owner of topic intent, source scope, and requested case-section classification, including the distinction between personal development areas and limitations of a case study.
+5. A resolved standalone question is used consistently for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains separate prompt context.
+6. If a short continuation cannot be resolved reliably, the backend asks the visitor to clarify before retrieval.
 
 Clarification response shape:
 
@@ -227,12 +235,13 @@ Clarification response shape:
   "sources": [],
   "confidence": "low",
   "not_enough_data": false,
+  "retrieval_status": "not_requested",
   "handoff_suggested": false,
   "handoff_reason": null
 }
 ```
 
-Clarification is distinct from the insufficient-data response below. Clarification means that no reliable standalone question was available, so retrieval did not run. Insufficient data means that a standalone question was resolved but retrieval failed or returned no useful chunks.
+Clarification is distinct from the insufficient-data response below. Clarification means that no reliable standalone question was available, so retrieval did not run. Insufficient data means that a standalone question was resolved and retrieval completed successfully but returned no useful chunks.
 
 Response:
 
@@ -241,13 +250,16 @@ Response:
   "answer": "According to the public knowledge base...",
   "sources": [
     {
-      "title": "Summary",
-      "section": "summary",
-      "confidence": "medium"
+      "title": "Corporate Borrower Credit Risk and Process Analysis",
+      "section": "experience",
+      "confidence": "medium",
+      "case_id": "case-corporate-borrower-credit-risk-process-analysis",
+      "case_section": "limitations"
     }
   ],
   "confidence": "medium",
   "not_enough_data": false,
+  "retrieval_status": "success",
   "handoff_suggested": false,
   "handoff_reason": null
 }
@@ -261,10 +273,37 @@ Insufficient-data response shape:
   "sources": [],
   "confidence": "low",
   "not_enough_data": true,
+  "retrieval_status": "empty",
   "handoff_suggested": true,
   "handoff_reason": "insufficient_data"
 }
 ```
+
+Technical retrieval failures are not knowledge claims and do not trigger a
+handoff suggestion:
+
+```json
+{
+  "answer": "I cannot access the public knowledge base right now. Please try again in a moment.",
+  "sources": [],
+  "confidence": "low",
+  "not_enough_data": false,
+  "retrieval_status": "unavailable",
+  "handoff_suggested": false,
+  "handoff_reason": null
+}
+```
+
+`retrieval_status` is one of `not_requested`, `success`, `empty`, or
+`unavailable`.
+
+Each source always contains `title`, `section`, and `confidence`. Case-study
+sources also expose nullable `case_id` and `case_section` fields. These are
+stable identifiers from reviewed public source metadata; they provide
+machine-verifiable attribution without exposing retrieved chunk text. Resume
+sources return null for both case fields.
+
+`handoff_suggested` and `handoff_reason` are required structured fields in both the JSON response and the SSE `done` event. `handoff_reason` is null when no handoff is suggested. The frontend treats these fields as authoritative and does not derive handoff state from answer text, user text, or `not_enough_data`. Frontend-scripted assistant messages use the equivalent camel-case metadata declared in project config.
 
 Out-of-scope questions return a scope-boundary answer rather than a general AI answer. The assistant is focused on the public professional profile, projects, skills, CV, availability, and contact options.
 
@@ -285,6 +324,8 @@ Purpose:
 - progressive answer display in the frontend.
 
 The request schema, history limits, follow-up resolution, and response semantics are the same as for `POST /api/chat`.
+
+If streaming fails before the first answer token, the frontend calls `POST /api/chat` and consumes the same structured handoff fields. A partial stream is not replayed through the JSON endpoint.
 
 Content type:
 
@@ -312,10 +353,10 @@ event: token
 data: {"text":"..."}
 
 event: sources
-data: {"sources":[{"title":"Summary","section":"summary","confidence":"medium"}]}
+data: {"sources":[{"title":"Corporate Borrower Credit Risk and Process Analysis","section":"experience","confidence":"medium","case_id":"case-corporate-borrower-credit-risk-process-analysis","case_section":"limitations"}]}
 
 event: done
-data: {"request_id":"...","confidence":"medium","not_enough_data":false,"handoff_suggested":false,"handoff_reason":null}
+data: {"request_id":"...","confidence":"medium","not_enough_data":false,"retrieval_status":"success","handoff_suggested":false,"handoff_reason":null}
 ```
 
 Error event:

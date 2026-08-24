@@ -38,7 +38,10 @@ SAFE_LOG_FIELDS = {
     "status_code",
     "status_class",
     "duration_ms",
+    "error_code",
     "error_type",
+    "retrieval_stage",
+    "retryable",
 }
 LOKI_LABEL_FIELDS = ("service", "environment", "level")
 SENSITIVE_VALUE_MARKERS = (

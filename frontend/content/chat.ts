@@ -3,7 +3,6 @@ import type { QuickPrompt } from "../types/chat";
 
 const ownerName = ownerConfig.shortName;
 const ownerPossessiveName = ownerConfig.possessiveName;
-const ownerTermPattern = buildOwnerTermPattern();
 
 export const chatShellCopy = {
   ariaLabel: "AI digital assistant",
@@ -17,7 +16,7 @@ export const chatShellCopy = {
   handoffConnectLabel: `Connect me with ${ownerName}`,
   handoffConnectedStatus: `${ownerName} is connected`,
   handoffConnectingLabel: "Connecting...",
-  handoffContinueLabel: "Continue with AI",
+  handoffDismissLabel: "Not now",
   handoffInputPlaceholder: `Message ${ownerName} through this chat...`,
   handoffPromptAriaLabel: `Connect with ${ownerName}`,
   handoffPromptTitle: `Would you like to connect with ${ownerName}?`,
@@ -88,156 +87,3 @@ export const ESCALATION_TRANSCRIPT_LIMIT = 20;
 export const ESCALATION_TRANSCRIPT_ITEM_MAX_CHARS = 2000;
 export const ESCALATION_TRANSCRIPT_TOTAL_MAX_CHARS = 8000;
 export const ESCALATION_CONSENT_COPY = chatHandoffCopy.consentCopy;
-
-export const HANDOFF_CONFIRMATION_PATTERNS = [
-  /^\s*(yes|yeah|yep|sure|ok|okay|confirm|i confirm|yes please|please do)\s*[.!?]*\s*$/i,
-  new RegExp(
-    String.raw`^\s*(\u0434\u0430|\u0442\u0430\u043a|\u043e\u043a|` +
-      String.raw`\u043e\u043a\u0435\u0439|\u0434\u043e\u0431\u0440\u0435|` +
-      String.raw`\u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430|` +
-      String.raw`\u0431\u0443\u0434\u044c\s+\u043b\u0430\u0441\u043a\u0430)` +
-      String.raw`\s*[.!?]*\s*$`,
-    "i",
-  ),
-] as const;
-
-export const HANDOFF_REQUEST_PATTERNS = [
-  /^\s*connect\s*[.!?]*\s*$/i,
-  /^\s*con+ect\s*[.!?]*\s*$/i,
-  /^\s*con+ect\s+me\s*[.!?]*\s*$/i,
-  new RegExp(String.raw`\bcon+ect\s+(me\s+)?(with|to)\s+${ownerTermPattern}\b`, "i"),
-  /^\s*connect\s+me\s*[.!?]*\s*$/i,
-  new RegExp(String.raw`\bconnect\s+(me\s+)?(with|to)\s+${ownerTermPattern}\b`, "i"),
-  new RegExp(
-    String.raw`\bcan\s+you\s+connect\s+me\s+(with|to)\s+${ownerTermPattern}\b`,
-    "i",
-  ),
-  new RegExp(String.raw`\bgive\s+me\s+${ownerTermPattern}\b`, "i"),
-  new RegExp(String.raw`\bget\s+me\s+${ownerTermPattern}\b`, "i"),
-  new RegExp(
-    String.raw`\bi\s+confirm\s+i('?d| would)\s+like\s+to\s+` +
-      String.raw`(talk|speak|chat)\s+(to|with)\s+${ownerTermPattern}\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bi\s+(want|would\s+like|need|'d\s+like)\s+(to\s+)?` +
-      String.raw`(talk|speak|chat)\s+(to|with)\s+${ownerTermPattern}\b`,
-    "i",
-  ),
-  new RegExp(String.raw`\b(talk|speak|chat)\s+(to|with)\s+${ownerTermPattern}\b`, "i"),
-  new RegExp(
-    String.raw`\bcan\s+${ownerTermPattern}\s+(contact|call|message|email|reach)\s+me\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bi('?d| would)\s+like\s+to\s+hire\s+(${ownerTermPattern}|him|them)\b`,
-    "i",
-  ),
-  new RegExp(String.raw`\bi\s+(want|need)\s+to\s+hire\s+(${ownerTermPattern}|him|them)\b`, "i"),
-  new RegExp(String.raw`\b(best|great|strong)\s+offer\s+(for\s+)?(${ownerTermPattern}|him|them)\b`, "i"),
-  new RegExp(String.raw`\btell\s+(${ownerTermPattern}|him|them)\s+i\b`, "i"),
-  /\bshare\s+code\b/i,
-  /\bright-to-work\s+share\s+code\b/i,
-  /\buk\s+share\s+code\b/i,
-  new RegExp(
-    String.raw`\bget\s+${ownerTermPattern}\s+(to\s+)?` +
-      String.raw`(contact|call|message|email|reply\s+to)\s+me\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bplease\s+(connect|put)\s+me\s+` +
-      String.raw`(through\s+)?(to\s+)?${ownerTermPattern}\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bi\s+(want|would\s+like|need)\s+(to\s+)?` +
-      String.raw`(talk|speak|chat)\s+(to|with)\s+(a\s+)?` +
-      String.raw`(human|person|real\s+person|agent|representative)\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b(talk|speak|chat)\s+(to|with)\s+(a\s+)?` +
-      String.raw`(human|person|real\s+person|agent|representative)\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b(connect|handoff|escalate)\s+(me\s+)?(to\s+)?` +
-      String.raw`(a\s+)?(human|person|real\s+person|agent|representative)\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bconnect\s+me\s+with\s+(a\s+)?` +
-      String.raw`(human|person|real\s+person|agent|representative)\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bi\s+need\s+(a\s+)?` +
-      String.raw`(human|person|real\s+person|agent|representative)\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\bcan\s+i\s+(talk|speak|chat)\s+(to|with)\s+(a\s+)?` +
-      String.raw`(human|person|real\s+person|agent|representative)\b`,
-    "i",
-  ),
-  /^\s*(human|person|real\s+person|agent|representative|operator)\s*[.!?]*\s*$/i,
-  new RegExp(String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\s+\u043c\u0435\u043d\u044f\b`, "i"),
-  new RegExp(String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u0442\u0435\s+\u043c\u0435\u043d\u044f\b`, "i"),
-  new RegExp(
-    String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\s+\u043c\u0435\u043d\u044f\s+` +
-      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u0442\u0435\s+` +
-      String.raw`\u043c\u0435\u043d\u044f\s+\u0441\s+` +
-      String.raw`\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c\s+` +
-      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
-      String.raw`\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c\s+` +
-      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
-      String.raw`\u0441\u0432\u044f\u0437\u0430\u0442\u044c\u0441\u044f\s+` +
-      String.raw`\u0441\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
-      String.raw`\u043f\u043e\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u0438\s+` +
-      String.raw`\u0437\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-  new RegExp(
-    String.raw`\b\u0445\u043e\u0447\u0443\s+` +
-      String.raw`\u0437\u0432'\u044f\u0437\u0430\u0442\u0438\u0441\u044f\s+` +
-      String.raw`\u0437\s+\u0430\u043b\u0435\u043a\u0441\u043e\u043c\b`,
-    "i",
-  ),
-] as const;
-
-function buildOwnerTermPattern() {
-  const ownerTerms = [
-    ownerName,
-    ownerConfig.displayName,
-    ...ownerConfig.publicAliases,
-  ]
-    .map((term) => term.trim())
-    .filter(Boolean)
-    .map(escapeRegExp);
-
-  return `(?:${Array.from(new Set(ownerTerms)).join("|")})`;
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}

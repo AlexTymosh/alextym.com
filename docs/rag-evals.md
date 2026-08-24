@@ -9,6 +9,9 @@
 | `rag:eval:free` | Free | Local before/after contract eval cycle without OpenAI/Qdrant |
 | `rag:eval:paid` | Paid | Live RAG eval cycle with OpenAI/Qdrant |
 | `rag:eval:compare` | Free | Manual comparison for two custom reports |
+| `rag:release:predeploy` | Paid/live | Mandatory CI, collection, canary, retrieval, and answer release gate |
+| `rag:release:postdeploy` | Paid/live | Deployed readiness and JSON/SSE canary parity |
+| `rag:release:metrics` | Free/read-only | Protected metrics check for Qdrant retrieval errors |
 
 ## Auto-cycle algorithm
 
@@ -135,6 +138,24 @@ Open:
 ```text
 .tmp/evals/rag-comparison.md
 ```
+
+For a release, use the stricter non-optional gates:
+
+```powershell
+task rag:release:predeploy
+# Deploy the already verified revision.
+task rag:release:postdeploy -- --base-url https://alextym.com
+task rag:release:metrics -- --base-url https://<backend-host>
+```
+
+The release tasks do not use `--allow-failures`. The pre-deploy task is
+read-only for Qdrant but may incur OpenAI embedding and answer-generation cost.
+The post-deploy task sends two canonical canaries through both JSON and SSE.
+
+Answer phrase checks normalize Unicode compatibility forms, equivalent dash and
+quote characters, case, and whitespace before matching. This prevents a
+typographic non-breaking hyphen such as `six‑hour` from failing an expectation
+written as `six-hour`; required and forbidden factual phrases remain unchanged.
 
 ## Manual comparison
 

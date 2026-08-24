@@ -1,11 +1,14 @@
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, TypeVar
 
 from openai import OpenAI
+from pydantic import BaseModel
 
 from app.core.config import Settings
 from app.llm.client import ProviderConfigurationError, ProviderRequestError
 from app.rag.prompt_builder import PromptBundle
+
+StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 
 
 class OpenAIEmbeddingClient:
@@ -118,6 +121,24 @@ class OpenAIResponsesClient:
                     yield delta
         except Exception as exc:
             raise ProviderRequestError("OpenAI streaming response failed.") from exc
+
+    def parse_structured(
+        self,
+        prompt: PromptBundle,
+        response_model: type[StructuredResponseT],
+    ) -> StructuredResponseT:
+        try:
+            response = self._client.responses.parse(
+                **self._request_options(prompt),
+                text_format=response_model,
+            )
+        except Exception as exc:
+            raise ProviderRequestError("OpenAI structured response request failed.") from exc
+
+        parsed_response = getattr(response, "output_parsed", None)
+        if not isinstance(parsed_response, response_model):
+            raise ProviderRequestError("OpenAI response did not contain structured output.")
+        return parsed_response
 
     def _request_options(self, prompt: PromptBundle) -> dict[str, Any]:
         request_options: dict[str, Any] = {
