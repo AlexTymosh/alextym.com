@@ -1,8 +1,5 @@
 from app.rag.models import RetrievalFilter
-from app.rag.qdrant_retriever import (
-    QdrantRetriever,
-    _with_current_public_source_groups,
-)
+from app.rag.qdrant_retriever import QdrantRetriever
 
 
 def test_retriever_searches_current_resume_and_case_study_groups() -> None:
@@ -16,23 +13,24 @@ def test_retriever_searches_current_resume_and_case_study_groups() -> None:
 
     assert retriever.retrieve("How did the site owner automate WEEE reporting?") == []
 
-    assert store.payload_filter is not None
-    assert store.payload_filter.source_group_any == ("resume", "case-studies")
+    assert [call.source_group_any for call in store.payload_filters] == [
+        ("case-studies",),
+        ("resume", "case-studies"),
+    ]
 
 
-def test_current_source_group_filter_preserves_route_selectors() -> None:
-    original = RetrievalFilter(
-        topic_any=("hard-skills",),
-        tag_any=("python", "automation"),
-        section_any=("experience",),
+def test_commercial_service_route_searches_resume_only() -> None:
+    store = CapturingStore()
+    retriever = QdrantRetriever(
+        embedding_client=FakeEmbeddingClient(),
+        store=store,
+        default_limit=6,
+        score_threshold=0.4,
     )
 
-    updated = _with_current_public_source_groups(original)
+    assert retriever.retrieve("What services does Alex offer?") == []
 
-    assert updated.source_group_any == ("resume", "case-studies")
-    assert updated.topic_any == original.topic_any
-    assert updated.tag_any == original.tag_any
-    assert updated.section_any == original.section_any
+    assert [call.source_group_any for call in store.payload_filters] == [("resume",)]
 
 
 class FakeEmbeddingClient:
@@ -42,7 +40,7 @@ class FakeEmbeddingClient:
 
 class CapturingStore:
     def __init__(self) -> None:
-        self.payload_filter: RetrievalFilter | None = None
+        self.payload_filters: list[RetrievalFilter] = []
 
     def search(
         self,
@@ -52,5 +50,6 @@ class CapturingStore:
         score_threshold: float,
         payload_filter: RetrievalFilter | None = None,
     ) -> list[object]:
-        self.payload_filter = payload_filter
+        assert payload_filter is not None
+        self.payload_filters.append(payload_filter)
         return []

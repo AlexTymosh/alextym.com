@@ -112,39 +112,6 @@ SERVICE_REQUEST_TERMS = (
     "can he build",
 )
 
-WEAKNESS_REQUEST_TERMS = (
-    "weakness",
-    "weaknesses",
-    "education",
-    "university",
-    "degree",
-    "master",
-    "master's",
-    "masters",
-    "mba",
-    "academic",
-    "honours",
-    "scholarship",
-    "finance",
-    "banking",
-    "insurance",
-    "rag",
-    "qdrant",
-    "prometheus",
-    "grafana",
-    "observability",
-    "metrics",
-    "monitoring",
-    "weak point",
-    "weak points",
-    "development area",
-    "development areas",
-    "areas to improve",
-    "limitations",
-    f"what should {_OWNER_REFERENCE.casefold()} improve",
-    "what should he improve",
-)
-
 SECOND_PERSON_TERMS = (
     "you",
     "your",
@@ -257,26 +224,3 @@ RAG_PROJECT_TERMS = (
     "retrieval augmented",
     "vector search",
 )
-
-BROAD_EDUCATION_REWRITE_TERMS = (
-    "mba",
-    "university",
-    "degree",
-    "master",
-    "master's",
-    "education",
-    "finance",
-    "banking",
-    "insurance",
-)
-
-RAG_REWRITE_TERMS = ("rag", "qdrant", "embedding")
-
-OBSERVABILITY_REWRITE_TERMS = (
-    "prometheus",
-    "grafana",
-    "observability",
-    "metrics",
-)
-
-SERVICE_REWRITE_TERMS = ("service", "website", "software")

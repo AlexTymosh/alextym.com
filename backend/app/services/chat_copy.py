@@ -17,6 +17,9 @@ INSUFFICIENT_DATA_ANSWER = (
     "to answer that accurately. \n"
     f"Would you like me to connect you with {OWNER_REFERENCE}?"
 )
+RETRIEVAL_UNAVAILABLE_ANSWER = (
+    "I cannot access the public knowledge base right now. Please try again in a moment."
+)
 PROMPT_INJECTION_ANSWER = (
     "I\u2019m not sure I can help with that request.\n"
     f"Let\u2019s focus on {OWNER_POSSESSIVE} professional background or "

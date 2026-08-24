@@ -7,28 +7,18 @@ from qdrant_client import QdrantClient, models
 from app.core.confidence import Confidence
 from app.core.config import Settings
 from app.llm.client import ProviderConfigurationError, ProviderRequestError
+from app.rag.collection_contract import (
+    RagCollectionContract,
+    payload_index_fields,
+    validate_qdrant_collection_contract,
+)
+from app.rag.errors import RetrievalError
 from app.rag.models import ChunkMetadata, KnowledgeChunk, RetrievalFilter
 from app.rag.vector_config import DenseVectorName, NAMED_DENSE_VECTOR_NAMES
 from app.rag.vector_config import VectorMode, normalise_query_vector_name
 from app.rag.vector_config import normalise_vector_mode
 
 NamedEmbeddings = dict[DenseVectorName, list[float]]
-
-_VERSIONED_PAYLOAD_INDEXES = (
-    "document_type",
-    "source_group",
-    "case_id",
-    "case_section",
-    "dataset_version",
-)
-_BASE_PAYLOAD_INDEXES = (
-    "source",
-    "source_file",
-    "section",
-    "topic",
-    "visibility",
-    "tags",
-)
 
 
 class QdrantKnowledgeStore:
@@ -97,11 +87,16 @@ class QdrantKnowledgeStore:
         include_versioned_indexes: bool,
         wait: bool,
     ) -> None:
-        fields = _BASE_PAYLOAD_INDEXES
-        if include_versioned_indexes:
-            fields = (*fields, *_VERSIONED_PAYLOAD_INDEXES)
+        fields = payload_index_fields(include_versioned=include_versioned_indexes)
         for field_name in fields:
             self._ensure_payload_index(field_name, wait=wait)
+
+    def validate_contract(self, contract: RagCollectionContract) -> None:
+        validate_qdrant_collection_contract(
+            client=self._client,
+            collection_name=self._collection_name,
+            contract=contract,
+        )
 
     def _ensure_payload_index(self, field_name: str, *, wait: bool) -> None:
         kwargs: dict[str, Any] = {
@@ -415,7 +410,12 @@ class QdrantKnowledgeStore:
         try:
             query_response = self._client.query_points(**query_kwargs)
         except Exception as exc:
-            raise ProviderRequestError(f"Qdrant search failed: {exc}") from exc
+            raise RetrievalError(
+                "Qdrant vector search failed.",
+                stage="vector_search",
+                code="vector_search_failed",
+                retryable=True,
+            ) from exc
 
         points = getattr(query_response, "points", query_response)
         return [_chunk_from_point(point) for point in points]
