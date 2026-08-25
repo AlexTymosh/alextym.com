@@ -451,9 +451,11 @@ GET /api/warmup
 Current behaviour:
 
 - `/api/health/live` returns `{"status":"alive"}`;
-- `/api/health/ready` returns configuration presence statuses, not real provider connectivity checks;
+- `/api/health/ready` performs a cached read-only Qdrant collection-contract
+  check and returns HTTP 503 when that configured contract is not ready;
 - `/api/warmup` returns lightweight app/environment readiness metadata;
-- none of these endpoints call OpenAI, Qdrant, Resend, Telegram, or Redis.
+- liveness and warmup call no providers; readiness calls only Qdrant and does not
+  generate embeddings or mutate collection data.
 
 Current readiness fields:
 
@@ -466,11 +468,13 @@ llm_config
 contact_email
 ```
 
-Current configuration status values:
+Current readiness status values:
 
 ```text
-configured
-not_configured
+status: ready | not_ready
+vector_db: ready | not_ready | not_configured
+llm_config: configured | not_configured
+contact_email: configured | not_configured
 ```
 
 ---
@@ -614,6 +618,59 @@ knowledge source.
 
 ---
 
+## RAG release gate
+
+Run the mandatory pre-deploy gate against the same backend `.env` and Qdrant
+collection or alias that the release will use:
+
+```powershell
+task rag:release:predeploy
+```
+
+This command stops on the first failed gate and runs:
+
+1. all free repository, backend, frontend, RAG, and Docker checks;
+2. the shared read-only Qdrant collection contract;
+3. focused direct retrieval canaries selected from canonical eval cases;
+4. the complete live retrieval suite with no allowed failures;
+5. the complete live answer suite with no allowed failures.
+
+The command may call OpenAI and Qdrant and therefore may incur cost. It does not
+deploy code, ingest vectors, delete points, or activate an alias. Any required
+ingestion or alias activation is a separate reviewed operation and must finish
+before this gate.
+
+After the verified backend revision is deployed, test the public frontend rewrite
+and both chat transports:
+
+```powershell
+task rag:release:postdeploy -- --base-url https://alextym.com
+```
+
+The post-deploy command first requires `/api/health/ready` to report a configured
+LLM and a ready vector database. It then sends two public canaries through both
+`/api/chat` and `/api/chat/stream`. Answers are evaluated independently, while
+source attribution and structured metadata must be equal across JSON and SSE.
+
+Immediately after the canaries, query the protected metrics endpoint on the
+backend origin:
+
+```powershell
+task rag:release:metrics -- --base-url https://<backend-host>
+```
+
+The command reads `METRICS_TOKEN` from the backend `.env`; do not pass the token
+on the command line. It requires `portfolio_rag_retrievals_total` to exist and
+requires cumulative `collection_contract` and `vector_search` errors to remain
+zero for the deployed process. A non-zero value is a failed release signal, not
+an allowed warning.
+
+All release reports are written under ignored `.tmp/evals/`. They contain public
+case IDs and bounded results only, not model answers, prompts, retrieved context,
+or credentials.
+
+---
+
 ## Production smoke checklist
 
 Run after every deployment that touches frontend routing, backend API, provider configuration, or environment variables.
@@ -632,7 +689,7 @@ Expected readiness shape:
 status: ready
 app: ready
 environment: <environment>
-vector_db: configured | not_configured
+vector_db: ready | not_ready | not_configured
 llm_config: configured | not_configured
 contact_email: configured | not_configured
 ```

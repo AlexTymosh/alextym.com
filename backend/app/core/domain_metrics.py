@@ -32,7 +32,13 @@ CHAT_REQUESTS_TOTAL = Counter(
 CHAT_RESPONSES_TOTAL = Counter(
     "portfolio_chat_responses_total",
     "Chat responses completed by user-visible quality signals.",
-    ("mode", "confidence", "not_enough_data", "handoff_suggested"),
+    (
+        "mode",
+        "confidence",
+        "not_enough_data",
+        "handoff_suggested",
+        "retrieval_status",
+    ),
     registry=DOMAIN_METRICS_REGISTRY,
 )
 CHAT_POLICY_DECISIONS_TOTAL = Counter(
@@ -43,14 +49,14 @@ CHAT_POLICY_DECISIONS_TOTAL = Counter(
 )
 RAG_RETRIEVALS_TOTAL = Counter(
     "portfolio_rag_retrievals_total",
-    "RAG retrieval attempts by outcome.",
-    ("outcome",),
+    "RAG retrieval attempts by outcome, stage, and bounded error code.",
+    ("outcome", "stage", "error_code"),
     registry=DOMAIN_METRICS_REGISTRY,
 )
 RAG_RETRIEVAL_DURATION_SECONDS = Histogram(
     "portfolio_rag_retrieval_duration_seconds",
-    "RAG retrieval latency in seconds by outcome.",
-    ("outcome",),
+    "RAG retrieval latency in seconds by outcome, stage, and bounded error code.",
+    ("outcome", "stage", "error_code"),
     buckets=LATENCY_BUCKETS,
     registry=DOMAIN_METRICS_REGISTRY,
 )
@@ -132,12 +138,14 @@ def record_chat_response(
     confidence: str,
     not_enough_data: bool,
     handoff_suggested: bool,
+    retrieval_status: str,
 ) -> None:
     CHAT_RESPONSES_TOTAL.labels(
         mode=_safe_label(mode),
         confidence=_safe_label(confidence),
         not_enough_data=_bool_label(not_enough_data),
         handoff_suggested=_bool_label(handoff_suggested),
+        retrieval_status=_safe_label(retrieval_status),
     ).inc()
 
 
@@ -150,10 +158,17 @@ def record_rag_retrieval(
     outcome: str,
     chunks_count: int,
     duration_seconds: float,
+    stage: str = "complete",
+    error_code: str = "none",
 ) -> None:
     resolved_outcome = _safe_label(outcome)
-    RAG_RETRIEVALS_TOTAL.labels(outcome=resolved_outcome).inc()
-    RAG_RETRIEVAL_DURATION_SECONDS.labels(outcome=resolved_outcome).observe(duration_seconds)
+    labels = {
+        "outcome": resolved_outcome,
+        "stage": _safe_label(stage),
+        "error_code": _safe_label(error_code),
+    }
+    RAG_RETRIEVALS_TOTAL.labels(**labels).inc()
+    RAG_RETRIEVAL_DURATION_SECONDS.labels(**labels).observe(duration_seconds)
     RAG_RETRIEVED_CHUNKS.observe(max(0, chunks_count))
 
 

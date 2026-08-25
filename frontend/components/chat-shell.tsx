@@ -17,7 +17,7 @@ import {
   handoffStatusCopy,
   renderMessageText,
 } from "../lib/chat-formatting";
-import type { Message } from "../types/chat";
+import type { AssistantMessage } from "../types/chat";
 
 const DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE =
   chatHandoffCopy.defaultUnavailableMessage;
@@ -37,7 +37,7 @@ export function ChatShell() {
   const {
     closeHandoff,
     connectWithAlex,
-    continueWithAi,
+    dismissHandoffSuggestion,
     handleInputKeyDown,
     handleSubmit,
     handoffId,
@@ -281,13 +281,13 @@ export function ChatShell() {
             <button
               type="button"
               className="prompt-button"
-              onClick={continueWithAi}
+              onClick={dismissHandoffSuggestion}
               disabled={isClosingHandoff}
             >
               <span className="prompt-button__icon" aria-hidden="true">
                 {">"}
               </span>
-              <span>{chatShellCopy.handoffContinueLabel}</span>
+              <span>{chatShellCopy.handoffDismissLabel}</span>
             </button>
           </div>
         </div>
@@ -368,12 +368,12 @@ export function ChatShell() {
 function DelayedMessageSources({
   message,
 }: Readonly<{
-  message: Message;
+  message: AssistantMessage;
 }>) {
   const uniqueSources = useMemo(() => {
     const sourcesByKey = new Map<
       string,
-      NonNullable<Message["sources"]>[number]
+      NonNullable<AssistantMessage["sources"]>[number]
     >();
 
     for (const source of message.sources ?? []) {

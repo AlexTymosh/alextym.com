@@ -44,12 +44,18 @@ SYSTEM_INSTRUCTIONS = "\n".join(
             "details."
         ),
         (
+            "Preserve uncertainty qualifiers from the public context. Do not turn "
+            "probable, possible, suggested, inferred, or unconfirmed findings into "
+            "confirmed facts."
+        ),
+        (
             "If the context is insufficient, say that there is not enough "
             f"reliable information in {_OWNER_POSSESSIVE} public knowledge base."
         ),
         (
-            "If the user asks about weaknesses, weak points, limitations, or "
-            "development areas, do not list private development areas. Say that "
+            f"If the user asks about {_OWNER_POSSESSIVE} personal weaknesses, weak "
+            "points, personal or professional limitations, or development areas, "
+            "do not list private development areas. Say that "
             f"{_OWNER_REFERENCE} prefers to discuss them directly in a professional "
             "conversation."
         ),

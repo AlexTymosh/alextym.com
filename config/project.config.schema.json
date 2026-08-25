@@ -313,7 +313,7 @@
     },
     "quickPrompt": {
       "type": "object",
-      "required": ["label", "responses"],
+      "required": ["label", "responses", "handoffSuggested", "handoffReason"],
       "additionalProperties": false,
       "properties": {
         "label": { "$ref": "#/$defs/nonEmptyString" },
@@ -321,6 +321,20 @@
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "handoffSuggested": { "type": "boolean" },
+        "handoffReason": {
+          "type": ["string", "null"],
+          "enum": [
+            "insufficient_data",
+            "private_data",
+            "language_unsupported",
+            "user_requested_human",
+            "availability_or_contact",
+            "service_enquiry",
+            "public_boundary",
+            null
+          ]
         }
       }
     },

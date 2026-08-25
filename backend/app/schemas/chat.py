@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.core.confidence import Confidence
 
 ChatHistoryRole = Literal["user", "assistant"]
+RetrievalStatus = Literal["not_requested", "success", "empty", "unavailable"]
 HandoffReason = Literal[
     "insufficient_data",
     "private_data",
@@ -94,6 +95,16 @@ class ChatSource(BaseModel):
     title: str = Field(examples=["resume.md"])
     section: str | None = Field(default=None, examples=["Summary"])
     confidence: Confidence = Field(examples=["medium"])
+    case_id: str | None = Field(
+        default=None,
+        description="Stable public case-study identifier, when the source is a case study.",
+        examples=["case-pricing-data-erp-governance"],
+    )
+    case_section: str | None = Field(
+        default=None,
+        description="Semantic case-study section, when the source is a case study.",
+        examples=["implementation"],
+    )
 
 
 class ChatResponse(BaseModel):
@@ -106,6 +117,11 @@ class ChatResponse(BaseModel):
     sources: list[ChatSource] = Field(default_factory=list)
     confidence: Confidence = Field(examples=["low"])
     not_enough_data: bool = Field(examples=[True])
+    retrieval_status: RetrievalStatus = Field(
+        default="not_requested",
+        description="Outcome of public-knowledge retrieval for this response.",
+        examples=["empty"],
+    )
     handoff_suggested: bool = Field(
         default=False,
         description=(
