@@ -302,6 +302,96 @@ tasks:
         --output
         '{{.OUTPUT | default "../.tmp/evals/eval-comparison.md"}}'
 
+  rag:release:contract:
+    desc: Run the read-only Qdrant collection-contract release probe.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --extra dev --env-file .env
+        python -m scripts.verify_rag_release collection
+        --report-json "../.tmp/evals/release-collection.json"
+
+  rag:release:canaries:
+    desc: Run read-only direct retrieval canaries against configured OpenAI/Qdrant.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --extra dev --env-file .env
+        python -m scripts.verify_rag_release retrieval
+        --report-json "../.tmp/evals/release-retrieval-canaries.json"
+
+  rag:release:retrieval-eval:
+    desc: Require the complete live retrieval eval suite with zero failures or regressions.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --extra dev --env-file .env
+        python -m scripts.run_retrieval_evals
+        --cases evals/retrieval_eval_cases_generated_rag.json
+        --suite rag_retrieval_quality
+        --before "../.tmp/evals/release-retrieval-before.json"
+        --after "../.tmp/evals/release-retrieval-after.json"
+        --comparison "../.tmp/evals/release-retrieval-comparison.md"
+
+  rag:release:answer-eval:
+    desc: Require the complete live answer eval suite with zero failures.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --extra dev --env-file .env
+        python -m scripts.run_chat_evals
+        --cases evals/chat_eval_cases_generated_rag.json
+        --suite rag_generated_quality
+        --mode live
+        --report-json "../.tmp/evals/release-answers.json"
+
+  rag:release:predeploy:
+    desc: Run all mandatory code, collection, retrieval, and answer gates before deployment.
+    cmds:
+      - task: ci
+      - task: rag:release:contract
+      - task: rag:release:canaries
+      - task: rag:release:retrieval-eval
+      - task: rag:release:answer-eval
+
+  rag:release:postdeploy:
+    desc: Verify deployed readiness plus JSON/SSE canaries; pass --base-url via CLI args.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --extra dev --env-file .env
+        python -m scripts.verify_rag_release api
+        {{.CLI_ARGS}}
+        --report-json "../.tmp/evals/release-deployed-api.json"
+
+  rag:release:metrics:
+    desc: Require zero Qdrant retrieval errors in protected deployed metrics.
+    dir: backend
+    env:
+      UV_CACHE_DIR: "{{.ROOT_DIR}}/.tmp/uv-cache-rag"
+      UV_PROJECT_ENVIRONMENT: "{{.ROOT_DIR}}/.tmp/backend-rag-venv"
+    cmds:
+      - >-
+        uv run --extra dev --env-file .env
+        python -m scripts.verify_rag_release metrics
+        {{.CLI_ARGS}}
+        --report-json "../.tmp/evals/release-metrics.json"
+
   backend:check:
     desc: Run all backend checks.
     cmds:

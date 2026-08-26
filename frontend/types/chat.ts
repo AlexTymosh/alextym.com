@@ -1,4 +1,9 @@
 export type Confidence = "low" | "medium" | "high";
+export type RetrievalStatus =
+  | "not_requested"
+  | "success"
+  | "empty"
+  | "unavailable";
 
 export type MessageRole = "user" | "assistant" | "alex";
 
@@ -22,6 +27,8 @@ export type ChatSource = {
   title: string;
   section?: string | null;
   confidence: Confidence;
+  case_id?: string | null;
+  case_section?: string | null;
 };
 
 export type ChatResponse = {
@@ -29,8 +36,9 @@ export type ChatResponse = {
   sources: ChatSource[];
   confidence: Confidence;
   not_enough_data: boolean;
-  handoff_suggested?: boolean;
-  handoff_reason?: HandoffReason | null;
+  retrieval_status: RetrievalStatus;
+  handoff_suggested: boolean;
+  handoff_reason: HandoffReason | null;
   language_unsupported?: boolean;
   user_requested_human?: boolean;
 };
@@ -73,20 +81,32 @@ export type EscalationStreamClosedReason =
   | "session_expired"
   | "unknown";
 
-export type Message = {
+type BaseMessage = {
   id: string;
-  role: MessageRole;
   text: string;
+};
+
+export type AssistantMessage = BaseMessage & {
+  role: "assistant";
   sources?: ChatSource[];
   confidence?: Confidence;
   notEnoughData?: boolean;
-  handoffSuggested?: boolean;
-  handoffReason?: HandoffReason | null;
+  retrievalStatus?: RetrievalStatus;
+  handoffSuggested: boolean;
+  handoffReason: HandoffReason | null;
   languageUnsupported?: boolean;
   userRequestedHuman?: boolean;
 };
 
+type ParticipantMessage = BaseMessage & {
+  role: Exclude<MessageRole, "assistant">;
+};
+
+export type Message = AssistantMessage | ParticipantMessage;
+
 export type QuickPrompt = {
   label: string;
   responses: readonly string[];
+  handoffSuggested: boolean;
+  handoffReason: HandoffReason | null;
 };

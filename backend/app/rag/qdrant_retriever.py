@@ -2,8 +2,10 @@ from dataclasses import replace
 from typing import Protocol
 
 from app.core.config import Settings
-from app.llm.client import EmbeddingClient
+from app.llm.client import EmbeddingClient, ProviderConfigurationError, ProviderRequestError
 from app.llm.openai_client import OpenAIEmbeddingClient
+from app.rag.collection_contract import CASE_STUDY_SOURCE_GROUP, PUBLIC_SOURCE_GROUPS
+from app.rag.errors import RetrievalError
 from app.rag.keyword_scoring import build_keyword_terms, keyword_score_chunk
 from app.rag.models import KnowledgeChunk, RetrievalFilter
 from app.rag.qdrant_store import QdrantKnowledgeStore
@@ -121,29 +123,13 @@ LINK_QUERY_TERMS = {
     "repository",
     "website",
 }
-_CURRENT_PUBLIC_SOURCE_GROUPS = ("resume", "case-studies")
-_CASE_STUDY_SOURCE_GROUP = "case-studies"
-_CASE_EXAMPLE_MIN_CANDIDATES = 12
-_CASE_EXAMPLE_CANDIDATE_MULTIPLIER = 3
-_SINGLE_CASE_EXAMPLE_PATTERNS = (
-    "give me an example",
-    "give me example",
-    "give an example",
-    "show me an example",
-    "show me example",
-    "provide an example",
-    "tell me an example",
-    "one example",
-    "single example",
-    "specific example",
-    "concrete example",
-    "an example of",
-    "give me any case",
-    "show me any case",
-    "one case study",
-    "a case study",
-    "tell me about one case",
-)
+_GENERAL_MIN_CANDIDATES = 18
+_GENERAL_CANDIDATE_MULTIPLIER = 3
+_CASE_SELECTION_MIN_CANDIDATES = 36
+_CASE_SELECTION_CANDIDATE_MULTIPLIER = 6
+_CASE_SECTION_MIN_CANDIDATES = 18
+_CASE_SECTION_CANDIDATE_MULTIPLIER = 3
+_CASE_SECTION_BONUS = 2.25
 
 
 class QdrantRetriever:
@@ -176,40 +162,68 @@ class QdrantRetriever:
 
         effective_limit = limit or self._default_limit
         route = route_query(normalized_query)
+        routed_query = route.retrieval_text(normalized_query)
+        query_embedding = _embed_query(
+            self._embedding_client,
+            _expand_query(routed_query),
+        )
 
-        if _is_single_case_example_request(normalized_query):
-            case_chunks = self._retrieve_single_case_example(
+        if route.select_single_case:
+            case_chunks = self._retrieve_selected_case(
                 query=normalized_query,
                 route=route,
+                query_embedding=query_embedding,
                 limit=effective_limit,
             )
             if case_chunks:
                 return case_chunks
 
-        routed_query = route.retrieval_text(normalized_query)
-        payload_filter = _with_current_public_source_groups(route.payload_filter())
-        query_embedding = self._embedding_client.embed_text(_expand_query(routed_query))
-        chunks = _search_store(
-            store=self._store,
-            embedding=query_embedding,
-            limit=effective_limit,
-            score_threshold=self._score_threshold,
-            payload_filter=payload_filter,
-        )
-        filtered_chunks = _filter_sections_for_query(normalized_query, chunks)
-        return _rerank_chunks(filtered_chunks, query=normalized_query, route=route)
+            route = replace(
+                route,
+                source_scope="all",
+                select_single_case=False,
+            )
 
-    def _retrieve_single_case_example(
+        return self._retrieve_ranked_candidates(
+            query=normalized_query,
+            route=route,
+            query_embedding=query_embedding,
+            limit=effective_limit,
+        )
+
+    def _retrieve_ranked_candidates(
         self,
         *,
         query: str,
         route: QueryRoute,
+        query_embedding: list[float],
         limit: int,
     ) -> list[KnowledgeChunk]:
-        query_embedding = self._embedding_client.embed_text(_expand_query(query))
         candidate_limit = max(
-            _CASE_EXAMPLE_MIN_CANDIDATES,
-            limit * _CASE_EXAMPLE_CANDIDATE_MULTIPLIER,
+            _GENERAL_MIN_CANDIDATES,
+            limit * _GENERAL_CANDIDATE_MULTIPLIER,
+        )
+        chunks = _search_store(
+            store=self._store,
+            embedding=query_embedding,
+            limit=candidate_limit,
+            score_threshold=self._score_threshold,
+            payload_filter=_route_payload_filter(route),
+        )
+        filtered_chunks = _filter_sections_for_query(query, chunks)
+        return _rerank_chunks(filtered_chunks, query=query, route=route)[:limit]
+
+    def _retrieve_selected_case(
+        self,
+        *,
+        query: str,
+        route: QueryRoute,
+        query_embedding: list[float],
+        limit: int,
+    ) -> list[KnowledgeChunk]:
+        candidate_limit = max(
+            _CASE_SELECTION_MIN_CANDIDATES,
+            limit * _CASE_SELECTION_CANDIDATE_MULTIPLIER,
         )
         candidate_chunks = _search_store(
             store=self._store,
@@ -218,27 +232,32 @@ class QdrantRetriever:
             score_threshold=self._score_threshold,
             payload_filter=_case_study_filter(),
         )
-        ranked_candidates = _rerank_chunks(
-            _filter_sections_for_query(query, candidate_chunks),
+        filtered_candidates = _filter_sections_for_query(query, candidate_chunks)
+        selected_case_id = _select_case_id(
+            filtered_candidates,
             query=query,
             route=route,
         )
-        selected_case_id = _first_case_id(ranked_candidates)
         if selected_case_id is None:
             return []
 
+        section_candidate_limit = max(
+            _CASE_SECTION_MIN_CANDIDATES,
+            limit * _CASE_SECTION_CANDIDATE_MULTIPLIER,
+        )
         case_chunks = _search_store(
             store=self._store,
             embedding=query_embedding,
-            limit=limit,
+            limit=section_candidate_limit,
             score_threshold=self._score_threshold,
             payload_filter=_case_study_filter(case_id=selected_case_id),
         )
-        return _rerank_chunks(
+        ranked_sections = _rerank_chunks(
             _filter_sections_for_query(query, case_chunks),
             query=query,
             route=route,
         )
+        return ranked_sections[:limit]
 
 
 class KnowledgeSearchStore(Protocol):
@@ -268,35 +287,82 @@ def _search_store(
     )
 
 
-def _with_current_public_source_groups(
-    payload_filter: RetrievalFilter | None,
-) -> RetrievalFilter:
-    return replace(
-        payload_filter or RetrievalFilter(),
-        source_group_any=_CURRENT_PUBLIC_SOURCE_GROUPS,
+def _embed_query(
+    embedding_client: EmbeddingClient,
+    query: str,
+) -> list[float]:
+    try:
+        return embedding_client.embed_text(query)
+    except ProviderConfigurationError as exc:
+        raise RetrievalError(
+            "Embedding provider is not configured for retrieval.",
+            stage="embedding",
+            code="embedding_not_configured",
+            retryable=False,
+        ) from exc
+    except ProviderRequestError as exc:
+        raise RetrievalError(
+            "Embedding request failed during retrieval.",
+            stage="embedding",
+            code="embedding_request_failed",
+            retryable=True,
+        ) from exc
+
+
+def _route_payload_filter(route: QueryRoute) -> RetrievalFilter:
+    return route.payload_filter() or RetrievalFilter(
+        source_group_any=PUBLIC_SOURCE_GROUPS,
     )
 
 
 def _case_study_filter(*, case_id: str | None = None) -> RetrievalFilter:
     return RetrievalFilter(
-        source_group_any=(_CASE_STUDY_SOURCE_GROUP,),
+        source_group_any=(CASE_STUDY_SOURCE_GROUP,),
         case_id_any=(case_id,) if case_id else (),
     )
 
 
-def _is_single_case_example_request(query: str) -> bool:
-    normalized_query = " ".join(query.casefold().replace("/", " ").replace("-", " ").split())
-    if "examples" in normalized_query or "case studies" in normalized_query:
-        return False
-    return any(pattern in normalized_query for pattern in _SINGLE_CASE_EXAMPLE_PATTERNS)
+def _select_case_id(
+    chunks: list[KnowledgeChunk],
+    *,
+    query: str,
+    route: QueryRoute,
+) -> str | None:
+    case_selection_route = replace(route, case_section_hints=())
+    grouped_scores: dict[str, list[tuple[float, int]]] = {}
+    for score, index, chunk in _score_chunks(
+        chunks,
+        query=query,
+        route=case_selection_route,
+    ):
+        case_id = _case_id(chunk)
+        if case_id is None:
+            continue
+        grouped_scores.setdefault(case_id, []).append((score, index))
+
+    if not grouped_scores:
+        return None
+
+    return max(
+        grouped_scores,
+        key=lambda case_id: _case_group_score(grouped_scores[case_id]),
+    )
 
 
-def _first_case_id(chunks: list[KnowledgeChunk]) -> str | None:
-    for chunk in chunks:
-        case_id = chunk.metadata.extra.get("case_id")
-        if isinstance(case_id, str) and case_id.strip():
-            return case_id.strip()
-    return None
+def _case_group_score(scores: list[tuple[float, int]]) -> tuple[float, int]:
+    ranked = sorted(scores, key=lambda item: (-item[0], item[1]))
+    best_score, best_index = ranked[0]
+    supporting_score = sum(score for score, _index in ranked[1:3]) * 0.15
+    evidence_bonus = min(3, len(ranked)) * 0.05
+    return best_score + supporting_score + evidence_bonus, -best_index
+
+
+def _case_id(chunk: KnowledgeChunk) -> str | None:
+    case_id = chunk.metadata.extra.get("case_id")
+    if not isinstance(case_id, str):
+        return None
+    normalized_case_id = case_id.strip()
+    return normalized_case_id or None
 
 
 def _expand_query(query: str) -> str:
@@ -332,8 +398,19 @@ def _rerank_chunks(
     if not chunks:
         return []
 
+    scored_chunks = _score_chunks(chunks, query=query, route=route)
+    scored_chunks.sort(key=lambda item: (-item[0], item[1]))
+    return [chunk for _score, _index, chunk in scored_chunks]
+
+
+def _score_chunks(
+    chunks: list[KnowledgeChunk],
+    *,
+    query: str,
+    route: QueryRoute,
+) -> list[tuple[float, int, KnowledgeChunk]]:
     keyword_terms = build_keyword_terms(query, route=route)
-    scored_chunks = [
+    return [
         (
             _heuristic_score(
                 chunk,
@@ -345,8 +422,6 @@ def _rerank_chunks(
         )
         for index, chunk in enumerate(chunks)
     ]
-    scored_chunks.sort(key=lambda item: (-item[0], item[1]))
-    return [chunk for _score, _index, chunk in scored_chunks]
 
 
 def _heuristic_score(
@@ -359,6 +434,7 @@ def _heuristic_score(
     score += _topic_bonus(chunk, route)
     score += _tag_bonus(chunk, route)
     score += _section_bonus(chunk, route)
+    score += _case_section_bonus(chunk, route)
     score += keyword_score_chunk(chunk, query_terms=keyword_terms)
     return score
 
@@ -388,3 +464,36 @@ def _section_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
     if normalized_section in normalized_hints:
         return 0.25
     return 0.0
+
+
+def _case_section_bonus(chunk: KnowledgeChunk, route: QueryRoute) -> float:
+    if not route.case_section_hints:
+        return 0.0
+
+    section_intent = _case_section_intent(chunk)
+    if section_intent not in route.case_section_hints:
+        return 0.0
+
+    priority = route.case_section_hints.index(section_intent)
+    return max(1.25, _CASE_SECTION_BONUS - (0.25 * priority))
+
+
+def _case_section_intent(chunk: KnowledgeChunk) -> str | None:
+    value = chunk.metadata.extra.get("case_section")
+    if not isinstance(value, str):
+        return None
+
+    section = value.strip().casefold()
+    if section.startswith("implementation"):
+        return "implementation"
+    if section.startswith("validation") or section == "decision":
+        return "validation"
+    if section in {"limitations", "constraints"}:
+        return "limitations"
+    if section == "results":
+        return "results"
+    if section == "problem":
+        return "problem"
+    if section == "analysis" or section.startswith(("first-fault", "second-fault")):
+        return "analysis"
+    return None

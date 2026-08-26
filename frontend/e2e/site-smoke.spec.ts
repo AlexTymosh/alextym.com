@@ -134,6 +134,7 @@ test("includes frontend-scripted messages in the next chat request", async ({
   await expect(
     page.getByText("Would you like to see an example from his experience?"),
   ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toHaveCount(0);
 
   await page
     .getByRole("textbox", { name: chatShellCopy.inputAriaLabel })

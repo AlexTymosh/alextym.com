@@ -19,7 +19,7 @@ def test_qdrant_retriever_adds_route_hints_to_embedding_query() -> None:
     assert "working-style" in embedding_client.last_text
 
 
-def test_qdrant_retriever_passes_route_payload_filter_to_store() -> None:
+def test_qdrant_retriever_keeps_route_hints_out_of_payload_filter() -> None:
     search_store = FakeSearchStore([])
     retriever = QdrantRetriever(
         embedding_client=FakeEmbeddingClient(),
@@ -31,8 +31,13 @@ def test_qdrant_retriever_passes_route_payload_filter_to_store() -> None:
     retriever.retrieve("Can Alex provide a share code?")
 
     assert search_store.last_payload_filter is not None
-    assert search_store.last_payload_filter.topic_any == ("right-to-work-uk-location",)
-    assert "share-code" in search_store.last_payload_filter.tag_any
+    assert search_store.last_payload_filter.source_group_any == (
+        "resume",
+        "case-studies",
+    )
+    assert search_store.last_payload_filter.topic_any == ()
+    assert search_store.last_payload_filter.tag_any == ()
+    assert search_store.last_limit == 18
 
 
 def test_qdrant_retriever_preserves_existing_keyword_expansions() -> None:
@@ -66,6 +71,7 @@ class FakeSearchStore:
     def __init__(self, chunks: list[KnowledgeChunk]) -> None:
         self.chunks = chunks
         self.last_payload_filter: RetrievalFilter | None = None
+        self.last_limit: int | None = None
 
     def search(
         self,
@@ -76,6 +82,7 @@ class FakeSearchStore:
         payload_filter: RetrievalFilter | None = None,
     ) -> list[KnowledgeChunk]:
         self.last_payload_filter = payload_filter
+        self.last_limit = limit
         return self.chunks[:limit]
 
 

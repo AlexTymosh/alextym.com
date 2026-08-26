@@ -4,6 +4,7 @@ import type {
   ChatSource,
   Confidence,
   HandoffReason,
+  RetrievalStatus,
 } from "../types/chat";
 
 type SseEvent = {
@@ -14,8 +15,9 @@ type SseEvent = {
 type ChatStreamDone = {
   confidence: Confidence;
   not_enough_data: boolean;
-  handoff_suggested?: boolean;
-  handoff_reason?: HandoffReason | null;
+  retrieval_status: RetrievalStatus;
+  handoff_suggested: boolean;
+  handoff_reason: HandoffReason | null;
   language_unsupported?: boolean;
   user_requested_human?: boolean;
 };
@@ -95,7 +97,12 @@ export async function fetchJsonChatResponse(
     throw new Error("JSON fallback response unavailable.");
   }
 
-  return (await response.json()) as ChatResponse;
+  const payload = (await response.json()) as ChatResponse;
+  return {
+    ...payload,
+    handoff_suggested: payload.handoff_suggested === true,
+    handoff_reason: parseHandoffReason(payload.handoff_reason),
+  };
 }
 
 function parseSseEvent(rawEvent: string): SseEvent | null {
@@ -160,10 +167,8 @@ function handleSseEvent(
     handlers.onDone({
       confidence,
       not_enough_data: parsedPayload.not_enough_data === true,
-      handoff_suggested:
-        typeof parsedPayload.handoff_suggested === "boolean"
-          ? parsedPayload.handoff_suggested
-          : undefined,
+      retrieval_status: parseRetrievalStatus(parsedPayload.retrieval_status),
+      handoff_suggested: parsedPayload.handoff_suggested === true,
       handoff_reason: handoffReason,
       language_unsupported:
         typeof parsedPayload.language_unsupported === "boolean"
@@ -194,6 +199,18 @@ function parseConfidence(value: unknown): Confidence {
     return value;
   }
   return "low";
+}
+
+function parseRetrievalStatus(value: unknown): RetrievalStatus {
+  if (
+    value === "success" ||
+    value === "empty" ||
+    value === "unavailable" ||
+    value === "not_requested"
+  ) {
+    return value;
+  }
+  return "not_requested";
 }
 
 function parseHandoffReason(value: unknown): HandoffReason | null {

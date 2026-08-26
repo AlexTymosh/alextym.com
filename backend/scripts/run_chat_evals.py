@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,6 +20,20 @@ WORD_PATTERN = re.compile(
     "\u0141\u0142\u00d3\u00f3\u017b\u017c\u0179\u017a"
     "\u0106\u0107\u0143\u0144\u015a\u015b"
     r"]+|\d+"
+)
+MATCH_PUNCTUATION_TRANSLATION = str.maketrans(
+    {
+        "\u2010": "-",
+        "\u2011": "-",
+        "\u2012": "-",
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+    }
 )
 
 
@@ -54,7 +69,7 @@ def evaluate_response(case: dict[str, Any], response: dict[str, Any]) -> EvalRes
     expected = case.get("expected") or {}
     failures: list[EvalFailure] = []
     answer = str(response.get("answer") or "")
-    answer_lower = answer.casefold()
+    normalized_answer = _normalize_match_text(answer)
 
     _check_bool(case, response, expected, "not_enough_data", failures)
     _check_bool(case, response, expected, "handoff_suggested", failures)
@@ -74,15 +89,17 @@ def evaluate_response(case: dict[str, Any], response: dict[str, Any]) -> EvalRes
         )
 
     for phrase in _string_list(expected.get("must_include_all")):
-        if phrase.casefold() not in answer_lower:
+        if _normalize_match_text(phrase) not in normalized_answer:
             failures.append(_failure(case, "must_include_all", f"Missing: {phrase}"))
 
     include_any = _string_list(expected.get("must_include_any"))
-    if include_any and not any(item.casefold() in answer_lower for item in include_any):
+    if include_any and not any(
+        _normalize_match_text(item) in normalized_answer for item in include_any
+    ):
         failures.append(_failure(case, "must_include_any", f"Missing any of: {include_any}"))
 
     for phrase in _string_list(expected.get("must_not_include")):
-        if phrase.casefold() in answer_lower:
+        if _normalize_match_text(phrase) in normalized_answer:
             failures.append(_failure(case, "must_not_include", f"Found: {phrase}"))
 
     max_words = expected.get("max_words")
@@ -337,6 +354,22 @@ def _check_source_metadata(
         source_key="section",
         failures=failures,
     )
+    _check_source_field_any(
+        case,
+        response,
+        expected,
+        expected_key="must_include_source_case_id_any",
+        source_key="case_id",
+        failures=failures,
+    )
+    _check_source_field_any(
+        case,
+        response,
+        expected,
+        expected_key="must_include_source_case_section_any",
+        source_key="case_section",
+        failures=failures,
+    )
 
 
 def _check_source_field_any(
@@ -353,8 +386,8 @@ def _check_source_field_any(
         return
 
     actual_values = _source_text_values(response.get("sources"), source_key)
-    expected_normalized = {value.casefold() for value in expected_values}
-    actual_normalized = {value.casefold() for value in actual_values}
+    expected_normalized = {_normalize_match_text(value) for value in expected_values}
+    actual_normalized = {_normalize_match_text(value) for value in actual_values}
     if not actual_normalized.intersection(expected_normalized):
         failures.append(
             _failure(
@@ -397,6 +430,11 @@ def _string_list(value: object) -> list[str]:
 
 def _word_count(text: str) -> int:
     return len(WORD_PATTERN.findall(text))
+
+
+def _normalize_match_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).translate(MATCH_PUNCTUATION_TRANSLATION)
+    return " ".join(normalized.casefold().split())
 
 
 def _failure(case: dict[str, Any], check: str, detail: str) -> EvalFailure:

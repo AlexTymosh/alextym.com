@@ -100,12 +100,12 @@ The current UI starts with an assistant intro, a short explanation, and quick-pr
 Quick prompt labels currently implemented in the frontend:
 
 ```text
-Give me your 1-minute intro.
-Give me a short overview of his work experience.
-When is Alex ready to start work?
+Give me Alex's 30-second intro
+What are Alex's main strengths?
+Why hire Alex?
 ```
 
-These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint when selected, but their user and assistant messages remain in the visible conversation and can be included in the next AI request's `history`.
+These quick prompts use frontend scripted responses. They do not call the AI/RAG endpoint when selected, but their user and assistant messages remain in the visible conversation and can be included in the next AI request's `history`. Each scripted assistant message also carries explicit handoff metadata from project config; the current prompts set `handoffSuggested=false` and `handoffReason=null`.
 
 ### Typed message flow
 
@@ -115,14 +115,16 @@ Typed messages follow this path:
 Visitor types a message
   -> frontend checks whether an active handoff session exists
   -> if handoff is active, message goes to the handoff message endpoint
-  -> otherwise frontend checks local handoff request / confirmation patterns
-  -> if not handled locally, frontend calls POST /api/chat/stream
+  -> otherwise frontend calls POST /api/chat/stream
   -> if streaming fails before any text arrives, frontend falls back to POST /api/chat
+  -> frontend reads structured handoff metadata from the completed response
 ```
 
 The frontend sends the newest `user` and `assistant` messages for follow-up and pronoun handling, up to 10 items, 2000 characters per item, and 6000 characters in total. Scripted and model-generated assistant messages use the same history representation; the backend does not depend on where an assistant message was produced. Owner replies with the separate `alex` frontend role are excluded from this AI history.
 
 The current typed message is sent separately from history. History is conversational context only and is not treated as a source of factual claims.
+
+The frontend does not infer handoff intent from user text, assistant text, or `not_enough_data`. For typed messages, `handoff_suggested` and `handoff_reason` from the backend are authoritative. A handoff card can be dismissed with `Not now`; that dismissal is stored against the triggering assistant message ID, so a later independently suggested handoff can still be shown.
 
 ---
 
@@ -313,22 +315,72 @@ POST /api/chat or POST /api/chat/stream
 
 The resolved standalone question is used for retrieval, prompt construction, and answer-confidence calculation. Conversation history remains a separate context input.
 
-If an ambiguous short continuation cannot be resolved reliably, the chat asks for clarification before retrieval and does not suggest handoff. If retrieval for a resolved standalone question fails or returns no useful chunks, the chat returns an insufficient-data response instead of exposing retrieval-provider errors or fabricating an answer.
+Question resolution owns only subject and conversation disambiguation. An
+explicit, self-contained owner question is passed through unchanged; a
+deterministic pronoun or second-person resolution replaces only that subject
+reference. Topic intent, source scope, personal-development boundaries, and
+requested case sections are classified once by the RAG query router. The chat
+layer does not maintain a second set of topic-expansion rewrites.
+
+The ambiguous-follow-up path uses a dedicated `QuestionContextualizer` dependency,
+separate from the final-answer client contract. Its OpenAI adapter calls
+`responses.parse` with the `ContextualizedQuestion` Pydantic model, so intent,
+standalone question, confidence, and reason are enforced by provider structured
+output before routing consumes them. Production adapters share one Responses API
+client, while tests can replace answer generation and contextualization independently.
+
+If an ambiguous short continuation cannot be resolved reliably, the chat asks for clarification before retrieval and does not suggest handoff. A successful empty retrieval returns the insufficient-data response. A provider or collection-contract failure returns a distinct temporary-unavailable response, with no unsupported knowledge claim and no automatic handoff suggestion.
+
+`/api/health/ready` uses a cached read-only Qdrant contract probe. It validates
+the canonical runtime vector schema, required keyword indexes, point availability,
+and expected public source groups. `/api/health/live` remains provider-free.
 
 The current runtime RAG path is:
 
 ```text
-query routing
+query routing by subject intent, source scope, and requested case section
   -> query expansion
   -> OpenAI query embedding
-  -> Qdrant dense vector search
-  -> payload filters
-  -> score threshold
-  -> section filtering
-  -> heuristic reranking
-  -> keyword scoring
+  -> broad Qdrant candidate search with strict source filters only
+  -> case-study queries: group candidates by case_id and select one case
+  -> case-study queries: retrieve a broad section pool inside the selected case
+  -> heuristic and keyword reranking with requested-section bonuses
+  -> final result limit
   -> prompt context with compressed answer facts where available
 ```
+
+Topic, tag, and section hints influence embedding and reranking but are not
+mandatory Qdrant filters. This prevents a broad phrase such as `service` or
+`limitations` from excluding the relevant source before ranking. Exact
+`source_group` and `case_id` selectors remain strict payload filters.
+
+### RAG release verification boundary
+
+Release verification reuses production contracts instead of maintaining a
+second retrieval implementation:
+
+```text
+RagCollectionContract
+  -> runtime search
+  -> readiness
+  -> read-only pre-deploy collection probe
+
+canonical retrieval and answer eval cases
+  -> small committed canary selection manifest
+  -> direct retrieval canaries
+  -> deployed JSON and SSE canaries
+```
+
+The pre-deploy gate runs free CI, the read-only collection probe, focused direct
+retrieval canaries, and the complete live retrieval and answer suites. It does
+not ingest, delete, or activate Qdrant data. After backend deployment, the same
+selected questions are sent through both public chat transports; their source
+attribution and structured response fields must agree. The final operational
+gate requires the protected metrics endpoint to expose the RAG retrieval metric
+and report no collection-contract or vector-search errors.
+
+Release reports contain check names, public case IDs, counts, and status only.
+They do not contain prompts, answer text, retrieved context, or credentials.
 
 ---
 
@@ -343,8 +395,12 @@ sequenceDiagram
     participant TG as Telegram Bot API
     participant O as Owner
 
-    V->>UI: asks for contact / confirms handoff
-    UI->>API: POST /api/escalations with transcript
+    V->>UI: asks for contact
+    UI->>API: POST /api/chat/stream
+    API-->>UI: handoff_suggested + handoff_reason
+    UI-->>V: show consent card
+    V->>UI: chooses Connect me with Alex
+    UI->>API: POST /api/escalations with transcript and consent
     API->>API: validate consent, honeypot, availability, rate limit
     API->>R: create temporary handoff session with TTL
     API->>TG: send control message + transcript
