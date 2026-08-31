@@ -107,17 +107,16 @@ After every step:
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Step 1 regression tests are complete and intentionally fail on
-the current implementation. Waiting for the user's local commit confirmation
-before Step 2 implementation.
+Current stage: Step 2 implementation and frontend verification are complete.
+Waiting for the user's local commit confirmation before Step 3 documentation.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
 | 0.1 | Create local work branch | COMPLETE | `codex/fix-chat-stream-terminal-errors` created from `main` | Keep work local until push approval |
 | 0.2 | Record scoped work plan | COMPLETE | `SESSION_NOTES.md` now describes issue `#106`, target behaviour, and three-commit delivery plan | Begin Step 1 regression tests |
 | 1.1 | Add failing frontend stream-error regressions | COMPLETE | New Playwright spec covers SSE `error`, partial EOF without `done`, and empty EOF without `done`; focused run fails on current implementation as expected | Commit Step 1 before implementation |
-| 2.1 | Implement stream terminal-state handling | PENDING | Not started | Run focused Playwright tests until passing |
-| 2.2 | Run frontend quality gate | PENDING | Not started | Run `task frontend:check` |
+| 2.1 | Implement stream terminal-state handling | COMPLETE | Stream parser now requires terminal `done`, surfaces SSE `error`, validates `text/event-stream`, and distinguishes backend, incomplete, unavailable, fallback, partial, and abort states | Run frontend quality gate |
+| 2.2 | Run frontend quality gate | COMPLETE | Focused stream-error spec, related handoff spec, and full `task frontend:check` pass | Commit Step 2 before docs |
 | 3.1 | Document stream terminal semantics | PENDING | Not started | Run docs-adjacent checks if required |
 | 3.2 | Final verification and report | PENDING | Not started | Run final scoped checks and prepare commit summary |
 
@@ -129,6 +128,9 @@ before Step 2 implementation.
 | 2026-08-28 | Create branch | `codex/fix-chat-stream-terminal-errors` created |
 | 2026-08-28 | Issue and code review | Issue `#106` remains open; frontend ignores SSE `error` and treats EOF without `done` as success |
 | 2026-08-28 | Step 1 focused Playwright regression run | `npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` produced the expected failures: SSE `error` leaves `Understanding your question.`, partial EOF has no incomplete-stream notice, and empty EOF leaves `Understanding your question.`; command was interrupted after detailed failure reports because Playwright did not return a final summary promptly |
+| 2026-08-28 | Step 2 focused stream-error verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` passed 3/3 against a manually started dev server |
+| 2026-08-28 | Step 2 related chat-handoff verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-handoff.spec.ts --project=chromium --workers=1 --reporter=line` passed 9/9 |
+| 2026-08-28 | Step 2 frontend quality gate | `task frontend:check` passed: install, lint, typecheck, resume parser, production build, Playwright install, and 76/76 built E2E tests; npm audit still reports one existing high-severity dependency finding |
 
 Update the status table and verification log as work progresses. Do not mark a
 work item complete until its implementation and stated verification gate both
