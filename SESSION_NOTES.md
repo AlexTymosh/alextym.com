@@ -1,6 +1,6 @@
 # Chat stream terminal-error work
 
-Last updated: 2026-08-28
+Last updated: 2026-08-31
 
 Branch: `codex/fix-chat-stream-terminal-errors`
 
@@ -107,8 +107,8 @@ After every step:
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Step 2 implementation and frontend verification are complete.
-Waiting for the user's local commit confirmation before Step 3 documentation.
+Current stage: Step 3 documentation and verification are complete.
+Waiting for the user's local commit before any push or pull request work.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
@@ -117,8 +117,8 @@ Waiting for the user's local commit confirmation before Step 3 documentation.
 | 1.1 | Add failing frontend stream-error regressions | COMPLETE | New Playwright spec covers SSE `error`, partial EOF without `done`, and empty EOF without `done`; focused run fails on current implementation as expected | Commit Step 1 before implementation |
 | 2.1 | Implement stream terminal-state handling | COMPLETE | Stream parser now requires terminal `done`, surfaces SSE `error`, validates `text/event-stream`, and distinguishes backend, incomplete, unavailable, fallback, partial, and abort states | Run frontend quality gate |
 | 2.2 | Run frontend quality gate | COMPLETE | Focused stream-error spec, related handoff spec, and full `task frontend:check` pass | Commit Step 2 before docs |
-| 3.1 | Document stream terminal semantics | PENDING | Not started | Run docs-adjacent checks if required |
-| 3.2 | Final verification and report | PENDING | Not started | Run final scoped checks and prepare commit summary |
+| 3.1 | Document stream terminal semantics | COMPLETE | `docs/api-contract.md` now defines `done` as the only successful chat-stream terminal event, `error` as terminal failure, EOF before `done` as incomplete, and fallback/partial-stream handling; `docs/rag-and-ai-safety.md` and `docs/rag-and-ai-safety.ru.md` now summarize the same frontend fallback rule | Run docs-adjacent checks |
+| 3.2 | Final verification and report | COMPLETE | Docs diff and full current diff passed whitespace validation with `git diff --check`; Step 2 frontend regression, handoff, and full frontend checks remain the behavioural verification for this branch | Commit Step 3 before any push or PR |
 
 ## Verification log
 
@@ -131,6 +131,8 @@ Waiting for the user's local commit confirmation before Step 3 documentation.
 | 2026-08-28 | Step 2 focused stream-error verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` passed 3/3 against a manually started dev server |
 | 2026-08-28 | Step 2 related chat-handoff verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-handoff.spec.ts --project=chromium --workers=1 --reporter=line` passed 9/9 |
 | 2026-08-28 | Step 2 frontend quality gate | `task frontend:check` passed: install, lint, typecheck, resume parser, production build, Playwright install, and 76/76 built E2E tests; npm audit still reports one existing high-severity dependency finding |
+| 2026-08-31 | Step 3 docs whitespace check | `git diff --check -- docs/api-contract.md docs/rag-and-ai-safety.md docs/rag-and-ai-safety.ru.md` passed; Git reported only expected LF-to-CRLF working-copy warnings |
+| 2026-08-31 | Step 3 full diff whitespace check | `git diff --check` passed for `SESSION_NOTES.md` and documentation changes; Git reported only expected LF-to-CRLF working-copy warnings |
 
 Update the status table and verification log as work progresses. Do not mark a
 work item complete until its implementation and stated verification gate both

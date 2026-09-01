@@ -33,8 +33,11 @@ Visitor message
   -> SSE response with answer metadata
 ```
 
-The frontend buffers streamed tokens and renders them gradually. If streaming
-fails before text is received, the UI can fall back to the JSON chat endpoint.
+The frontend buffers streamed tokens and renders them gradually. A chat stream
+is successful only after its `done` event. If streaming fails before text is
+received, the UI can fall back to the JSON chat endpoint. If a partial stream
+ends before `done`, the UI keeps the partial answer visible and shows an
+incomplete-stream notice instead of replaying the request through JSON.
 
 ## Retrieval design
 

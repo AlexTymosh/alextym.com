@@ -33,8 +33,11 @@ Visitor message
   -> SSE response with answer metadata
 ```
 
-Frontend буферизирует streamed tokens и постепенно выводит их. Если streaming
-падает до получения текста, UI может использовать JSON chat endpoint.
+Frontend буферизирует streamed tokens и постепенно выводит их. Chat stream
+считается успешным только после события `done`. Если streaming падает до
+получения текста, UI может использовать JSON chat endpoint. Если partial stream
+заканчивается до `done`, UI оставляет partial answer видимым и показывает
+incomplete-stream notice вместо повторного запроса через JSON.
 
 ## Retrieval design
 
