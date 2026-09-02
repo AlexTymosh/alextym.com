@@ -12,6 +12,26 @@ type SseEvent = {
   data: string;
 };
 
+export type ChatStreamFailureKind =
+  | "backend_error"
+  | "incomplete"
+  | "unavailable";
+
+export class ChatStreamError extends Error {
+  readonly kind: ChatStreamFailureKind;
+
+  constructor(kind: ChatStreamFailureKind, message: string) {
+    super(message);
+    this.name = "ChatStreamError";
+    this.kind = kind;
+    Object.setPrototypeOf(this, ChatStreamError.prototype);
+  }
+}
+
+export function isChatStreamError(error: unknown): error is ChatStreamError {
+  return error instanceof ChatStreamError;
+}
+
 type ChatStreamDone = {
   confidence: Confidence;
   not_enough_data: boolean;
@@ -30,6 +50,12 @@ type StreamChatResponseOptions = {
   onSources: (sources: ChatSource[]) => void;
   onDone: (done: ChatStreamDone) => void;
 };
+
+const STREAM_UNAVAILABLE_MESSAGE = "Streaming response unavailable.";
+const STREAM_INCOMPLETE_MESSAGE =
+  "The streaming response ended before completion.";
+const STREAM_BACKEND_ERROR_MESSAGE =
+  "Something went wrong. Please try again later.";
 
 export async function streamChatResponse({
   message,
@@ -50,31 +76,61 @@ export async function streamChatResponse({
   });
 
   if (!response.ok || !response.body) {
-    throw new Error("Streaming response unavailable.");
+    throw new ChatStreamError("unavailable", STREAM_UNAVAILABLE_MESSAGE);
+  }
+
+  if (!isSseResponse(response)) {
+    throw new ChatStreamError("unavailable", STREAM_UNAVAILABLE_MESSAGE);
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let receivedDone = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
+  try {
+    while (!receivedDone) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() || "";
+
+      for (const rawEvent of events) {
+        receivedDone =
+          handleSseEvent(parseSseEvent(rawEvent), {
+            onToken,
+            onSources,
+            onDone,
+          }) === "done";
+
+        if (receivedDone) {
+          await cancelReader(reader);
+          break;
+        }
+      }
     }
 
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split(/\r?\n\r?\n/);
-    buffer = events.pop() || "";
-
-    for (const rawEvent of events) {
-      handleSseEvent(parseSseEvent(rawEvent), { onToken, onSources, onDone });
+    if (!receivedDone) {
+      buffer += decoder.decode();
+      if (buffer.trim()) {
+        receivedDone =
+          handleSseEvent(parseSseEvent(buffer), {
+            onToken,
+            onSources,
+            onDone,
+          }) === "done";
+      }
     }
+  } finally {
+    reader.releaseLock();
   }
 
-  buffer += decoder.decode();
-  if (buffer.trim()) {
-    handleSseEvent(parseSseEvent(buffer), { onToken, onSources, onDone });
+  if (!receivedDone) {
+    throw new ChatStreamError("incomplete", STREAM_INCOMPLETE_MESSAGE);
   }
 }
 
@@ -135,14 +191,24 @@ function handleSseEvent(
     onSources: (sources: ChatSource[]) => void;
     onDone: (done: ChatStreamDone) => void;
   },
-): void {
+): "continue" | "done" {
   if (!sseEvent) {
-    return;
+    return "continue";
+  }
+
+  if (sseEvent.event === "error") {
+    const parsedErrorPayload = safeParseJson(sseEvent.data);
+    const message =
+      isRecord(parsedErrorPayload) && typeof parsedErrorPayload.message === "string"
+        ? parsedErrorPayload.message
+        : STREAM_BACKEND_ERROR_MESSAGE;
+
+    throw new ChatStreamError("backend_error", message);
   }
 
   const parsedPayload = safeParseJson(sseEvent.data);
   if (!isRecord(parsedPayload)) {
-    return;
+    return "continue";
   }
 
   if (sseEvent.event === "token") {
@@ -150,14 +216,14 @@ function handleSseEvent(
     if (typeof token === "string") {
       handlers.onToken(token);
     }
-    return;
+    return "continue";
   }
 
   if (sseEvent.event === "sources") {
     if (Array.isArray(parsedPayload.sources)) {
       handlers.onSources(parsedPayload.sources as ChatSource[]);
     }
-    return;
+    return "continue";
   }
 
   if (sseEvent.event === "done") {
@@ -179,6 +245,24 @@ function handleSseEvent(
           ? parsedPayload.user_requested_human
           : undefined,
     });
+    return "done";
+  }
+
+  return "continue";
+}
+
+function isSseResponse(response: Response): boolean {
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.toLowerCase().startsWith("text/event-stream");
+}
+
+async function cancelReader(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+): Promise<void> {
+  try {
+    await reader.cancel();
+  } catch {
+    // The stream may already be closed by the server after the terminal event.
   }
 }
 

@@ -366,6 +366,21 @@ event: error
 data: {"message":"Something went wrong. Please try again later."}
 ```
 
+Terminal semantics:
+
+- `event: done` is the only successful terminal event for a chat stream.
+- `event: error` is a terminal failure event. Its `message` field must be safe
+  to show to the visitor and must not contain raw provider errors.
+- EOF before `done` is an incomplete stream, not a successful answer.
+- `sources`, `confidence`, `not_enough_data`, `retrieval_status`,
+  `handoff_suggested`, and `handoff_reason` are authoritative only after a
+  valid `done` event.
+- If the stream fails after at least one answer token, the frontend keeps the
+  partial text visible and shows an incomplete-stream notice instead of
+  replaying the request through `POST /api/chat`.
+- User-initiated aborts, resets, and unmounts are silent client-side stops and
+  must not display stream failure copy.
+
 Requirements:
 
 - handle client disconnects;
@@ -816,6 +831,7 @@ Frontend E2E checks should cover:
 - resume filters;
 - dynamic resume download route;
 - chat quick prompts;
-- typed chat stream/fallback behaviour;
+- typed chat stream/fallback behaviour, including SSE `error` and EOF before
+  `done`;
 - handoff prompt;
 - closing a handoff session.

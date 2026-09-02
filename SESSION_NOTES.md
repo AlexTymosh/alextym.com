@@ -1,266 +1,139 @@
-# RAG and chat reliability work
+# Chat stream terminal-error work
 
-Last updated: 2026-08-20
+Last updated: 2026-08-31
 
-Branch: `codex/fix-rag-chat-reliability`
+Branch: `codex/fix-chat-stream-terminal-errors`
+
+GitHub issue: `#106` - `P1: Handle chat stream errors and incomplete stream termination`
 
 ## Work boundary
 
-This branch is for the confirmed production RAG failure and the related chat
-reliability defects discovered during the investigation. Keep changes scoped to:
+This branch is for fixing the chat UI behaviour when `POST /api/chat/stream`
+fails or ends without the normal `done` event. Keep changes scoped to:
 
-- the Qdrant collection contract, readiness, failure semantics, and observability;
-- query routing, case selection, section retrieval, and retrieval evaluation;
-- structured contextualization of ambiguous follow-up messages;
-- frontend handoff suggestion and dismissal behavior;
-- tests and documentation required to verify those changes.
+- frontend chat stream parsing and terminal-state handling;
+- chat controller behaviour for SSE `error`, incomplete streams, and JSON
+  fallback;
+- focused Playwright coverage for failed and incomplete chat streams;
+- API/chat documentation that records the terminal stream contract.
 
-Do not change production environment variables, ingest or delete Qdrant data,
-push the branch, or open a pull request without explicit approval.
+Do not change RAG retrieval, Qdrant ingestion, production environment variables,
+deployment settings, Telegram handoff behaviour, or unrelated UI flows. Do not
+push the branch or open a pull request without explicit approval.
 
 ## Confirmed findings
 
-1. Production is configured for `alex_public_knowledge_named` in `named` vector
-   mode. That stale collection does not have the indexed `source_group` field now
-   required by every runtime retrieval. Qdrant rejects the query with HTTP 400:
-   `Index required but not found for "source_group"`.
-2. The chat service catches that provider/schema failure and returns the same
-   response used for genuinely empty knowledge. The UI therefore reports
-   insufficient public information instead of a technical retrieval failure.
-3. `/api/health/ready` checks only whether provider settings are present. It does
-   not validate the configured collection, vector schema, payload indexes, or a
-   read-only search contract.
-4. The current query router uses broad substring matches. In particular,
-   `limitations` is misrouted to personal development areas and `service` is
-   misrouted to commercial services. With neutral routing, both affected case
-   studies rank first.
-5. Live retrieval evaluation currently passes 15 of 20 cases. The remaining
-   failures also show that candidate retrieval and final result count are
-   conflated and that section intent is not modelled explicitly.
-6. The follow-up contextualizer asks the generic LLM client for free-form JSON.
-   The model correctly resolves `yes`, but a numeric confidence value fails the
-   schema that requires `low`, `medium`, or `high`; the valid meaning is then
-   discarded and replaced with a clarification response.
-7. The frontend handoff detector matches `Give me Alex's 30-second intro` as a
-   human handoff request. The frontend also derives handoff state from arbitrary
-   message text instead of relying on structured backend/message metadata.
-8. `Continue with AI` does not send a request. It only dismisses the handoff card
-   and focuses the input, so its label promises behavior the control does not
-   perform.
-9. The chat question resolver also performs topic expansion before the RAG query
-   router. Broad `software` and `service` matches replace three self-contained
-   case-study questions with a generic commercial-services query, changing their
-   source scope from `case_studies` to `resume`.
-10. The pre-RAG weakness policy has a separate term list containing bare
-    `limitations`. It intercepts the corporate credit-risk case before retrieval
-    even though the boundary-aware RAG router correctly classifies it as case
-    limitations.
-11. The answer evaluator compares required phrases without Unicode punctuation
-    normalization. A correct `six‑hour` answer therefore fails an ASCII
-    `six-hour` expectation, and the IoT uncertainty expectation accepts too few
-    semantically equivalent qualified formulations.
+1. Issue `#106` is open and still applicable to `main`.
+2. The backend can emit safe SSE `error` events from `/api/chat/stream`.
+3. Backend tests already verify that raw provider errors are not exposed in SSE
+   `error` payloads.
+4. The frontend stream parser currently handles `token`, `sources`, and `done`
+   events, but ignores `error` events.
+5. The frontend stream parser resolves successfully when the HTTP body reaches
+   EOF, even if no `done` event was received.
+6. The chat controller only enters its stream failure path when
+   `streamChatResponse()` throws. A silent EOF without `done` can therefore
+   leave an empty or partial assistant message without a clear failure state.
+7. Current E2E coverage includes happy-path streaming and HTTP failure before
+   streaming starts, but not SSE `error` events or partial streams without
+   `done`.
 
-## Telegram local development verification
+## Target behaviour
 
-The repository intentionally supports a separate local Telegram bot:
+1. A successful chat stream must end with a valid `done` event.
+2. SSE `error` is a terminal failure event and must be visible to the user.
+3. EOF before `done` is an incomplete stream, not a successful answer.
+4. If streaming fails before any answer token is received, the frontend may use
+   the existing JSON fallback and preserve structured metadata from that
+   fallback response.
+5. If streaming fails after one or more answer tokens are visible, do not replay
+   through JSON fallback. Keep the partial text visible and show an explicit
+   incomplete-stream notice.
+6. Do not apply sources, confidence, retrieval status, or handoff metadata unless
+   the stream completed with `done`.
+7. User-initiated abort/reset/unmount should remain silent and must not show an
+   error notice.
 
-- the backend reads `TELEGRAM_BOT_TOKEN`;
-- the local polling bridge reads `TELEGRAM_DEV_BOT_TOKEN`;
-- `telegram-dev-preflight.ps1` requires both local values to identify the same
-  dev bot and verifies `TELEGRAM_DEV_BOT_USERNAME` through Telegram `getMe`;
-- the deployed backend receives its separate `TELEGRAM_BOT_TOKEN` from Render.
+## Delivery plan: one PR, three commits
 
-`TELEGRAM_BOT_TOKEN_REAL` is not referenced by application code, scripts,
-Taskfile tasks, examples, or documentation. In the ignored local `backend/.env`:
+The work is planned as one pull request with three logical commits.
 
-- it has an accidental double `=` delimiter;
-- after normalizing that delimiter, it equals the configured local dev token;
-- it is therefore a redundant local alias, not part of the two-bot design;
-- its malformed syntax causes `uv --env-file` to print an unsafe parser warning.
-
-Do not commit or print any token value. The recommended local cleanup is to
-remove the unused `TELEGRAM_BOT_TOKEN_REAL` line and keep only the documented
-`TELEGRAM_BOT_TOKEN` plus `TELEGRAM_DEV_BOT_TOKEN` contract. This cleanup has not
-been performed.
-
-## Target architecture
-
-1. Define one shared `RagCollectionContract` used by ingestion, runtime search,
-   readiness checks, deployment validation, and tests.
-2. Standardize production retrieval on the evaluated single `body_dense` vector.
-   Keep named vectors out of production until fusion is implemented and proves a
-   measurable evaluation benefit.
-3. Use a stable Qdrant alias over versioned physical collections so ingestion can
-   build, validate, smoke-test, and atomically activate a compatible dataset.
-4. Separate routing dimensions: source scope, subject/domain hints, requested
-   section, and handoff policy. Broad hints must not become exclusionary filters.
-5. Use two-stage case-study retrieval: select a case from a wider candidate pool,
-   then retrieve and rank sections inside that case before returning the final
-   bounded result set.
-6. Introduce typed retrieval outcomes. Distinguish empty knowledge from embedding,
-   provider, collection-contract, and vector-search failures without exposing raw
-   provider errors to users.
-7. Use an OpenAI structured-output adapter for contextualization instead of
-   parsing free-form text returned by the general answer client.
-8. Make structured message/backend flags authoritative for handoff UI. Treat card
-   dismissal as a UI action tied to a message ID and label it according to its
-   actual behavior.
-9. Keep question resolution limited to subject and conversation disambiguation.
-   Preserve explicit self-contained questions, let the RAG query router own topic,
-   source, section, and public-boundary semantics, and evaluate grounded answers
-   using normalized typography plus explicit uncertainty safeguards.
-
-## Delivery plan: one PR, five technical steps
-
-The work is planned as one pull request with five sequential technical commits.
 After every step:
 
 - update the status table and verification log in this file;
-- run the checks scoped to that step;
+- run the smallest relevant check for that step;
 - stop and report the result;
 - provide a Conventional Commits message;
-- continue only after the user confirms the local commit.
+- continue to the next local commit only after the user confirms.
 
 | Step | Commit scope | Required result |
 | --- | --- | --- |
-| 1 | `fix(rag): enforce the production collection contract` | Qdrant contract validation, truthful readiness, typed retrieval failures, safe metrics/logs, and focused backend tests |
-| 2 | `refactor(rag): separate case selection from section retrieval` | Boundary-aware routing, wider candidate retrieval, case-to-section ranking, and passing live retrieval evaluation |
-| 3 | `fix(chat): use structured follow-up contextualization` | Provider-enforced structured output and passing ambiguous follow-up scenarios including `yes` |
-| 4 | `fix(chat-ui): make handoff suggestions explicit` | Structured handoff state, no quick-prompt false positive, accurate dismissal semantics, and Playwright coverage |
-| 5 | `chore(release): add RAG deployment verification` | Read-only contract probe, production canaries, complete JSON/SSE and eval verification, and updated documentation |
-
-The current `SESSION_NOTES.md` setup is preparatory work and is not one of the
-five technical steps. If committed separately, the branch will contain six local
-commits before any optional squash.
+| 1 | `test(chat-ui): cover failed and incomplete chat streams` | Playwright regressions demonstrate the current SSE `error` and missing-`done` failures |
+| 2 | `fix(chat-ui): handle chat stream terminal failures` | Stream parser and controller distinguish completed, failed, incomplete, fallback, and abort states |
+| 3 | `docs(chat): document stream terminal semantics` | API/chat docs define `done` as the only successful terminal event and `error` as terminal failure |
 
 ## Execution plan
 
-### Phase 1 - Collection contract and failure semantics
+### Step 1 - Regression tests
 
-- Add the shared collection contract and validation service.
-- Validate vector mode, vector name/dimension, required payload indexes, point
-  availability, and expected public source groups.
-- Keep liveness cheap; expose cached dependency state through readiness.
-- Map technical retrieval failures to a typed temporary-unavailable response.
-- Add bounded metrics and safe logs by retrieval stage/error code.
-- Add unit and integration tests for missing indexes, wrong vector mode, empty
-  search, and provider failure.
+- Add E2E coverage for backend SSE `event: error` before any token.
+- Add E2E coverage for a stream that sends a token but closes before `done`.
+- Add E2E coverage for a stream that closes before any token and before `done`.
+- Preserve existing happy-path and HTTP 503 JSON fallback coverage.
+- Expected interim result: new tests fail on the current implementation.
 
-### Phase 2 - Retrieval architecture and quality
+### Step 2 - Frontend stream handling
 
-- Replace substring routing with boundary-aware, precedence-tested routing.
-- Separate commercial-service intent from case-study service-design questions.
-- Model requested case sections such as problem, analysis, implementation,
-  validation, limitations, and results.
-- Retrieve a wider candidate pool, group/rank case candidates, then retrieve the
-  selected case sections and truncate only after reranking.
-- Run the complete live retrieval suite and investigate every remaining failure.
+- Add typed stream terminal errors/results in `frontend/lib/chat-api.ts`.
+- Track whether the stream received a valid `done` event.
+- Parse SSE `error` payloads and throw a safe user-facing stream error.
+- Treat EOF without `done` as an incomplete stream.
+- Validate `Content-Type` starts with `text/event-stream`.
+- Keep JSON fallback only for failures before the first answer token.
+- For failures after partial text, flush visible text and show the incomplete
+  stream notice.
+- For failures before any usable text and failed JSON fallback, replace the empty
+  assistant message with the generic assistant error message.
 
-### Phase 3 - Structured follow-up contextualization
+### Step 3 - Documentation
 
-- Add a dedicated provider interface for structured question resolution.
-- Use provider-enforced structured output matching `ContextualizedQuestion`.
-- Preserve frontend-generated assistant messages in bounded history.
-- Cover `yes`, pronouns, ambiguous continuations, low confidence, invalid output,
-  and provider failure.
-
-### Phase 4 - Frontend handoff state
-
-- Remove broad frontend inference from arbitrary user and assistant text.
-- Preserve explicit structured handoff flags on scripted and backend messages.
-- Rename `Continue with AI` to an accurate dismissal label such as `Not now`.
-- Track dismissal by the triggering message ID.
-- Add Playwright coverage for the 30-second intro, genuine handoff requests,
-  dismissal, `yes` follow-up, JSON fallback, and SSE completion.
-
-### Phase 5 - Release controls
-
-- Add a read-only collection-contract deployment probe.
-- Add production canary questions that require non-empty sources and known case
-  IDs/sections.
-- Require JSON/SSE parity, backend checks, frontend checks, retrieval evals, and
-  answer evals before deployment.
-- Deploy only after the target collection passes the contract and canary; verify
-  that Qdrant 400 retrieval errors remain at zero after activation.
-- Update RAG, API, deployment, architecture, and security documentation.
-- Use release-gate failures to verify the complete chat-policy -> question-resolution
-  -> query-router path; do not treat a direct retrieval pass as proof that the
-  public chat path is correct.
+- Update `docs/api-contract.md` with explicit terminal-event semantics.
+- Update `docs/rag-and-ai-safety.md` only if the frontend fallback paragraph
+  needs the same clarification.
+- Keep docs focused on behaviour and avoid changing architecture/deployment
+  guidance unless the implementation proves it necessary.
 
 ## Status table
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: all implementation, free CI, target-collection, live retrieval,
-live answer, local JSON/SSE, local metrics, and exact scripted `yes` checks are
-complete. The corrective release-gate changes are awaiting the user's local
-commit. Public post-deploy JSON/SSE and protected production metrics remain
-pending until this revision is pushed and deployed by the user.
+Current stage: Step 3 documentation and verification are complete.
+Waiting for the user's local commit before any push or pull request work.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
-| 0.1 | Create local work branch | COMPLETE | `codex/fix-rag-chat-reliability` created from clean `main` | Keep work local until push approval |
-| 0.2 | Confirm production RAG root cause | COMPLETE | Named collection rejects required `source_group` filter with Qdrant HTTP 400 | Preserve as regression test |
-| 0.3 | Verify current public collection | COMPLETE | Single-vector collection has 115 points and returns relevant sources | Formalize contract |
-| 0.4 | Run baseline retrieval evaluation | COMPLETE | 15/20 cases pass | Reach full expected-case/section coverage |
-| 0.5 | Verify Telegram two-bot setup | COMPLETE | Local backend/dev tokens match; production uses separate Render environment; unused `TELEGRAM_BOT_TOKEN_REAL` confirmed | Local cleanup requires approval |
-| 1.1 | Implement shared collection contract | COMPLETE | Shared contract validates canonical vector schema, required keyword indexes, points, and public source groups | Preserve contract in later retrieval changes |
-| 1.2 | Add cached readiness contract check | COMPLETE | Read-only Qdrant probe returns `not_ready` and HTTP 503 on contract failure; liveness remains provider-free | Add the production deployment gate in Phase 5 |
-| 1.3 | Add typed retrieval failure semantics and observability | COMPLETE | JSON/SSE expose `empty` vs `unavailable`; bounded stage/error metrics and safe logs added | Preserve status parity in later chat changes |
-| 2.1 | Redesign query routing dimensions | COMPLETE | Boundary-aware phrase routing separates subject hints, source scope, and case-section intent; targeted regressions pass | Preserve dimensions through retrieval eval |
-| 2.2 | Implement two-stage case/section retrieval | COMPLETE | Subject-only case selection groups at least 36 candidates; selected-case retrieval reranks at least 18 sections before final limit | Preserve stage separation in later changes |
-| 2.3 | Pass live retrieval evaluation | COMPLETE | Final live suite passes 20/20, up from 15/20, with zero regressions | Re-run as a release gate in Phase 5 |
-| 3.1 | Implement structured contextualizer adapter | COMPLETE | Dedicated dependency uses OpenAI `responses.parse` with the closed `ContextualizedQuestion` schema; answer generation remains separate | Preserve provider contract and metrics |
-| 3.2 | Verify ambiguous follow-up scenarios | COMPLETE | `yes`, pronouns, low confidence, invalid output, and provider failure pass; live `yes` returns retrieval success with six experience sources | Commit Phase 3 before starting Phase 4 |
-| 4.1 | Make handoff metadata authoritative | COMPLETE | Typed and scripted assistant messages carry explicit metadata; typed handoff requests always route through backend JSON/SSE metadata; text and `not_enough_data` inference removed | Preserve the contract in release controls |
-| 4.2 | Correct dismissal semantics and label | COMPLETE | `Not now` dismisses only the triggering assistant message ID; a later independent suggestion remains eligible | Preserve message identity across UI changes |
-| 4.3 | Add end-to-end chat/handoff coverage | COMPLETE | Desktop/mobile tests cover the 30-second intro, metadata true/false, direct request routing, message-scoped dismissal, frontend history, JSON fallback, SSE, and active handoff | Preserved by the Phase 5 full CI gate |
-| 5.1 | Implement release controls and run complete local verification | COMPLETE | Shared read-only contract probe, canonical canary selector, JSON/SSE parity and case attribution, strict metrics verification, Taskfile gates, tests, and documentation are implemented; final `task ci` passes | Preserve as the release contract |
-| 5.2 | Validate target Qdrant collection and deployed canaries | PENDING | Target collection contract, direct canaries, 20/20 retrieval, 19/19 answers, local JSON/SSE, and local metrics pass; the revision is not deployed | After user push/deploy, run public post-deploy and protected production metrics gates |
-| 5.3 | Prepare commit and PR text | COMPLETE | Corrective scope is isolated and fully verified; commits, push, and PR remain user-managed | User creates the local commit |
-| 5.4 | Close defects exposed by the release answer gate | COMPLETE | Explicit questions remain unchanged, subject-only follow-up resolution replaces semantic rewrites, weakness policy delegates to the shared router, prompts preserve uncertainty, and eval matching normalizes equivalent typography | Preserve all canonical questions in the cross-layer regression test |
+| 0.1 | Create local work branch | COMPLETE | `codex/fix-chat-stream-terminal-errors` created from `main` | Keep work local until push approval |
+| 0.2 | Record scoped work plan | COMPLETE | `SESSION_NOTES.md` now describes issue `#106`, target behaviour, and three-commit delivery plan | Begin Step 1 regression tests |
+| 1.1 | Add failing frontend stream-error regressions | COMPLETE | New Playwright spec covers SSE `error`, partial EOF without `done`, and empty EOF without `done`; focused run fails on current implementation as expected | Commit Step 1 before implementation |
+| 2.1 | Implement stream terminal-state handling | COMPLETE | Stream parser now requires terminal `done`, surfaces SSE `error`, validates `text/event-stream`, and distinguishes backend, incomplete, unavailable, fallback, partial, and abort states | Run frontend quality gate |
+| 2.2 | Run frontend quality gate | COMPLETE | Focused stream-error spec, related handoff spec, and full `task frontend:check` pass | Commit Step 2 before docs |
+| 3.1 | Document stream terminal semantics | COMPLETE | `docs/api-contract.md` now defines `done` as the only successful chat-stream terminal event, `error` as terminal failure, EOF before `done` as incomplete, and fallback/partial-stream handling; `docs/rag-and-ai-safety.md` and `docs/rag-and-ai-safety.ru.md` now summarize the same frontend fallback rule | Run docs-adjacent checks |
+| 3.2 | Final verification and report | COMPLETE | Docs diff and full current diff passed whitespace validation with `git diff --check`; Step 2 frontend regression, handoff, and full frontend checks remain the behavioural verification for this branch | Commit Step 3 before any push or PR |
 
 ## Verification log
 
 | Date | Check | Result |
 | --- | --- | --- |
-| 2026-08-19 | Git worktree before branch creation | Clean; `main` matched `origin/main` |
-| 2026-08-19 | Production `/api/chat` and Qdrant telemetry | Insufficient-data response coincides with Qdrant query HTTP 400 |
-| 2026-08-19 | Exact named-collection query | Reproduced missing indexed `source_group` error |
-| 2026-08-19 | Current single-collection retrieval | Relevant chunks returned above configured threshold |
-| 2026-08-19 | Live retrieval evaluation | 15 passed, 5 failed |
-| 2026-08-19 | Neutral-route diagnostic | Credit-risk and international-employment cases both rank first |
-| 2026-08-19 | Telegram environment contract | Local backend and poller use the same dev bot; unused REAL alias is malformed and redundant |
-| 2026-08-19 | Phase 1 focused backend tests | 47 passed; collection contract, readiness cache, provider failures, JSON/SSE parity, metrics, and safe logs covered |
-| 2026-08-19 | `task backend:check` | Ruff, format, compile, and all 399 backend tests passed; one existing Starlette deprecation warning |
-| 2026-08-19 | `task frontend:check` | ESLint, TypeScript, resume parser, production build, and all 62 Playwright tests passed |
-| 2026-08-19 | `task ci` | All eight local gates passed, including 27/27 chat eval, free RAG checks, and Docker build |
-| 2026-08-19 | Phase 2 targeted retrieval tests | 32 passed initially; broader retrieval suite passed after using workspace-local pytest temp storage |
-| 2026-08-19 | Phase 2 live retrieval evaluation | Improved 15/20 to 18/20, then 20/20 after separating subject-level case selection from section intent; zero regressions |
-| 2026-08-19 | Phase 2 `task backend:check` | Ruff, format, compile, and all 407 backend tests passed; one existing Starlette deprecation warning |
-| 2026-08-19 | Phase 2 `task ci` | All eight local gates passed: repository/config checks, backend, frontend, free RAG, and Docker build |
-| 2026-08-19 | Phase 3 pre-fix regression | Numeric `confidence: 0.95` discarded a valid `yes` resolution: 1 failed, 7 passed |
-| 2026-08-19 | Phase 3 targeted contextualization tests | 46 passed across provider schema, routing, JSON/SSE integration, RAG flow, and metrics |
-| 2026-08-19 | Phase 3 live structured contextualization | Exact frontend-scripted offer plus `yes` returned `alex_profile_question`, a standalone experience question, and `confidence: high` |
-| 2026-08-19 | Phase 3 live end-to-end follow-up | Contextualization, embedding, Qdrant retrieval, and answer generation completed with `retrieval_status: success`, six experience sources, and no clarification |
-| 2026-08-19 | Phase 3 `task backend:check` | Ruff, format, compile, and all 411 backend tests passed; one existing Starlette deprecation warning |
-| 2026-08-19 | Phase 3 `task ci` | All eight local gates passed: backend 411/411, frontend Playwright 62/62, chat eval 27/27, free RAG, and Docker build |
-| 2026-08-19 | Phase 4 targeted frontend checks | Project config, ESLint, TypeScript, and 28 desktop/mobile handoff/history scenarios passed |
-| 2026-08-19 | Phase 4 `task frontend:check` | ESLint, TypeScript, resume parser, production build, and all 70 Playwright tests passed; npm audit reports one existing high-severity dependency finding |
-| 2026-08-19 | Phase 4 `task ci` | All eight local gates passed: backend 411/411, frontend 70/70, chat eval 27/27, free RAG, and Docker build |
-| 2026-08-20 | Phase 4 commit verification | `ddb98bd` has the correct `fix(chat-ui): make handoff suggestions explicit` scope; the previous duplicate Phase 2 subject is resolved |
-| 2026-08-20 | Phase 5 targeted release tests | 49 passed across canary selection, collection contract, retrieval attribution, JSON/SSE verification, metrics failure semantics, chat eval metadata, and streaming source propagation |
-| 2026-08-20 | Phase 5 task and CLI contract | All `rag:release:*` tasks load successfully; verifier subcommands expose collection, retrieval, API, and metrics checks without executing a live call |
-| 2026-08-20 | Phase 5 `task ci` | All eight free gates passed: backend 419/419, frontend Playwright 70/70, chat eval 27/27, free RAG, and Docker build; one existing npm high-severity finding remains |
-| 2026-08-20 | First complete live answer release gate | 15/19 passed; IoT, credit-risk limitations, international employment service, and Kaizen service transformation failed through the public chat path despite 20/20 direct retrieval |
-| 2026-08-20 | Cross-layer root-cause trace | Three explicit questions were rewritten to resume services; credit-risk limitations was intercepted by the pre-RAG weakness policy |
-| 2026-08-20 | Corrective targeted tests | 55 question-resolution, chat, router, generated-eval, and RAG tests passed; every canonical case-study question survives policy and resolution unchanged |
-| 2026-08-20 | Unicode and uncertainty diagnostics | Correct IoT source/context contained the six-hour fact; model used `six‑hour` and qualified hardware/interference language, exposing evaluator typography and synonym false negatives |
-| 2026-08-20 | Final `task backend:check` | Ruff, format, compile, and all 424 backend tests passed; one existing Starlette deprecation warning remains |
-| 2026-08-20 | Target collection and retrieval release gates | Collection contract and direct canaries passed; complete live retrieval remained 20/20 with zero regressions |
-| 2026-08-20 | Final live answer release gate | 19/19 passed; all four original answer failures are resolved |
-| 2026-08-20 | Local transport and operational gates | Both release canaries passed through JSON/SSE, protected metrics reported zero collection/vector errors, and exact frontend-scripted history plus `yes` returned success with six sources in both transports |
-| 2026-08-20 | Final `task ci` | All eight gates passed on the final tree: backend 424/424, frontend Playwright 70/70, chat eval 27/27, free RAG, and Docker build; one existing npm high-severity finding remains |
+| 2026-08-28 | Git worktree before branch creation | Clean; `main` matched `origin/main` |
+| 2026-08-28 | Create branch | `codex/fix-chat-stream-terminal-errors` created |
+| 2026-08-28 | Issue and code review | Issue `#106` remains open; frontend ignores SSE `error` and treats EOF without `done` as success |
+| 2026-08-28 | Step 1 focused Playwright regression run | `npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` produced the expected failures: SSE `error` leaves `Understanding your question.`, partial EOF has no incomplete-stream notice, and empty EOF leaves `Understanding your question.`; command was interrupted after detailed failure reports because Playwright did not return a final summary promptly |
+| 2026-08-28 | Step 2 focused stream-error verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` passed 3/3 against a manually started dev server |
+| 2026-08-28 | Step 2 related chat-handoff verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-handoff.spec.ts --project=chromium --workers=1 --reporter=line` passed 9/9 |
+| 2026-08-28 | Step 2 frontend quality gate | `task frontend:check` passed: install, lint, typecheck, resume parser, production build, Playwright install, and 76/76 built E2E tests; npm audit still reports one existing high-severity dependency finding |
+| 2026-08-31 | Step 3 docs whitespace check | `git diff --check -- docs/api-contract.md docs/rag-and-ai-safety.md docs/rag-and-ai-safety.ru.md` passed; Git reported only expected LF-to-CRLF working-copy warnings |
+| 2026-08-31 | Step 3 full diff whitespace check | `git diff --check` passed for `SESSION_NOTES.md` and documentation changes; Git reported only expected LF-to-CRLF working-copy warnings |
 
-Update the status table and verification log as each phase progresses. Do not mark
-an item complete until its implementation and stated verification gate both pass.
+Update the status table and verification log as work progresses. Do not mark a
+work item complete until its implementation and stated verification gate both
+pass.

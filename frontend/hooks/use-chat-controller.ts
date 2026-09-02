@@ -3,7 +3,11 @@ import type { FormEvent, KeyboardEvent } from "react";
 
 import { chatHandoffCopy, chatNoticeCopy, chatShellCopy } from "../content/chat";
 import { useEscalationStream } from "../hooks/use-escalation-stream";
-import { fetchJsonChatResponse, streamChatResponse } from "../lib/chat-api";
+import {
+  fetchJsonChatResponse,
+  isChatStreamError,
+  streamChatResponse,
+} from "../lib/chat-api";
 import { isAbortError } from "../lib/chat-errors";
 import { buildChatHistory } from "../lib/chat-history";
 import {
@@ -356,6 +360,24 @@ export function useChatController({
         return;
       }
 
+      if (isChatStreamError(error) && error.kind === "backend_error") {
+        renderer.flush();
+        if (rawStreamText) {
+          setNotice(error.message || chatNoticeCopy.assistantUnavailable);
+          return;
+        }
+
+        updateAssistantMessage(assistantId, {
+          text: error.message || chatNoticeCopy.assistantErrorMessage,
+          confidence: "low",
+          notEnoughData: false,
+          handoffSuggested: false,
+          handoffReason: null,
+        });
+        setNotice(chatNoticeCopy.assistantUnavailable);
+        return;
+      }
+
       if (!rawStreamText) {
         try {
           const fallbackResponse = await fetchJsonChatResponse(
@@ -381,7 +403,7 @@ export function useChatController({
             updateAssistantMessage(assistantId, {
               text: chatNoticeCopy.assistantErrorMessage,
               confidence: "low",
-              notEnoughData: true,
+              notEnoughData: false,
               handoffSuggested: false,
               handoffReason: null,
             });
