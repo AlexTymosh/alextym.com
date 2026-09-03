@@ -1,138 +1,124 @@
-# Chat stream terminal-error work
+# Repeat handoff after close work
 
-Last updated: 2026-08-31
+Last updated: 2026-09-02
 
-Branch: `codex/fix-chat-stream-terminal-errors`
+Branch: `codex/allow-new-handoff-after-close`
 
-GitHub issue: `#106` - `P1: Handle chat stream errors and incomplete stream termination`
+GitHub issue: `#103` - `P2: Allow a new handoff request after a handoff is closed`
 
 ## Work boundary
 
-This branch is for fixing the chat UI behaviour when `POST /api/chat/stream`
-fails or ends without the normal `done` event. Keep changes scoped to:
+This branch is for fixing the chat UI lifecycle after a human handoff is closed.
+Keep changes scoped to:
 
-- frontend chat stream parsing and terminal-state handling;
-- chat controller behaviour for SSE `error`, incomplete streams, and JSON
-  fallback;
-- focused Playwright coverage for failed and incomplete chat streams;
-- API/chat documentation that records the terminal stream contract.
+- frontend handoff lifecycle state in `use-chat-controller`;
+- focused Playwright coverage for requesting a new handoff after a closed one;
+- documentation only if the implemented behaviour changes or clarifies an
+  existing API/UI contract.
 
-Do not change RAG retrieval, Qdrant ingestion, production environment variables,
-deployment settings, Telegram handoff behaviour, or unrelated UI flows. Do not
-push the branch or open a pull request without explicit approval.
+Do not change backend escalation APIs, Telegram webhook behaviour, RAG
+retrieval, deployment settings, unrelated chat UI flows, or issue `#107`
+owner-message context handling. Do not push the branch or open a pull request
+without explicit approval.
 
 ## Confirmed findings
 
-1. Issue `#106` is open and still applicable to `main`.
-2. The backend can emit safe SSE `error` events from `/api/chat/stream`.
-3. Backend tests already verify that raw provider errors are not exposed in SSE
-   `error` payloads.
-4. The frontend stream parser currently handles `token`, `sources`, and `done`
-   events, but ignores `error` events.
-5. The frontend stream parser resolves successfully when the HTTP body reaches
-   EOF, even if no `done` event was received.
-6. The chat controller only enters its stream failure path when
-   `streamChatResponse()` throws. A silent EOF without `done` can therefore
-   leave an empty or partial assistant message without a clear failure state.
-7. Current E2E coverage includes happy-path streaming and HTTP failure before
-   streaming starts, but not SSE `error` events or partial streams without
-   `done`.
+1. Issue `#103` is open and still applicable to `main`.
+2. The chat UI sets `escalationSent` to `true` after a successful handoff
+   request.
+3. The handoff prompt is hidden while `escalationSent` is `true`.
+4. `escalationSent` is reset by full chat reset, but not by manual handoff close
+   or SSE `closed` events.
+5. The UI copy says visitors can request a new connection after the handoff is
+   closed.
+6. Existing Playwright coverage checks that messages after manual close return
+   to AI chat, but does not check that a later backend handoff suggestion can
+   show a new prompt.
 
 ## Target behaviour
 
-1. A successful chat stream must end with a valid `done` event.
-2. SSE `error` is a terminal failure event and must be visible to the user.
-3. EOF before `done` is an incomplete stream, not a successful answer.
-4. If streaming fails before any answer token is received, the frontend may use
-   the existing JSON fallback and preserve structured metadata from that
-   fallback response.
-5. If streaming fails after one or more answer tokens are visible, do not replay
-   through JSON fallback. Keep the partial text visible and show an explicit
-   incomplete-stream notice.
-6. Do not apply sources, confidence, retrieval status, or handoff metadata unless
-   the stream completed with `done`.
-7. User-initiated abort/reset/unmount should remain silent and must not show an
-   error notice.
+1. During an active handoff, duplicate handoff prompts remain blocked.
+2. When a handoff reaches a terminal `closed` state, the one-shot
+   `escalationSent` guard is reset.
+3. This applies to manual close and backend/SSE `closed` events.
+4. A later AI response with `handoff_suggested: true` can show a fresh handoff
+   prompt after the previous handoff is closed.
+5. Dismissing a specific handoff prompt still suppresses only that prompt.
+6. Normal AI chat, active handoff messaging, and close flows continue to work.
 
-## Delivery plan: one PR, three commits
+## Delivery plan: one PR, two commits
 
-The work is planned as one pull request with three logical commits.
+The work is planned as one pull request with two logical commits.
 
 After every step:
 
 - update the status table and verification log in this file;
 - run the smallest relevant check for that step;
 - stop and report the result;
-- provide a Conventional Commits message;
+- provide a Conventional Commits message with an emoji and concise description;
 - continue to the next local commit only after the user confirms.
 
 | Step | Commit scope | Required result |
 | --- | --- | --- |
-| 1 | `test(chat-ui): cover failed and incomplete chat streams` | Playwright regressions demonstrate the current SSE `error` and missing-`done` failures |
-| 2 | `fix(chat-ui): handle chat stream terminal failures` | Stream parser and controller distinguish completed, failed, incomplete, fallback, and abort states |
-| 3 | `docs(chat): document stream terminal semantics` | API/chat docs define `done` as the only successful terminal event and `error` as terminal failure |
+| 1 | `test(chat-ui): cover repeat handoff after close` | Playwright regression demonstrates that a second handoff prompt is currently blocked after close |
+| 2 | `fix(chat-ui): allow new handoff after close` | Manual close and SSE close reset the handoff prompt guard without allowing duplicate prompts during active handoff |
 
 ## Execution plan
 
-### Step 1 - Regression tests
+### Step 1 - Regression test
 
-- Add E2E coverage for backend SSE `event: error` before any token.
-- Add E2E coverage for a stream that sends a token but closes before `done`.
-- Add E2E coverage for a stream that closes before any token and before `done`.
-- Preserve existing happy-path and HTTP 503 JSON fallback coverage.
-- Expected interim result: new tests fail on the current implementation.
+- Extend `frontend/e2e/chat-handoff.spec.ts` with a focused scenario:
+  first AI response suggests handoff, visitor connects, handoff closes, later AI
+  response suggests handoff again.
+- Assert the second chat request goes to `/api/chat/stream`, not the escalation
+  message endpoint.
+- Assert the second handoff prompt becomes visible after the closed state.
+- Run the focused Playwright spec and confirm the new scenario fails on current
+  `main` behaviour.
 
-### Step 2 - Frontend stream handling
+### Step 2 - Frontend lifecycle fix
 
-- Add typed stream terminal errors/results in `frontend/lib/chat-api.ts`.
-- Track whether the stream received a valid `done` event.
-- Parse SSE `error` payloads and throw a safe user-facing stream error.
-- Treat EOF without `done` as an incomplete stream.
-- Validate `Content-Type` starts with `text/event-stream`.
-- Keep JSON fallback only for failures before the first answer token.
-- For failures after partial text, flush visible text and show the incomplete
-  stream notice.
-- For failures before any usable text and failed JSON fallback, replace the empty
-  assistant message with the generic assistant error message.
+- Reset `escalationSent` when `handleEscalationStreamClosed` moves the handoff
+  to `closed`.
+- Reset `escalationSent` after a successful manual `closeHandoff`.
+- Keep `escalationSent` set during `waiting_for_alex`, `connected`, and `error`
+  states so active handoff sessions do not show duplicate prompts.
+- Re-run the focused handoff spec.
+- Run the smallest relevant frontend quality checks; use `task frontend:check`
+  before final report unless there is a clear environment blocker.
 
-### Step 3 - Documentation
+### Step 3 - Documentation check
 
-- Update `docs/api-contract.md` with explicit terminal-event semantics.
-- Update `docs/rag-and-ai-safety.md` only if the frontend fallback paragraph
-  needs the same clarification.
-- Keep docs focused on behaviour and avoid changing architecture/deployment
-  guidance unless the implementation proves it necessary.
+- Review `docs/api-contract.md`, `docs/architecture.md`, and handoff setup docs
+  only around closed-handoff behaviour.
+- Update docs only if the implementation reveals a mismatch or missing contract
+  detail.
+- Run `git diff --check`.
 
 ## Status table
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Step 3 documentation and verification are complete.
-Waiting for the user's local commit before any push or pull request work.
+Current stage: Step 1 regression coverage is complete. Waiting for the user's
+local commit before Step 2 implementation.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
-| 0.1 | Create local work branch | COMPLETE | `codex/fix-chat-stream-terminal-errors` created from `main` | Keep work local until push approval |
-| 0.2 | Record scoped work plan | COMPLETE | `SESSION_NOTES.md` now describes issue `#106`, target behaviour, and three-commit delivery plan | Begin Step 1 regression tests |
-| 1.1 | Add failing frontend stream-error regressions | COMPLETE | New Playwright spec covers SSE `error`, partial EOF without `done`, and empty EOF without `done`; focused run fails on current implementation as expected | Commit Step 1 before implementation |
-| 2.1 | Implement stream terminal-state handling | COMPLETE | Stream parser now requires terminal `done`, surfaces SSE `error`, validates `text/event-stream`, and distinguishes backend, incomplete, unavailable, fallback, partial, and abort states | Run frontend quality gate |
-| 2.2 | Run frontend quality gate | COMPLETE | Focused stream-error spec, related handoff spec, and full `task frontend:check` pass | Commit Step 2 before docs |
-| 3.1 | Document stream terminal semantics | COMPLETE | `docs/api-contract.md` now defines `done` as the only successful chat-stream terminal event, `error` as terminal failure, EOF before `done` as incomplete, and fallback/partial-stream handling; `docs/rag-and-ai-safety.md` and `docs/rag-and-ai-safety.ru.md` now summarize the same frontend fallback rule | Run docs-adjacent checks |
-| 3.2 | Final verification and report | COMPLETE | Docs diff and full current diff passed whitespace validation with `git diff --check`; Step 2 frontend regression, handoff, and full frontend checks remain the behavioural verification for this branch | Commit Step 3 before any push or PR |
+| 0.1 | Create local work branch | COMPLETE | `codex/allow-new-handoff-after-close` created from `main` | Keep work local until push approval |
+| 0.2 | Replace session notes with scoped plan | COMPLETE | `SESSION_NOTES.md` now contains only issue `#103` plan and boundaries | Begin Step 1 regression test |
+| 1.1 | Add repeat-handoff regression coverage | COMPLETE | `frontend/e2e/chat-handoff.spec.ts` now covers a second handoff prompt after manual close and after SSE `closed`; both scenarios reach the second AI response but fail because the new handoff prompt is not shown | Commit Step 1 before implementation |
+| 2.1 | Implement closed-handoff lifecycle reset | PENDING | Not started | Focused Playwright run should pass |
+| 2.2 | Run frontend verification | PENDING | Not started | `task frontend:check` or documented blocker |
+| 3.1 | Check docs for lifecycle contract mismatch | PENDING | Not started | Update docs only if needed |
+| 3.2 | Final diff hygiene and report | PENDING | Not started | `git diff --check` and commit message |
 
 ## Verification log
 
 | Date | Check | Result |
 | --- | --- | --- |
-| 2026-08-28 | Git worktree before branch creation | Clean; `main` matched `origin/main` |
-| 2026-08-28 | Create branch | `codex/fix-chat-stream-terminal-errors` created |
-| 2026-08-28 | Issue and code review | Issue `#106` remains open; frontend ignores SSE `error` and treats EOF without `done` as success |
-| 2026-08-28 | Step 1 focused Playwright regression run | `npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` produced the expected failures: SSE `error` leaves `Understanding your question.`, partial EOF has no incomplete-stream notice, and empty EOF leaves `Understanding your question.`; command was interrupted after detailed failure reports because Playwright did not return a final summary promptly |
-| 2026-08-28 | Step 2 focused stream-error verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-stream-errors.spec.ts --project=chromium --workers=1 --reporter=line` passed 3/3 against a manually started dev server |
-| 2026-08-28 | Step 2 related chat-handoff verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test chat-handoff.spec.ts --project=chromium --workers=1 --reporter=line` passed 9/9 |
-| 2026-08-28 | Step 2 frontend quality gate | `task frontend:check` passed: install, lint, typecheck, resume parser, production build, Playwright install, and 76/76 built E2E tests; npm audit still reports one existing high-severity dependency finding |
-| 2026-08-31 | Step 3 docs whitespace check | `git diff --check -- docs/api-contract.md docs/rag-and-ai-safety.md docs/rag-and-ai-safety.ru.md` passed; Git reported only expected LF-to-CRLF working-copy warnings |
-| 2026-08-31 | Step 3 full diff whitespace check | `git diff --check` passed for `SESSION_NOTES.md` and documentation changes; Git reported only expected LF-to-CRLF working-copy warnings |
+| 2026-09-02 | Git worktree before branch creation | Clean `main`; local `main` matched `origin/main` |
+| 2026-09-02 | Create branch | `codex/allow-new-handoff-after-close` created |
+| 2026-09-02 | Step 1 focused Playwright regression run | `PLAYWRIGHT_USE_DEV_SERVER=true npx playwright test chat-handoff.spec.ts -g "new handoff prompt" --project=chromium --workers=1 --reporter=line` showed the expected failures in both new tests: the second AI response appeared, but `Would you like to connect with Alex?` was not rendered after manual close or SSE `closed`; the hanging Playwright process was interrupted after failure details were printed |
 
 Update the status table and verification log as work progresses. Do not mark a
 work item complete until its implementation and stated verification gate both
