@@ -94,6 +94,7 @@ export function useChatController({
   const handleEscalationStreamClosed = useCallback(
     (reason: EscalationStreamClosedReason) => {
       setHandoffState("closed");
+      setEscalationSent(false);
       setMessages((currentMessages) => [
         ...currentMessages,
         {
@@ -536,6 +537,7 @@ export function useChatController({
       await submitEscalationClose(handoffId);
       closeEscalationStream();
       setHandoffState("closed");
+      setEscalationSent(false);
       setMessages((currentMessages) => [
         ...currentMessages,
         {

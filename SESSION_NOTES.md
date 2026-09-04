@@ -1,6 +1,6 @@
 # Repeat handoff after close work
 
-Last updated: 2026-09-02
+Last updated: 2026-09-03
 
 Branch: `codex/allow-new-handoff-after-close`
 
@@ -99,18 +99,19 @@ After every step:
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Step 1 regression coverage is complete. Waiting for the user's
-local commit before Step 2 implementation.
+Current stage: Step 2 implementation, frontend verification, and documentation
+check are complete. Waiting for the user's local commit before any push or pull
+request work.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
 | 0.1 | Create local work branch | COMPLETE | `codex/allow-new-handoff-after-close` created from `main` | Keep work local until push approval |
 | 0.2 | Replace session notes with scoped plan | COMPLETE | `SESSION_NOTES.md` now contains only issue `#103` plan and boundaries | Begin Step 1 regression test |
 | 1.1 | Add repeat-handoff regression coverage | COMPLETE | `frontend/e2e/chat-handoff.spec.ts` now covers a second handoff prompt after manual close and after SSE `closed`; both scenarios reach the second AI response but fail because the new handoff prompt is not shown | Commit Step 1 before implementation |
-| 2.1 | Implement closed-handoff lifecycle reset | PENDING | Not started | Focused Playwright run should pass |
-| 2.2 | Run frontend verification | PENDING | Not started | `task frontend:check` or documented blocker |
-| 3.1 | Check docs for lifecycle contract mismatch | PENDING | Not started | Update docs only if needed |
-| 3.2 | Final diff hygiene and report | PENDING | Not started | `git diff --check` and commit message |
+| 2.1 | Implement closed-handoff lifecycle reset | COMPLETE | `use-chat-controller` now resets `escalationSent` when a handoff closes through manual close or SSE `closed`, while leaving the guard active during waiting/connected/error states | Run frontend verification |
+| 2.2 | Run frontend verification | COMPLETE | Focused repeat-handoff tests passed 2/2, full handoff spec passed 11/11, and `task frontend:check` passed with 80/80 built E2E tests | Check docs for lifecycle contract mismatch |
+| 3.1 | Check docs for lifecycle contract mismatch | COMPLETE | Existing API, architecture, and handoff setup docs already state that closing a handoff returns new messages to normal AI chat flow; no docs update needed | Run final diff hygiene |
+| 3.2 | Final diff hygiene and report | COMPLETE | `git diff --check` passed for the final Step 2 diff; Git reported only expected LF-to-CRLF working-copy warnings | Commit Step 2 before any push or PR |
 
 ## Verification log
 
@@ -119,6 +120,11 @@ local commit before Step 2 implementation.
 | 2026-09-02 | Git worktree before branch creation | Clean `main`; local `main` matched `origin/main` |
 | 2026-09-02 | Create branch | `codex/allow-new-handoff-after-close` created |
 | 2026-09-02 | Step 1 focused Playwright regression run | `PLAYWRIGHT_USE_DEV_SERVER=true npx playwright test chat-handoff.spec.ts -g "new handoff prompt" --project=chromium --workers=1 --reporter=line` showed the expected failures in both new tests: the second AI response appeared, but `Would you like to connect with Alex?` was not rendered after manual close or SSE `closed`; the hanging Playwright process was interrupted after failure details were printed |
+| 2026-09-03 | Step 2 focused Playwright verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npx playwright test chat-handoff.spec.ts -g "new handoff prompt" --project=chromium --workers=1 --reporter=line` passed 2/2 against a manually started dev server |
+| 2026-09-03 | Step 2 full handoff Playwright verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npx playwright test chat-handoff.spec.ts --project=chromium --workers=1 --reporter=line` passed 11/11 against a manually started dev server |
+| 2026-09-03 | Step 2 frontend quality gate | `task frontend:check` passed: install, lint, typecheck, resume parser, production build, Playwright install, and 80/80 built E2E tests; npm audit still reports existing dependency findings: one low and one high |
+| 2026-09-03 | Step 3 docs review | `docs/api-contract.md`, `docs/architecture.md`, and `docs/telegram-handoff-setup.md` already describe closed handoff returning new messages to normal AI chat flow; no documentation changes required |
+| 2026-09-03 | Step 2 final diff whitespace check | `git diff --check` passed for `SESSION_NOTES.md` and `frontend/hooks/use-chat-controller.ts`; Git reported only expected LF-to-CRLF working-copy warnings |
 
 Update the status table and verification log as work progresses. Do not mark a
 work item complete until its implementation and stated verification gate both
