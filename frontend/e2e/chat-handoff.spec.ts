@@ -309,6 +309,134 @@ test("closes handoff and sends later messages back to AI", async ({ page }) => {
   await expect(page.getByText("The AI assistant is active again.")).toBeVisible();
 });
 
+test("shows a new handoff prompt after manual handoff close", async ({
+  page,
+}) => {
+  let closeCalled = false;
+  let escalationMessageCallCount = 0;
+  let chatStreamCallCount = 0;
+
+  await mockChatStreamSequence(
+    page,
+    [
+      {
+        answer: "The first answer recommends a human handoff.",
+        handoffSuggested: true,
+        handoffReason: "insufficient_data",
+        notEnoughData: true,
+      },
+      {
+        answer: "The second answer recommends a new human handoff.",
+        handoffSuggested: true,
+        handoffReason: "user_requested_human",
+        notEnoughData: false,
+      },
+    ],
+    () => {
+      chatStreamCallCount += 1;
+    },
+  );
+  await mockEscalationStart(page);
+  await mockEscalationStream(page);
+
+  await page.route("**/api/escalations/hnd_e2e/messages", async (route) => {
+    escalationMessageCallCount += 1;
+    await route.fulfill({
+      contentType: "application/json",
+      status: 200,
+      body: JSON.stringify({ status: "ok" }),
+    });
+  });
+  await page.route("**/api/escalations/hnd_e2e/close", async (route) => {
+    closeCalled = true;
+    await route.fulfill({
+      contentType: "application/json",
+      status: 200,
+      body: JSON.stringify({ status: "ok", state: "closed" }),
+    });
+  });
+
+  await page.goto("/chat");
+  await askQuestion(page, "Can you connect me with Alex?");
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
+
+  await page
+    .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+    .click();
+  await expect(
+    page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }).click();
+
+  expect(closeCalled).toBe(true);
+  await expect(page.getByText(chatHandoffCopy.closedByUserMessage)).toBeVisible();
+
+  await askQuestion(page, "Can I connect again?");
+
+  expect(chatStreamCallCount).toBe(2);
+  expect(escalationMessageCallCount).toBe(0);
+  await expect(
+    page.getByText("The second answer recommends a new human handoff."),
+  ).toBeVisible();
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
+});
+
+test("shows a new handoff prompt after SSE handoff close", async ({ page }) => {
+  let escalationMessageCallCount = 0;
+  let chatStreamCallCount = 0;
+
+  await mockChatStreamSequence(
+    page,
+    [
+      {
+        answer: "The first answer recommends a human handoff.",
+        handoffSuggested: true,
+        handoffReason: "insufficient_data",
+        notEnoughData: true,
+      },
+      {
+        answer: "The second answer recommends a new human handoff.",
+        handoffSuggested: true,
+        handoffReason: "user_requested_human",
+        notEnoughData: false,
+      },
+    ],
+    () => {
+      chatStreamCallCount += 1;
+    },
+  );
+  await mockEscalationStart(page);
+  await mockEscalationStream(page, { closeReason: "session_closed" });
+
+  await page.route("**/api/escalations/hnd_e2e/messages", async (route) => {
+    escalationMessageCallCount += 1;
+    await route.fulfill({
+      contentType: "application/json",
+      status: 200,
+      body: JSON.stringify({ status: "ok" }),
+    });
+  });
+
+  await page.goto("/chat");
+  await askQuestion(page, "Can you connect me with Alex?");
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
+
+  await page
+    .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+    .click();
+  await expect(page.getByText(chatHandoffCopy.closedByUserMessage)).toBeVisible();
+
+  await askQuestion(page, "Can I connect again?");
+
+  expect(chatStreamCallCount).toBe(2);
+  expect(escalationMessageCallCount).toBe(0);
+  await expect(
+    page.getByText("The second answer recommends a new human handoff."),
+  ).toBeVisible();
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
+});
+
 async function askQuestion(page: Page, text: string) {
   await page.getByLabel(chatShellCopy.inputAriaLabel).fill(text);
   await page.getByRole("button", { name: chatShellCopy.sendLabel }).click();
@@ -340,12 +468,15 @@ async function mockEscalationStart(page: Page) {
   });
 }
 
-async function mockEscalationStream(page: Page) {
+async function mockEscalationStream(
+  page: Page,
+  options: EscalationStreamOptions = {},
+) {
   await page.route("**/api/escalations/hnd_e2e/stream", async (route) => {
     await route.fulfill({
       headers: streamHeaders,
       status: 200,
-      body: buildEscalationStream(),
+      body: buildEscalationStream(options),
     });
   });
 }
@@ -384,6 +515,10 @@ type ChatStreamOptions = {
   notEnoughData: boolean;
 };
 
+type EscalationStreamOptions = {
+  closeReason?: "session_closed" | "session_expired";
+};
+
 function buildChatStream(options: ChatStreamOptions): string {
   return [
     "event: meta",
@@ -409,8 +544,8 @@ function buildChatStream(options: ChatStreamOptions): string {
   ].join("\n");
 }
 
-function buildEscalationStream(): string {
-  return [
+function buildEscalationStream(options: EscalationStreamOptions = {}): string {
+  const events = [
     "event: meta",
     'data: {"handoff_id":"hnd_e2e","status":"connected"}',
     "",
@@ -423,6 +558,16 @@ function buildEscalationStream(): string {
       created_at: "2026-01-01T00:00:00Z",
     })}`,
     "",
-    "",
-  ].join("\n");
+  ];
+
+  if (options.closeReason) {
+    events.push(
+      "event: closed",
+      `data: ${JSON.stringify({ reason: options.closeReason })}`,
+      "",
+    );
+  }
+
+  events.push("");
+  return events.join("\n");
 }
