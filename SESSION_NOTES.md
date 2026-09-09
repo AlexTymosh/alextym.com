@@ -1,50 +1,52 @@
-# Repeat handoff after close work
+# Telegram handoff duplicate close-message work
 
-Last updated: 2026-09-03
+Last updated: 2026-09-08
 
-Branch: `codex/allow-new-handoff-after-close`
+Branch: `codex/avoid-duplicate-telegram-close-message`
 
-GitHub issue: `#103` - `P2: Allow a new handoff request after a handoff is closed`
+GitHub issue: `#104` - `P2: Avoid duplicate close messages when handoff is closed from Telegram`
 
 ## Work boundary
 
-This branch is for fixing the chat UI lifecycle after a human handoff is closed.
-Keep changes scoped to:
+This branch is for preventing duplicate visitor-facing close messages when the
+Owner closes a handoff from Telegram. Keep changes scoped to:
 
-- frontend handoff lifecycle state in `use-chat-controller`;
-- focused Playwright coverage for requesting a new handoff after a closed one;
+- Telegram callback close behaviour in the backend;
+- escalation session stream semantics around stored messages and `closed`
+  events;
+- focused backend regression coverage for callback close and SSE close output;
 - documentation only if the implemented behaviour changes or clarifies an
-  existing API/UI contract.
+  existing handoff contract.
 
-Do not change backend escalation APIs, Telegram webhook behaviour, RAG
-retrieval, deployment settings, unrelated chat UI flows, or issue `#107`
-owner-message context handling. Do not push the branch or open a pull request
-without explicit approval.
+Do not change frontend chat lifecycle, RAG retrieval, chat completion logic,
+deployment settings, Telegram webhook authentication, or issue `#107`
+owner-message AI context handling. Do not push the branch or open a pull
+request without explicit approval.
 
 ## Confirmed findings
 
-1. Issue `#103` is open and still applicable to `main`.
-2. The chat UI sets `escalationSent` to `true` after a successful handoff
-   request.
-3. The handoff prompt is hidden while `escalationSent` is `true`.
-4. `escalationSent` is reset by full chat reset, but not by manual handoff close
-   or SSE `closed` events.
-5. The UI copy says visitors can request a new connection after the handoff is
-   closed.
-6. Existing Playwright coverage checks that messages after manual close return
-   to AI chat, but does not check that a later backend handoff suggestion can
-   show a new prompt.
+1. Issue `#104` is open and still applicable to `main`.
+2. Telegram callback close currently calls the session store with a
+   visitor-facing `close_message`.
+3. The session close transition stores that `close_message` as an `alex`
+   message.
+4. The escalation stream emits stored `alex` messages before emitting the SSE
+   `closed` event.
+5. The frontend renders `alex` messages and also appends its own close copy when
+   it receives the SSE `closed` event.
+6. Therefore callback close can produce two visitor-facing close messages: a
+   stored Owner close message and the frontend-generated SSE close message.
 
 ## Target behaviour
 
-1. During an active handoff, duplicate handoff prompts remain blocked.
-2. When a handoff reaches a terminal `closed` state, the one-shot
-   `escalationSent` guard is reset.
-3. This applies to manual close and backend/SSE `closed` events.
-4. A later AI response with `handoff_suggested: true` can show a fresh handoff
-   prompt after the previous handoff is closed.
-5. Dismissing a specific handoff prompt still suppresses only that prompt.
-6. Normal AI chat, active handoff messaging, and close flows continue to work.
+1. SSE `closed` is the single source of visitor-facing close copy.
+2. Closing from a Telegram callback closes the session without appending a
+   stored `alex` close message.
+3. Telegram operator confirmation remains unchanged.
+4. Manual `/close` command behaviour remains consistent with callback close.
+5. Expiry still emits the correct `session_expired` close event.
+6. Existing quick replies and manual owner replies continue to be delivered as
+   visitor-visible `alex` messages.
 
 ## Delivery plan: one PR, two commits
 
@@ -60,71 +62,63 @@ After every step:
 
 | Step | Commit scope | Required result |
 | --- | --- | --- |
-| 1 | `test(chat-ui): cover repeat handoff after close` | Playwright regression demonstrates that a second handoff prompt is currently blocked after close |
-| 2 | `fix(chat-ui): allow new handoff after close` | Manual close and SSE close reset the handoff prompt guard without allowing duplicate prompts during active handoff |
+| 1 | `test(handoff): cover Telegram close without visitor message` | Backend regression demonstrates that callback close currently passes a visitor-facing close message to the session store |
+| 2 | `fix(handoff): avoid duplicate Telegram close messages` | Callback close closes the session without appending an `alex` close message, while operator confirmation and stream `closed` behaviour remain intact |
 
 ## Execution plan
 
 ### Step 1 - Regression test
 
-- Extend `frontend/e2e/chat-handoff.spec.ts` with a focused scenario:
-  first AI response suggests handoff, visitor connects, handoff closes, later AI
-  response suggests handoff again.
-- Assert the second chat request goes to `/api/chat/stream`, not the escalation
-  message endpoint.
-- Assert the second handoff prompt becomes visible after the closed state.
-- Run the focused Playwright spec and confirm the new scenario fails on current
-  `main` behaviour.
+- Update focused Telegram webhook close coverage so callback close expects the
+  session store to receive no visitor-facing `close_message`.
+- Preserve assertions that the callback is acknowledged and the operator gets a
+  Telegram confirmation.
+- Run the focused backend test and confirm it fails on current `main`
+  behaviour.
 
-### Step 2 - Frontend lifecycle fix
+### Step 2 - Backend fix
 
-- Reset `escalationSent` when `handleEscalationStreamClosed` moves the handoff
-  to `closed`.
-- Reset `escalationSent` after a successful manual `closeHandoff`.
-- Keep `escalationSent` set during `waiting_for_alex`, `connected`, and `error`
-  states so active handoff sessions do not show duplicate prompts.
-- Re-run the focused handoff spec.
-- Run the smallest relevant frontend quality checks; use `task frontend:check`
-  before final report unless there is a clear environment blocker.
+- Change Telegram callback close to call session close without `close_message`.
+- Remove obsolete visitor-facing close-copy plumbing if it becomes unused.
+- Keep quick reply and manual owner reply storage unchanged.
+- Re-run focused Telegram webhook close tests.
+- Run adjacent backend tests for callback, stream, and session state behaviour.
+- Run `task backend:check` before final report unless there is a clear
+  environment blocker.
 
 ### Step 3 - Documentation check
 
-- Review `docs/api-contract.md`, `docs/architecture.md`, and handoff setup docs
-  only around closed-handoff behaviour.
-- Update docs only if the implementation reveals a mismatch or missing contract
-  detail.
+- Review `docs/api-contract.md`, `docs/architecture.md`, and
+  `docs/telegram-handoff-setup.md` around Telegram close and SSE `closed`.
+- Update docs only if they still imply Telegram callback close should send a
+  separate visitor-facing close message.
 - Run `git diff --check`.
 
 ## Status table
 
 Status values: `COMPLETE`, `IN_PROGRESS`, `PENDING`, `BLOCKED`.
 
-Current stage: Step 2 implementation, frontend verification, and documentation
-check are complete. Waiting for the user's local commit before any push or pull
-request work.
+Current stage: Step 1 regression coverage is complete. Waiting for the user's
+local commit before Step 2 implementation.
 
 | ID | Work item | Status | Evidence / current result | Next gate |
 | --- | --- | --- | --- | --- |
-| 0.1 | Create local work branch | COMPLETE | `codex/allow-new-handoff-after-close` created from `main` | Keep work local until push approval |
-| 0.2 | Replace session notes with scoped plan | COMPLETE | `SESSION_NOTES.md` now contains only issue `#103` plan and boundaries | Begin Step 1 regression test |
-| 1.1 | Add repeat-handoff regression coverage | COMPLETE | `frontend/e2e/chat-handoff.spec.ts` now covers a second handoff prompt after manual close and after SSE `closed`; both scenarios reach the second AI response but fail because the new handoff prompt is not shown | Commit Step 1 before implementation |
-| 2.1 | Implement closed-handoff lifecycle reset | COMPLETE | `use-chat-controller` now resets `escalationSent` when a handoff closes through manual close or SSE `closed`, while leaving the guard active during waiting/connected/error states | Run frontend verification |
-| 2.2 | Run frontend verification | COMPLETE | Focused repeat-handoff tests passed 2/2, full handoff spec passed 11/11, and `task frontend:check` passed with 80/80 built E2E tests | Check docs for lifecycle contract mismatch |
-| 3.1 | Check docs for lifecycle contract mismatch | COMPLETE | Existing API, architecture, and handoff setup docs already state that closing a handoff returns new messages to normal AI chat flow; no docs update needed | Run final diff hygiene |
-| 3.2 | Final diff hygiene and report | COMPLETE | `git diff --check` passed for the final Step 2 diff; Git reported only expected LF-to-CRLF working-copy warnings | Commit Step 2 before any push or PR |
+| 0.1 | Create local work branch | COMPLETE | `codex/avoid-duplicate-telegram-close-message` created from clean `main` | Keep work local until push approval |
+| 0.2 | Replace session notes with scoped plan | COMPLETE | `SESSION_NOTES.md` now contains only issue `#104` plan and boundaries | Begin Step 1 regression test |
+| 1.1 | Add callback-close regression coverage | COMPLETE | `backend/tests/test_telegram_webhook_close.py` now expects Telegram callback close to close the session without a visitor-facing `close_message`; focused test fails on current behaviour because the callback still passes close copy into the session store | Commit Step 1 before implementation |
+| 2.1 | Implement Telegram callback close fix | PENDING | Not started | Focused backend tests should pass |
+| 2.2 | Run backend verification | PENDING | Not started | Adjacent tests and `task backend:check` or documented blocker |
+| 3.1 | Check docs for close-message contract mismatch | PENDING | Not started | Update docs only if needed |
+| 3.2 | Final diff hygiene and report | PENDING | Not started | `git diff --check` and commit message |
 
 ## Verification log
 
 | Date | Check | Result |
 | --- | --- | --- |
-| 2026-09-02 | Git worktree before branch creation | Clean `main`; local `main` matched `origin/main` |
-| 2026-09-02 | Create branch | `codex/allow-new-handoff-after-close` created |
-| 2026-09-02 | Step 1 focused Playwright regression run | `PLAYWRIGHT_USE_DEV_SERVER=true npx playwright test chat-handoff.spec.ts -g "new handoff prompt" --project=chromium --workers=1 --reporter=line` showed the expected failures in both new tests: the second AI response appeared, but `Would you like to connect with Alex?` was not rendered after manual close or SSE `closed`; the hanging Playwright process was interrupted after failure details were printed |
-| 2026-09-03 | Step 2 focused Playwright verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npx playwright test chat-handoff.spec.ts -g "new handoff prompt" --project=chromium --workers=1 --reporter=line` passed 2/2 against a manually started dev server |
-| 2026-09-03 | Step 2 full handoff Playwright verification | `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npx playwright test chat-handoff.spec.ts --project=chromium --workers=1 --reporter=line` passed 11/11 against a manually started dev server |
-| 2026-09-03 | Step 2 frontend quality gate | `task frontend:check` passed: install, lint, typecheck, resume parser, production build, Playwright install, and 80/80 built E2E tests; npm audit still reports existing dependency findings: one low and one high |
-| 2026-09-03 | Step 3 docs review | `docs/api-contract.md`, `docs/architecture.md`, and `docs/telegram-handoff-setup.md` already describe closed handoff returning new messages to normal AI chat flow; no documentation changes required |
-| 2026-09-03 | Step 2 final diff whitespace check | `git diff --check` passed for `SESSION_NOTES.md` and `frontend/hooks/use-chat-controller.ts`; Git reported only expected LF-to-CRLF working-copy warnings |
+| 2026-09-08 | Git worktree before branch creation | Clean `main`; local `main` matched `origin/main` |
+| 2026-09-08 | Create branch | `codex/avoid-duplicate-telegram-close-message` created |
+| 2026-09-08 | Step 1 focused backend regression run | `UV_CACHE_DIR=.tmp/uv-cache UV_PROJECT_ENVIRONMENT=.tmp/backend-venv uv run --extra dev python -m pytest tests/test_telegram_webhook_close.py -q` failed as expected: 1 failed, 2 passed; callback close still passed `This conversation has been closed because there was no response for a while...` as `close_message` instead of `None` |
+| 2026-09-08 | Step 1 diff whitespace check | `git diff --check` passed; Git reported only expected LF-to-CRLF working-copy warnings |
 
 Update the status table and verification log as work progresses. Do not mark a
 work item complete until its implementation and stated verification gate both

@@ -1,7 +1,6 @@
 import pytest
 
 from app.main import app
-from app.services.telegram_webhook import CLOSE_HANDOFF_REPLY
 from tests.telegram_webhook_helpers import (
     FakeCallbackAcknowledger,
     FakeEscalationSessionStore,
@@ -55,7 +54,7 @@ def test_telegram_webhook_closes_handoff_with_inline_command_id() -> None:
     assert store.closed_handoff_ids == [(TEST_HANDOFF_ID, None)]
 
 
-def test_telegram_webhook_closes_handoff_from_callback_with_user_message() -> None:
+def test_telegram_webhook_closes_handoff_from_callback_without_visitor_message() -> None:
     store = FakeEscalationSessionStore()
     callback_acknowledger = FakeCallbackAcknowledger()
     use_test_settings()
@@ -69,7 +68,7 @@ def test_telegram_webhook_closes_handoff_from_callback_with_user_message() -> No
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "handoff_id": TEST_HANDOFF_ID}
-    assert store.closed_handoff_ids == [(TEST_HANDOFF_ID, CLOSE_HANDOFF_REPLY)]
+    assert store.closed_handoff_ids == [(TEST_HANDOFF_ID, None)]
     assert callback_acknowledger.callback_answers == [
         ("callback-1", "Closed and notified the website visitor.", False)
     ]
