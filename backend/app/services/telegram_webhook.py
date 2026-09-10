@@ -12,7 +12,6 @@ from app.schemas.telegram import TelegramCallbackQuery, TelegramMessage, Telegra
 from app.services.escalation_sessions import build_escalation_session_store
 from app.services.handoff_copy import (
     CONTACT_QUICK_REPLY as CONTACT_QUICK_REPLY,
-    HANDOFF_CLOSED_AFTER_NO_RESPONSE_REPLY as CLOSE_HANDOFF_REPLY,
     READING_QUICK_REPLY as READING_QUICK_REPLY,
     STILL_THERE_QUICK_REPLY as STILL_THERE_QUICK_REPLY,
     quick_reply_for_callback_action,
@@ -195,10 +194,7 @@ class TelegramWebhookService:
         handoff_id: str,
     ) -> TelegramWebhookResult:
         try:
-            closed_session = await self._session_store.close(
-                handoff_id,
-                close_message=CLOSE_HANDOFF_REPLY,
-            )
+            closed_session = await self._session_store.close(handoff_id)
         except EscalationSessionStoreError as exc:
             raise TelegramWebhookProcessingError("Telegram handoff could not close.") from exc
 

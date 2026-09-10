@@ -17,11 +17,6 @@ STILL_THERE_QUICK_REPLY_BUTTON_LABEL = (
     "\u2753 Send: \u201cAre you still there? I\u2019m ready...\u201d"
 )
 
-HANDOFF_CLOSED_AFTER_NO_RESPONSE_REPLY = (
-    "This conversation has been closed because there was no response for a while. "
-    "You can request a new connection with the site owner if needed."
-)
-
 _QUICK_REPLIES_BY_CALLBACK_ACTION = {
     "reading": READING_QUICK_REPLY,
     "contact": CONTACT_QUICK_REPLY,
