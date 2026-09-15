@@ -50,6 +50,32 @@ POST /api/telegram/webhook
 
 ---
 
+## Internal Redis probe
+
+`POST /internal/probes/redis` is outside the public `/api` prefix and hidden from
+OpenAPI. No request body is required. Authenticate with
+`Authorization: Bearer <REDIS_PROBE_TOKEN>`.
+
+The probe writes a random value to a unique `system:probe:redis:<id>` key with
+a 60-second TTL, reads and compares it, then deletes it. All Redis calls share
+a 15-second deadline. Cleanup is attempted within that deadline even on failure;
+the TTL removes abandoned keys. Business keys and visitor data are not accessed.
+
+Responses:
+
+- `200`: `{"status":"ok"}` after successful write, read, and deletion;
+- `403`: `{"detail":"Forbidden"}` for missing or incorrect authorization;
+- `404`: `{"detail":"Not found"}` when `REDIS_PROBE_TOKEN` is empty;
+- `503`: `{"detail":"Redis check failed"}` for missing/invalid Redis configuration,
+  connection/provider errors, timeouts, value mismatches, or cleanup failure.
+
+An unauthorized or disabled probe makes no Redis calls. Provider details and
+credentials are never returned. This endpoint does not affect liveness, readiness,
+or warmup responses. Daily scheduling and email alerts are configured in
+[cron-job.org](deployment.md#daily-redis-check).
+
+---
+
 ## Health: live
 
 Endpoint:

@@ -60,6 +60,13 @@ Frontend must not receive backend secrets.
 
 Only use `NEXT_PUBLIC_*` for values that are genuinely public.
 
+The internal Redis probe uses a dedicated `REDIS_PROBE_TOKEN`, stored only in
+backend environment variables and the cron-job.org Authorization header. Keep it
+out of URLs, source control, and logs. Authorization is checked before any Redis
+request. The probe accepts no Redis commands or keys from callers, uses only
+random temporary data, and logs safe error categories without provider messages,
+tokens, key names, or values.
+
 ---
 
 ## Public and private data boundary
