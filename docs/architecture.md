@@ -172,6 +172,12 @@ backend/app/core/       -> configuration
 
 Keep routers thin. Most orchestration belongs in services, and RAG-specific logic belongs in `backend/app/rag/`.
 
+The separate internal `POST /internal/probes/redis` endpoint checks Upstash with
+an asynchronous temporary write/read/delete operation. Configure a daily
+cron-job.org job to call it with a dedicated secret and send failure/recovery emails. Scheduling
+and notifications live outside the backend; ordinary health checks stay independent
+of Redis. See [deployment settings](deployment.md#daily-redis-check).
+
 ---
 
 ## High-level architecture

@@ -383,6 +383,7 @@ TELEGRAM_WEBHOOK_URL
 
 UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
+REDIS_PROBE_TOKEN
 ESCALATION_SESSION_TTL_SECONDS
 
 HANDOFF_AVAILABILITY_ENABLED
@@ -476,6 +477,44 @@ vector_db: ready | not_ready | not_configured
 llm_config: configured | not_configured
 contact_email: configured | not_configured
 ```
+
+---
+
+## Daily Redis check
+
+Use a separate daily [cron-job.org](https://cron-job.org/en/) job to exercise Redis
+and receive failure/recovery emails. This also creates regular Redis activity.
+Keep the existing frequent Render keep-alive job pointed at `/api/health/live`.
+
+After deploying the probe endpoint:
+
+1. Keep `UPSTASH_REDIS_REST_URL` (HTTPS) and `UPSTASH_REDIS_REST_TOKEN` configured
+   on the backend. Add `REDIS_PROBE_TOKEN` with a dedicated random secret of at least
+   32 random bytes. An empty probe token disables the endpoint. Do not reuse a
+   provider, Telegram, or metrics token.
+2. Create a job for `https://<backend-host>/internal/probes/redis`, method `POST`,
+   empty body. Use the direct backend URL because frontend rewrites cover `/api/*`.
+   Set the custom header `Authorization: Bearer <REDIS_PROBE_TOKEN>`; keep the
+   secret out of the URL and job title.
+3. Schedule it once daily, for example at 09:00 in `Europe/London`, with a 30-second
+   request timeout. Enable email notifications on the first failure, recovery,
+   and automatic job disabling.
+4. Run a manual test and check for HTTP `200` with `{"status":"ok"}` in job history.
+   Verify alerts with a temporary test job using an incorrect probe token (`403`),
+   then correct that job's token and verify recovery before removing the test job.
+   A manual test alone does not establish that scheduled email delivery works.
+
+The backend uses three Redis commands per successful run (about 90 per 30 days).
+Its temporary key expires after 60 seconds if cleanup cannot finish. Probe logs contain
+only the result, a bounded failure category, and elapsed time. A `503` means the
+Redis check failed; `403` or `404` means probe authorization/configuration needs
+attention. A timeout or connection failure can also mean the backend is asleep or
+unreachable. See the [API contract](api-contract.md#internal-redis-probe).
+
+Daily checks can take up to a day to notice a new failure. They test basic Redis
+access, not the full handoff workflow, and do not restore an already archived
+database. Notifications depend on cron-job.org and email delivery. No QStash,
+Grafana change, backend scheduler, or paid plan is needed for this setup.
 
 ---
 

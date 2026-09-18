@@ -51,6 +51,7 @@ class Settings:
     escalation_message_daily_limit_per_ip: int = 30
     upstash_redis_rest_url: str = ""
     upstash_redis_rest_token: str = ""
+    redis_probe_token: str = ""
     escalation_session_ttl_seconds: int = 7200
     handoff_availability_enabled: bool = True
     handoff_availability_timezone: str = "Europe/London"
@@ -220,6 +221,7 @@ def get_settings() -> Settings:
         ),
         upstash_redis_rest_url=os.getenv("UPSTASH_REDIS_REST_URL", ""),
         upstash_redis_rest_token=os.getenv("UPSTASH_REDIS_REST_TOKEN", ""),
+        redis_probe_token=os.getenv("REDIS_PROBE_TOKEN", ""),
         escalation_session_ttl_seconds=_get_int(
             "ESCALATION_SESSION_TTL_SECONDS",
             7200,
