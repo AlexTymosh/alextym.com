@@ -230,17 +230,23 @@ Validation:
 message: required, 1-2000 characters
 session_id: optional, max 100 characters
 history: optional, latest short conversation context
-history item role: user or assistant
+history item role: user, assistant, or owner
 history item content: 1-2000 characters
 history item count: max 10
 history total content: max 6000 characters
 ```
 
-The frontend builds `history` from the latest visible `user` and `assistant` messages. A frontend-scripted assistant response and a backend/model-generated assistant response both use `role: "assistant"` and follow the same backend processing path. Owner replies from a human handoff use the separate `alex` frontend role and are not included in AI chat history.
+The backend accepts `user` (visitor), `assistant` (AI or frontend-scripted response), and `owner` (human site owner) history entries. Owner replies retain their speaker identity and chronological position when formatting conversation context. Existing requests containing only `user` and `assistant` remain valid.
+
+The current frontend still builds `history` from visible `user` and `assistant` messages and omits its separate `alex` role. Frontend support for sending those replies as `owner` is the next step of issue #107. The live handoff SSE protocol continues to emit `role: "alex"`; this backend change does not rename that event field.
 
 The current user message is sent separately in `message` and is not duplicated in `history`. The frontend compacts whitespace, caps each entry at 2000 characters, and retains the newest entries that fit the count and total limits above. After request validation, the backend does not apply another per-message truncation.
 
 `history` is used only for conversational context, such as pronoun resolution and follow-up understanding. It is not a source of factual claims.
+
+The client-supplied `owner` label is not proof of identity or authority. All history remains untrusted data, never model instructions or verified public knowledge. Owner text is kept in the conversation portion of the prompt, separate from retrieved public sources. An owner reply alone cannot supply an answer when public retrieval has no relevant data.
+
+Owner replies can provide context for short confirmations and references such as `that project` or `there`, even when the reply uses first-person wording without the owner's name. Ambiguous references use the structured contextualizer; unresolved references request clarification instead of guessing a project. An owner reply following an older assistant handoff offer prevents a subsequent `yes` from confirming that older offer. Frontend handoff-close and expiry notices are not offers; a newer explicit assistant handoff offer can still be confirmed.
 
 ### Follow-up resolution
 
@@ -533,11 +539,13 @@ Validation:
 consent_accepted: must be true
 reason: required, 1-100 characters
 transcript: required, 1-20 messages
-transcript item role: user or assistant
+transcript item role: user, assistant, or owner
 transcript item content: 1-2000 characters
 transcript total content: max 8000 characters
 company_website: optional honeypot field, max 200 characters
 ```
+
+The `owner` role represents a reply from an earlier human handoff. The backend preserves all three speaker roles and message order in the temporary session transcript and Telegram notification. Telegram transcript text labels these replies `Owner`, separately from `Assistant`, and does not count them as AI messages. Consent, TTL storage, and size limits remain unchanged. This field is conversation data, not an authenticated owner command.
 
 Success response with Redis session storage configured:
 

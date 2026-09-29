@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-EscalationRole = Literal["user", "assistant"]
+EscalationRole = Literal["user", "assistant", "owner"]
 
 MAX_ESCALATION_TRANSCRIPT_MESSAGES = 20
 MAX_ESCALATION_TRANSCRIPT_TOTAL_CHARS = 8000
@@ -10,7 +10,10 @@ MAX_ESCALATION_MESSAGE_CHARS = 2000
 
 
 class EscalationTranscriptMessage(BaseModel):
-    role: EscalationRole = Field(examples=["user"])
+    role: EscalationRole = Field(
+        examples=["user", "assistant", "owner"],
+        description="Conversation speaker, including owner replies from an earlier handoff.",
+    )
     content: str = Field(
         min_length=1,
         max_length=2000,

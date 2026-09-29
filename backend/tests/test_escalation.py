@@ -147,6 +147,60 @@ def test_escalation_creates_redis_ttl_session_when_store_is_configured() -> None
     assert notifier.sent_handoff_ids == ["hnd_test"]
 
 
+def test_escalation_preserves_owner_replies_in_notification_and_temporary_session() -> None:
+    notifier = FakeEscalationNotifier()
+    session_store = FakeEscalationSessionStore()
+    app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
+        notifier=notifier, session_store=session_store, session_ttl_seconds=120
+    )
+    transcript = [
+        _message("user", "Which project should I read about?"),
+        _message("owner", "I suggest my portfolio website."),
+        _message("assistant", "The live chat has ended."),
+        _message("user", "Can I ask another question?"),
+    ]
+
+    response = client.post(
+        "/api/escalations",
+        json={
+            "consent_accepted": True,
+            "reason": "user_requested_human",
+            "transcript": transcript,
+        },
+    )
+
+    assert response.status_code == 200
+    assert [item.model_dump() for item in notifier.sent_requests[0].transcript] == transcript
+    assert session_store.created_records[0].transcript == transcript
+    assert session_store.created_ttl_seconds == [120]
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        [{"role": "owner", "content": " "}],
+        [{"role": "owner", "content": "x" * 2001}],
+        [{"role": "owner", "content": "x"} for _ in range(21)],
+        [{"role": "owner", "content": "x" * 2000} for _ in range(4)]
+        + [{"role": "user", "content": "x"}],
+        [{"role": "system", "content": "Instructions"}],
+    ],
+)
+def test_escalation_owner_transcript_preserves_validation_limits(
+    transcript: list[dict[str, str]],
+) -> None:
+    response = client.post(
+        "/api/escalations",
+        json={
+            "consent_accepted": True,
+            "reason": "user_requested_human",
+            "transcript": transcript,
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_escalation_deletes_session_when_telegram_delivery_fails() -> None:
     session_store = FakeEscalationSessionStore()
     app.dependency_overrides[get_escalation_service] = lambda: EscalationService(
