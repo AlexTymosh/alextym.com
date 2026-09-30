@@ -120,7 +120,7 @@ Visitor types a message
   -> frontend reads structured handoff metadata from the completed response
 ```
 
-The frontend sends the newest `user` and `assistant` messages for follow-up and pronoun handling, up to 10 items, 2000 characters per item, and 6000 characters in total. Scripted and model-generated assistant messages use the same history representation; the backend does not depend on where an assistant message was produced. Owner replies with the separate `alex` frontend role are excluded from this AI history.
+The frontend sends the newest visitor, assistant, and owner messages for follow-up and pronoun handling, up to 10 items, 2000 characters per item, and 6000 characters in total. Scripted and model-generated assistant messages use the same history representation; the backend does not depend on where an assistant message was produced. Visible owner replies keep the `alex` frontend role and are serialized as `owner` in AI history and repeat-handoff transcripts. All speakers share the corresponding count and size limits.
 
 The current typed message is sent separately from history. History is conversational context only and is not treated as a source of factual claims.
 

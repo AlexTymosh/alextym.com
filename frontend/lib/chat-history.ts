@@ -13,9 +13,6 @@ export function buildChatHistory(messages: Message[]): ChatHistoryMessage[] {
     if (history.length >= CHAT_HISTORY_LIMIT) {
       break;
     }
-    if (message.role === "alex") {
-      continue;
-    }
 
     const content = compactHistoryContent(message.text);
     if (!content) {
@@ -26,7 +23,10 @@ export function buildChatHistory(messages: Message[]): ChatHistoryMessage[] {
       break;
     }
 
-    history.unshift({ role: message.role, content });
+    history.unshift({
+      role: message.role === "alex" ? "owner" : message.role,
+      content,
+    });
     totalChars += content.length;
   }
 

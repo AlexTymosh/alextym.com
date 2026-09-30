@@ -238,7 +238,7 @@ history total content: max 6000 characters
 
 The backend accepts `user` (visitor), `assistant` (AI or frontend-scripted response), and `owner` (human site owner) history entries. Owner replies retain their speaker identity and chronological position when formatting conversation context. Existing requests containing only `user` and `assistant` remain valid.
 
-The current frontend still builds `history` from visible `user` and `assistant` messages and omits its separate `alex` role. Frontend support for sending those replies as `owner` is the next step of issue #107. The live handoff SSE protocol continues to emit `role: "alex"`; this backend change does not rename that event field.
+The frontend builds `history` from visible visitor, AI, and owner messages. It maps the UI role `alex` to API role `owner`, preserving the visible sender and chronological order. The live handoff SSE protocol continues to emit `role: "alex"`. The same history is sent to the streaming endpoint and JSON fallback.
 
 The current user message is sent separately in `message` and is not duplicated in `history`. The frontend compacts whitespace, caps each entry at 2000 characters, and retains the newest entries that fit the count and total limits above. After request validation, the backend does not apply another per-message truncation.
 
@@ -546,6 +546,8 @@ company_website: optional honeypot field, max 200 characters
 ```
 
 The `owner` role represents a reply from an earlier human handoff. The backend preserves all three speaker roles and message order in the temporary session transcript and Telegram notification. Telegram transcript text labels these replies `Owner`, separately from `Assistant`, and does not count them as AI messages. Consent, TTL storage, and size limits remain unchanged. This field is conversation data, not an authenticated owner command.
+
+The frontend includes visible `alex` replies as `owner` entries when building a repeat-handoff transcript. Owner replies use the same whitespace compaction, per-message clipping, message count, and total character limits as other speakers. Both transcript and AI history builders retain the newest entries that fit; they stop when the next older non-empty entry would exceed the budget.
 
 Success response with Redis session storage configured:
 
