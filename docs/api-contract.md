@@ -853,6 +853,8 @@ Backend tests should cover:
 - invalid contact email;
 - contact honeypot;
 - streaming endpoint event format;
+- owner history in JSON/SSE follow-ups, including close/expiry notices, retrieval
+  grounding, and untrusted-history boundaries;
 - escalation consent validation;
 - escalation honeypot;
 - active handoff message forwarding;
@@ -870,4 +872,13 @@ Frontend E2E checks should cover:
 - typed chat stream/fallback behaviour, including SSE `error` and EOF before
   `done`;
 - handoff prompt;
-- closing a handoff session.
+- closing a handoff session;
+- ordered `owner` history after manual close, SSE close, and session expiry,
+  with matching payloads for streaming and JSON fallback;
+- repeat handoff with prior owner replies preserved in the consented transcript
+  and separate owner labels in the UI.
+
+The owner-context regression tests use provider doubles on the backend and mocked
+API responses in Playwright. Browser tests assert actual outgoing request bodies
+on desktop and mobile Chromium. They verify frontend transmission and rendering;
+they do not exercise live Telegram delivery, Qdrant retrieval, or model behaviour.

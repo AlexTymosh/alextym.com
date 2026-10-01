@@ -4,10 +4,10 @@
 
 Branch: `codex/107-owner-chat-context`.
 
-The user approved three commits, committed Step 1 as `68434d4`, and authorized
-continuing to Step 2. Step 2 is implemented and awaits user review and a user-created
-commit. Do not start Step 3 without the user's next instruction. Do not commit or
-push on their behalf.
+The user approved three commits, committed Step 1 as `68434d4` and Step 2 as
+`d98b999`, and authorized Step 3. Step 3 is implemented and awaits user review and
+a user-created commit. Verification results and dependency audit follow-ups are below.
+Do not commit, push, or close the issue on their behalf.
 
 ### Step 1 completed: backend contract and context
 
@@ -41,8 +41,53 @@ push on their behalf.
 - `git diff --check` and the repository raw-Cyrillic check passed.
 - Full browser scenarios and repository-wide CI remain part of Step 3.
 
-### Remaining agreed step
+### Step 3 completed: browser regressions and final checks
 
-3. End-to-end regression coverage for manual/automatic close, streaming/JSON fallback,
-   and repeat handoff; final documentation and CI checks. Issue #107 remains open until
-   this verification is complete.
+- Add seven browser scenarios, run on desktop and mobile Chromium (14 checks):
+  manual close, SSE close, and session expiry, each through streaming and JSON
+  fallback, plus a second handoff session with a distinct session ID and owner reply.
+- Assert actual outgoing history/transcript payloads, speaker order, preserved owner
+  labels, explicit repeat-handoff consent, and return to AI routing after closure.
+- Update API testing documentation with regression coverage and mock boundaries.
+- Focused browser run: 14 passed. The initial attempt could not launch browsers
+  because the Chromium revision required by the installed Playwright was missing.
+  Installed the required browser; the successful run used elevated execution to
+  avoid the previously observed Windows sandbox server-teardown hang.
+- Full `task ci` passed repository hygiene, project config, setup wizard,
+  deployment config, frontend checks, and free RAG checks. Frontend lint, typecheck,
+  resume parser, production build, and all 122 Playwright checks passed. Free RAG
+  validation passed four generated-case tests and all 27 contract-evaluation cases.
+- The first backend run had 508 passes and the same existing intermittent Redis
+  probe timeout failure (`test_hung_operation_times_out_without_hanging_cleanup[SET]`).
+  A complete `task backend:check` rerun passed all 509 tests without code changes.
+- The initial `task ci` did not finish green because of that intermittent backend
+  failure and an unavailable Docker Engine. After the user started Docker,
+  `task docker:build` passed on 2026-09-30 and produced `alextym-backend:latest`.
+  All CI components have now passed, with backend and Docker verified separately
+  after the initial full run; the entire pipeline was not rerun.
+- `npm audit --json` confirmed two affected package groups (one high, one critical).
+  `npm audit --omit=dev --json` reports only Next.js. Dependencies and lockfiles
+  were not changed in this branch; remediation is outside issue #107.
+- Next.js 16.3.4 is covered by [GHSA-vcvr-r3jv-pc5j](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j),
+  fixed in 16.3.6. The reported RCE requires attacker-controlled SVG input to the
+  Node.js `next/og` ImageResponse implementation. No such usage was found in the
+  project; its Open Graph image is the static `frontend/public/og-image.png`.
+- `brace-expansion` 1.1.18 and 5.0.9 arrive through ESLint/minimatch tooling.
+  Audit reports two stack-exhaustion advisories and one CPU-exhaustion advisory
+  (GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr).
+  Updating the respective dependency lines to at least 1.1.21 and 5.0.12 addresses
+  these three advisories. They are absent from the production-only audit.
+- The existing Starlette/httpx deprecation warning remains. The dependency audit
+  is not a comprehensive security assessment of the application or Docker image.
+- Browser tests use mocked API responses; backend tests use provider doubles.
+  Live Telegram delivery, Qdrant retrieval, and model behaviour remain unverified.
+  No ingestion or external messages were sent.
+- Removed the unrelated generated `next-env.d.ts` change from the production build.
+
+### Review boundary
+
+The three implementation steps for issue #107 are ready for review. Step 3 changes
+only browser tests, API testing documentation, and these notes. The user requested
+a readiness assessment, PR text, and squash-commit text, and will create the third
+commit, push, and open the PR after review. No commit, push, PR creation, deployment,
+or GitHub issue closure has been performed by the assistant.
