@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from app.schemas.escalation import EscalationRequest
+from app.schemas.escalation import EscalationRequest, EscalationTranscriptMessage
 from app.services.escalation import TelegramEscalationNotifier
 
 TEST_HANDOFF_ID = "hnd_" + "a" * 32
@@ -89,6 +89,23 @@ async def test_handoff_notification_sends_transcript_as_document() -> None:
         "Assistant: Would you like me to connect you with the site owner?"
         in telegram_client.calls[1]["text"]
     )
+
+
+@pytest.mark.anyio
+async def test_repeated_handoff_labels_owner_reply_without_counting_it_as_ai() -> None:
+    telegram_client = FakeTelegramClient()
+    notifier = TelegramEscalationNotifier(telegram_client=telegram_client)
+    request = _escalation_request()
+    request.transcript.append(
+        EscalationTranscriptMessage(role="owner", content="I suggest my portfolio website.")
+    )
+
+    await notifier.notify(request, handoff_id=TEST_HANDOFF_ID)
+
+    assert "<b>AI messages before handoff:</b> 1" in telegram_client.calls[0]["text"]
+    transcript = telegram_client.calls[1]["text"]
+    assert "Owner: I suggest my portfolio website." in transcript
+    assert transcript.index("User:") < transcript.index("Assistant:") < transcript.index("Owner:")
 
 
 @pytest.mark.anyio

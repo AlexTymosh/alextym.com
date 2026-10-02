@@ -15,9 +15,6 @@ export function buildEscalationTranscript(
     if (transcript.length >= ESCALATION_TRANSCRIPT_LIMIT) {
       break;
     }
-    if (message.role === "alex") {
-      continue;
-    }
 
     const content = message.text.replace(/\s+/g, " ").trim();
     if (!content) {
@@ -35,7 +32,10 @@ export function buildEscalationTranscript(
       break;
     }
 
-    transcript.unshift({ role: message.role, content: clippedContent });
+    transcript.unshift({
+      role: message.role === "alex" ? "owner" : message.role,
+      content: clippedContent,
+    });
     totalChars += clippedContent.length;
   }
 

@@ -30,6 +30,7 @@ _PROJECT_CONFIG = get_project_config()
 _OWNER_REFERENCE = _PROJECT_CONFIG.assistant.owner_reference
 _OWNER_POSSESSIVE = _PROJECT_CONFIG.owner.possessive_name
 _OWNER_PRONOUN_PATTERN = re.compile(r"\b(his|him|he|yours|your|you)\b", re.IGNORECASE)
+_OWNER_FOLLOW_UP_REFERENCE_PATTERN = re.compile(r"\b(it|its|this|that|these|those|them|there)\b")
 
 
 QuestionIntent = Literal[
@@ -104,7 +105,7 @@ def resolve_question(
         )
 
     subject = _last_explicit_user_subject(request.history)
-    has_alex_context = history_has_alex_assistant_context(request.history)
+    has_alex_context = history_has_owner_context(request.history)
 
     if _is_follow_up_profile_question(normalized_message):
         if subject == "third_party":
@@ -115,7 +116,7 @@ def resolve_question(
                 conversational_context=conversational_context,
                 resolution_method="rules",
             )
-        if subject == "alex" or has_alex_context:
+        if (subject == "alex" or has_alex_context) and not _is_owner_message_follow_up(request):
             return QuestionResolution(
                 intent="alex_profile_question",
                 original_question=request.message,
@@ -132,7 +133,7 @@ def resolve_question(
     if contextualized_resolution is not None:
         return contextualized_resolution
 
-    if _looks_like_short_continuation(normalized_message):
+    if _looks_like_short_continuation(normalized_message) or _is_owner_message_follow_up(request):
         return _clarification_resolution(
             request=request,
             conversational_context=conversational_context,
@@ -179,7 +180,7 @@ def is_weakness_request(
     if _contains_any_phrase(normalized_message, SECOND_PERSON_TERMS):
         return True
     if _contains_any_phrase(normalized_message, FOLLOW_UP_PRONOUN_TERMS):
-        return history_has_alex_assistant_context(history)
+        return history_has_owner_context(history)
     return False
 
 
@@ -218,9 +219,11 @@ def is_direct_third_party_subject(normalized_message: str) -> bool:
     return any(subject in normalized_message for subject in KNOWN_THIRD_PARTY_SUBJECTS)
 
 
-def history_has_alex_assistant_context(history: list[ChatHistoryMessage]) -> bool:
+def history_has_owner_context(history: list[ChatHistoryMessage]) -> bool:
     owner_markers = _owner_context_markers()
     for item in reversed(history):
+        if item.role == "owner":
+            return True
         if item.role != "assistant":
             continue
         normalized_content = normalize_message(item.content)
@@ -321,12 +324,21 @@ def _should_contextualize_with_llm(request: ChatRequest) -> bool:
     normalized_message = normalize_message(request.message)
     if any(term in normalized_message for term in ALEX_TERMS):
         return False
-    is_ambiguous_follow_up = _looks_like_short_continuation(normalized_message) or any(
-        term in normalized_message for term in FOLLOW_UP_PRONOUN_TERMS
+    is_ambiguous_follow_up = (
+        _looks_like_short_continuation(normalized_message)
+        or any(term in normalized_message for term in FOLLOW_UP_PRONOUN_TERMS)
+        or _is_owner_message_follow_up(request)
     )
     if not is_ambiguous_follow_up:
         return False
-    return history_has_alex_assistant_context(request.history)
+    return history_has_owner_context(request.history)
+
+
+def _is_owner_message_follow_up(request: ChatRequest) -> bool:
+    return bool(
+        any(item.role == "owner" for item in request.history)
+        and _OWNER_FOLLOW_UP_REFERENCE_PATTERN.search(normalize_message(request.message))
+    )
 
 
 def _last_explicit_user_subject(history: list[ChatHistoryMessage]) -> str | None:

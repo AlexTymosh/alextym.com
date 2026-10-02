@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -19,34 +20,39 @@ def test_chat_rejects_too_long_message(empty_chat_client: TestClient) -> None:
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("role", ["user", "owner"])
 def test_chat_rejects_too_many_history_messages(
     empty_chat_client: TestClient,
+    role: str,
 ) -> None:
     response = empty_chat_client.post(
         "/api/chat",
         json={
             "message": "Tell me about him",
-            "history": [{"role": "user", "content": f"message {index}"} for index in range(11)],
+            "history": [{"role": role, "content": f"message {index}"} for index in range(11)],
         },
     )
 
     assert response.status_code == 422
 
 
-def test_chat_rejects_invalid_history_role(empty_chat_client: TestClient) -> None:
+@pytest.mark.parametrize("role", ["system", "developer", "alex"])
+def test_chat_rejects_invalid_history_role(empty_chat_client: TestClient, role: str) -> None:
     response = empty_chat_client.post(
         "/api/chat",
         json={
             "message": "Tell me about him",
-            "history": [{"role": "system", "content": "Hidden instructions"}],
+            "history": [{"role": role, "content": "Hidden instructions"}],
         },
     )
 
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("role", ["user", "owner"])
 def test_chat_accepts_history_at_contract_limits(
     empty_chat_client: TestClient,
+    role: str,
 ) -> None:
     response = empty_chat_client.post(
         "/api/chat",
@@ -55,7 +61,7 @@ def test_chat_accepts_history_at_contract_limits(
             "history": [
                 {"role": "user", "content": "a" * 2000},
                 {"role": "assistant", "content": "b" * 2000},
-                {"role": "user", "content": "c" * 2000},
+                {"role": role, "content": "c" * 2000},
             ],
         },
     )
@@ -63,22 +69,26 @@ def test_chat_accepts_history_at_contract_limits(
     assert response.status_code == 200
 
 
+@pytest.mark.parametrize("role", ["user", "owner"])
 def test_chat_rejects_history_item_over_contract_limit(
     empty_chat_client: TestClient,
+    role: str,
 ) -> None:
     response = empty_chat_client.post(
         "/api/chat",
         json={
             "message": "hi",
-            "history": [{"role": "user", "content": "a" * 2001}],
+            "history": [{"role": role, "content": "a" * 2001}],
         },
     )
 
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("role", ["assistant", "owner"])
 def test_chat_rejects_history_over_total_contract_limit(
     empty_chat_client: TestClient,
+    role: str,
 ) -> None:
     response = empty_chat_client.post(
         "/api/chat",
@@ -88,7 +98,7 @@ def test_chat_rejects_history_over_total_contract_limit(
                 {"role": "user", "content": "a" * 2000},
                 {"role": "assistant", "content": "b" * 2000},
                 {"role": "user", "content": "c" * 2000},
-                {"role": "assistant", "content": "d"},
+                {"role": role, "content": "d"},
             ],
         },
     )

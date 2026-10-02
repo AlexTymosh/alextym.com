@@ -1,3 +1,5 @@
+import pytest
+
 from app.llm.client import ProviderRequestError
 from app.schemas.chat import ChatRequest
 from app.services.chat_intent_resolution import (
@@ -218,3 +220,78 @@ class UnexpectedQuestionContextualizer:
         conversational_context: str,
     ) -> ContextualizedQuestion:
         raise AssertionError("Direct questions must not call the contextualizer.")
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["yes", "Which technologies were used in that project?", "What did he use for that project?"],
+)
+def test_owner_reply_enables_contextualization_without_owner_name(message: str) -> None:
+    contextualizer = StaticQuestionContextualizer(
+        ContextualizedQuestion(
+            intent="alex_profile_question",
+            standalone_question="Which technologies does Alex's portfolio website use?",
+            confidence="high",
+            reason="The visitor refers to the owner's preceding project offer",
+        )
+    )
+    request = ChatRequest(
+        message=message,
+        history=[
+            {"role": "owner", "content": "I built a portfolio website. Want to know its stack?"},
+            {"role": "assistant", "content": "The live chat has ended."},
+        ],
+    )
+
+    resolution = resolve_question(request, question_contextualizer=contextualizer)
+
+    assert resolution.resolution_method == "llm"
+    assert resolution.standalone_question == "Which technologies does Alex's portfolio website use?"
+    assert contextualizer.last_message == message
+    assert "owner: I built a portfolio website." in contextualizer.last_context
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["yes", "Which technologies were used in that project?", "What did he use for that project?"],
+)
+@pytest.mark.parametrize("failure_mode", ["unconfigured", "provider_error", "low_confidence"])
+def test_unresolved_owner_follow_up_requests_clarification(message: str, failure_mode: str) -> None:
+    contextualizer = {
+        "unconfigured": None,
+        "provider_error": FailingQuestionContextualizer(),
+        "low_confidence": StaticQuestionContextualizer(
+            ContextualizedQuestion(
+                intent="clarification_required",
+                standalone_question=None,
+                confidence="low",
+                reason="The referenced project is unclear",
+            )
+        ),
+    }[failure_mode]
+
+    resolution = resolve_question(
+        ChatRequest(
+            message=message,
+            history=[{"role": "owner", "content": "We can discuss a project."}],
+        ),
+        question_contextualizer=contextualizer,
+    )
+
+    assert resolution.requires_clarification is True
+    assert resolution.requires_retrieval is False
+    assert resolution.standalone_question is None
+
+
+def test_explicit_question_is_preserved_after_owner_reply() -> None:
+    question = "What are Alex's main strengths?"
+    resolution = resolve_question(
+        ChatRequest(
+            message=question,
+            history=[{"role": "owner", "content": "I suggest my portfolio project."}],
+        ),
+        question_contextualizer=UnexpectedQuestionContextualizer(),
+    )
+
+    assert resolution.standalone_question == question
+    assert resolution.resolution_method == "rules"
