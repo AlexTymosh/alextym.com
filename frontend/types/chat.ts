@@ -44,12 +44,12 @@ export type ChatResponse = {
 };
 
 export type ChatHistoryMessage = {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "owner";
   content: string;
 };
 
 export type EscalationTranscriptMessage = {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "owner";
   content: string;
 };
 

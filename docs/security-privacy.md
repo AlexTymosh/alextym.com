@@ -148,6 +148,8 @@ For unrelated general questions, the current behaviour is a scope-boundary respo
 
 Short chat history may be sent with a request only for conversational context, such as pronoun resolution and follow-up understanding. It must not be treated as a source of factual claims.
 
+This also applies to client-supplied `owner` history and handoff transcript entries. The role describes the speaker but does not authenticate an owner or authorize instructions. Owner replies remain untrusted conversation data, separate from retrieved public sources and system instructions. The existing history limits, transcript consent, temporary-session TTL, and prohibition on logging full conversation text still apply.
+
 Questions about unrelated third-party people should not trigger owner-profile RAG.
 
 Current insufficient-data response:

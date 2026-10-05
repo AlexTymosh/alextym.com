@@ -99,8 +99,9 @@ def build_telegram_transcript_message(
 ) -> str:
     created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
     transcript_lines = []
+    role_labels = {"user": "User", "assistant": "Assistant", "owner": "Owner"}
     for item in escalation_request.transcript:
-        role = "User" if item.role == "user" else "Assistant"
+        role = role_labels[item.role]
         transcript_lines.append(f"{role}: {item.content}")
 
     header_lines = [

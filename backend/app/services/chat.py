@@ -606,9 +606,16 @@ def _is_handoff_confirmation_after_prompt(request: ChatRequest) -> bool:
         return False
 
     for item in reversed(request.history):
+        if item.role == "owner":
+            return False
         if item.role != "assistant":
             continue
         normalized_content = _normalize_message(item.content)
+        # Frontend close notices mention handoff/connection but are not offers.
+        if re.match(
+            r"this handoff(?: session)? has (?:been )?(?:closed|expired)\b", normalized_content
+        ):
+            return False
         language_fallback_prompts = {
             _normalize_message(UNSUPPORTED_RUSSIAN_LANGUAGE_ANSWER),
             _normalize_message(UNSUPPORTED_UKRAINIAN_LANGUAGE_ANSWER),

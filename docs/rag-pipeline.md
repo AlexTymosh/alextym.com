@@ -407,6 +407,8 @@ Low-confidence or explicit `clarification_required` contextualizer output produc
 
 The conversation history is used only to resolve meaning and preserve conversational context. It is not treated as a factual source. Frontend-scripted and model-generated assistant messages use the same history role and the backend does not branch on their origin.
 
+The backend also accepts `owner` history entries for human handoff replies. They keep their speaker label in both contextualization and answer prompts, including first-person replies without the owner's name. Short confirmations and references such as `that project` can be contextualized from these entries; unresolved references request clarification. The label is client-supplied and conveys no authentication, instruction authority, or factual trust. Answers still require retrieved public knowledge. The frontend maps visible `alex` replies to `owner` entries within the existing history limits for both streaming and JSON requests.
+
 Non-English input currently triggers unsupported-language handling rather than multilingual RAG.
 
 ---
