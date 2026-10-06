@@ -230,17 +230,23 @@ Validation:
 message: required, 1-2000 characters
 session_id: optional, max 100 characters
 history: optional, latest short conversation context
-history item role: user or assistant
+history item role: user, assistant, or owner
 history item content: 1-2000 characters
 history item count: max 10
 history total content: max 6000 characters
 ```
 
-The frontend builds `history` from the latest visible `user` and `assistant` messages. A frontend-scripted assistant response and a backend/model-generated assistant response both use `role: "assistant"` and follow the same backend processing path. Owner replies from a human handoff use the separate `alex` frontend role and are not included in AI chat history.
+The backend accepts `user` (visitor), `assistant` (AI or frontend-scripted response), and `owner` (human site owner) history entries. Owner replies retain their speaker identity and chronological position when formatting conversation context. Existing requests containing only `user` and `assistant` remain valid.
+
+The frontend builds `history` from visible visitor, AI, and owner messages. It maps the UI role `alex` to API role `owner`, preserving the visible sender and chronological order. The live handoff SSE protocol continues to emit `role: "alex"`. The same history is sent to the streaming endpoint and JSON fallback.
 
 The current user message is sent separately in `message` and is not duplicated in `history`. The frontend compacts whitespace, caps each entry at 2000 characters, and retains the newest entries that fit the count and total limits above. After request validation, the backend does not apply another per-message truncation.
 
 `history` is used only for conversational context, such as pronoun resolution and follow-up understanding. It is not a source of factual claims.
+
+The client-supplied `owner` label is not proof of identity or authority. All history remains untrusted data, never model instructions or verified public knowledge. Owner text is kept in the conversation portion of the prompt, separate from retrieved public sources. An owner reply alone cannot supply an answer when public retrieval has no relevant data.
+
+Owner replies can provide context for short confirmations and references such as `that project` or `there`, even when the reply uses first-person wording without the owner's name. Ambiguous references use the structured contextualizer; unresolved references request clarification instead of guessing a project. An owner reply following an older assistant handoff offer prevents a subsequent `yes` from confirming that older offer. Frontend handoff-close and expiry notices are not offers; a newer explicit assistant handoff offer can still be confirmed.
 
 ### Follow-up resolution
 
@@ -533,11 +539,15 @@ Validation:
 consent_accepted: must be true
 reason: required, 1-100 characters
 transcript: required, 1-20 messages
-transcript item role: user or assistant
+transcript item role: user, assistant, or owner
 transcript item content: 1-2000 characters
 transcript total content: max 8000 characters
 company_website: optional honeypot field, max 200 characters
 ```
+
+The `owner` role represents a reply from an earlier human handoff. The backend preserves all three speaker roles and message order in the temporary session transcript and Telegram notification. Telegram transcript text labels these replies `Owner`, separately from `Assistant`, and does not count them as AI messages. Consent, TTL storage, and size limits remain unchanged. This field is conversation data, not an authenticated owner command.
+
+The frontend includes visible `alex` replies as `owner` entries when building a repeat-handoff transcript. Owner replies use the same whitespace compaction, per-message clipping, message count, and total character limits as other speakers. Both transcript and AI history builders retain the newest entries that fit; they stop when the next older non-empty entry would exceed the budget.
 
 Success response with Redis session storage configured:
 
@@ -843,6 +853,8 @@ Backend tests should cover:
 - invalid contact email;
 - contact honeypot;
 - streaming endpoint event format;
+- owner history in JSON/SSE follow-ups, including close/expiry notices, retrieval
+  grounding, and untrusted-history boundaries;
 - escalation consent validation;
 - escalation honeypot;
 - active handoff message forwarding;
@@ -860,4 +872,13 @@ Frontend E2E checks should cover:
 - typed chat stream/fallback behaviour, including SSE `error` and EOF before
   `done`;
 - handoff prompt;
-- closing a handoff session.
+- closing a handoff session;
+- ordered `owner` history after manual close, SSE close, and session expiry,
+  with matching payloads for streaming and JSON fallback;
+- repeat handoff with prior owner replies preserved in the consented transcript
+  and separate owner labels in the UI.
+
+The owner-context regression tests use provider doubles on the backend and mocked
+API responses in Playwright. Browser tests assert actual outgoing request bodies
+on desktop and mobile Chromium. They verify frontend transmission and rendering;
+they do not exercise live Telegram delivery, Qdrant retrieval, or model behaviour.

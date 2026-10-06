@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { chatHandoffCopy, chatShellCopy } from "../content/chat";
+import { chatHandoffCopy, chatNoticeCopy, chatShellCopy } from "../content/chat";
 import { chatConfig } from "../lib/project-config";
 import type { HandoffReason } from "../types/chat";
 
@@ -437,6 +437,240 @@ test("shows a new handoff prompt after SSE handoff close", async ({ page }) => {
   await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
 });
 
+for (const closure of ["manual", "session_closed", "session_expired"] as const) {
+  for (const transport of ["stream", "json"] as const) {
+    test(`preserves owner history after ${closure} via ${transport}`, async ({
+      page,
+    }) => {
+      const initialQuestion = "Can you tell me about your portfolio project?";
+      const initialAnswer = "I can connect you with Alex for more details.";
+      const ownerReply =
+        "I suggest my portfolio website. Would you like to know its technologies?";
+      const followUp = "Which technologies were used in that project?";
+      const followUpAnswer =
+        "The public portfolio context describes a FastAPI backend.";
+      const closeMessage =
+        closure === "session_expired"
+          ? chatHandoffCopy.sessionExpiredMessage
+          : chatHandoffCopy.closedByUserMessage;
+      const streamPayloads: unknown[] = [];
+      const jsonPayloads: unknown[] = [];
+      let handoffMessageCalls = 0;
+      let closeCalls = 0;
+
+      await page.route("**/api/chat/stream", async (route) => {
+        streamPayloads.push(route.request().postDataJSON());
+        const isInitialRequest = streamPayloads.length === 1;
+        if (!isInitialRequest && transport === "json") {
+          await route.fulfill({ status: 503, body: "Streaming unavailable" });
+          return;
+        }
+        await route.fulfill({
+          headers: streamHeaders,
+          status: 200,
+          body: buildChatStream({
+            answer: isInitialRequest ? initialAnswer : followUpAnswer,
+            handoffSuggested: isInitialRequest,
+            handoffReason: isInitialRequest ? "insufficient_data" : null,
+            notEnoughData: isInitialRequest,
+          }),
+        });
+      });
+      await page.route("**/api/chat", async (route) => {
+        jsonPayloads.push(route.request().postDataJSON());
+        await route.fulfill({
+          status: 200,
+          json: {
+            answer: followUpAnswer,
+            sources: [],
+            confidence: "low",
+            not_enough_data: false,
+            retrieval_status: "success",
+            handoff_suggested: false,
+            handoff_reason: null,
+          },
+        });
+      });
+      await mockEscalationStart(page);
+      await mockEscalationStream(page, {
+        ownerReply,
+        closeReason: closure === "manual" ? undefined : closure,
+      });
+      await page.route("**/api/escalations/hnd_e2e/messages", async (route) => {
+        handoffMessageCalls += 1;
+        await route.fulfill({ status: 200, json: { status: "ok" } });
+      });
+      await page.route("**/api/escalations/hnd_e2e/close", async (route) => {
+        closeCalls += 1;
+        await route.fulfill({
+          status: 200,
+          json: { status: "ok", state: "closed" },
+        });
+      });
+
+      await page.goto("/chat");
+      await askQuestion(page, initialQuestion);
+      await page
+        .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+        .click();
+      await expect(page.locator(".message--alex .message__content")).toHaveText(
+        ownerReply,
+      );
+
+      if (closure === "manual") {
+        await page
+          .getByRole("button", { name: chatShellCopy.handoffCloseLabel })
+          .click();
+      }
+      await expect(page.getByText(closeMessage)).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }),
+      ).toHaveCount(0);
+      await askQuestion(page, followUp);
+      await expect(page.getByText(followUpAnswer)).toBeVisible();
+
+      const expectedPayload = {
+        message: followUp,
+        history: [
+          { role: "user", content: initialQuestion },
+          { role: "assistant", content: initialAnswer },
+          {
+            role: "assistant",
+            content: chatHandoffCopy.nameRequestMessage.replace(/\s+/g, " "),
+          },
+          { role: "owner", content: ownerReply },
+          { role: "assistant", content: closeMessage },
+        ],
+      };
+      expect(streamPayloads).toEqual([
+        { message: initialQuestion, history: [] },
+        expectedPayload,
+      ]);
+      expect(jsonPayloads).toEqual(transport === "json" ? [expectedPayload] : []);
+      if (transport === "json") {
+        await expect(
+          page.getByText(chatNoticeCopy.streamingFallbackUsed),
+        ).toBeVisible();
+      }
+      expect(closeCalls).toBe(closure === "manual" ? 1 : 0);
+      expect(handoffMessageCalls).toBe(0);
+      await expect(page.locator(".message--alex .message__sender")).toHaveText(
+        chatShellCopy.messageSenderOwner,
+      );
+      await expect(page.locator(".message--alex .message__content")).toHaveText(
+        ownerReply,
+      );
+      await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toHaveCount(0);
+    });
+  }
+}
+
+test("preserves owner replies in a repeat-handoff transcript", async ({ page }) => {
+  const initialQuestion = "Can you tell me about your portfolio project?";
+  const initialAnswer = "I can connect you with Alex for project details.";
+  const ownerReply = "I suggest my portfolio website.";
+  const reconnectQuestion = "Can I connect with Alex again about that project?";
+  const reconnectAnswer = "You can request a new connection with Alex.";
+  const secondOwnerReply = "We can continue discussing my portfolio website.";
+  const escalationPayloads: unknown[] = [];
+  const chatPayloads: unknown[] = [];
+
+  await mockChatStreamSequence(
+    page,
+    [
+      {
+        answer: initialAnswer,
+        handoffSuggested: true,
+        handoffReason: "insufficient_data",
+        notEnoughData: true,
+      },
+      {
+        answer: reconnectAnswer,
+        handoffSuggested: true,
+        handoffReason: "user_requested_human",
+        notEnoughData: false,
+      },
+    ],
+    (payload) => chatPayloads.push(payload),
+  );
+  await page.route("**/api/escalations", async (route) => {
+    escalationPayloads.push(route.request().postDataJSON());
+    await route.fulfill({
+      status: 200,
+      json: {
+        status: "ok",
+        handoff_id: escalationPayloads.length === 1 ? "hnd_e2e" : "hnd_repeat",
+        state: "waiting_for_alex",
+        expires_in_seconds: 7200,
+      },
+    });
+  });
+  await mockEscalationStream(page, { ownerReply, closeReason: "session_closed" });
+  await mockEscalationStream(page, {
+    handoffId: "hnd_repeat",
+    ownerReply: secondOwnerReply,
+    closeReason: "session_expired",
+  });
+
+  await page.goto("/chat");
+  await askQuestion(page, initialQuestion);
+  await page
+    .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+    .click();
+  await expect(page.getByText(chatHandoffCopy.closedByUserMessage)).toBeVisible();
+  await askQuestion(page, reconnectQuestion);
+  await expect(page.getByText(chatShellCopy.handoffPromptTitle)).toBeVisible();
+  expect(escalationPayloads).toHaveLength(1);
+  await page
+    .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+    .click();
+  await expect(page.getByText(chatHandoffCopy.sessionExpiredMessage)).toBeVisible();
+
+  const firstTranscript = [
+    { role: "user", content: initialQuestion },
+    { role: "assistant", content: initialAnswer },
+  ];
+  const history = [
+    ...firstTranscript,
+    {
+      role: "assistant",
+      content: chatHandoffCopy.nameRequestMessage.replace(/\s+/g, " "),
+    },
+    { role: "owner", content: ownerReply },
+    { role: "assistant", content: chatHandoffCopy.closedByUserMessage },
+  ];
+  expect(chatPayloads).toEqual([
+    { message: initialQuestion, history: [] },
+    { message: reconnectQuestion, history },
+  ]);
+  expect(escalationPayloads).toEqual([
+    {
+      consent_accepted: true,
+      reason: "user_requested_human",
+      company_website: "",
+      transcript: firstTranscript,
+    },
+    {
+      consent_accepted: true,
+      reason: "user_requested_human",
+      company_website: "",
+      transcript: [
+        ...history,
+        { role: "user", content: reconnectQuestion },
+        { role: "assistant", content: reconnectAnswer },
+      ],
+    },
+  ]);
+  await expect(page.locator(".message--alex .message__content")).toHaveText([
+    ownerReply,
+    secondOwnerReply,
+  ]);
+  await expect(page.locator(".message--alex .message__sender")).toHaveText([
+    chatShellCopy.messageSenderOwner,
+    chatShellCopy.messageSenderOwner,
+  ]);
+});
+
 async function askQuestion(page: Page, text: string) {
   await page.getByLabel(chatShellCopy.inputAriaLabel).fill(text);
   await page.getByRole("button", { name: chatShellCopy.sendLabel }).click();
@@ -472,7 +706,8 @@ async function mockEscalationStream(
   page: Page,
   options: EscalationStreamOptions = {},
 ) {
-  await page.route("**/api/escalations/hnd_e2e/stream", async (route) => {
+  const handoffId = options.handoffId ?? "hnd_e2e";
+  await page.route(`**/api/escalations/${handoffId}/stream`, async (route) => {
     await route.fulfill({
       headers: streamHeaders,
       status: 200,
@@ -517,6 +752,8 @@ type ChatStreamOptions = {
 
 type EscalationStreamOptions = {
   closeReason?: "session_closed" | "session_expired";
+  handoffId?: string;
+  ownerReply?: string;
 };
 
 function buildChatStream(options: ChatStreamOptions): string {
@@ -545,16 +782,18 @@ function buildChatStream(options: ChatStreamOptions): string {
 }
 
 function buildEscalationStream(options: EscalationStreamOptions = {}): string {
+  const handoffId = options.handoffId ?? "hnd_e2e";
+  const messageId = `msg_${handoffId}`;
   const events = [
     "event: meta",
-    'data: {"handoff_id":"hnd_e2e","status":"connected"}',
+    `data: ${JSON.stringify({ handoff_id: handoffId, status: "connected" })}`,
     "",
-    "id: msg_e2e",
+    `id: ${messageId}`,
     "event: message",
     `data: ${JSON.stringify({
-      id: "msg_e2e",
+      id: messageId,
       role: "alex",
-      content: "Thanks, I can see this handoff.",
+      content: options.ownerReply ?? "Thanks, I can see this handoff.",
       created_at: "2026-01-01T00:00:00Z",
     })}`,
     "",

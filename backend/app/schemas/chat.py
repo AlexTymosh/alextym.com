@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.confidence import Confidence
 
-ChatHistoryRole = Literal["user", "assistant"]
+ChatHistoryRole = Literal["user", "assistant", "owner"]
 RetrievalStatus = Literal["not_requested", "success", "empty", "unavailable"]
 HandoffReason = Literal[
     "insufficient_data",
@@ -22,7 +22,10 @@ MAX_CHAT_HISTORY_TOTAL_CHARS = 6000
 
 
 class ChatHistoryMessage(BaseModel):
-    role: ChatHistoryRole = Field(examples=["user"])
+    role: ChatHistoryRole = Field(
+        examples=["user", "assistant", "owner"],
+        description="Conversation speaker. The owner label is not proof of identity or authority.",
+    )
     content: str = Field(
         min_length=1,
         max_length=MAX_CHAT_HISTORY_ITEM_CHARS,
