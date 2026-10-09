@@ -576,6 +576,19 @@ HTTP status codes:
 502 -> Telegram delivery or session storage failure
 ```
 
+The outside-hours `403` response includes `detail.code` (`handoff_outside_hours`),
+`detail.message`, and `detail.contact_path` (currently `/contact`). The frontend
+uses this path for the contact-form link alongside the unavailable-handoff notice,
+including any query string and fragment. It accepts only valid root-relative paths
+within the site. Missing, blank, non-string, malformed, or external values fall
+back to `/contact`; protocol-relative URLs, backslashes, control characters, and
+paths that normalize to a leading double slash also fall back to `/contact`.
+
+The notice text and contact path share one state value, cleared together on chat
+reset, a new question, or a handoff retry. Successful handoff stream events clear
+them as well. The same handling applies if a visitor-message request returns
+`handoff_outside_hours`.
+
 ---
 
 ## Escalation: visitor message during active handoff
@@ -872,6 +885,8 @@ Frontend E2E checks should cover:
 - typed chat stream/fallback behaviour, including SSE `error` and EOF before
   `done`;
 - handoff prompt;
+- unavailable-handoff contact links from backend errors, safe `/contact` fallback,
+  and clearing stale paths on reset, new questions, and successful message retries;
 - closing a handoff session;
 - ordered `owner` history after manual close, SSE close, and session expiry,
   with matching payloads for streaming and JSON fallback;

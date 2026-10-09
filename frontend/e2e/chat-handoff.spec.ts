@@ -671,6 +671,176 @@ test("preserves owner replies in a repeat-handoff transcript", async ({ page }) 
   ]);
 });
 
+for (const { name, contactPath, expected } of [
+  {
+    name: "backend path with query and fragment",
+    contactPath: " /contact/support?source=handoff#message ",
+    expected: "/contact/support?source=handoff#message",
+  },
+  { name: "missing path", contactPath: undefined, expected: "/contact" },
+  { name: "null path", contactPath: null, expected: "/contact" },
+  { name: "blank path", contactPath: "  ", expected: "/contact" },
+  { name: "non-string path", contactPath: 42, expected: "/contact" },
+  { name: "relative path", contactPath: "contact", expected: "/contact" },
+  {
+    name: "external URL",
+    contactPath: "https://example.com/contact",
+    expected: "/contact",
+  },
+  {
+    name: "script URL",
+    contactPath: "javascript:alert(1)",
+    expected: "/contact",
+  },
+  {
+    name: "protocol-relative URL",
+    contactPath: "//example.com/contact",
+    expected: "/contact",
+  },
+  {
+    name: "backslash URL",
+    contactPath: "/\\example.com/contact",
+    expected: "/contact",
+  },
+  {
+    name: "control character in path",
+    contactPath: "/\n/example.com/contact",
+    expected: "/contact",
+  },
+  {
+    name: "malformed escape",
+    contactPath: "/contact%ZZ",
+    expected: "/contact",
+  },
+  {
+    name: "encoded dot segments before double slash",
+    contactPath: "/%2e//example.com/contact",
+    expected: "/contact",
+  },
+]) {
+  test(`uses a safe unavailable handoff contact link for ${name}`, async ({
+    page,
+  }) => {
+    await mockChatStream(page, {
+      answer: "I can offer a direct connection with Alex.",
+      handoffSuggested: true,
+      handoffReason: "user_requested_human",
+      notEnoughData: false,
+    });
+    await page.route("**/api/escalations", async (route) => {
+      await route.fulfill({ status: 403, json: unavailableHandoff(contactPath) });
+    });
+
+    await page.goto("/chat");
+    await askQuestion(page, "Connect me with Alex.");
+    await page
+      .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+      .click();
+
+    const link = page.getByRole("link", { name: chatShellCopy.contactFormLinkLabel });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", expected);
+    expect(
+      await link.evaluate((element: HTMLAnchorElement) => element.origin),
+    ).toBe(new URL(page.url()).origin);
+  });
+}
+
+for (const action of ["reset", "new question"] as const) {
+  test(`clears the unavailable handoff contact path after ${action}`, async ({
+    page,
+  }) => {
+    let attempts = 0;
+    await mockChatStream(page, {
+      answer: "I can offer a direct connection with Alex.",
+      handoffSuggested: true,
+      handoffReason: "user_requested_human",
+      notEnoughData: false,
+    });
+    await page.route("**/api/escalations", async (route) => {
+      attempts += 1;
+      await route.fulfill({
+        status: 403,
+        json: unavailableHandoff(
+          attempts === 1 ? "/contact?attempt=first" : undefined,
+        ),
+      });
+    });
+
+    await page.goto("/chat");
+    await askQuestion(page, "Connect me with Alex.");
+    await page
+      .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+      .click();
+    const link = page.getByRole("link", { name: chatShellCopy.contactFormLinkLabel });
+    await expect(link).toHaveAttribute("href", "/contact?attempt=first");
+
+    if (action === "reset") {
+      await page.getByRole("button", { name: chatShellCopy.resetLabel }).click();
+      await expect(link).toHaveCount(0);
+    }
+    await askQuestion(page, "Can I try connecting again?");
+    await expect(link).toHaveCount(0);
+    await page
+      .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+      .click();
+    await expect(link).toHaveAttribute("href", "/contact");
+    expect(attempts).toBe(2);
+  });
+}
+
+test("uses the unavailable handoff message path and clears it on a successful retry", async ({
+  page,
+}) => {
+  await setupConnectedHandoff(page);
+  await page.route("**/api/escalations/hnd_e2e/stream", async (route) => {
+    // Keep fixture EOF reconnects from clearing the notice during the retry.
+    await route.fulfill({
+      headers: streamHeaders,
+      body: `retry: 60000\n${buildEscalationStream()}`,
+    });
+  });
+  let attempts = 0;
+  await page.route("**/api/escalations/hnd_e2e/messages", async (route) => {
+    attempts += 1;
+    await route.fulfill({
+      status: attempts === 1 ? 403 : 200,
+      json:
+        attempts === 1
+          ? unavailableHandoff("/contact?source=message#form")
+          : { status: "ok" },
+    });
+  });
+
+  await page.goto("/chat");
+  await askQuestion(page, "Connect me with Alex.");
+  await page
+    .getByRole("button", { name: chatShellCopy.handoffConnectLabel })
+    .click();
+  await expect(page.locator(".message--alex .message__content")).toBeVisible();
+  await askQuestion(page, "My follow-up message.");
+  const link = page.getByRole("link", { name: chatShellCopy.contactFormLinkLabel });
+  await expect(link).toHaveAttribute("href", "/contact?source=message#form");
+
+  await page.getByRole("button", { name: chatShellCopy.sendLabel }).click();
+  await expect(link).toHaveCount(0);
+  await expect(page.getByLabel(chatShellCopy.inputAriaLabel)).toHaveValue("");
+  await expect(page.locator(".message--user .message__content").last()).toHaveText(
+    "My follow-up message.",
+  );
+  expect(attempts).toBe(2);
+});
+
+function unavailableHandoff(contactPath?: unknown) {
+  return {
+    detail: {
+      code: "handoff_outside_hours",
+      message: chatHandoffCopy.defaultUnavailableMessage,
+      contact_path: contactPath,
+    },
+  };
+}
+
 async function askQuestion(page: Page, text: string) {
   await page.getByLabel(chatShellCopy.inputAriaLabel).fill(text);
   await page.getByRole("button", { name: chatShellCopy.sendLabel }).click();
