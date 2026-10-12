@@ -271,6 +271,24 @@ def change_responsible(vehicle_id: int, name: str) -> None:
         db.commit()
 
 
+
+
+def change_workshop(vehicle_id: int, garage: str) -> None:
+    garage = garage.strip()
+    if not garage:
+        raise ValueError('Workshop is required')
+    with connection() as db:
+        old = db.execute('SELECT garage FROM vehicles WHERE id=?', (vehicle_id,)).fetchone()
+        if old is None:
+            raise ValueError('Vehicle not found')
+        if old['garage'] == garage:
+            return
+        db.execute('UPDATE vehicles SET garage=? WHERE id=?', (garage, vehicle_id))
+        db.execute('INSERT INTO events(vehicle_id,kind,author,body,created_at,is_demo) VALUES (?,?,?,?,?,1)',
+                   (vehicle_id,'internal','Fleet Hub',f'Workshop changed: {old["garage"]} → {garage}',datetime.now().isoformat(timespec='seconds')))
+        db.commit()
+
+
 def change_workflow_scenario(vehicle_id: int, ticket_id: str, scenario: str) -> None:
     """Switch the selected OPEN ticket to a different template and reset its stage progress.
 

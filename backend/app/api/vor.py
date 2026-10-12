@@ -95,6 +95,10 @@ class ChangeResponsible(BaseModel):
     vehicle_id: int
     name: Literal['Alex Tym','Victoria B.','Jason W.','Janine M.','Gosha T.']
 
+class ChangeWorkshop(BaseModel):
+    vehicle_id: int
+    garage: str = Field(min_length=1,max_length=100)
+
 class NewContact(BaseModel):
     name: str = Field(min_length=1,max_length=80)
     email: str = Field(min_length=3,max_length=254)
@@ -193,13 +197,15 @@ def create_message(body: NewMessage, request: Request) -> dict:
             # One-off exact addresses and entire trusted domains are supported.
             allowed = {x.strip().lower() for x in os.getenv('VOR_DEMO_ALLOWED_RECIPIENTS','').split(',') if x.strip()}
             domains = {x.strip().lower().lstrip('@') for x in os.getenv('VOR_DEMO_ALLOWED_EMAIL_DOMAINS','').split(',') if x.strip()}
-            # A standalone '*' explicitly allows subscribers from any domain.
-            # The list of recipients still comes exclusively from the protected Manage directory.
-            any_domain = '*' in domains
             if not allowed and not domains:
                 raise HTTPException(503, 'Live sending requires an allowed email domain or recipient policy')
-            unapproved = [email for email in recipients
-                          if not (any_domain or email in allowed or email.rsplit('@', 1)[-1] in domains)]
+            # Explicit '*' permits any domain, but addresses must still belong to
+            # subscribed contacts and pass email validation and the daily quota.
+            any_domain = '*' in domains
+            unapproved = [
+                email for email in recipients
+                if not (any_domain or email in allowed or email.rsplit('@', 1)[-1] in domains)
+            ]
             if unapproved:
                 raise HTTPException(403, 'A subscribed address is outside permitted recipient domains. Check Manage.')
             limit = max(1,min(int(os.getenv('VOR_DEMO_EMAIL_LIMIT','15')),30))
@@ -290,6 +296,16 @@ def set_responsible(body: ChangeResponsible, request: Request) -> dict:
     same_origin(request)
     try:
         vor_store.change_responsible(body.vehicle_id,body.name)
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    return {'ok':True}
+
+
+@router.post('/workshop', dependencies=[Depends(required)])
+def set_workshop(body: ChangeWorkshop, request: Request) -> dict:
+    same_origin(request)
+    try:
+        vor_store.change_workshop(body.vehicle_id, body.garage)
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     return {'ok':True}

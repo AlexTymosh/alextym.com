@@ -272,3 +272,62 @@
  .middlePane .scenarioRow>small{grid-row:2;grid-column:2}
  .contactForm{grid-template-columns:1fr}
 }
+
+
+/* v1.3.2 layout refinements */
+.details{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-width:0;margin-bottom:0}
+.middlePane{grid-column:2;grid-row:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,.28fr);gap:10px;padding:10px 14px;margin-top:-12px;border:1px solid #d8ddcd;border-top:1px solid #d8ddcd;border-radius:0 0 16px 16px;background:#fcfcf8;box-shadow:0 1px 3px #33402512}
+.ticketRowHead{display:grid;gap:4px;margin-top:8px}.ticketRowHead small{font-size:11px;color:#6f7868;display:block}.ticketRowHead>div{display:flex;gap:6px;flex-wrap:wrap}
+.middlePane .workflow{padding:0 10px 0 0;border-right:1px solid #d8ddcd}.middlePane .nextAction{padding:0 0 0 10px;border-left:0}
+.middlePane .workflowStages{grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;margin-top:5px}
+.middlePane .workflowStages li{min-height:28px;padding:4px 4px;font-size:9px}
+.middlePane .workflowStages .stageMarker{height:16px;width:16px;min-width:16px;font-size:9px}
+.middlePane .stageLabel{font-size:9px;line-height:1.1}
+.middlePane .scenarioRow{grid-template-columns:84px minmax(0,1fr) auto;gap:5px}
+.middlePane .scenarioRow label{font-size:8px;line-height:1.1}
+.middlePane .workflowFooter button{padding:7px 10px}
+.responsibleSelect{width:100%}
+.chatterPane{border:2px dashed #b8bfb3;background:#f3f5f1}.timeline{background:#eef0ec}
+.composeTabs button:last-of-type{min-width:124px}
+@media (max-width:1320px){.middlePane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+/* v1.4 visual simplification */
+.root{background:#e1e4dc;position:fixed}
+.root::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(30deg, transparent 24%, rgba(89,98,70,.08) 25%, rgba(89,98,70,.08) 26%, transparent 27%, transparent 74%, rgba(89,98,70,.08) 75%, rgba(89,98,70,.08) 76%, transparent 77%, transparent),linear-gradient(-30deg, transparent 24%, rgba(185,96,99,.06) 25%, rgba(185,96,99,.06) 26%, transparent 27%, transparent 74%, rgba(185,96,99,.06) 75%, rgba(185,96,99,.06) 76%, transparent 77%, transparent);background-size:48px 48px,48px 48px}
+.root > *{position:relative;z-index:1}
+.details{border:1px solid #a5ae98;border-radius:16px 16px 0 0;box-shadow:0 2px 5px #33402518;background:#f8f9f4}
+.detailsHead{border-bottom:1px solid #d8ddcd;border-radius:16px 16px 0 0}
+.heroEyebrow{display:none}
+.middlePane{grid-template-columns:minmax(0,1fr);border:1px solid #a5ae98;border-top:0;border-radius:0 0 16px 16px;box-shadow:0 2px 5px #33402518;background:#f8f9f4;padding:10px 14px 12px;margin-top:-10px}
+.middlePane .workflow{padding:0;border-right:0}
+.middlePane .workflowStages{grid-template-columns:repeat(8,minmax(0,1fr));gap:2px}
+.middlePane .workflowStages li{min-height:27px;padding:3px 4px}
+.middlePane .scenarioRow{grid-template-columns:84px minmax(0,1fr) auto}
+.nextAction{display:none!important}
+.chatterPane{background:#f5f6f2}
+.timeline{background:#ecefeb}
+.compose{background:#eff1ed}
+@media (max-width:1320px){.middlePane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+/* v1.4.2 compact workflow + fixed toast */
+.root{background:#d8ddd4}
+.root::before{opacity:.24}
+.toast{position:fixed;left:16px;top:86px;right:auto;max-width:320px;box-shadow:0 6px 18px #28302422}
+.detailsHead{padding:12px 16px 10px;align-items:flex-start}
+.detailsHead h1{margin-top:4px}
+.detailsHead p{margin-top:3px}
+.ticketRowHead{margin-top:6px}
+.ticketRowHead small{margin-bottom:4px}
+.detailsBody{padding:10px 16px 11px;gap:8px}
+.middlePane{padding:8px 14px 10px}
+.workflowTopRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.workflowHeaderActions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.workflowToggle{border:1px solid #d8ddcd;background:#f0f2e8;color:#596246;border-radius:9px;padding:6px 10px;font-size:16px;line-height:1}
+.workflowCompleteBtn{border:0;background:#596246;color:white;padding:8px 10px;border-radius:9px;font-size:11px;font-weight:700;white-space:nowrap}
+.middlePane .scenarioRow{margin:4px 0 5px}
+.middlePane .workflowStages{margin:4px 0 0;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+.middlePane .workflowStages li{min-height:28px;padding:4px 4px}
+.workflowFooter{display:none}
+@media (max-width:1320px){.middlePane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr))}}
