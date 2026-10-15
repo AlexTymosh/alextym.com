@@ -11,6 +11,7 @@ import {
 import { isAbortError } from "../lib/chat-errors";
 import { buildChatHistory } from "../lib/chat-history";
 import {
+  getHandoffContactPath,
   getPendingHandoffSuggestion,
   isHumanHandoffActive,
 } from "../lib/chat-handoff";
@@ -56,8 +57,8 @@ export function useChatController({
   >("warming");
   const [isThinking, setIsThinking] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [handoffUnavailableMessage, setHandoffUnavailableMessage] = useState<
-    string | null
+  const [handoffUnavailable, setHandoffUnavailable] = useState<
+    { message: string; contactPath: string } | null
   >(null);
   const [isEscalating, setIsEscalating] = useState(false);
   const [isSendingHandoffMessage, setIsSendingHandoffMessage] = useState(false);
@@ -72,7 +73,7 @@ export function useChatController({
 
   const handleEscalationStreamMeta = useCallback(() => {
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
     setHandoffState((currentState) =>
       currentState === "connected" ? "connected" : "waiting_for_alex",
     );
@@ -86,7 +87,7 @@ export function useChatController({
       ]);
       setHandoffState("connected");
       setNotice(null);
-      setHandoffUnavailableMessage(null);
+      setHandoffUnavailable(null);
     },
     [],
   );
@@ -222,7 +223,7 @@ export function useChatController({
     setMessages([]);
     setIsThinking(false);
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
     setIsEscalating(false);
     setIsSendingHandoffMessage(false);
     setIsClosingHandoff(false);
@@ -258,7 +259,7 @@ export function useChatController({
     setInput("");
     setIsThinking(true);
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
 
     try {
       await waitForScriptedResponse(abortController.signal);
@@ -327,7 +328,7 @@ export function useChatController({
     setInput("");
     setIsThinking(true);
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
 
     try {
       await streamChatResponse({
@@ -445,7 +446,7 @@ export function useChatController({
 
     setIsSendingHandoffMessage(true);
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
 
     try {
       await submitEscalationMessage(handoffId, messageText);
@@ -456,7 +457,7 @@ export function useChatController({
       setInput("");
     } catch (error) {
       if (isHandoffUnavailableError(error)) {
-        showHandoffUnavailableMessage(error.message);
+        showHandoffUnavailable(error);
         return;
       }
       if (error instanceof EscalationApiError && error.status === 429) {
@@ -477,7 +478,7 @@ export function useChatController({
 
     setIsEscalating(true);
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
 
     try {
       const response = await submitEscalation(
@@ -509,7 +510,7 @@ export function useChatController({
       ]);
     } catch (error) {
       if (isHandoffUnavailableError(error)) {
-        showHandoffUnavailableMessage(error.message);
+        showHandoffUnavailable(error);
         setDismissedHandoffMessageId(pendingHandoffSuggestion?.id ?? null);
         return;
       }
@@ -531,7 +532,7 @@ export function useChatController({
 
     setIsClosingHandoff(true);
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
 
     try {
       await submitEscalationClose(handoffId);
@@ -561,12 +562,15 @@ export function useChatController({
       setDismissedHandoffMessageId(pendingHandoffSuggestion.id);
     }
     setNotice(null);
-    setHandoffUnavailableMessage(null);
+    setHandoffUnavailable(null);
     focusMessageInputSoon();
   }
 
-  function showHandoffUnavailableMessage(message: string) {
-    setHandoffUnavailableMessage(message || DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE);
+  function showHandoffUnavailable(error: EscalationApiError) {
+    setHandoffUnavailable({
+      message: error.message || DEFAULT_HANDOFF_UNAVAILABLE_MESSAGE,
+      contactPath: getHandoffContactPath(error.contactPath),
+    });
     setNotice(null);
   }
 
@@ -592,7 +596,7 @@ export function useChatController({
     handleSubmit,
     handoffId,
     handoffState,
-    handoffUnavailableMessage,
+    handoffUnavailable,
     hasActiveHandoff,
     input,
     inputPlaceholder,

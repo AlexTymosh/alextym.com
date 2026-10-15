@@ -1,93 +1,83 @@
-# Session Notes
+# SESSION_NOTES.md — Fleet VOR Hub demo · v1.3.1
 
-## Issue #107: preserve owner messages after handoff
+**Branch:** `feat/fleet-vor-hub-demo`  
+**Target project:** https://github.com/AlexTymosh/alextym.com (`frontend`: Next.js 16; `backend`: FastAPI)  
+**Integration:** isolated route `/fleet-vor-hub`, not in public site navigation. API `/api/vor/*` through Next.js backend rewrite.  
+**Last change:** 12 October 2026. **Status:** patch prepared and automated backend tests run; not deployed by the assistant.  
 
-Branch: `codex/107-owner-chat-context`.
+## Goal
 
-The user approved three commits, committed Step 1 as `68434d4` and Step 2 as
-`d98b999`, and authorized Step 3. Step 3 is implemented and awaits user review and
-a user-created commit. Verification results and dependency audit follow-ups are below.
-Do not commit, push, or close the issue on their behalf.
+Show managers a compact, vehicle-centred VOR case management demo: vehicle status, linked PS000xxx tickets, multiple workflow templates, next actions, communication history, maintenance scheduling, dashboard. Synthetic vehicles, workshops, tickets and KEY2/HOTH events; integrations with those systems are **simulated**, not live.
 
-### Step 1 completed: backend contract and context
+## Architecture & storage
 
-- Accept `owner` alongside `user` and `assistant` in chat history and handoff transcripts.
-- Preserve speaker identity in contextualization, answer prompts, temporary sessions,
-  and Telegram transcript text. Owner messages remain untrusted context, not facts or instructions.
-- Resolve ambiguous references to owner replies; ask for clarification when unresolved.
-- Prevent owner replies and handoff-close/expiry notices from confirming an old handoff offer.
-- Add regression tests and update API, RAG, and security documentation.
-- `task backend:check`: passed, 509 tests. One earlier run had an intermittent failure in
-  the existing Redis probe timeout test (`SET`); the complete rerun passed without Redis changes.
-- Existing Starlette/httpx deprecation warning remains. Tests used local provider doubles;
-  live OpenAI, Qdrant, Telegram, and browser end-to-end behaviour were not verified.
+- `frontend/app/fleet-vor-hub/VorHub.tsx`, `vor.module.css`: client-side demo UI, fixed overlay, independent theme.
+- `backend/app/api/vor.py`: password-protected route (signed HTTP-only cookie), contacts, subscriptions, events, workflow, bookings, Excel and ICS exports, optional Resend delivery.
+- `backend/app/services/vor_store.py`: `sqlite3` state and seed/migrations. `backend/app/services/vor_seed.sqlite3` contains 20 fictional vehicles, 40 synthetic PS tickets, scenarios and sample activity.
+- Live contacts, subscriptions, events and bookings persist in SQLite at `VOR_DEMO_DB_PATH`, default `backend/_local/vor_hub.sqlite3`. This DB is ignored by Git. Never delete it during patches.
+- `backend/app/main.py` router already registered in previously installed Fleet Hub. The v1.3 archive does **not** change this entrypoint.
+- Existing site's `RESEND_API_KEY` and optionally `CONTACT_FROM_EMAIL` may be reused. Resend must be configured with a verified sending domain.
 
-### Step 2 completed: frontend history and transcript
+## Current UX (v1.3)
 
-- Map visible `alex` replies to API `owner` entries in AI history and repeat-handoff
-  transcripts. Keep UI sender labels and the live handoff SSE role unchanged.
-- Include owner messages in the existing count, per-message, and total character limits.
-- Add 14 pure history/transcript checks to the existing Playwright runner, covering
-  speaker order, unchanged UI data, ordinary chat, blank text, clipping, and newest-message limits.
-- Update API, architecture, and RAG documentation to describe frontend transmission.
-- Synced local dependencies with the existing lockfile before final verification.
-- `npm run lint`, `npm run typecheck`, and `npm run build`: passed with Next.js 16.3.4.
-- Focused `chat-history.spec.ts` checks: 14 passed using the Chromium project and one worker.
-  These tests exercise pure functions, not a browser conversation or live providers.
-- The initial focused run finished its tests but stalled while stopping the managed Next.js
-  server on Windows. It was interrupted; its server process is no longer running. The successful
-  rerun set `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000` to skip the unnecessary managed server;
-  these pure tests make no requests to that URL.
-- `git diff --check` and the repository raw-Cyrillic check passed.
-- Full browser scenarios and repository-wide CI remain part of Step 3.
+- Vehicles: separated cards, each shows Workshop.
+- Selected Vehicle: broad top panel with Maintenance & Compliance dates; red-tinted overdue items.
+- Workflow + Next Action: **one short panel**, horizontal left-to-right stages (2 rows if necessary), scenario picker and Complete stage; next-action summary alongside.
+- Communication history: muted-grey timeline and dashed border, no redundant `Vehicle timeline` subtitle.
+- Subscriber `Manage`: add contact by name/email/role and subscribe immediately; edit an existing contact (e.g. replace Alex/Victoria placeholder addresses), select/unselect subscribers per vehicle. **No special CLI or per-address env setup**.
+- External Email: `Subject` + text; no manual To; backend chooses **all current subscribers**. Default is simulation. Live Resend sends a **notification with vehicle, ticket and link**, not the internal message text. `To/Bcc` avoids exposing the entire list of subscriber emails to other recipients.
+- Calendar: MOT/Inspection/Service bookings with garage and dates, list of missing bookings in next 60 days, ICS export. Dashboard with synthetic metrics and Excel export.
+- Source of truth for contact email addresses is now the UI/database: legacy `VOR_DEMO_ALEX_EMAIL`, `VOR_DEMO_VICTORIA_EMAIL` are not re-synced after migration.
 
-### Step 3 completed: browser regressions and final checks
+## Deployment requirements (important)
 
-- Add seven browser scenarios, run on desktop and mobile Chromium (14 checks):
-  manual close, SSE close, and session expiry, each through streaming and JSON
-  fallback, plus a second handoff session with a distinct session ID and owner reply.
-- Assert actual outgoing history/transcript payloads, speaker order, preserved owner
-  labels, explicit repeat-handoff consent, and return to AI routing after closure.
-- Update API testing documentation with regression coverage and mock boundaries.
-- Focused browser run: 14 passed. The initial attempt could not launch browsers
-  because the Chromium revision required by the installed Playwright was missing.
-  Installed the required browser; the successful run used elevated execution to
-  avoid the previously observed Windows sandbox server-teardown hang.
-- Full `task ci` passed repository hygiene, project config, setup wizard,
-  deployment config, frontend checks, and free RAG checks. Frontend lint, typecheck,
-  resume parser, production build, and all 122 Playwright checks passed. Free RAG
-  validation passed four generated-case tests and all 27 contract-evaluation cases.
-- The first backend run had 508 passes and the same existing intermittent Redis
-  probe timeout failure (`test_hung_operation_times_out_without_hanging_cleanup[SET]`).
-  A complete `task backend:check` rerun passed all 509 tests without code changes.
-- The initial `task ci` did not finish green because of that intermittent backend
-  failure and an unavailable Docker Engine. After the user started Docker,
-  `task docker:build` passed on 2026-09-30 and produced `alextym-backend:latest`.
-  All CI components have now passed, with backend and Docker verified separately
-  after the initial full run; the entire pipeline was not rerun.
-- `npm audit --json` confirmed two affected package groups (one high, one critical).
-  `npm audit --omit=dev --json` reports only Next.js. Dependencies and lockfiles
-  were not changed in this branch; remediation is outside issue #107.
-- Next.js 16.3.4 is covered by [GHSA-vcvr-r3jv-pc5j](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j),
-  fixed in 16.3.6. The reported RCE requires attacker-controlled SVG input to the
-  Node.js `next/og` ImageResponse implementation. No such usage was found in the
-  project; its Open Graph image is the static `frontend/public/og-image.png`.
-- `brace-expansion` 1.1.18 and 5.0.9 arrive through ESLint/minimatch tooling.
-  Audit reports two stack-exhaustion advisories and one CPU-exhaustion advisory
-  (GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr).
-  Updating the respective dependency lines to at least 1.1.21 and 5.0.12 addresses
-  these three advisories. They are absent from the production-only audit.
-- The existing Starlette/httpx deprecation warning remains. The dependency audit
-  is not a comprehensive security assessment of the application or Docker image.
-- Browser tests use mocked API responses; backend tests use provider doubles.
-  Live Telegram delivery, Qdrant retrieval, and model behaviour remain unverified.
-  No ingestion or external messages were sent.
-- Removed the unrelated generated `next-env.d.ts` change from the production build.
+Set the following in the **backend** hosting environment (e.g. Render), not `NEXT_PUBLIC_*`:
 
-### Review boundary
+```
+VOR_DEMO_ENABLED=true
+VOR_DEMO_PASSWORD=<chosen password>
+VOR_DEMO_SEND_REAL_EMAIL=true
+VOR_DEMO_EMAIL_LIMIT=15
+VOR_DEMO_PUBLIC_URL=https://alextym.com/fleet-vor-hub
+VOR_DEMO_ALLOWED_ORIGINS=https://alextym.com,https://www.alextym.com
+VOR_DEMO_ALLOWED_EMAIL_DOMAINS=scas.nhs.uk
+RESEND_API_KEY=<existing verified Resend key>
+VOR_DEMO_FROM_EMAIL=<verified demo sender; optional if CONTACT_FROM_EMAIL is configured>
+VOR_DEMO_DB_PATH=/var/data/vor_hub.sqlite3
+```
 
-The three implementation steps for issue #107 are ready for review. Step 3 changes
-only browser tests, API testing documentation, and these notes. The user requested
-a readiness assessment, PR text, and squash-commit text, and will create the third
-commit, push, and open the PR after review. No commit, push, PR creation, deployment,
-or GitHub issue closure has been performed by the assistant.
+By default, only named *domains* or exact `VOR_DEMO_ALLOWED_RECIPIENTS` may receive mail. v1.3.1 also accepts the explicit wildcard `VOR_DEMO_ALLOWED_EMAIL_DOMAINS=*`, which allows all domains for subscribers added through `Manage`. This must not be used with a weak public demo password: the 15-recipient/day quota is only a secondary safeguard. Unapproved subscribers block the **whole** delivery when the wildcard is not enabled. Real sending requires login, explicit enablement, daily recipient quota and valid sender. Password `Victoria` remains supported locally; change it before enabling live sending publicly.
+
+**Persistent deployment data:** Render Free has ephemeral storage and no persistent disk, including restart after idling. If using Render Free, entered emails and saved history will be lost on restart. For durable deployed Manage/history, use a paid Render service with persistent disk mounted at `/var/data` and `VOR_DEMO_DB_PATH` as above, or migrate to a managed durable database (not implemented in this patch). **Do not claim persistence on Render Free.** See `UPDATE_VOR_HUB_V1_3.md`.
+
+## Operations / UI testing
+
+- Backend: open `http://127.0.0.1:8000/api/vor/session`; frontend `http://localhost:3000/fleet-vor-hub`.
+- Open `Manage`: edit Alex Tym and Victoria B. emails from `.example` to chosen addresses, uncheck external fake subscribers, optionally add more by name and email.
+- Real send is off until explicitly enabled and provider configured on backend. A failed Resend request returns an error; it is not recorded as successfully delivered.
+- Daily quota counts **recipient addresses**, not API calls; failed or uncertain provider attempts consume quota to reduce retry abuse. No email is sent on navigation, login or page load.
+- Run `python -m pytest -q backend/tests/test_vor_v1_3.py` from `backend/` adjusting path to `tests/test_vor_v1_3.py`. Run frontend `npm run typecheck`/`npm run build` locally.
+- Never commit `.env`, email secrets, actual private contacts or SQLite DB. Added demos should use fictional identifiers only.
+
+## Verified by patch author
+
+- Nine backend tests passed in isolated test environment including original v1-v1.2 regressions and new v1.3 tests. Previous v1 export migration assertion updated from exactly one marker to ≥3 installed demo migrations.
+- TSX syntax transpilation: no diagnostics.
+- Full Next.js production build/browser screenshots not run in this isolated environment.
+
+## Next
+
+1. Install v1.3 patch over v1.2, preserve SQLite, test Manage locally.
+2. Verify compact panel and dashed/grey Chatter at 1440×900 and 1920×1080.
+3. Configure live Resend in backend hosting environment; **do not** deploy until receiver domains and persistence expectations are understood.
+4. Consider removing synthetic sender branding if presenting outside private demo; real KEY2/HOTH integration is explicitly out of scope.
+
+## Patch v1.3.1 — wildcard recipient domain policy
+
+- `VOR_DEMO_ALLOWED_EMAIL_DOMAINS=*` now explicitly permits **any email domain** for active subscribed contacts.
+- Exact allowlisting via `VOR_DEMO_ALLOWED_RECIPIENTS` and ordinary domain restrictions continue to work when `*` is absent.
+- This change only alters the domain policy in `backend/app/api/vor.py` and does **not** auto-send on page load or permit user-supplied recipients in the send request.
+- `Manage` remains the only place to add addresses; login and `VOR_DEMO_SEND_REAL_EMAIL=true` are still required to send. Daily recipient cap `VOR_DEMO_EMAIL_LIMIT` is still enforced.
+- High risk with weak demo password: any authenticated visitor can add arbitrary recipients then trigger real email. Set a non-guessable password before public deployment, or keep live sending disabled.
+- Real mail still needs Resend and a verified sender, public HTTPS link, and persistent storage if contacts must survive service restart.
+- Tests include wildcard acceptance for recipients on different domains and continued quota enforcement.

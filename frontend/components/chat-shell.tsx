@@ -42,7 +42,7 @@ export function ChatShell() {
     handleSubmit,
     handoffId,
     handoffState,
-    handoffUnavailableMessage,
+    handoffUnavailable,
     hasActiveHandoff,
     input,
     inputPlaceholder,
@@ -95,11 +95,14 @@ export function ChatShell() {
   }, [handoffId, handoffState]);
 
   const unavailableMessageCopy = useMemo(() => {
-    if (!handoffUnavailableMessage) {
+    if (!handoffUnavailable) {
       return null;
     }
-    return formatHandoffUnavailableMessage(handoffUnavailableMessage);
-  }, [handoffUnavailableMessage]);
+    return {
+      ...formatHandoffUnavailableMessage(handoffUnavailable.message),
+      contactPath: handoffUnavailable.contactPath,
+    };
+  }, [handoffUnavailable]);
 
   useEffect(() => {
     const scrollToBottom = () => {
@@ -119,7 +122,7 @@ export function ChatShell() {
     };
   }, [
     handoffState,
-    handoffUnavailableMessage,
+    handoffUnavailable,
     messages,
     notice,
     shouldShowHandoffPrompt,
@@ -318,7 +321,7 @@ export function ChatShell() {
           <span>
             {unavailableMessageCopy.retryLine}{" "}
             <a
-              href="/contact"
+              href={unavailableMessageCopy.contactPath}
               style={{
                 color: "var(--text)",
                 textDecoration: "underline",
