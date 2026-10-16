@@ -331,3 +331,1048 @@
 .middlePane .workflowStages li{min-height:28px;padding:4px 4px}
 .workflowFooter{display:none}
 @media (max-width:1320px){.middlePane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+/* v2 / fleet UI refresh — compact 24-inch workspace, calm green visual system. */
+.root {
+  background: #e9eee9;
+  color: #29392f;
+}
+.root::before {
+  opacity: 1;
+  background-image:
+    linear-gradient(135deg, rgba(75,110,83,.055) 25%, transparent 25%, transparent 75%, rgba(75,110,83,.055) 75%),
+    linear-gradient(135deg, rgba(75,110,83,.055) 25%, transparent 25%, transparent 75%, rgba(75,110,83,.055) 75%),
+    radial-gradient(circle at 12% 22%, rgba(103,145,109,.11), transparent 36%),
+    radial-gradient(circle at 92% 88%, rgba(164,179,144,.15), transparent 38%);
+  background-position: 0 0, 20px 20px, 0 0, 0 0;
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+}
+.root input:focus,.root textarea:focus,.root select:focus {
+  border-color: #70967b;
+  box-shadow: 0 0 0 2px rgba(91,139,103,.18);
+}
+.root button:focus-visible { outline: 2px solid #497657; outline-offset: 2px; }
+.header {
+  height: 58px;
+  min-height: 58px;
+  flex: 0 0 58px;
+  padding: 0 15px;
+  gap: 10px;
+  background: rgba(250,252,248,.97);
+  border-bottom-color: #d4dfd3;
+  box-shadow: 0 1px 5px rgba(43,73,48,.06);
+}
+.brand { min-width: 0; gap: 9px; }
+.brand strong { font-size: 15px; color: #284432; }
+.brand small { font-size: 10px; }
+.logo { padding: 8px 10px; min-width: 62px; font-size: 14px; background: #426a4e; border-radius: 9px; }
+.logo small { font-size: 7px; margin-top: 4px; }
+.nav { padding: 3px; border-radius: 10px; background: #edf3eb; border-color: #d5e1d4; }
+.nav button { padding: 7px 14px; border-radius: 7px; font-size: 12px; }
+.nav .navActive { color: #32583b; }
+.headerRight { gap: 7px; }
+.profile { font-size: 11px; padding: 3px 7px 3px 4px; background: #f0f4ed; }
+.demoBadge { padding: 5px 8px; background: #e0eadf; font-size: 11px; }
+.exportButton { padding: 7px 10px; background: #e9f1e6; border-color: #c7d8c5; color: #365942; border-radius: 8px; font-size: 11px; }
+.exportButton:hover { background: #dceada; border-color: #98b49b; }
+.logout { color: #3f6d4a; }
+.workspace {
+  max-width: 1940px;
+  padding: 9px 11px 11px;
+  gap: 9px;
+  grid-template-columns: 250px minmax(0,1fr);
+  grid-template-rows: auto max-content minmax(240px,1fr);
+}
+.panel { border-color: #cfddcf; background: #fbfdf9; border-radius: 12px; box-shadow: 0 2px 7px rgba(49,75,53,.06); }
+.panelHeading h2 { color: #314e3a; }
+/* Denser vehicle directory: more entries visible without scrolling. */
+.sideHeader { padding: 10px 10px 9px; border-color: #d6e2d5; }
+.sideHeader>input { margin-top: 8px; padding: 7px 9px; font-size: 12px; }
+.critical { background: #f2e4e1; color: #925b5d; border: 1px solid #e7c9c6; padding: 5px 8px; font-size: 10px; }
+.vehicleScroll { padding: 6px; }
+.vehicleCard { padding: 8px 9px; margin-bottom: 5px; border-radius: 9px; border-left-width: 3px; box-shadow: none; line-height: 1.25; }
+.vehicleCard:hover { background: #f1f7ef; border-color: #b4cbb4; }
+.vehicleSelected { background: #e8f2e5!important; border-color: #7da183; box-shadow: inset 0 0 0 1px #bad5bb; }
+.vehicleTitle b { font-size: 14px; }
+.vehicleCard>small { font-size: 11px; margin-top: 2px; }
+.vehicleCard p { font-size: 11px; margin-top: 5px; }
+.cardStatus { margin-top: 5px; gap: 5px; font-size: 10px; }
+.vehicleWorkshop { margin-top: 5px; padding-top: 5px; gap: 5px; font-size: 10px; }
+.vehicleWorkshop strong { font-size: 10px; }
+.unread { min-width: 20px; height: 20px; font-size: 10px; background: #446f50; }
+.statusVor { background: #a36769; color: #fff; }
+.vehicleCard[data-severity="critical"] { border-left-color: #a36769; }
+.critical,.externalChip { background: #f4e7e4; color: #885154; border-color: #dec2bf; }
+.severity { background: #f0ead8; color: #766342; }
+.statusOperational { background: #507a58; }
+/* Vehicle summary: lower hero height gives activity timeline more room. */
+.details { min-height: 0; border-color: #9fbaa2; border-radius: 12px 12px 0 0; grid-template-columns: minmax(230px,.52fr) minmax(0,1.48fr); box-shadow: 0 2px 7px rgba(50,79,53,.07); }
+.detailsHead { padding: 10px 13px; border-radius: 12px 0 0 0; background: linear-gradient(125deg,#deecdd,#f1f7ed); border-color: #d3e0d3; }
+.detailsHead h1 { font-size: 25px; margin-top: 4px; letter-spacing: .15px; color: #2e5738; }
+.detailsHead p { font-size: 11px; margin-top: 2px; }
+.pills { gap: 4px; }
+.pills span { padding: 3px 7px; font-size: 10px; }
+.ticketRowHead { margin-top: 6px; gap: 3px; }
+.ticketRowHead small { font-size: 9px; margin-bottom: 1px; }
+.ticketRowHead>div { gap: 4px; }
+.ticketChip { padding: 4px 7px; font-size: 10px; background: #ebf3e8; }
+.miniMeta { padding: 5px 7px; font-size: 10px; line-height: 1.3; border-radius: 9px; }
+.detailsBody { padding: 9px 12px; row-gap: 5px; column-gap: 9px; align-content: center; grid-template-columns: minmax(160px,.78fr) minmax(210px,1.22fr); }
+.detailsBody .problemLabel { font-size: 9px; color: #956160; }
+.detailsBody .issueBox { padding: 7px 9px; font-size: 12px; border-radius: 7px; background: #eef4e9; border-left: 3px solid #7d9d78; }
+.detailsBody .infoPair { gap: 5px; }
+.detailsBody .infoPair>div { padding: 5px 6px; border-radius: 7px; background: #fbfdf9; }
+.infoPair label { font-size: 9px; margin-bottom: 2px; }
+.responsibleSelect { font-size: 10px!important; padding: 4px 19px 4px 5px!important; }
+.detailsBody .ticketRow { min-height: 0; }
+.maintenanceInside { padding-top: 5px; gap: 9px; }
+.maintenanceTitle { min-width: 90px; max-width: 90px; font-size: 9px; }
+.maintenanceInside .maintenanceGrid { gap: 5px; }
+.maintenanceInside .maintenanceGrid>div { padding: 4px 5px; border-radius: 7px; column-gap: 4px; }
+.maintenanceInside .maintenanceGrid small { font-size: 9px; }
+.maintenanceInside .maintenanceGrid strong { font-size: 10px; }
+.maintenanceInside .maintenanceGrid button { font-size: 9px; padding: 4px 5px; }
+.overdueEvent { background: #f9eeec!important; border-color: #dfc5c1!important; box-shadow: inset 3px 0 0 #ad7772; }
+.maintenanceInside .maintenanceGrid .overdueEvent small,
+.maintenanceInside .maintenanceGrid .overdueEvent strong,
+.outstandingCard.overdueEvent span { color: #91625c; }
+.eventMOT { background: #f6e8e4; border-left-color: #a36769; }
+/* Workflow: the current step itself is the action; no separate CTA button. */
+.middlePane { margin-top: -9px; padding: 8px 12px 9px; background: #f8fbf6; border-color: #9fbaa2; border-radius: 0 0 12px 12px; box-shadow: 0 2px 7px rgba(50,79,53,.07); }
+.workflowTopRow { gap: 8px; margin-bottom: 4px; }
+.workflowTopRow .panelHeading { justify-content: start; gap: 8px; }
+.workflowTopRow .panelHeading h2 { font-size: 12px; }
+.workflowTopRow .panelHeading>span { font-size: 10px; white-space: nowrap; }
+.workflowHint { font-size: 10px; color: #68816d; margin-left: auto; text-align: right; }
+.workflowHeaderActions { gap: 4px; }
+.workflowToggle { padding: 4px 8px; border-radius: 7px; font-size: 13px; border-color: #c7d9c6; background: #eaf2e7; color: #426d4d; }
+.middlePane .workflowStages { margin: 2px 0 0; gap: 4px; grid-template-columns: repeat(8,minmax(0,1fr)); }
+.middlePane .workflowStages li { display: block; padding: 0; min-height: 33px; border: 0; background: transparent; }
+.stageButton { font-family: inherit; width: 100%; min-height: 33px; height: 100%; display: flex; align-items: center; gap: 5px; text-align: left; padding: 5px 6px; border-radius: 7px; border: 1px solid #d8e2d7; background: #f5f7f3; color: #6a7669; transition: background .15s, border-color .15s, transform .15s,box-shadow .15s; }
+.root .stageButton:disabled { cursor: default; opacity: 1; }
+.stageDone .stageButton { background: #edf5eb; color: #58705b; border-color: #d0e1ce; }
+.stageCurrent .stageButton { background: #e2f0df; color: #2b6137; border-color: #65966f; box-shadow: inset 0 0 0 1px #83ad87; font-weight: 700; cursor: pointer; }
+.stageCurrent .stageButton:hover:not(:disabled) { background: #d4e9d2; border-color: #477b54; transform: translateY(-1px); }
+.stageCurrent .stageButton:active:not(:disabled) { transform: translateY(0); }
+.stageCurrent .stageButton:focus-visible { outline: 2px solid #2d7343; outline-offset: 2px; }
+.middlePane .workflowStages .stageMarker { height: 17px; width: 17px; min-width: 17px; font-size: 9px; }
+.stageDone .stageMarker { background: #628c68; }
+.stageCurrent .stageMarker { background: #467650; }
+.middlePane .stageLabel { font-size: 10px; line-height: 1.16; }
+.stageAction { font-size: 9px; color: #326b42; white-space: nowrap; margin-left: auto; font-weight: 800; }
+.middlePane .scenarioRow { margin: 4px 0 6px; }
+/* Chatter: save vertical space without sacrificing click targets. */
+.chatterPane { border: 1px solid #b6cab7; border-radius: 12px; background: #f7faf5; box-shadow: 0 2px 8px rgba(46,75,50,.08); }
+.chatterPane .chatterTop { padding: 9px 11px 7px; background: #fbfdf9; }
+.chatterPane .subscribers { margin-top: 5px; padding: 6px 8px; background: #eef4ed; border-color: #d9e4d7; }
+.chatterPane .subscriberGroups { margin-top: 4px; }
+.chatterPane .subscriberGroups>div { padding: 4px 6px; }
+.chatterPane .filterBar { margin-top: 5px; }
+.filterBar { gap: 4px; }
+.filterBar button { padding: 5px 8px; border-radius: 7px; }
+.chatterPane .timeline { background: #f0f5f0; border-color: #dbe6dc; padding: 9px 11px; }
+.chatterPane .event { background: #fffefa; border: 1px solid #d7e4d8; box-shadow: 0 1px 2px rgba(44,65,42,.06); border-radius: 9px; }
+.chatterPane .eventMine { background: #4c7155; color: #fff; border-color: #4c7155; }
+.chatterPane .compose { padding: 8px 11px; background: #f7faf6; }
+.composeTabs button { padding: 5px 9px; }
+.composeBottom textarea { height: 56px; }
+.composeBottom button { height: 42px; width: 44px; border-radius: 9px; background: #487650; }
+.toast { top: 67px; background: #eff5e9; border-color: #8bad8c; }
+/* Dashboard and calendar inherit the same calm palette. */
+.metric { padding: 14px; border-color: #d4e2d2; background: #fbfdf9; }
+.chartGrid>.panel { padding: 15px; }
+.calendarTop { padding: 14px; }
+.calendarLayout { padding: 11px; gap: 10px; }
+.outstandingPanel .panelHeading { padding: 12px; }
+.loginCard { background: #fbfdf9; border: 1px solid #cddccb; }
+.loginCard .logo,.loginCard button { background: #426a4e; }
+.loginCard .error { color: #94595c; }
+@media (max-height: 850px) and (min-width: 961px) {
+  .workspace { padding: 7px 9px 9px; gap: 8px; grid-template-columns: 240px minmax(0,1fr); }
+  .detailsHead { padding: 8px 11px; }
+  .detailsHead h1 { font-size: 23px; }
+  .detailsBody { padding: 7px 10px; row-gap: 4px; }
+  .middlePane { margin-top: -8px; padding: 6px 10px 8px; }
+  .middlePane .workflowStages li,.stageButton { min-height: 30px; }
+  .chatterPane .chatterTop { padding: 7px 10px 5px; }
+}
+@media (max-width: 1320px) and (min-width: 961px) {
+  .workspace { grid-template-columns: 230px minmax(0,1fr); }
+  .details { grid-template-columns: minmax(190px,.55fr) minmax(0,1.45fr); }
+  .detailsBody { grid-template-columns: minmax(145px,.75fr) minmax(180px,1.25fr); }
+  .workflowHint { display: none; }
+  .middlePane .workflowStages { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .maintenanceTitle { min-width: 74px; max-width: 74px; }
+}
+@media (max-width: 960px) {
+  .header { height: auto; min-height: 58px; flex: 0 0 auto; }
+  .workspace { overflow: auto; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto auto auto; align-content: start; }
+  .vehiclePane { grid-column: 1; grid-row: 1; min-height: 210px; max-height: 260px; }
+  .details { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; min-height: 0; }
+  .detailsHead { border-radius: 12px 12px 0 0; }
+  .detailsBody { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .middlePane { grid-column: 1; grid-row: 3; margin-top: -9px; }
+  .chatterPane { grid-column: 1; grid-row: 4; min-height: 490px; }
+  .middlePane .workflowStages { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@media (max-width: 620px) {
+  .header { flex-wrap: wrap; min-height: 0; height: auto; padding: 8px; }
+  .workspace { display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow: auto; }
+  .vehiclePane { flex: none; min-height: 190px; max-height: 250px; }
+  .details { flex: none; display: flex; flex-direction: column; }
+  .detailsBody { display: grid; grid-template-columns: minmax(0,1fr); }
+  .detailsBody .problemLabel,.detailsBody .issueBox,.detailsBody .infoPair,.maintenanceInside { grid-area: auto; }
+  .maintenanceInside { display: block; }
+  .maintenanceTitle { max-width: none; margin-bottom: 5px; }
+  .middlePane { display: flex; flex-direction: column; margin-top: -8px; }
+  .middlePane .workflowStages { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .workflowHint { display: none; }
+  .chatterPane { flex: none; min-height: 520px; }
+  .emailFields { grid-template-columns: 1fr; }
+}
+
+/* vNext alt redesign: stronger separation of navigation, overview and messages */
+.root{
+  background:#dfe5dc;
+}
+.root::before{
+  opacity:.22;
+  background-image:
+    linear-gradient(135deg, rgba(83,94,72,.05) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(83,94,72,.05) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(83,94,72,.05) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(83,94,72,.05) 25%, transparent 25%);
+  background-position:16px 0,16px 0,0 0,0 0;
+  background-size:32px 32px;
+}
+.header{
+  height:66px;
+  flex-basis:66px;
+  padding:0 16px;
+  background:#f7f9f3;
+  border-bottom:1px solid #d1d8cc;
+}
+.brand strong{font-size:17px}
+.brand small{font-size:10px}
+.logo{border-radius:12px;padding:10px 12px;background:#4f6a52}
+.nav{padding:3px;border-radius:12px;background:#ebefe7;border-color:#d3dacd}
+.nav button{padding:10px 18px}
+.headerRight{gap:8px}
+.demoBadge,.profile{border-radius:9px;padding:7px 10px}
+.workspace{
+  grid-template-columns:264px minmax(420px, 500px) minmax(520px, 1fr);
+  gap:18px;
+  padding:18px;
+  align-items:start;
+}
+.panel{border-radius:18px;border:1px solid #ccd5c7;box-shadow:0 8px 22px rgba(54,67,52,.08)}
+
+/* left navigation rail */
+.vehiclePane{
+  background:linear-gradient(180deg,#edf2ea 0%,#e8eee5 100%);
+  border-color:#c9d2c2;
+  box-shadow:0 10px 24px rgba(56,67,53,.10), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.sideHeader{
+  padding:14px 14px 10px;
+  background:linear-gradient(180deg,rgba(255,255,255,.58),rgba(255,255,255,.15));
+  border-bottom:1px solid #d7ddd1;
+}
+.sideHeader>input{margin-top:10px;padding:8px 10px}
+.critical{
+  background:#e7d8d8;
+  color:#6e5155;
+  border:1px solid #d7c0c1;
+  padding:8px 10px;
+}
+.vehicleScroll{padding:8px;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0))}
+.vehicleCard{
+  padding:10px 10px 9px;
+  border-radius:13px;
+  border:1px solid #d3daca;
+  border-left-width:5px;
+  margin-bottom:8px;
+  box-shadow:0 3px 10px rgba(43,54,40,.06);
+}
+.vehicleCard:hover{background:#f4f7f1}
+.vehicleSelected{
+  background:#f7fbf5!important;
+  border-color:#8cab92;
+  box-shadow:0 0 0 2px rgba(104,137,112,.14),0 6px 14px rgba(43,54,40,.08);
+}
+.vehicleTitle b{font-size:15px;letter-spacing:.1px}
+.vehicleCard>small{font-size:11px;margin-top:2px}
+.cardStatus{margin-top:8px;font-size:10px}
+.vehicleCard p{
+  margin-top:6px;
+  font-size:12px;
+  white-space:normal;
+  line-height:1.25;
+  min-height:30px;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+}
+.vehicleWorkshop{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:10px;color:#67735f}
+.unread{min-width:22px;height:22px;background:#4f6a52}
+.statusVor{background:#b5878d}
+.statusOperational{background:#5d775f}
+.severity{background:#d7c9a5;color:#5a5435}
+.vehicleCard[data-severity="critical"]{border-left-color:#b5878d}
+.vehicleCard[data-severity="high"]{border-left-color:#b79a62}
+
+/* centre case overview */
+.details{
+  background:linear-gradient(180deg,#f8fbf5 0%,#f4f7f1 100%);
+  border-color:#bfcbb8;
+  box-shadow:0 10px 24px rgba(56,67,53,.10);
+}
+.detailsHead{
+  padding:13px 14px 10px;
+  background:linear-gradient(95deg,#eef4ea,#f8fbf6 55%,#ffffff 100%);
+}
+.pills{gap:5px}
+.detailsHead h1{font-size:22px}
+.detailsHead p{font-size:12px}
+.miniMeta{padding:8px 10px;border-radius:12px;background:#fbfcf8}
+.detailsBody{padding:12px 14px 13px;gap:10px}
+.problemLabel{color:#8a6b70}
+.issueBox{background:#edf3e9;border:1px solid #d7e0d1;padding:10px 12px;font-size:14px}
+.infoPair>div{padding:8px 9px;border-radius:11px;background:#fbfcf9}
+.responsibleSelect{padding:8px 10px;border-radius:9px}
+.maintenanceInside{
+  padding:10px 12px;
+  border:1px solid #d7ddd1;
+  border-radius:13px;
+  background:#fbfcf8;
+}
+.maintenanceTitle{font-size:11px;font-weight:800;letter-spacing:.4px;color:#5d6956;margin-bottom:8px}
+.maintenanceGrid{gap:7px;margin-top:0}
+.maintenanceGrid>div{padding:8px 8px 7px;border-radius:11px;background:#fff}
+.maintenanceGrid strong{font-size:12px}
+.ticketRowHead{gap:6px;margin-top:6px}
+.ticketChip{background:#eef3ea;border-color:#d2dccd;padding:6px 8px;font-size:11px}
+.ticketChosen{border-color:#789078;background:#f6faf5}
+
+/* workflow card becomes its own compact control surface */
+.middlePane{
+  background:linear-gradient(180deg,#f7faf5 0%,#f1f6ef 100%);
+  border-color:#c7d2c0;
+  box-shadow:0 8px 20px rgba(56,67,53,.09);
+  margin-top:-8px;
+  padding:10px 12px 12px;
+}
+.workflowTopRow{align-items:center}
+.workflow .panelHeading h2{font-size:15px}
+.workflowHint{
+  margin-left:auto;
+  font-size:11px;
+  color:#6e7867;
+  background:#eef3ea;
+  border:1px solid #d8e1d2;
+  padding:6px 8px;
+  border-radius:999px;
+}
+.workflowToggle{
+  border:1px solid #d4dccf;
+  background:#fbfcf9;
+  color:#4f5b49;
+  border-radius:9px;
+  width:30px;
+  height:30px;
+}
+.scenarioRow{
+  background:#fbfcf8;
+  border:1px solid #d9e0d4;
+  border-radius:12px;
+  padding:7px 8px;
+  margin:8px 0 7px;
+}
+.middlePane .workflowStages{gap:4px;margin-top:7px}
+.middlePane .workflowStages li{min-height:44px;padding:0;border-radius:12px;overflow:hidden}
+.stageButton{
+  width:100%;height:100%;border:1px solid #d4dccf;border-radius:12px;background:#fbfcf8;
+  display:flex;align-items:center;gap:7px;padding:7px 8px;text-align:left;color:#3d4638;
+}
+.stagePending .stageButton{background:#f8faf7}
+.stageDone .stageButton{background:#edf5ec;border-color:#b8cdb7}
+.stageCurrent .stageButton{background:#eff6ef;border-color:#82a485;box-shadow:inset 0 0 0 1px rgba(111,146,116,.18)}
+.stageButton:disabled{opacity:1}
+.stageMarker{display:grid;place-items:center;width:20px;height:20px;min-width:20px;border-radius:999px;background:#e6ece1;color:#55614d;font-size:10px;font-weight:800}
+.stageDone .stageMarker{background:#5f7b60;color:#fff}
+.stageCurrent .stageMarker{background:#6b8b6d;color:#fff}
+.stageLabel{font-size:10px;line-height:1.15;font-weight:700}
+.stageAction{margin-left:auto;font-size:10px;font-weight:800;color:#547056;white-space:nowrap}
+.workflowEmpty{padding:8px 0 2px;color:#6d7766}
+
+/* hide old next action block completely if still rendered */
+.nextAction{display:none!important}
+
+/* communication workspace */
+.chatterPane{
+  background:linear-gradient(180deg,#f8faf7 0%,#f2f5f1 100%);
+  border:1px solid #bcc9bf;
+  box-shadow:0 14px 28px rgba(48,57,46,.10);
+  position:relative;
+}
+.chatterPane::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:6px;
+  border-radius:18px 0 0 18px;
+  background:linear-gradient(180deg,#627e66,#8fa18d);
+}
+.chatterTop{padding:14px 16px 10px;background:rgba(255,255,255,.46);border-bottom:1px solid #d7ddd1}
+.chatterPane .panelHeading h2{font-size:18px}
+.linkedCount{background:#e9efe6;color:#52604d}
+.subscribers{background:#eef3ea;border-color:#d7ddd1}
+.subscriberGroups>div{background:#fafbf8}
+.personChip{background:#e4ece0;border-color:#cad5c6}
+.externalChip{background:#eadedf;border-color:#d8c0c2;color:#73585d}
+.filterBar{background:#e9eee7;border-radius:12px;padding:4px}
+.filterBar button{padding:8px 11px}
+.filterBar .filterActive{background:#fff}
+.ticketFilter{margin-top:8px}
+.timeline{
+  background:#eef2ee;
+  border-block:1px solid #d3dbd2;
+  padding:16px;
+  gap:12px;
+  scroll-behavior:smooth;
+}
+.event{
+  max-width:84%;
+  background:#fff;
+  border:1px solid #d7ddd3;
+  border-radius:15px 15px 15px 6px;
+  box-shadow:0 4px 12px rgba(47,58,44,.07);
+}
+.eventMine{
+  background:#4f6a52;
+  border-color:#4f6a52;
+  border-radius:15px 15px 6px 15px;
+}
+.eventMeta span{background:#eef3ea}
+.eventMine .eventMeta span{background:#6c836d}
+.compose{
+  background:#f8faf7;
+  border-top:1px solid #d6ddd2;
+  padding:10px 12px 12px;
+}
+.composeTabs{gap:6px}
+.composeTabs button{border-radius:9px;padding:7px 10px;background:#eff3eb;border:1px solid #d5ddd0}
+.composeActive{background:#4f6a52!important;color:#fff!important;border-color:#4f6a52!important}
+.composeBottom textarea{background:#fff;min-height:54px}
+.composeBottom button{background:#5a765d}
+.recipientSummary{background:#eef3ea}
+.manageContacts{background:#f7faf5;border-color:#d6ddd1;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.contactDirectoryRow button,.contactForm button{background:#eef3ea}
+.contactForm button[type="submit"]{background:#4f6a52}
+
+/* softer overdue + critical palette */
+.overdueEvent{
+  background:#f2e5e6!important;
+  border-color:#dbc4c6!important;
+  box-shadow:inset 3px 0 0 #b5878d;
+}
+.maintenanceInside .maintenanceGrid .overdueEvent small,
+.maintenanceInside .maintenanceGrid .overdueEvent strong,
+.outstandingCard.overdueEvent span{color:#7d6166;font-weight:750}
+
+@media (max-width: 1380px){
+  .workspace{grid-template-columns:250px minmax(360px, 450px) minmax(440px, 1fr);gap:14px;padding:14px}
+  .middlePane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width: 1180px){
+  .workspace{grid-template-columns:250px minmax(0,1fr);grid-template-rows:auto auto minmax(300px,1fr)}
+  .chatterPane{grid-column:1 / -1;grid-row:3;min-height:460px}
+  .details{grid-column:2;grid-row:1}
+  .middlePane{grid-column:2;grid-row:2}
+}
+@media (max-width: 760px){
+  .workspace{display:flex;flex-direction:column;overflow:auto}
+  .vehiclePane{min-height:240px;max-height:320px}
+  .details,.middlePane,.chatterPane{width:100%}
+  .middlePane .workflowStages{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .workflowHint{display:none}
+}
+
+/* vNext hotfix: restore three-zone layout and replace harsh red with muted rose */
+.workspace{
+  grid-template-columns: 260px minmax(470px, 540px) minmax(640px, 1fr) !important;
+  grid-template-rows: auto auto;
+  align-items:start;
+}
+.vehiclePane{grid-column:1;grid-row:1 / span 2;min-height:0}
+.details{grid-column:2;grid-row:1}
+.middlePane{grid-column:2;grid-row:2}
+.chatterPane{grid-column:3;grid-row:1 / span 2;min-height:0}
+
+/* make centre blocks comfortable and prevent squeezed vertical labels */
+.detailsHead,.detailsBody{padding-left:16px;padding-right:16px}
+.middlePane{padding:12px 14px 14px}
+.middlePane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:6px}
+.middlePane .workflowStages li{min-height:52px}
+.stageButton{padding:8px 9px;align-items:flex-start}
+.stageLabel{font-size:11px;line-height:1.2}
+.stageAction{font-size:10px}
+.workflowHint{display:none}
+.scenarioRow{grid-template-columns:108px minmax(0,1fr) auto}
+
+/* make messages the main workspace */
+.chatterPane{display:flex;flex-direction:column}
+.timeline{flex:1;min-height:360px}
+.compose{margin-top:auto}
+
+/* soften all red uses */
+.critical,
+.statusVor,
+.problemLabel,
+.externalChip,
+.vehicleCard[data-severity="critical"] .statusVor{
+  background:#d8c1c5 !important;
+  color:#6d565a !important;
+  border-color:#cdb5b9 !important;
+}
+.vehicleCard[data-severity="critical"]{border-left-color:#c6a8ae !important}
+.overdueEvent{
+  background:#efe3e5 !important;
+  border-color:#d8c1c5 !important;
+  box-shadow:inset 3px 0 0 #b39197 !important;
+}
+.maintenanceInside .maintenanceGrid .overdueEvent small,
+.maintenanceInside .maintenanceGrid .overdueEvent strong,
+.outstandingCard.overdueEvent span{color:#7a6166 !important}
+
+/* cleaner vehicle cards */
+.vehicleCard{padding:9px 10px 8px}
+.vehicleCard p{min-height:0}
+.vehicleWorkshop{margin-top:4px}
+
+@media (max-width: 1480px){
+  .workspace{grid-template-columns:250px minmax(420px,500px) minmax(520px,1fr) !important}
+}
+@media (max-width: 1240px){
+  .workspace{grid-template-columns:240px minmax(0,1fr) !important;grid-template-rows:auto auto minmax(380px,1fr)}
+  .vehiclePane{grid-column:1;grid-row:1 / span 3}
+  .details{grid-column:2;grid-row:1}
+  .middlePane{grid-column:2;grid-row:2}
+  .chatterPane{grid-column:2;grid-row:3}
+  .timeline{min-height:300px}
+}
+
+
+/* v3 — independently sized case column, scroll-contained communications and amber statuses */
+.root{
+  background: #e5eae3;
+  color: #293b32;
+}
+.root::before{
+  background-image:
+    linear-gradient(30deg, rgba(91,116,97,.11) 12%, transparent 12%, transparent 88%, rgba(91,116,97,.11) 88%),
+    linear-gradient(150deg, rgba(91,116,97,.11) 12%, transparent 12%, transparent 88%, rgba(91,116,97,.11) 88%);
+  background-size:56px 56px;
+  opacity:.18;
+}
+.workspace{
+  max-width:1920px;
+  width:100%;
+  flex:1;
+  min-height:0;
+  height:100%;
+  display:grid !important;
+  grid-template-areas:"rail case messages";
+  grid-template-columns:minmax(220px,265px) minmax(410px,510px) minmax(420px,1fr) !important;
+  grid-template-rows:minmax(0,1fr) !important;
+  gap:13px;
+  padding:13px;
+  align-items:stretch;
+  overflow:hidden;
+}
+.vehiclePane{
+  grid-area:rail;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  align-self:stretch;
+  height:100%;
+  min-height:0;
+  max-height:none;
+  background:#f1f5f0;
+  border:1px solid #cfdbcf;
+}
+.caseColumn{
+  grid-area:case;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  align-self:start;
+  gap:12px;
+  min-width:0;
+  min-height:0;
+  max-height:100%;
+  overflow-y:auto;
+  scrollbar-width:thin;
+}
+.caseColumn > .details,
+.caseColumn > .middlePane{
+  grid-area:auto;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  width:100%;
+  flex-shrink:0;
+  margin:0;
+  min-width:0;
+  border:1px solid #cbd7c9;
+  border-radius:16px;
+  box-shadow:0 4px 15px rgba(32,61,43,.055);
+  background:#fafcf9;
+}
+.caseColumn > .details{
+  display:flex!important;
+  flex-direction:column;
+  grid-template-columns:none!important;
+  min-height:0;
+  overflow:hidden;
+}
+.caseColumn .detailsHead{
+  display:flex;
+  border-right:0;
+  border-bottom:1px solid #d9e3d9;
+  border-radius:15px 15px 0 0;
+  background:linear-gradient(100deg,#eaf2ea,#f8fbf8);
+  padding:13px 15px;
+  gap:10px;
+}
+.caseColumn .detailsHead h1{font-size:25px;letter-spacing:0;margin-top:5px}
+.caseColumn .detailsHead p{font-size:12px;margin-top:3px}
+.caseColumn .ticketRowHead{margin-top:7px;gap:4px}
+.caseColumn .ticketRowHead > div{gap:5px}
+.caseColumn .ticketChip{padding:4px 7px;font-size:10px}
+.caseColumn .miniMeta{font-size:10px;padding:7px 8px;line-height:1.4}
+.caseColumn .detailsBody{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  grid-template-rows:auto auto auto!important;
+  gap:7px 12px;
+  padding:13px 15px 14px;
+  align-content:start;
+  background:#fafcf9;
+}
+.caseColumn .detailsBody .problemLabel{grid-area:1 / 1 / 2 / 2;align-self:end}
+.caseColumn .detailsBody .issueBox{grid-area:2 / 1 / 3 / 2;align-self:stretch;display:flex;align-items:center;padding:10px 12px;font-size:13px}
+.caseColumn .detailsBody .infoPair{
+  grid-area:1 / 2 / 3 / 3;
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-rows:auto auto;
+  gap:6px;
+}
+.caseColumn .detailsBody .infoPair>div{padding:6px 8px;border:1px solid #dce5da;background:#fff}
+.caseColumn .detailsBody .infoPair label{font-size:9px;margin-bottom:3px}
+.caseColumn .detailsBody .responsibleSelect{font-size:11px!important;padding:5px 8px!important;width:100%}
+.caseColumn .detailsBody .maintenanceInside{
+  grid-area:3 / 1 / 4 / 3;
+  display:block;
+  padding:8px;
+  border:1px solid #dae4d8;
+  border-radius:12px;
+  background:#f3f7f2;
+  min-width:0;
+}
+.caseColumn .maintenanceTitle{max-width:none;margin-bottom:6px;font-size:10px;letter-spacing:.3px}
+.caseColumn .maintenanceInside .maintenanceGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  margin:0;
+}
+.caseColumn .maintenanceInside .maintenanceGrid>div{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  padding:7px;
+  min-width:0;
+  gap:3px;
+  background:#fff;
+}
+.caseColumn .maintenanceInside .maintenanceGrid small,
+.caseColumn .maintenanceInside .maintenanceGrid strong,
+.caseColumn .maintenanceInside .maintenanceGrid button{
+  grid-column:auto;
+  grid-row:auto;
+  margin:0;
+  min-width:0;
+}
+.caseColumn .maintenanceInside .maintenanceGrid strong{font-size:11px;white-space:normal}
+.caseColumn .maintenanceInside .maintenanceGrid button{font-size:10px;margin-top:3px}
+
+/* Workflow is a separate component immediately beneath overview. */
+.caseColumn > .middlePane{
+  display:block !important;
+  padding:12px 13px 13px;
+  border-radius:16px;
+  background:#f8fbf7;
+  overflow:visible;
+}
+.caseColumn .middlePane .workflow{display:block;padding:0;overflow:visible}
+.caseColumn .workflowTopRow{display:flex;align-items:center;gap:8px}
+.caseColumn .workflowTopRow .panelHeading{flex:1;min-width:0;justify-content:flex-start;flex-wrap:wrap;gap:7px}
+.caseColumn .workflowTopRow h2{font-size:14px}
+.caseColumn .workflowTopRow .panelHeading span{font-size:10px}
+.caseColumn .workflowHeaderActions{margin-left:auto}
+.caseColumn .workflowToggle{height:27px;width:28px;border-radius:8px}
+.caseColumn .middlePane .workflowStages{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  grid-auto-rows:auto;
+  gap:6px;
+  margin:9px 0 0;
+  padding:0;
+}
+.caseColumn .middlePane .workflowStages li{
+  height:auto;
+  min-height:39px;
+  border:0;
+  padding:0;
+  display:block;
+  min-width:0;
+}
+.caseColumn .middlePane .workflowStages .stageButton{
+  height:100%;min-height:39px;
+  display:flex;align-items:center;
+  padding:7px 8px;
+  gap:6px;
+  border-radius:10px;
+}
+.caseColumn .stageLabel{font-size:11px;line-height:1.25;overflow-wrap:normal;word-break:normal;hyphens:auto}
+.caseColumn .stageMarker{flex:0 0 20px}
+.caseColumn .stageAction{font-size:9px}
+.caseColumn .scenarioRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;padding:8px}
+.caseColumn .scenarioRow label{grid-column:1/-1;grid-row:auto}
+.caseColumn .scenarioRow select{grid-column:1;grid-row:auto}
+.caseColumn .scenarioRow>small{grid-column:2;grid-row:auto}
+
+/* Chatter is the visual priority; messages, not the full page, scroll. */
+.workspace > .chatterPane{
+  grid-area:messages;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  align-self:stretch;
+  min-height:0!important;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid #b8cbbd;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 8px 25px rgba(28,67,43,.10);
+}
+.workspace > .chatterPane::before{width:4px;background:#5b816b;pointer-events:none}
+.workspace > .chatterPane .chatterTop{flex:0 0 auto;background:#fff;padding:12px 14px 10px}
+.workspace > .chatterPane .chatterTop h2{font-size:17px;letter-spacing:-.2px}
+.workspace > .chatterPane .subscribers{margin-top:8px;padding:8px;background:#f4f8f4}
+.workspace > .chatterPane .subscriberGroups{margin-top:5px}
+.workspace > .chatterPane .subscriberGroups>div{padding:6px}
+.workspace > .chatterPane .filterBar{margin-top:8px}
+.workspace > .chatterPane .ticketFilter{margin-top:5px}
+.workspace > .chatterPane .timeline{
+  min-height:0!important;
+  flex:1 1 0%;
+  overflow-y:auto;
+  background:#f1f5f2;
+  padding:13px 17px;
+}
+.workspace > .chatterPane .event{max-width:85%;border-radius:13px;box-shadow:0 1px 4px rgba(43,70,54,.07)}
+.workspace > .chatterPane .eventMine{background:#4e725f;border-color:#4e725f;color:#fff}
+.workspace > .chatterPane .compose{
+  flex:0 0 auto;
+  margin-top:0;
+  padding:9px 14px 11px;
+  background:#fff;
+  border-top:1px solid #d8e4da;
+}
+.workspace > .chatterPane .composeBottom textarea{height:57px;min-height:57px}
+.workspace > .chatterPane .composeBottom button{background:#4f755d;height:46px;width:46px}
+
+/* Navigation rail: denser cards, full-width information. */
+.vehiclePane .sideHeader{padding:13px 12px 10px}
+.vehiclePane .vehicleScroll{padding:7px}
+.vehiclePane .vehicleCard{
+  padding:8px 9px 7px;
+  margin-bottom:6px;
+  border-radius:11px;
+  border-left-width:3px;
+}
+.vehiclePane .vehicleTitle b{font-size:14px}
+.vehiclePane .vehicleCard>small{font-size:10px;margin-top:2px}
+.vehiclePane .cardStatus{margin-top:5px;gap:6px}
+.vehiclePane .vehicleCard p{font-size:11px;line-height:1.25;margin-top:5px;min-height:0;-webkit-line-clamp:1;white-space:nowrap}
+.vehiclePane .vehicleWorkshop{font-size:10px;padding-top:4px;margin-top:4px}
+.vehiclePane .statusVor,.vehiclePane .statusOperational{font-size:10px;padding:3px 7px}
+
+/* Remove all rose/red/pink accents. Warnings use restrained ochre/amber. */
+.root .critical,
+.root .statusVor,
+.root .vehicleCard[data-severity="critical"] .statusVor{
+  background:#dfc597 !important;
+  color:#614d28 !important;
+  border:1px solid #c7a971 !important;
+}
+.root .critical{background:#f1e4cc!important;font-size:10px}
+.root .severity{background:#eee4c8!important;color:#625638!important}
+.root .problemLabel{background:transparent!important;color:#757e57!important;font-weight:800}
+.root .externalChip{background:#e5ede8!important;color:#4e695d!important;border-color:#c5d5ca!important}
+.root .vehicleCard[data-severity="critical"]{border-left-color:#ad8e57!important}
+.root .vehicleCard[data-severity="high"]{border-left-color:#bea46f!important}
+.root .overdueEvent,
+.root .eventMOT{
+  background:#faf0db!important;
+  border-color:#e5d2a7!important;
+  box-shadow:inset 3px 0 0 #c09b58!important;
+}
+.root .maintenanceInside .maintenanceGrid .overdueEvent small,
+.root .maintenanceInside .maintenanceGrid .overdueEvent strong,
+.root .outstandingCard.overdueEvent span{color:#765b2a!important}
+.root .loginCard .error{color:#86652e}
+.root .calendarEvent.eventMOT{border-left-color:#c09b58!important}
+
+@media (max-width:1250px){
+  .workspace{
+    grid-template-areas:"rail case" "messages messages";
+    grid-template-columns:230px minmax(0,1fr)!important;
+    grid-template-rows:auto minmax(450px,1fr)!important;
+    overflow-y:auto;
+    align-items:start;
+  }
+  .vehiclePane{height:100%;min-height:510px;max-height:620px}
+  .caseColumn{max-height:none;overflow:visible}
+  .workspace > .chatterPane{min-height:550px!important;height:550px}
+}
+@media (max-width:760px){
+  .workspace{
+    display:flex!important;
+    flex-direction:column;
+    overflow-y:auto;
+    gap:10px;
+    padding:10px;
+  }
+  .vehiclePane{flex:0 0 auto;width:100%;height:270px;min-height:230px;max-height:300px}
+  .caseColumn{width:100%;flex:0 0 auto;overflow:visible;max-height:none}
+  .caseColumn .detailsBody{grid-template-columns:1fr!important;grid-template-rows:auto!important}
+  .caseColumn .detailsBody .problemLabel,
+  .caseColumn .detailsBody .issueBox,
+  .caseColumn .detailsBody .infoPair,
+  .caseColumn .detailsBody .maintenanceInside{grid-column:1;grid-row:auto}
+  .caseColumn .detailsBody .infoPair{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}
+  .caseColumn .maintenanceInside .maintenanceGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .workspace > .chatterPane{width:100%;min-height:540px!important;height:540px;flex:0 0 auto}
+}
+
+/* Keep named grid areas intact across desktop and tablet breakpoints. */
+.workspace > .vehiclePane{grid-area:rail!important}
+.workspace > .caseColumn{grid-area:case!important}
+.workspace > .chatterPane{grid-area:messages!important}
+@media (min-width:761px) and (max-width:1250px){
+  .workspace{grid-template-rows:max-content minmax(550px,1fr)!important}
+}
+
+
+/* Fleet Workspace v4: two-column layout, conversation-first */
+.root{background:#e7ece6;color:#253b30}
+.root::before{background-image:linear-gradient(135deg,rgba(70,105,80,.045) 25%,transparent 25%,transparent 75%,rgba(70,105,80,.045) 75%),linear-gradient(45deg,rgba(70,105,80,.04) 25%,transparent 25%,transparent 75%,rgba(70,105,80,.04) 75%);background-size:42px 42px;background-position:0 0,21px 21px;opacity:.25}
+.header{height:60px;flex-basis:60px;min-height:60px;background:#fbfcfa;border-bottom:1px solid #ccd9cd}
+.workspace{
+  display:grid!important;
+  grid-template-areas:"rail content"!important;
+  grid-template-columns:clamp(228px,17vw,260px) minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  max-width:1920px;
+  padding:12px;
+  gap:12px;
+  align-items:stretch;
+  overflow:hidden;
+  min-height:0;
+}
+.workspace > .vehiclePane{
+  grid-area:rail!important;grid-column:auto!important;grid-row:auto!important;
+  height:100%;max-height:none;min-height:0;min-width:0;
+  background:#f1f5f0;border:1px solid #cddccd;box-shadow:0 3px 15px rgba(32,65,44,.07);
+}
+.workspace > .contentPane{
+  grid-area:content;display:flex;flex-direction:column;
+  min-width:0;min-height:0;max-height:100%;height:100%;gap:10px;overflow:hidden;
+}
+.contentPane > .caseColumn{
+  display:flex;flex:0 0 auto;flex-direction:column;gap:8px;
+  overflow:visible;max-height:none;min-width:0;width:100%;
+}
+.contentPane .caseColumn > .details{
+  display:grid!important;grid-template-columns:minmax(195px,.78fr) minmax(0,2.4fr)!important;
+  grid-template-rows:auto!important;width:100%;min-height:0;
+  border-radius:14px!important;margin:0!important;
+  overflow:hidden;background:#fbfdfa;box-shadow:0 3px 14px rgba(33,65,43,.06);
+  border:1px solid #cddbcc;
+}
+.contentPane .caseColumn .detailsHead{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+  padding:12px 14px 11px;
+  border:0;border-right:1px solid #d8e3d7!important;border-radius:0;
+  background:linear-gradient(105deg,#eaf3e9,#f5f9f3);
+  min-width:0;
+}
+.contentPane .caseColumn .detailsHead h1{font-size:24px;line-height:1.05;margin-top:5px}
+.contentPane .caseColumn .detailsHead p{font-size:11px;margin-top:4px}
+.contentPane .caseColumn .ticketRowHead{margin-top:7px}
+.contentPane .caseColumn .ticketRowHead small{font-size:9px}
+.contentPane .caseColumn .ticketChip{font-size:10px;padding:3px 6px}
+.contentPane .caseColumn .miniMeta{font-size:10px;padding:5px 7px;white-space:nowrap}
+.contentPane .caseColumn .detailsBody{
+  display:grid!important;grid-template-columns:minmax(180px,1.1fr) minmax(165px,.9fr) minmax(280px,1.5fr)!important;
+  grid-template-rows:auto auto!important;
+  gap:5px 9px;padding:10px 12px;
+  align-content:center;min-width:0;
+  background:#fbfdfa;
+}
+.contentPane .caseColumn .detailsBody .problemLabel{grid-area:1 / 1!important;align-self:end;font-size:9px;letter-spacing:.4px}
+.contentPane .caseColumn .detailsBody .issueBox{grid-area:2 / 1!important;min-height:40px;padding:8px 10px;font-size:12px;background:#eef4ec}
+.contentPane .caseColumn .detailsBody .infoPair{
+  grid-area:1 / 2 / 3 / 3!important;display:grid;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto auto;gap:5px;min-width:0;
+}
+.contentPane .caseColumn .detailsBody .infoPair>div{padding:4px 7px}
+.contentPane .caseColumn .detailsBody .infoPair label{font-size:9px;margin-bottom:2px}
+.contentPane .caseColumn .detailsBody .responsibleSelect{font-size:11px!important;padding:4px 8px!important}
+.contentPane .caseColumn .detailsBody .maintenanceInside{
+  grid-area:1 / 3 / 3 / 4!important;display:grid;grid-template-columns:1fr;
+  align-content:center;gap:5px;padding:7px;border:1px solid #dae4d8;border-radius:11px;background:#f4f8f3;min-width:0;
+}
+.contentPane .caseColumn .maintenanceTitle{font-size:9px;max-width:none;margin:0;color:#627461}
+.contentPane .caseColumn .maintenanceInside .maintenanceGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;gap:5px}
+.contentPane .caseColumn .maintenanceInside .maintenanceGrid>div{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:3px;min-width:0;padding:5px 6px}
+.contentPane .caseColumn .maintenanceInside .maintenanceGrid small{font-size:9px;line-height:1.15}
+.contentPane .caseColumn .maintenanceInside .maintenanceGrid strong{font-size:10px;white-space:nowrap}
+.contentPane .caseColumn .maintenanceInside .maintenanceGrid button{font-size:9px;margin-top:0}
+/* Collapsible progress strip */
+.contentPane .caseColumn > .middlePane{
+  display:block!important;width:100%;min-height:0;overflow:visible;margin:0!important;
+  border:1px solid #d1dece;border-radius:13px!important;
+  padding:10px 13px;box-shadow:0 2px 8px rgba(40,64,44,.045);background:#f9fcf8;
+}
+.contentPane .middlePane .workflow{padding:0;overflow:visible}
+.contentPane .workflowTopRow{display:flex;align-items:center;gap:8px;min-height:23px}
+.contentPane .workflowTopRow .panelHeading{flex:1;justify-content:flex-start;gap:12px}
+.contentPane .workflowTopRow h2{font-size:13px}
+.contentPane .workflowTopRow .panelHeading span{font-size:10px;color:#697e6b}
+.contentPane .workflowHeaderActions{margin-left:auto}
+.contentPane .workflowToggle{
+  border:1px solid #cdddcf;border-radius:7px;background:#eff5ee;
+  height:auto;width:auto;padding:5px 10px;font-size:11px;font-weight:700;color:#46644d;
+}
+.contentPane .workflowSummary{display:flex;align-items:center;gap:12px;padding-top:6px}
+.contentPane .workflowProgress{display:flex;gap:4px;flex:1;min-width:90px}
+.contentPane .workflowProgress>span{display:block;height:8px;flex:1;border-radius:4px;background:#e4eae1;border:1px solid #dbe4d8}
+.contentPane .workflowProgress>.progressDone{background:#547a5b;border-color:#547a5b}
+.contentPane .workflowProgress>.progressCurrent{background:#c39e5c;border-color:#c39e5c}
+.contentPane .currentStageButton{
+  display:inline-flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#f1f6ed;border:1px solid #bad0bb;border-radius:9px;
+  padding:7px 10px;color:#355942;font-size:11px;max-width:55%;min-width:200px;
+}
+.contentPane .currentStageButton strong{white-space:nowrap;color:#2d6845;font-size:11px}
+.contentPane .currentStageButton:disabled{opacity:.55}
+.contentPane .currentStageButton:not(:disabled):hover{background:#e1eee0}
+.contentPane .workflowCompleteLabel{color:#627564;font-size:11px}
+.contentPane .workflowStages{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px;margin-top:11px}
+.contentPane .workflowStages li{min-height:44px}
+.contentPane .workflowStages .stageButton{min-height:42px;font-size:10px}
+/* Communication pane is a full-height workspace within right column. */
+.contentPane > .chatterPane{
+  grid-area:auto!important;grid-column:auto!important;grid-row:auto!important;
+  flex:1 1 0%!important;min-height:0!important;height:auto!important;
+  display:flex;flex-direction:column;overflow:hidden;width:100%;
+  border-radius:15px;border:1px solid #b9cfbf;background:#fff;
+  box-shadow:0 5px 20px rgba(27,63,39,.075);
+}
+.contentPane > .chatterPane::before{width:4px;background:#527a5c}
+.contentPane > .chatterPane .chatterTop{padding:10px 13px 8px;flex:0 0 auto}
+.contentPane > .chatterPane .panelHeading h2{font-size:16px}
+.contentPane .subscribers{padding:4px 9px!important;margin-top:6px!important;border-radius:9px;background:#f2f6f1!important}
+.contentPane .subscriberTop{display:flex;align-items:center;gap:8px}
+.contentPane .subscriberTop>button:last-child{margin-left:auto;text-decoration:none;border:1px solid #d0ded1;padding:4px 8px;border-radius:7px;background:#fbfdfa}
+.contentPane .subscribersToggle{display:inline-flex;align-items:center;gap:9px;flex:1;min-width:0;border:0;background:transparent;padding:3px;text-align:left;color:#536957;font-size:11px}
+.contentPane .subscribersToggle strong{white-space:nowrap;color:#405c46;font-size:11px}
+.contentPane .subscribersToggle span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#6a796b;font-size:11px}
+.contentPane .subscribersToggle em{font-style:normal;margin-left:auto}
+.contentPane .subscriberGroups{margin:6px 0 3px}
+.contentPane .subscriberGroups>div{padding:6px}
+.contentPane .filterBar{margin-top:7px!important;padding:3px}
+.contentPane .filterBar button{padding:6px 10px}
+.contentPane .ticketFilter{margin-top:5px}
+.contentPane > .chatterPane .timeline{
+  flex:1 1 0%;min-height:0!important;overflow-y:auto;
+  background:linear-gradient(180deg,#f2f6f3,#edf3ee);
+  border-block:1px solid #d7e3d8;
+  padding:13px 16px;gap:10px;
+}
+.contentPane > .chatterPane .event{max-width:min(76%,670px);padding:10px 13px;border-radius:13px;background:#fff}
+.contentPane > .chatterPane .eventMine{background:#476c53;border-color:#476c53;color:#fff}
+.contentPane > .chatterPane .compose{flex:0 0 auto;padding:8px 12px 10px;background:#fff;margin:0}
+.contentPane > .chatterPane .composeBottom textarea{height:49px;min-height:49px}
+.contentPane > .chatterPane .composeBottom button{height:45px;width:46px}
+/* denser rail and no red */
+.workspace > .vehiclePane .vehicleCard{padding:7px 9px 6px;margin-bottom:6px}
+.workspace > .vehiclePane .vehicleCard p{margin-top:4px;min-height:0;white-space:nowrap}
+.workspace > .vehiclePane .vehicleWorkshop{margin-top:4px;padding-top:4px}
+.root .critical,.root .statusVor,.root .severity{background:#f0e2c7!important;color:#765a31!important;border:1px solid #dfcaa1!important}
+.root .vehicleCard[data-severity="critical"]{border-left-color:#b99354!important}
+.root .overdueEvent,.root .eventMOT{background:#fbf1e0!important;border-color:#dfc797!important;box-shadow:inset 3px 0 0 #bf9957!important}
+.root .externalChip{background:#e4eee6!important;color:#4c7154!important;border-color:#c5d9c8!important}
+.root .problemLabel{background:transparent!important;color:#697a64!important}
+.root .loginCard .error{color:#87672d}
+/* responsive: preserve two panels on laptops, stack on mobile */
+@media (max-width:1350px){
+ .workspace{grid-template-columns:228px minmax(0,1fr)!important;gap:10px;padding:10px}
+ .contentPane .caseColumn .detailsBody{grid-template-columns:minmax(145px,1fr) minmax(140px,.9fr) minmax(240px,1.6fr)!important}
+ .contentPane .caseColumn .maintenanceInside .maintenanceGrid strong{white-space:normal}
+}
+@media (max-width:1080px){
+ .workspace{grid-template-columns:215px minmax(0,1fr)!important}
+ .contentPane .caseColumn > .details{grid-template-columns:minmax(170px,.8fr) minmax(0,2fr)!important}
+ .contentPane .caseColumn .detailsBody{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:auto auto auto!important}
+ .contentPane .caseColumn .detailsBody .problemLabel{grid-area:1 / 1!important}
+ .contentPane .caseColumn .detailsBody .issueBox{grid-area:2 / 1!important}
+ .contentPane .caseColumn .detailsBody .infoPair{grid-area:1 / 2 / 3 / 3!important}
+ .contentPane .caseColumn .detailsBody .maintenanceInside{grid-area:3 / 1 / 4 / 3!important}
+ .contentPane .workflowStages{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (max-width:760px){
+ .root{overflow:auto}
+ .workspace{display:flex!important;flex-direction:column;overflow-y:auto;gap:9px;padding:9px;align-items:stretch}
+ .workspace > .vehiclePane{flex:none;width:100%;height:235px;min-height:235px;max-height:235px}
+ .workspace > .contentPane{width:100%;height:auto;max-height:none;overflow:visible;flex:none;min-height:0}
+ .contentPane .caseColumn > .details{display:flex!important;flex-direction:column;grid-template-columns:none!important}
+ .contentPane .caseColumn .detailsHead{border-right:0!important;border-bottom:1px solid #d8e3d7!important}
+ .contentPane .caseColumn .detailsBody{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:auto!important}
+ .contentPane .caseColumn .detailsBody .problemLabel{grid-area:1 / 1!important}
+ .contentPane .caseColumn .detailsBody .issueBox{grid-area:2 / 1!important}
+ .contentPane .caseColumn .detailsBody .infoPair{grid-area:1 / 2 / 3 / 3!important}
+ .contentPane .caseColumn .detailsBody .maintenanceInside{grid-area:3 / 1 / 4 / 3!important}
+ .contentPane .workflowSummary{flex-direction:column;align-items:stretch;gap:6px}
+ .contentPane .currentStageButton{min-width:0;max-width:none;width:100%}
+ .contentPane > .chatterPane{flex:none!important;min-height:560px!important;height:560px!important}
+ .contentPane .workflowStages{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
+@media (max-width:760px){
+ .header{height:auto;min-height:100px;flex-basis:100px;flex-wrap:wrap;align-content:center;justify-content:space-between;gap:5px;padding:7px 10px}
+ .header .brand{min-width:0;gap:7px}
+ .header .brand small{display:none}
+ .header .nav{order:3;flex:0 0 100%;justify-content:center;margin:0 auto;padding:2px;max-width:370px}
+ .header .nav button{padding:7px 14px}
+ .headerRight{gap:4px}
+ .headerRight .profile,.headerRight .logout{display:none}
+}
