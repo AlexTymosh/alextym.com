@@ -49,7 +49,18 @@ def test_frozen_api_login_and_bidirectional_mutations(monkeypatch, tmp_path):
         v1_path_api = "/api/vor-01/bootstrap"
         v2_path_api = "/api/vor/bootstrap"
         v1_before, v2_before = read(v1_path_api), read(v2_path_api)
-        assert v1_before == v2_before
+        # PR-02 adds v2-only vehicle metadata (is_archived). The frozen v1
+        # schema must NOT be migrated just to make these dictionaries equal.
+        # Compare every original v1 field and all unchanged collections instead.
+        assert v1_before.keys() == v2_before.keys()
+        assert {k: v for k, v in v1_before.items() if k != "vehicles"} == {
+            k: v for k, v in v2_before.items() if k != "vehicles"
+        }
+        assert len(v1_before["vehicles"]) == len(v2_before["vehicles"])
+        for legacy, active in zip(v1_before["vehicles"], v2_before["vehicles"]):
+            assert all(active.get(field) == value for field, value in legacy.items())
+            assert "is_archived" not in legacy
+            assert active["is_archived"] == 0
         vehicle = v1_before["vehicles"][0]
         reg = vehicle["registration"]
         open_tickets = [t for t in v1_before["tickets"] if t["vehicle_id"] == vehicle["id"] and t["status"] == "open"]

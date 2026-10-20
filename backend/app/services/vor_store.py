@@ -452,11 +452,12 @@ def rows(db: sqlite3.Connection, query: str, args: tuple = ()) -> list[dict[str,
 
 
 def snapshot() -> dict[str, Any]:
-    with connection() as db:
+    from app.services import vor_data
+    with vor_data.database() as db:
         return {
             "vehicles": rows(
                 db,
-                "SELECT * FROM vehicles ORDER BY (availability_status = 'VOR') DESC, vor_days DESC, id",
+                "SELECT * FROM vehicles WHERE COALESCE(is_archived,0)=0 ORDER BY (availability_status = 'VOR') DESC, vor_days DESC, id",
             ),
             "tickets": rows(db, "SELECT * FROM tickets ORDER BY opened_at DESC"),
             "events": rows(db, "SELECT * FROM events ORDER BY created_at, id"),
