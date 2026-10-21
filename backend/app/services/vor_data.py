@@ -167,11 +167,11 @@ def _add_vehicle(db: sqlite3.Connection, registration: str, model: str, garage: 
     future = (date.today()+timedelta(days=365)).isoformat()
     data = {
         "registration": registration, "model": model, "garage": garage,
-        "availability_status": "Available", "severity": "Low", "issue": "No active defect",
+        "availability_status": "Operational", "severity": "Low", "issue": "No active defect",
         "scenario": "engine", "vor_days": 0, "workflow_current_step": 0,
         "next_action": "No action required", "responsible": "Alex Tym", "action_due": future,
         "mot_due": future, "inspection_due": future, "service_due": future,
-        "odometer_miles": 0, "unread_count": 0, "is_archived": 0,
+        "odometer_miles": 0, "unread_count": 0, "is_archived": 0, "last_service_date": date.today().isoformat(),
     }
     columns = list(db.execute("PRAGMA table_info(vehicles)"))
     vals: dict[str, object] = {}
@@ -187,7 +187,7 @@ def _add_vehicle(db: sqlite3.Connection, registration: str, model: str, garage: 
     placeholders = ",".join("?" for _ in vals)
     cur = db.execute(f"INSERT INTO vehicles ({columns_sql}) VALUES ({placeholders})",tuple(vals.values()))
     vehicle_id = int(cur.lastrowid)
-    _status_baseline(db,vehicle_id,"Available")
+    _status_baseline(db,vehicle_id,"Operational")
     db.execute("INSERT INTO vor_asset_events(vehicle_id,action,actor,details,created_at) VALUES (?,?,?,?,?)",
       (vehicle_id,"registered","Fleet Hub",json.dumps({"registration":registration}),utcnow()))
     return vehicle_id
@@ -229,7 +229,7 @@ def archive_vehicle(vehicle_id: int, archived: bool) -> dict:
 
 def update_status(vehicle_id: int, status: str, actor: str, reason: str, reference: str) -> dict:
     """Manual Fleet confirmation in synthetic KEY2 register; no external writes."""
-    if status not in {"VOR","Available"}:
+    if status not in {"VOR","Operational"}:
         raise ValueError("Unsupported status")
     if actor.strip()!="Fleet Department":
         raise ValueError("Manual confirmation must be by Fleet Department")
@@ -243,7 +243,7 @@ def update_status(vehicle_id: int, status: str, actor: str, reason: str, referen
         if old==status:
             return {"ok":True,"changed":False}
         now=utcnow()
-        db.execute("UPDATE vehicles SET availability_status=?,vor_days=CASE WHEN ?='Available' THEN 0 ELSE vor_days END WHERE id=?",(status,status,vehicle_id))
+        db.execute("UPDATE vehicles SET availability_status=?,vor_days=CASE WHEN ?='Operational' THEN 0 ELSE vor_days END WHERE id=?",(status,status,vehicle_id))
         db.execute("""INSERT INTO vor_status_events
           (vehicle_id,old_status,new_status,event_kind,actor,source,reason,external_reference,effective_at,recorded_at)
           VALUES (?,?,?,'manual',?,'Fleet Department',?,?,?,?)""",

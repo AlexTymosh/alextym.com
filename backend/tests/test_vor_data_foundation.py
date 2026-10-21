@@ -152,15 +152,15 @@ def test_xlsx_and_manual_register_and_archive(databases):
 def test_status_only_changes_by_explicit_manual_confirmation(databases):
     vor_data.register_list()
     with pytest.raises(ValueError,match="Fleet Department"):
-        vor_data.update_status(1, "Available", "System", "release", "KEY2-X")
+        vor_data.update_status(1, "Operational", "System", "release", "KEY2-X")
     state = vor_data.register_list()
     assert len(state["statuses"]) == 1
-    assert vor_data.update_status(1, "Available", "Fleet Department", "Confirmed available", "KEY2-X")["changed"]
-    assert not vor_data.update_status(1,"Available","Fleet Department","Repeated","KEY2-X")["changed"]
+    assert vor_data.update_status(1, "Operational", "Fleet Department", "Confirmed available", "KEY2-X")["changed"]
+    assert not vor_data.update_status(1,"Operational","Fleet Department","Repeated","KEY2-X")["changed"]
     state = vor_data.register_list()
     assert len(state["statuses"]) == 2
     assert state["statuses"][0]["old_status"] == "VOR"
-    assert state["statuses"][0]["new_status"] == "Available"
+    assert state["statuses"][0]["new_status"] == "Operational"
     assert state["statuses"][0]["external_reference"] == "KEY2-X"
 
 

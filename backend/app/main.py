@@ -12,7 +12,9 @@ from app.api.health import router as health_router
 from app.api.redis_probe import router as redis_probe_router
 from app.api.telegram import router as telegram_router
 from app.api.vor import router as vor_router
+from app.api.vor_checklist import router as vor_checklist_router
 from app.api.vor_data import router as vor_data_router
+from app.api.vor_intake import router as vor_intake_router
 from app.api.vor_v1 import router as vor_v1_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
@@ -46,7 +48,9 @@ def create_app() -> FastAPI:
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     app.include_router(vor_router, prefix="/api")
+    app.include_router(vor_checklist_router, prefix="/api")
     app.include_router(vor_data_router, prefix="/api")
+    app.include_router(vor_intake_router, prefix="/api")
     app.include_router(vor_v1_router, prefix="/api")
     app.include_router(analytics_router, prefix="/api")
     app.include_router(redis_probe_router)

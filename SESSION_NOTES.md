@@ -297,3 +297,38 @@ A separate PR for documentation updates may be inserted as needed. Merge only af
 - **Known issues:** Hosted SQLite cannot be retrieved via GitHub; if it is the authoritative running state, it must be backed up from the host first. On an ephemeral host, persistent v1 storage requires a separate deploy/restore plan.
 - **Decisions confirmed:** Existing v1 DB copied in full; status return from VOR to Available requires a separate manual Fleet Department action (future PR).
 - **Next action:** Extract PR-01 patch, run the freeze utility with the correct active SQLite path, run tests/build and demonstrate bidirectional isolation. Approve G0 only after all checks pass.
+
+### Session 2026-10-20 — PR-02 Data Foundation
+
+- **Scope:** additive v2 case/status model, CSV/XLSX import, manual asset register, archive/restore.
+- **Isolation:** PR-01 frozen v1 files and SQLite remain unchanged.
+- **Verification gate G1:** targeted pytest, frontend build and browser v1/v2 smoke test pending.
+- **Next:** PR-03 Process Design and New Defect.
+
+### Session 2026-10-20 — PR-03 Process Design and Defect Intake
+
+- **Scope:** v2-only AS-IS/TO-BE process diagram and separate New Defect form.
+- **Defect intake:** HOTH reference, vehicle, pathway, VOR reason, observations; no action owner/deadline fields.
+- **Workflow:** Standard Defect gets the eight-stage template; HOTH-owned specialist cases have no PTS stages.
+- **Status:** reported VOR does not alter KEY2/vehicle availability; release remains manual.
+- **PR-02 compatibility:** corrected Operational status and last_service_date for real seeded SQLite.
+- **Verification gate G2:** targeted pytest, frontend build, browser review and v1 isolation check pending.
+
+### Session 2026-10-21 — Unified app shell and BPMN swimlanes
+
+- **UI:** /fleet-vor-hub is one state-driven app with a collapsible Odoo-inspired sidebar; no navigation between Next.js pages.
+- **Fleet data:** Vehicle Register, Add Vehicle and Import Vehicles are separate app sections (same working API).
+- **Defects:** New Defect is a distinct internal section; no Next Action owner/deadline fields.
+- **BPMN:** Visio-style horizontal swimlanes with SCAS roles and external Garage/Supplier, AS-IS/TO-BE tabs.
+- **Compatibility:** existing v2 Workspace, Dashboard, Calendar, Excel export, login and backend APIs preserved.
+- **Legacy paths:** /register, /new-defect, /process redirect to /fleet-vor-hub. Frozen v1 unaffected.
+- **Verification:** run npm run typecheck and npm run build; manual browser checks on all eight app sections.
+
+### Session 2026-10-21 — UX refinement and workflow checklist
+
+- Removed visible brand/system references from v2 UI only; source data keys unchanged.
+- Calendar: taller cells and type, vehicle-base/city, and booked-garage/partner filters. True booking city/partner fields remain future schema work.
+- Defect reason: radio selection required and initially empty.
+- Process: compact movable swimlane cards; roadmap still places full management dashboard in PR-07.
+- Fleet Workspace: right-side persisted stage checklist; all stage items required before advance via new endpoint.
+- Frozen v1 is untouched.

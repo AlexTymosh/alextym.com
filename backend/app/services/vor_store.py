@@ -401,6 +401,8 @@ def change_workflow_scenario(vehicle_id: int, ticket_id: str, scenario: str) -> 
             raise ValueError("Ticket does not belong to vehicle")
         if ticket["status"] != "open":
             raise ValueError("Only open tickets can change scenario")
+        if db.execute("SELECT 1 FROM vor_cases WHERE legacy_ticket_id=? AND pathway IN ('tyres','windscreen')", (ticket_id,)).fetchone():
+            raise ValueError("Specialist repairs are managed by the HOTH team")
         template = db.execute(
             "SELECT name,steps_json FROM workflow_templates WHERE code=?", (scenario,)
         ).fetchone()

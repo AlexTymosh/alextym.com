@@ -1376,3 +1376,32 @@
  .headerRight{gap:4px}
  .headerRight .profile,.headerRight .logout{display:none}
 }
+
+/* Embedded in the single-route FleetApp shell; frozen v1 is untouched. */
+.root.embeddedRoot{position:relative;inset:auto;z-index:auto;width:100%;height:100%;min-height:0;overflow:hidden;}
+
+
+/* v2 UX refinement: calendar filters + right-side checklist */
+.root .dayCell{min-height:125px!important}
+.calendarFilters{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:0 18px 13px;padding:10px 13px;border:1px solid #d6e2d8;background:#f6faf6;border-radius:9px}
+.calendarFilters label{display:grid;gap:4px;min-width:150px;flex:1;font-size:11px;font-weight:700;color:#536b5b}
+.calendarFilters select{min-height:35px;font-size:12px;padding:6px 8px}
+.calendarFilters button{background:#fff;border:1px solid #cddace;border-radius:8px;padding:8px 12px;font-size:11px;color:#456a4f}
+.root .workspace .contentPane{display:grid!important;grid-template-columns:minmax(0,1fr) clamp(285px,25vw,360px)!important;grid-template-rows:auto minmax(0,1fr)!important;gap:9px!important}
+.root .workspace .contentPane>.caseColumn{grid-column:1 / -1!important;grid-row:1!important;min-width:0;display:block!important}
+.root .workspace .contentPane>.chatterPane{grid-column:1!important;grid-row:2!important;height:100%!important;min-height:0!important;max-height:none!important}
+.root .workspace .contentPane>.middlePane{grid-column:2!important;grid-row:2!important;min-height:0!important;max-height:100%!important;display:flex!important;flex-direction:column;background:#fbfdfb;border:1px solid #cbdccc;border-radius:13px;padding:12px;overflow-y:auto;overflow-x:hidden;box-shadow:0 3px 15px #254a3220}
+.root .workspace .contentPane>.middlePane .workflow{padding:0!important;overflow:visible}
+.root .workspace .contentPane>.middlePane .workflowSummary{display:grid!important;gap:8px}
+.root .workspace .contentPane>.middlePane .currentStageButton{max-width:none;min-width:0;width:100%}
+.root .workspace .contentPane>.middlePane .workflowStages{display:grid!important;grid-template-columns:1fr!important;gap:9px!important;overflow:visible;max-height:none}
+.root .workspace .contentPane>.middlePane .workflowStages>li{padding:7px;border:1px solid #dee9df;background:#fff;border-radius:10px}
+.root .workspace .contentPane>.middlePane .stageButton{width:100%;min-height:38px!important;text-align:left}
+.stageChecklist{border-top:1px solid #edf0ec;margin:7px 0 0;padding:8px 3px 3px;display:grid;gap:8px}
+.checklistEntry{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;color:#3a4d41;line-height:1.4}
+.checklistEntry input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;accent-color:#64ae72}
+.checklistEntry input[type=date]{width:100%;min-width:0;padding:6px!important;font-size:11px}
+.checklistEntry:has(input[type=date]){display:grid;grid-template-columns:1fr;gap:3px}
+.checklistHint{font-size:10px;color:#8d6a34;margin-top:5px}
+@media(max-width:1050px){.root .workspace .contentPane{grid-template-columns:minmax(0,1fr) 275px!important}}
+@media(max-width:850px){.root .workspace .contentPane{display:flex!important;flex-direction:column!important;max-height:none!important;overflow:visible!important}.root .workspace .contentPane>.chatterPane{min-height:440px!important;height:440px!important;flex:none!important}.root .workspace .contentPane>.middlePane{max-height:none!important;min-height:360px!important;overflow:visible!important;flex:none!important}.root .dayCell{min-height:90px!important}}
