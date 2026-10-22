@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.api.vor import required, same_origin
-from app.services import vor_store
+from app.services import vor_store, vor_operations as ops
 
 router = APIRouter(prefix="/vor/checklists", tags=["Fleet VOR demo checklists"])
 CHECKLIST: tuple[tuple[str, ...], ...] = (
@@ -114,7 +114,7 @@ def advance_with_checks(body:AdvanceStage,request:Request):
         index=int(step[0])
         if index<len(CHECKLIST):
             completed={r[0] for r in db.execute("SELECT item_key FROM vor_step_checklists WHERE ticket_id=? AND step_index=? AND checked=1", (body.ticket_id,index))}
-            pending=set(CHECKLIST[index])-completed
+            pending=ops.required_keys(db,index)-completed
             if pending:
                 raise HTTPException(409,"Complete the current stage checklist before advancing")
     # Standard store method advances and audits the workflow. No vehicle status is changed.

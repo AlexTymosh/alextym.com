@@ -5,10 +5,12 @@ import VorHub from "./VorHub";
 import VehicleRegisterPanel from "./register/Panel";
 import NewDefectPanel from "./new-defect/Panel";
 import ProcessPanel from "./process/Panel";
+import WorkflowSettingsPanel from "./operations/WorkflowSettingsPanel";
+import OperationsQueuePanel from "./operations/OperationsQueuePanel";
 import styles from "./fleet-app.module.css";
 
-type Section="workspace"|"dashboard"|"calendar"|"new-defect"|"register"|"add"|"import"|"status-history"|"process";
-type IconKind="workspace"|"dashboard"|"calendar"|"defect"|"register"|"add"|"import"|"process"|"history";
+type Section="workspace"|"dashboard"|"calendar"|"new-defect"|"register"|"add"|"import"|"status-history"|"process"|"workflow-settings"|"operations-queue";
+type IconKind="workspace"|"dashboard"|"calendar"|"defect"|"register"|"add"|"import"|"process"|"history"|"settings";
 const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
   {label:"OPERATIONS",items:[
     {id:"workspace",label:"Fleet Workspace",icon:"workspace"},
@@ -16,12 +18,14 @@ const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
     {id:"calendar",label:"Calendar",icon:"calendar"},
     {id:"new-defect",label:"New Defect",icon:"defect"},
     {id:"process",label:"Process Design",icon:"process"},
+    {id:"workflow-settings",label:"Workflow Settings",icon:"settings"},
+    {id:"operations-queue",label:"Actions & Blockers",icon:"history"},
   ]},
 
 ];
 const labels:Record<Section,string>={
   workspace:"Fleet Workspace",dashboard:"Dashboard",calendar:"Calendar",
-  "new-defect":"New Defect",process:"Process Design",register:"Vehicle Register",
+  "new-defect":"New Defect",process:"Process Design","workflow-settings":"Workflow Settings","operations-queue":"Actions & Blockers",register:"Vehicle Register",
   add:"Add Vehicle",import:"Import Vehicles","status-history":"Recorded Status History",
 };
 
@@ -36,6 +40,7 @@ function NavIcon({name}:{name:IconKind}){
     {name==="add"&&<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M12 9v8M8 13h8"/></>}
     {name==="import"&&<><path d="M12 3v13m-4-4 4 4 4-4M4 19v2h16v-2"/></>}
     {name==="history"&&<><path d="M4 6v5h5"/><path d="M4.7 11a8 8 0 1 1 2.3 6.9M12 7v5l3 2"/></>}
+    {name==="settings"&&<><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2m0-14-2 2M7 17l-2 2"/></>}
     {name==="process"&&<><rect x="2" y="4" width="7" height="6" rx="1"/><rect x="15" y="4" width="7" height="6" rx="1"/><rect x="9" y="15" width="7" height="6" rx="1"/><path d="M9 7h6M12 7v8"/></>}
   </svg>;
 }
@@ -107,6 +112,8 @@ export default function FleetApp(){
           {(section==="register"||section==="add"||section==="import"||section==="status-history")&&<VehicleRegisterPanel section={section} navigate={navigate}/>}
           {section==="new-defect"&&<NewDefectPanel navigate={next=>navigate(next)} onRegistered={registration=>setFocusedVehicle(registration)}/>}
           {section==="process"&&<ProcessPanel/>}
+          {section==="workflow-settings"&&<WorkflowSettingsPanel/>}
+          {section==="operations-queue"&&<OperationsQueuePanel onOpenVehicle={registration=>{setFocusedVehicle(registration);navigate("workspace")}}/>}
         </div>
       </main>
     </div>

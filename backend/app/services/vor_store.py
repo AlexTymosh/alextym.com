@@ -422,6 +422,9 @@ def change_workflow_scenario(vehicle_id: int, ticket_id: str, scenario: str) -> 
             "UPDATE tickets SET scenario=?,title=?,kind=? WHERE id=?",
             (scenario, issue, ticket_kind, ticket_id),
         )
+        for table_name in ("vor_step_checklists", "ops_stage_skips", "ops_release_checks"):
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table_name,)).fetchone():
+                db.execute(f"DELETE FROM {table_name} WHERE ticket_id=?", (ticket_id,))
         db.execute("DELETE FROM ticket_steps WHERE ticket_id=?", (ticket_id,))
         db.executemany(
             "INSERT INTO ticket_steps(ticket_id,step_index,label,status) VALUES (?,?,?,?)",

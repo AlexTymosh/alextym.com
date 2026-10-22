@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import styles from "./vor.module.css";
+import OperationsPanel from "./operations/OperationsPanel";
+import AssetSignals,{type OpsIndicator} from "./operations/AssetSignals";
 
 type Vehicle = {id:number;registration:string;model:string;availability_status:string;severity:string;issue:string;scenario:string;garage:string;vor_days:number;workflow_current_step:number;next_action:string;responsible:string;action_due:string;mot_due:string;inspection_due:string;service_due:string;odometer_miles:number;unread_count:number};
 type Ticket = {id:string;vehicle_id:number;kind:string;title:string;status:string;severity:string;scenario:string;key2_reference:string|null;hoth_reference:string|null};
@@ -114,6 +116,8 @@ function Dashboard({data}:{data:Data}) {
 }
 
 export default function VorHub({embedded=false,externalView,initialVehicle,onAuthChange}:{embedded?:boolean;externalView?:Tab;initialVehicle?:string|null;onAuthChange?:(authenticated:boolean)=>void}={}) {
+ // PR0405: case-based operational control and asset signals
+ const [opsOverview,setOpsOverview]=useState<Record<string,OpsIndicator>>({});
  const [session,setSession]=useState<{enabled:boolean;authenticated:boolean;liveEmail:boolean}|null>(null);
  const [password,setPassword]=useState("");const [loginError,setLoginError]=useState("");
  const [data,setData]=useState<Data|null>(null);const [view,setView]=useState<Tab>("vehicles");
@@ -135,7 +139,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const [workflowExpanded,setWorkflowExpanded]=useState(true);
  const [showSubscribers,setShowSubscribers]=useState(false);
  const timelineRef = useRef<HTMLDivElement>(null);
- const load = useCallback(async ()=>{const payload=await request<Data>("/bootstrap");setData(payload);setClock(c=>c+1)},[]);
+ const load = useCallback(async ()=>{const payload=await request<Data>("/bootstrap");setData(payload);request<{vehicles:Record<string,OpsIndicator>}>("/ops/overview").then(r=>setOpsOverview(r.vehicles)).catch(()=>setOpsOverview({}));setClock(c=>c+1)},[]);
  useEffect(()=>{request<{enabled:boolean;authenticated:boolean;liveEmail:boolean}>("/session").then(s=>{setSession(s);onAuthChange?.(s.authenticated);if(s.authenticated) load().catch(e=>setNotice(e.message))}).catch(e=>setLoginError(e.message))},[load]);
  const login=async(e:FormEvent)=>{e.preventDefault();setLoginError("");setBusy(true);try{await request("/login",{method:"POST",body:JSON.stringify({password})});setSession(x=>({...x!,authenticated:true}));onAuthChange?.(true);setPassword("");await load()}catch(err){setLoginError((err as Error).message)}finally{setBusy(false)}};
  const mutate=async(path:string,body:object,after?:()=>void)=>{setBusy(true);setNotice("");try{await request(path,{method:"POST",body:JSON.stringify(body)});await load();after?.()}catch(err){setNotice((err as Error).message)}finally{setBusy(false)}};
@@ -147,6 +151,15 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
 
  const [checklist,setChecklist]=useState<Record<string,{checked:boolean;value:string|null}>>({});
  const [savingChecklist,setSavingChecklist]=useState(false);
+ const [configuredStages,setConfiguredStages]=useState<Record<number,{key:string;label:string;required?:boolean;type?:"date"}[]>>({});
+ useEffect(()=>{if(!session?.authenticated)return;
+   request<{items:{stage_index:number;item_key:string;label:string;required:boolean}[]}>('/ops/templates')
+      .then(r=>{const byStage:Record<number,{key:string;label:string;required?:boolean;type?:"date"}[]>={};
+        for(const item of r.items){(byStage[item.stage_index]??=[]).push({key:item.item_key,label:item.label,required:item.required,type:item.item_key==="diagnosis_date"?"date":undefined});}
+        setConfiguredStages(byStage);}).catch(()=>{});
+ },[session?.authenticated]);
+ const stageList=(i:number):{key:string;label:string;required?:boolean;type?:"date"}[]=>configuredStages[i]||WORKFLOW_ITEMS[i]||[];
+
  useEffect(()=>{let active=true;
    if(!primary?.id){setChecklist({});return;}
    request<{items:ChecklistItem[]}>(`/checklists/${encodeURIComponent(primary.id)}`)
@@ -154,7 +167,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
      .catch(e=>{if(active)setNotice((e as Error).message)});
    return()=>{active=false};
  },[primary?.id,clock]);
- const checklistReady=(index:number)=>(WORKFLOW_ITEMS[index]||[]).every(item=>checklist[`${index}:${item.key}`]?.checked);
+ const checklistReady=(index:number)=>stageList(index).filter(item=>item.required!==false).every(item=>checklist[`${index}:${item.key}`]?.checked);
  const saveChecklist=async(index:number,key:string,checked:boolean,value:string|null=null)=>{
    if(!selected||!primary)return;
    setSavingChecklist(true);
@@ -162,7 +175,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
      setChecklist(prev=>({...prev,[`${index}:${key}`]:{checked,value}}));
    }catch(e){setNotice((e as Error).message)}finally{setSavingChecklist(false)}
  };
- const doneStages=currentSteps.filter(s=>s.status==="done").length;
+ const doneStages=currentSteps.filter(s=>s.status==="done"||s.status==="skipped").length;
  const currentStage=currentSteps.find(s=>s.status==="current");
  const canAdvanceStage=Boolean(selected&&primary?.status==="open"&&currentStage&&!busy&&!savingChecklist&&checklistReady(currentStage.step_index));
  const events=(data?.events||[]).filter(e=>e.vehicle_id===selected?.id && (filter==="all"||filter===e.kind) && (ticketFilter==="all"||(ticketFilter==="vehicle-only"?!e.ticket_id:e.ticket_id===ticketFilter))).sort((a,b)=>a.created_at.localeCompare(b.created_at)).slice(-80);
@@ -198,7 +211,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
   {!embedded&&<header className={styles.header}><div className={styles.brand}><div className={styles.logo}>SCAS <small>FLEET</small></div><div><strong>Fleet VOR Hub</strong><small>Vehicle-centred issues and communications workspace</small></div></div><nav className={styles.nav} aria-label="Fleet Hub pages"><button className={view==="vehicles"?styles.navActive:""} onClick={()=>setView("vehicles")}>Vehicles</button><button className={view==="dashboard"?styles.navActive:""} onClick={()=>setView("dashboard")}>Dashboard</button><button className={view==="calendar"?styles.navActive:""} onClick={()=>setView("calendar")}>Calendar</button></nav><div className={styles.headerRight}><a className={styles.exportButton} href={`${API}/export.xlsx`} download="fleet-vor-demo.xlsx" title="Download Excel workbook">↓ Excel</a><a className={styles.exportButton} href="/fleet-vor-hub/register" title="Vehicle register and imports">Vehicle Register</a><a className={styles.exportButton} href="/fleet-vor-hub/new-defect" title="Register OSD / HOTH notification">+ New Defect</a><a className={styles.exportButton} href="/fleet-vor-hub/process" title="AS-IS and TO-BE process mapping">Process Design</a><span className={styles.demoBadge}>Demo v2</span><span className={styles.profile}><Image src="/images/profile/alex.webp" alt="Alex Tymoshenko" width={28} height={28} className={styles.avatar} />Alex Tymoshenko</span><button className={styles.logout} onClick={()=>request("/logout",{method:"POST",body:"{}"}).finally(()=>{setSession(s=>({...s!,authenticated:false}));setData(null)})}>Log out</button></div></header>}
   {notice&&<div role="status" className={styles.toast} onClick={()=>setNotice("")}>{notice} ×</div>}
   {view==="dashboard"?<Dashboard data={data}/>:view==="calendar"?<CalendarView data={data} book={openBook} loading={busy}/>:<main className={styles.workspace}>
-    <aside className={`${styles.panel} ${styles.vehiclePane}`}><div className={styles.sideHeader}><div className={styles.panelHeading}><div><h2>Vehicles</h2><p>{shown.length} vehicles shown</p></div><span className={styles.critical}>{data.vehicles.filter(x=>x.severity==="Critical"&&x.availability_status==="VOR").length} critical</span></div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="⌕  Reg, model, issue, garage…" aria-label="Search vehicles"/></div><div className={styles.vehicleScroll}>{shown.map(v=><button key={v.id} onClick={()=>{setReg(v.registration);setTicketFilter("all");setFilter("all")}} className={`${styles.vehicleCard} ${v.registration===selected?.registration?styles.vehicleSelected:""}`} data-severity={v.severity.toLowerCase()}><div className={styles.vehicleTitle}><b>{v.registration}</b>{v.unread_count>0&&<span className={styles.unread}>{v.unread_count}</span>}</div><small>{v.model}</small><div className={styles.cardStatus}><span className={v.availability_status==="VOR"?styles.statusVor:styles.statusOperational}>{v.availability_status}</span><span>{v.vor_days?v.vor_days+" days":"Available"}</span></div><p>{v.issue}</p><div className={styles.vehicleWorkshop}><span>Workshop</span><strong>{v.garage}</strong></div></button>)}</div></aside>
+    <aside className={`${styles.panel} ${styles.vehiclePane}`}><div className={styles.sideHeader}><div className={styles.panelHeading}><div><h2>Vehicles</h2><p>{shown.length} vehicles shown</p></div><span className={styles.critical}>{data.vehicles.filter(x=>x.severity==="Critical"&&x.availability_status==="VOR").length} critical</span></div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="⌕  Reg, model, issue, garage…" aria-label="Search vehicles"/></div><div className={styles.vehicleScroll}>{shown.map(v=><button key={v.id} onClick={()=>{setReg(v.registration);setTicketFilter("all");setFilter("all")}} className={`${styles.vehicleCard} ${v.registration===selected?.registration?styles.vehicleSelected:""}`} data-severity={v.severity.toLowerCase()}><div className={styles.vehicleTitle}><b>{v.registration}</b>{v.unread_count>0&&<span className={styles.unread}>{v.unread_count}</span>}</div><small>{v.model}</small><div className={styles.cardStatus}><span className={v.availability_status==="VOR"?styles.statusVor:styles.statusOperational}>{v.availability_status}</span><span>{v.vor_days?v.vor_days+" days":"Available"}</span></div><p>{v.issue}</p><div className={styles.vehicleWorkshop}><span>Workshop</span><strong>{v.garage}</strong></div><AssetSignals value={opsOverview[String(v.id)]}/></button>)}</div></aside>
       <div className={styles.contentPane}>
       <div className={styles.caseColumn}>
       <div className={`${styles.panel} ${styles.details}`}>
@@ -236,25 +249,25 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
       <div className={styles.workflow}>
        <div className={styles.workflowTopRow}><div className={styles.panelHeading}><h2>Repair workflow</h2><span>{doneStages}/{currentSteps.length} completed</span></div><div className={styles.workflowHeaderActions}><button type="button" className={styles.workflowToggle} aria-label={workflowExpanded?"Collapse workflow stages":"Expand workflow stages"} aria-expanded={workflowExpanded} onClick={()=>setWorkflowExpanded(v=>!v)}>{workflowExpanded?"Hide details −":"Show stages +"}</button></div></div>
        <div className={styles.workflowSummary}>
-        <div className={styles.workflowProgress} role="progressbar" aria-label="Workflow completion" aria-valuenow={doneStages} aria-valuemin={0} aria-valuemax={currentSteps.length||1}>{currentSteps.map(s=><span key={s.step_index} className={s.status==="done"?styles.progressDone:s.status==="current"?styles.progressCurrent:""}/>)}</div>
+        <div className={styles.workflowProgress} role="progressbar" aria-label="Workflow completion" aria-valuenow={doneStages} aria-valuemin={0} aria-valuemax={currentSteps.length||1}>{currentSteps.map(s=><span key={s.step_index} className={(s.status==="done"||s.status==="skipped")?styles.progressDone:s.status==="current"?styles.progressCurrent:""}/>)}</div>
         {currentStage?<button type="button" className={styles.currentStageButton} disabled={!canAdvanceStage} title="Complete the current workflow stage" onClick={()=>{if(selected&&primary&&canAdvanceStage)mutate("/checklists/advance",{vehicle_id:selected.id,ticket_id:primary.id})}}><span>Current: {currentStage.label}</span><strong>✓ Complete</strong></button>:<span className={styles.workflowCompleteLabel}>{currentSteps.length?"All stages completed":"No stages assigned"}</span>}
        </div>
        {workflowExpanded&&<div className={styles.scenarioRow}><label htmlFor="vor-scenario">Repair / service scenario</label><select id="vor-scenario" value={primary?.scenario||""} disabled={busy||!primary||primary.status!=="open"} onChange={e=>{if(!selected||!primary)return;const code=e.target.value;if(code===primary.scenario)return;if(!window.confirm(`Change workflow to ${SCENARIO_LABELS[code]||code}? Current stage progress for ${primary.id} will restart.`))return;mutate("/scenario",{vehicle_id:selected.id,ticket_id:primary.id,scenario:code})}}>{data.workflows.map(w=><option key={w.code} value={w.code}>{SCENARIO_LABELS[w.code]||w.name}</option>)}</select><small>{primary?.id}</small></div>}
        {workflowExpanded&&<ol className={styles.workflowStages}>{currentSteps.map(s=>{
         const canComplete = s.status==="current" && !busy && !savingChecklist && checklistReady(s.step_index) && Boolean(selected) && primary?.status==="open";
-        return <li key={`${primary?.id}-${s.step_index}`} className={s.status==="done"?styles.stageDone:s.status==="current"?styles.stageCurrent:styles.stagePending}>
+        return <li key={`${primary?.id}-${s.step_index}`} className={(s.status==="done"||s.status==="skipped")?styles.stageDone:s.status==="current"?styles.stageCurrent:styles.stagePending}>
          <button type="button" className={styles.stageButton} disabled={!canComplete}
           aria-label={`${s.status==="done"?"Completed":canComplete?"Complete":"Upcoming"} stage: ${s.label}`}
           title={s.status==="done"?"Completed":s.status==="current"?"Complete this stage":"Complete the current stage first"}
           onClick={()=>{if(canComplete && selected && primary)mutate("/checklists/advance",{vehicle_id:selected.id,ticket_id:primary.id});}}>
-          <span className={styles.stageMarker}>{s.status==="done"?"✓":s.step_index+1}</span>
+          <span className={styles.stageMarker}>{s.status==="done"?"✓":s.status==="skipped"?"N/R":s.step_index+1}</span>
           <span className={styles.stageLabel}>{s.label}</span>
           {s.status==="current"&&<span className={styles.stageAction}>✓ Finish</span>}
          </button>
           <div className={styles.stageChecklist} aria-label={`Checklist for ${s.label}`}>
-            {(WORKFLOW_ITEMS[s.step_index]||[]).map(item=><label className={styles.checklistEntry} key={item.key}>
+            {stageList(s.step_index).map(item=><label className={styles.checklistEntry} key={item.key}>
               {item.type==="date"?<><span>{item.label}</span><input type="date" disabled={savingChecklist||busy||s.status==="done"} value={checklist[`${s.step_index}:${item.key}`]?.value||""} onChange={e=>void saveChecklist(s.step_index,item.key,Boolean(e.target.value),e.target.value||null)}/></>:
-                <><input type="checkbox" disabled={savingChecklist||busy||s.status==="done"} checked={checklist[`${s.step_index}:${item.key}`]?.checked||false} onChange={e=>void saveChecklist(s.step_index,item.key,e.target.checked)}/><span>{item.label}</span></>}
+                <><input type="checkbox" disabled={savingChecklist||busy||s.status==="done"} checked={checklist[`${s.step_index}:${item.key}`]?.checked||false} onChange={e=>void saveChecklist(s.step_index,item.key,e.target.checked)}/><span>{item.label}{item.required===false?" (optional)":""}</span></>}
             </label>)}
             {s.status==="current"&&!checklistReady(s.step_index)&&<small className={styles.checklistHint}>Complete the checklist to finish this stage.</small>}
             {s.status==="done"&&!checklistReady(s.step_index)&&<small className={styles.checklistHint}>Historical completion: checklist was not recorded.</small>}
@@ -262,6 +275,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
         </li>;
        })}</ol>}
        {currentSteps.length===0&&<p className={styles.workflowEmpty}>No stages assigned to this ticket.</p>}
+       {selected&&<OperationsPanel key={`${selected.id}-${primary?.id||"no-ticket"}`} vehicleId={selected.id} ticketId={primary?.id||null} onSaved={load}/>}
       </div>
     </section>
       </div>
