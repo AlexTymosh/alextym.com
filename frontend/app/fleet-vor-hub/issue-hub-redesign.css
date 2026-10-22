@@ -1,0 +1,72 @@
+/* PR09 APPROVED MOCKUP REDESIGN */
+/* PR09 — Approved Insytly-inspired Issue Hub layout (v2 only). */
+.root .workspace{grid-template-columns:clamp(235px,18vw,292px) minmax(0,1fr)!important;gap:10px!important}
+.root .workspace > .vehiclePane{background:#f8fafc!important;border-color:#dbe5eb!important}
+.root .workspace .sideHeader{background:#fff;padding:9px 9px 10px!important}
+.root .workspace .sideHeader .critical{display:none!important}
+.railTabs{display:flex;align-items:stretch;gap:5px;margin:-4px -4px 7px;border-bottom:1px solid #e7edf1}
+.railTabs button{border:0;border-bottom:3px solid transparent;border-radius:0;padding:8px 14px;background:transparent;color:#8293a1;font-size:12px;font-weight:750}
+.railTabs .railSelected{color:#30834c;border-color:#64ae72;background:#f7fbf8}
+.ticketRailCard{width:100%;border:1px solid #dae4eb;border-left:3px solid #69ad7a;background:#fff;border-radius:7px;text-align:left;margin-bottom:5px;padding:9px 10px;display:grid;gap:4px;color:#344f5d}
+.ticketRailCard:hover,.ticketRailSelected{border-color:#64ae72;background:#edf8f0}
+.ticketRailCard strong{font-size:12px;color:#244154}
+.ticketRailCard small{font-size:10px;color:#748797}
+.ticketRailCard span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ticketRailCard em{font-style:normal;color:#548f65;font-weight:750;font-size:10px}
+/* Vehicle top summary: distinct, compact operational context strip. */
+.root .workspace .contentPane .caseColumn>.details{background:#fff!important;border:1px solid #d1e1e9!important;border-top:3px solid #64ae72!important;border-radius:11px!important;box-shadow:0 3px 15px #25475e12!important;min-height:110px}
+.root .workspace .contentPane .caseColumn .detailsHead{background:linear-gradient(112deg,#eff9f2,#f7fbfd)!important;border-right:1px solid #e3ebf0!important;padding:12px 16px!important}
+.root .workspace .contentPane .caseColumn .detailsHead h1{font-size:25px!important;font-weight:850;letter-spacing:.2px;color:#224352}
+.root .workspace .contentPane .caseColumn .detailsBody{background:#fff!important;gap:9px!important;padding:12px 15px!important;align-content:center}
+.root .workspace .contentPane .caseColumn .issueBox{border:1px solid #e2eaf0;background:#f4f7f9!important;border-left:3px solid #64ae72;border-radius:8px!important;min-height:43px!important}
+.root .workspace .contentPane .caseColumn .maintenanceInside{background:#f9fbfc!important}
+.root .workspace .contentPane .caseColumn .maintenanceInside .maintenanceGrid>div{background:#fff;border:1px solid #e0e8ee;border-radius:6px}
+.root .workspace .contentPane .caseColumn .maintenanceInside .maintenanceGrid>div.overdueEvent{background:#fff0f0!important;border-color:#f3c9c9!important}
+/* Chat filters and ticket buttons stay in one toolbar. */
+.root .workspace .chatterTop .activityToolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;min-width:0}
+.root .workspace .chatterTop .activityToolbar .filterBar{flex:0 1 auto;margin:0!important;min-width:0;padding:3px 4px;overflow-x:auto;white-space:nowrap}
+.root .workspace .chatterTop .activityToolbar .ticketFilter{flex:0 1 auto;display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0;margin:0!important;white-space:nowrap;overflow-x:auto;font-size:10px;color:#758c99}
+.root .workspace .chatterTop .activityToolbar .ticketFilter>span{font-weight:750}
+.root .workspace .chatterTop .activityToolbar .ticketFilter button{border:1px solid #dce6ea;border-radius:5px;background:#fff;padding:5px 7px;color:#607b8b;font-weight:750;font-size:10px}
+.root .workspace .chatterTop .activityToolbar .ticketFilter button.ticketActive{background:#e3f5e9;color:#277e47;border-color:#7bc08e}
+.root .workspace .chatterPane .event{background:#fff;border-color:#e1e8ed;box-shadow:0 1px 3px #22435a08!important}
+/* Ticket pager between workflow heading and stages */
+.root .workspace .contentPane .workflowTicketNav{display:flex;align-items:center;justify-content:center;gap:4px;max-width:100%;padding:8px 0;margin:6px 0 0;border-bottom:1px solid #edf1f3;overflow-x:auto}
+.root .workspace .contentPane .workflowTicketNav>span{color:#738796;font-size:10px;margin-right:4px}
+.root .workspace .contentPane .workflowTicketNav button{border:1px solid #dce5e9;background:#fff;color:#637b8b;border-radius:6px;padding:6px 8px;white-space:nowrap;font-size:10px;font-weight:750}
+.root .workspace .contentPane .workflowTicketNav button.ticketActive{border-color:#8ac99b;color:#2c7847;background:#e9f7ed}
+.root .workspace .contentPane .workflowTicketNav button:disabled{opacity:.35;cursor:default}
+.root .workspace .contentPane > .middlePane .workflowStages{gap:5px!important}
+.root .workspace .contentPane > .middlePane .workflowStages>li{padding:2px!important;border-radius:8px!important}
+.root .workspace .contentPane > .middlePane .workflowStages>li>.stageButton{min-height:33px!important;padding:6px 7px!important}
+.root .workspace .contentPane > .middlePane .workflowStages>li>.stageChecklist{padding:8px!important;margin-top:3px!important}
+/* Calendar: due/unbooked vehicle list at left and full-height grid at right. */
+.root .calendarLayout{grid-template-columns:clamp(245px,22vw,330px) minmax(0,1fr)!important;gap:11px!important;height:100%!important;min-height:0!important;max-width:none!important;padding:12px!important}
+.root .calendarLayout>.outstandingPanel{grid-column:1!important;grid-row:1!important;height:100%!important;min-height:0!important;overflow:hidden!important;display:flex;flex-direction:column;order:0;background:#fff}
+.root .calendarLayout>.outstandingPanel .outstandingList{flex:1;min-height:0;overflow-y:auto;padding:7px 9px}
+.root .calendarLayout>.outstandingPanel .outstandingCard{padding:10px 9px;margin-bottom:7px;border:1px solid #dce5ea;border-radius:8px;background:#fff}
+.root .calendarLayout>.panel:first-child{grid-column:2!important;grid-row:1!important;height:100%!important;min-height:0!important;overflow:hidden!important;order:1;background:#fff}
+.root .calendarLayout .calendarTop{padding:12px 15px!important;border-bottom:1px solid #e8eef2;gap:10px}
+.root .calendarLayout .calendarFilters{background:#f8fafc;margin:10px 14px!important;border-color:#e0e8ef;border-radius:8px}
+.root .calendarLayout .calendarGrid{margin:0 12px!important;min-height:0!important;flex:1!important}
+.root .calendarLayout .weekday{background:#f2f6f9!important;color:#688091}
+.root .calendarLayout .dayCell{border:1px solid #e5ebf0!important;background:#fff!important;min-height:107px!important;padding:8px!important}
+.root .calendarLayout .blankDay{background:#f8fafb!important}
+.root .calendarLayout .calendarEvent{border-radius:5px;padding:5px 6px;background:#e9f4ff!important;border-left:3px solid #64a3e8!important;box-shadow:none!important;font-size:10px}
+.root .calendarLayout .calendarEvent.eventMOT{background:#feecee!important;border-left-color:#ee6e75!important}
+.root .calendarLayout .calendarEvent.eventInspection{background:#fff2e1!important;border-left-color:#efb05e!important}
+.root .calendarLayout .calendarEvent.eventService{background:#eaf4ff!important;border-left-color:#579aef!important}
+.root .calendarLayout .calendarEvent span{display:block!important;font-size:9px;color:#638198}
+.root .calendarLayout .calendarFootnote{padding:8px 15px;color:#869aa5;font-size:10px}
+@media(max-width:1190px){.root .workspace .chatterTop .activityToolbar{flex-wrap:wrap}.root .calendarLayout{grid-template-columns:250px minmax(0,1fr)!important}}
+@media(max-width:850px){.root .calendarLayout{display:flex!important;flex-direction:column!important;height:auto!important;max-height:none!important;overflow-y:auto!important}.root .calendarLayout>.outstandingPanel{width:100%;height:290px!important;flex:0 0 290px!important}.root .calendarLayout>.panel:first-child{width:100%;height:auto!important;min-height:580px!important;flex:1}.root .workspace .chatterTop .activityToolbar{flex-direction:column;align-items:stretch}}
+/* Activity cards: list styling and visible author avatars, without altering event data. */
+.root .workspace .chatterPane .timeline{align-items:stretch!important;gap:7px!important;padding:10px 11px!important;background:#f8fafc!important}
+.root .workspace .chatterPane .timeline .event{display:flex!important;align-items:flex-start!important;gap:10px!important;align-self:stretch!important;max-width:100%!important;background:#fff!important;color:#2e4655!important;padding:10px 12px!important;border:1px solid #e1eaf0!important;border-radius:8px!important}
+.root .workspace .chatterPane .timeline .eventMine{background:#ecf9f0!important;border-color:#c8e2cd!important}
+.root .workspace .chatterPane .eventAvatar{flex:0 0 33px;display:grid;place-items:center;width:33px;height:33px;border-radius:10px;background:#e4eef8;color:#456c8f;font-size:11px;font-weight:850}
+.root .workspace .chatterPane .eventMine .eventAvatar{background:#d8edde;color:#368455}
+.root .workspace .chatterPane .eventContent{flex:1;min-width:0}
+.root .workspace .chatterPane .eventContent .eventMeta{font-size:11px;color:#4a6574}
+.root .workspace .chatterPane .eventContent p{margin:5px 0;font-size:11px;line-height:1.5}
+.root .workspace .chatterPane .eventContent time{margin-top:4px;color:#8b9ca6}

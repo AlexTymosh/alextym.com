@@ -16,3 +16,30 @@
 .subnavItem:hover{background:#EDF5F2}
 .subnavItem.subSelected{background:#E3F3E7;color:#32794A}
 @media(max-width:760px){.sidebar .registerRow{justify-content:center}.sidebar .registerRow .navItem{justify-content:center;padding:12px}.sidebar .subnav,.sidebar .navExpand{display:none}}
+
+/*PR08_INSYTLY_VISUAL_BEGIN*/
+/* Fleet Hub PR-08 — Insytly-inspired shell; source: user-approved reference. */
+.app{--iy-green:#64ae72;--iy-red:#fa666b;--iy-amber:#f3b45b;--iy-surface:#fff;--iy-line:#dde5ed;--iy-bg:#eff3f8;background:var(--iy-bg);color:#2b3944}
+.topbar{height:55px;min-height:55px;padding:0 17px;background:#fff;border-bottom:1px solid var(--iy-line);box-shadow:0 1px 3px #1c344a0a}
+.brandIcon{width:32px;height:32px;border-radius:8px;background:var(--iy-green);font-size:17px}
+.brand strong{font-size:14px;font-weight:800;letter-spacing:0}
+.brand small{font-size:10px;margin-top:0;color:#80909f}
+.demoFlag{background:#e6f5e9;color:#347a48;border-radius:5px;padding:5px 8px}
+.exportButton{border-color:var(--iy-line);border-radius:6px;background:#fff;padding:6px 10px}
+.sidebar{background:#f8fafc;border-color:var(--iy-line);gap:12px;padding:12px 8px;flex-basis:210px}
+.sidebar.collapsed{flex-basis:57px}
+.group{gap:2px}
+.groupLabel{font-size:9px;letter-spacing:1.05px;padding:5px 10px;color:#91a0ae}
+.navItem{padding:8px 10px;border-radius:7px;color:#536977;font-size:11px;font-weight:680;gap:9px}
+.navItem:hover{background:#edf3f6}
+.navItem.selected{background:#e4f3e8;box-shadow:inset 3px 0 var(--iy-green);color:#287946}
+.navItem svg{width:16px;height:16px}
+.sidebarFooter{color:#8293a1}
+.contentBar{min-height:58px;flex-basis:58px;padding:8px 17px;background:#fff;border-color:var(--iy-line)}
+.contentBar h1{font-size:15px;font-weight:850;letter-spacing:0;margin:2px 0 0}
+.breadcrumb{font-size:9px}
+.primaryAction{border-radius:6px;background:var(--iy-green);border-color:#58a269;box-shadow:none;padding:7px 12px}
+.primaryAction:hover{background:#4b9d5e}
+.content,.workspaceContent{background:var(--iy-bg)}
+@media(max-width:760px){.topbar{padding:0 10px}.sidebar,.sidebar:not(.collapsed){flex-basis:57px}.sidebar .navItem{justify-content:center;padding:10px 5px}.contentBar{padding:7px 10px;min-height:56px;flex-basis:56px}.brand strong{font-size:12px}}
+/* PR08_INSYTLY_VISUAL_END */

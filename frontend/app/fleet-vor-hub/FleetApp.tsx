@@ -15,7 +15,7 @@ type Section="workspace"|"dashboard"|"calendar"|"new-defect"|"register"|"add"|"i
 type IconKind="workspace"|"dashboard"|"calendar"|"defect"|"register"|"add"|"import"|"process"|"history"|"settings";
 const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
   {label:"OPERATIONS",items:[
-    {id:"workspace",label:"Fleet Workspace",icon:"workspace"},
+    {id:"workspace",label:"Issue Hub",icon:"workspace"},
     {id:"dashboard",label:"Dashboard",icon:"dashboard"},
     {id:"calendar",label:"Calendar",icon:"calendar"},
     {id:"new-defect",label:"New Defect",icon:"defect"},
@@ -27,7 +27,7 @@ const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
 
 ];
 const labels:Record<Section,string>={
-  workspace:"Fleet Workspace",dashboard:"Dashboard",calendar:"Calendar",
+  workspace:"Issue Hub",dashboard:"Dashboard",calendar:"Calendar",
   "new-defect":"New Defect",process:"Process Design",reconciliation:"Reconciliation","workflow-settings":"Workflow Settings","operations-queue":"Actions & Blockers",register:"Vehicle Register",
   add:"Add Vehicle",import:"Import Vehicles","status-history":"Recorded Status History",
 };
