@@ -12,6 +12,7 @@ from app.api.health import router as health_router
 from app.api.redis_probe import router as redis_probe_router
 from app.api.telegram import router as telegram_router
 from app.api.vor import router as vor_router
+from app.api.vor_reporting import router as vor_reporting_router
 from app.api.vor_reconciliation import router as vor_reconciliation_router
 from app.api.vor_operations import router as vor_operations_router
 from app.api.vor_checklist import router as vor_checklist_router
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     app.include_router(vor_router, prefix="/api")
+    app.include_router(vor_reporting_router, prefix="/api")
     app.include_router(vor_reconciliation_router, prefix="/api")
     app.include_router(vor_operations_router, prefix="/api")
     app.include_router(vor_checklist_router, prefix="/api")
