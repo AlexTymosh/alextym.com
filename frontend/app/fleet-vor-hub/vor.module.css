@@ -1405,3 +1405,35 @@
 .checklistHint{font-size:10px;color:#8d6a34;margin-top:5px}
 @media(max-width:1050px){.root .workspace .contentPane{grid-template-columns:minmax(0,1fr) 275px!important}}
 @media(max-width:850px){.root .workspace .contentPane{display:flex!important;flex-direction:column!important;max-height:none!important;overflow:visible!important}.root .workspace .contentPane>.chatterPane{min-height:440px!important;height:440px!important;flex:none!important}.root .workspace .contentPane>.middlePane{max-height:none!important;min-height:360px!important;overflow:visible!important;flex:none!important}.root .dayCell{min-height:90px!important}}
+
+
+/* PR06 UI POLISH: full-height calendar + compact stage cards */
+/* Stretch each week's cells to the remaining calendar height (weeks are set in JSX). */
+.root .calendarLayout{height:100%!important;max-height:100%!important;min-height:0!important;align-items:stretch!important}
+.root .calendarLayout > .panel:first-child{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important}
+.root .calendarLayout .calendarTop,.root .calendarLayout .calendarFilters{flex:0 0 auto!important}
+.root .calendarLayout .calendarGrid{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;align-content:stretch!important}
+.root .calendarLayout .weekday{align-self:stretch}
+.root .calendarLayout .dayCell{min-height:110px!important;height:auto!important}
+.root .calendarLayout .calendarFootnote{flex:0 0 auto!important}
+
+/* The old template was a horizontal flex list with height:100% buttons.
+   Force the stage header and its checklist to flow VERTICALLY. */
+.root .workspace .contentPane > .middlePane .workflowStages{display:flex!important;flex-direction:column!important;gap:6px!important;margin:9px 0!important;align-content:start!important;min-height:0!important;padding:0!important}
+.root .workspace .contentPane > .middlePane .workflowStages > li{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;flex:0 0 auto!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:3px!important;border-radius:9px!important;gap:0!important}
+.root .workspace .contentPane > .middlePane .workflowStages > li > .stageButton{display:flex!important;align-items:center!important;gap:7px!important;height:auto!important;min-height:32px!important;padding:6px 7px!important;flex:0 0 auto!important;line-height:1.25!important;border-radius:7px!important}
+.root .workspace .contentPane > .middlePane .workflowStages > li > .stageChecklist{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-width:0!important;gap:6px!important;flex:0 0 auto!important;margin:3px 0 0!important;padding:9px 9px 8px!important;border-top:1px solid #e1ebe1!important;background:#fff!important;border-radius:0 0 7px 7px!important}
+.root .workspace .contentPane .stageMarker{display:grid!important;place-items:center!important;flex:0 0 22px!important;min-width:22px!important;width:22px!important;height:22px!important;font-size:10px!important}
+.root .workspace .contentPane .stageLabel{font-size:11px!important;line-height:1.25!important;flex:1!important;min-width:0!important}
+.root .workspace .contentPane .stageChecklist .checklistEntry{display:flex!important;align-items:center!important;gap:8px!important;font-size:11px!important;line-height:1.35!important;min-width:0!important;cursor:pointer}
+.root .workspace .contentPane .stageChecklist .checklistEntry input[type=checkbox]{appearance:auto!important;display:inline-block!important;opacity:1!important;visibility:visible!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;margin:0!important;accent-color:#64ae72!important}
+.root .workspace .contentPane .stageChecklist .checklistEntry input[type=date]{width:100%!important;min-width:0!important;padding:6px!important}
+.root .workspace .contentPane .stageChecklist .checklistEntry:has(input[type=date]){display:grid!important;grid-template-columns:1fr!important;gap:3px!important}
+.root .workspace .contentPane .workflowStages .stageStateDone{margin-left:auto;white-space:nowrap;font-size:10px;font-weight:800;color:#4a8759}
+.root .workspace .contentPane .workflowStages .stageStateActive{margin-left:auto;white-space:nowrap;font-size:10px;font-weight:750;color:#9c773d}
+.root .workspace .contentPane .workflowStages .stageChevron{font-size:16px;line-height:1;color:#829989;margin-left:4px}
+.root .workspace .contentPane .workflowStages .historicStep{margin:0;font-size:10px;color:#7d8e80}
+.root .workspace .contentPane .workflowStages .stageFooter{display:flex;align-items:center;justify-content:space-between;gap:7px;padding-top:8px;border-top:1px solid #edf2ed;color:#85683d;font-size:10px}
+.root .workspace .contentPane .workflowStages .stageFinish{flex-shrink:0;padding:7px 10px;border:0;border-radius:7px;background:#4f865e;color:white;font-size:10px;font-weight:750;cursor:pointer}
+.root .workspace .contentPane .workflowStages .stageFinish:disabled{opacity:.45;cursor:default}
+@media(max-width:900px){.root .calendarLayout{height:auto!important;max-height:none!important;min-height:650px!important}.root .calendarLayout > .panel:first-child{min-height:650px!important}.root .calendarLayout .calendarGrid{min-height:470px!important}}

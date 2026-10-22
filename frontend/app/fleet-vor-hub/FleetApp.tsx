@@ -1,3 +1,4 @@
+// PR06_RECONCILIATION
 "use client";
 
 import {useEffect,useState} from "react";
@@ -7,9 +8,10 @@ import NewDefectPanel from "./new-defect/Panel";
 import ProcessPanel from "./process/Panel";
 import WorkflowSettingsPanel from "./operations/WorkflowSettingsPanel";
 import OperationsQueuePanel from "./operations/OperationsQueuePanel";
+import ReconciliationPanel from "./reconciliation/Panel";
 import styles from "./fleet-app.module.css";
 
-type Section="workspace"|"dashboard"|"calendar"|"new-defect"|"register"|"add"|"import"|"status-history"|"process"|"workflow-settings"|"operations-queue";
+type Section="workspace"|"dashboard"|"calendar"|"new-defect"|"register"|"add"|"import"|"status-history"|"process"|"workflow-settings"|"operations-queue"|"reconciliation";
 type IconKind="workspace"|"dashboard"|"calendar"|"defect"|"register"|"add"|"import"|"process"|"history"|"settings";
 const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
   {label:"OPERATIONS",items:[
@@ -18,6 +20,7 @@ const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
     {id:"calendar",label:"Calendar",icon:"calendar"},
     {id:"new-defect",label:"New Defect",icon:"defect"},
     {id:"process",label:"Process Design",icon:"process"},
+    {id:"reconciliation",label:"Reconciliation",icon:"history"},
     {id:"workflow-settings",label:"Workflow Settings",icon:"settings"},
     {id:"operations-queue",label:"Actions & Blockers",icon:"history"},
   ]},
@@ -25,7 +28,7 @@ const groups: {label:string;items:{id:Section;label:string;icon:IconKind}[]}[]=[
 ];
 const labels:Record<Section,string>={
   workspace:"Fleet Workspace",dashboard:"Dashboard",calendar:"Calendar",
-  "new-defect":"New Defect",process:"Process Design","workflow-settings":"Workflow Settings","operations-queue":"Actions & Blockers",register:"Vehicle Register",
+  "new-defect":"New Defect",process:"Process Design",reconciliation:"Reconciliation","workflow-settings":"Workflow Settings","operations-queue":"Actions & Blockers",register:"Vehicle Register",
   add:"Add Vehicle",import:"Import Vehicles","status-history":"Recorded Status History",
 };
 
@@ -112,6 +115,7 @@ export default function FleetApp(){
           {(section==="register"||section==="add"||section==="import"||section==="status-history")&&<VehicleRegisterPanel section={section} navigate={navigate}/>}
           {section==="new-defect"&&<NewDefectPanel navigate={next=>navigate(next)} onRegistered={registration=>setFocusedVehicle(registration)}/>}
           {section==="process"&&<ProcessPanel/>}
+          {section==="reconciliation"&&<ReconciliationPanel/>}
           {section==="workflow-settings"&&<WorkflowSettingsPanel/>}
           {section==="operations-queue"&&<OperationsQueuePanel onOpenVehicle={registration=>{setFocusedVehicle(registration);navigate("workspace")}}/>}
         </div>

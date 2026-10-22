@@ -332,3 +332,27 @@ A separate PR for documentation updates may be inserted as needed. Merge only af
 - Process: compact movable swimlane cards; roadmap still places full management dashboard in PR-07.
 - Fleet Workspace: right-side persisted stage checklist; all stage items required before advance via new endpoint.
 - Frozen v1 is untouched.
+
+### PR-04 + PR-05 combined — Operational Control and asset indicators (2026-10-21)
+
+- v2-only tasks/deadlines, blockers, documents, release checks, manual VOR/Operational status confirmation and operational audit.
+- Workflow Settings exposes editable item labels and required flags (date remains required); current stage can be marked Not required with recorded actor/reason.
+- Right-side workflow displays operational controls; vehicle cards show live task, overdue, blockers, documents, release and progress indicators.
+- No external system updates and no automatic release. Frozen v1 source/database untouched.
+- User must run local backend tests, frontend typecheck/build and browser smoke tests before commit.
+
+### PR-06 — Reconciliation (22 October 2026)
+
+- V2-only synthetic HOTH and Fleet snapshot imports and discrepancy queue; no external system integration.
+- Comparison runs preserve source batches and historical evidence; reviewed differences remain auditable.
+- Differences never automatically change vehicle status. Separate explicit Fleet confirmation remains authoritative.
+- CSV snapshot import, demonstration seed, optional source selection, review decisions, audit and Excel export.
+- UI remains within /fleet-vor-hub (no separate Next.js route); no visible NHS/KEY2 branding.
+- Local build/tests and browser verification required before committing.
+
+### PR-06 UI polish — Workflow, Calendar, Settings (22 October 2026)
+
+- Workflow Settings: compact two-column expandable stage editor; save/discard per stage; previous audit is preserved.
+- Calendar: week rows stretch vertically to occupy the booking calendar panel. Filters remain unchanged.
+- Fleet Workspace: compact stage cards with visible completion ticks, optional checklist expansion, checkboxes shown vertically and only the current stage editable. Historical stages without recorded checklist evidence are not falsely ticked.
+- Frozen v1, backend APIs and databases unchanged. Local typecheck/build and browser tests required.

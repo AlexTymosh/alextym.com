@@ -87,7 +87,7 @@ function CalendarView({data,book,loading}: {data:Data;book:(v:Vehicle,kind:strin
     <label>Booking type<select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">All types</option>{TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select></label>
     <button type="button" onClick={()=>{setCityFilter("all");setPartnerFilter("all");setTypeFilter("all")}}>Clear filters</button>
    </div>
-   <div className={styles.calendarGrid}>{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(n=><div className={styles.weekday} key={n}>{n}</div>)}
+   <div className={styles.calendarGrid} style={{gridTemplateRows:`32px repeat(${Math.ceil(cells.length/7)}, minmax(110px, 1fr))`}}>{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(n=><div className={styles.weekday} key={n}>{n}</div>)}
    {cells.map((c,index)=><div key={`${index}-${c}`} className={`${styles.dayCell} ${c===data.today?styles.isToday:""} ${!c?styles.blankDay:""}`}>
     {c&&<><strong>{Number(c.slice(-2))}</strong>{lookup(c).map(b=>{const v=data.vehicles.find(x=>x.id===b.vehicle_id);return <div className={`${styles.calendarEvent} ${styles[`event${b.kind}` as keyof typeof styles]||""} ${b.booked_date<data.today?styles.overdueEvent:""}`} key={b.id} title={`${b.kind}: ${v?.registration} · ${b.garage}`}><b>{v?.registration}</b><span>{b.kind} · {b.garage}</span></div>})}</>}
    </div>)}</div>
@@ -137,6 +137,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const [contactRole,setContactRole]=useState<"internal"|"external">("internal");
  const [editContactId,setEditContactId]=useState<number|null>(null);
  const [workflowExpanded,setWorkflowExpanded]=useState(true);
+ const [expandedStage,setExpandedStage]=useState<number|null>(null);
  const [showSubscribers,setShowSubscribers]=useState(false);
  const timelineRef = useRef<HTMLDivElement>(null);
  const load = useCallback(async ()=>{const payload=await request<Data>("/bootstrap");setData(payload);request<{vehicles:Record<string,OpsIndicator>}>("/ops/overview").then(r=>setOpsOverview(r.vehicles)).catch(()=>setOpsOverview({}));setClock(c=>c+1)},[]);
@@ -253,25 +254,47 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
         {currentStage?<button type="button" className={styles.currentStageButton} disabled={!canAdvanceStage} title="Complete the current workflow stage" onClick={()=>{if(selected&&primary&&canAdvanceStage)mutate("/checklists/advance",{vehicle_id:selected.id,ticket_id:primary.id})}}><span>Current: {currentStage.label}</span><strong>✓ Complete</strong></button>:<span className={styles.workflowCompleteLabel}>{currentSteps.length?"All stages completed":"No stages assigned"}</span>}
        </div>
        {workflowExpanded&&<div className={styles.scenarioRow}><label htmlFor="vor-scenario">Repair / service scenario</label><select id="vor-scenario" value={primary?.scenario||""} disabled={busy||!primary||primary.status!=="open"} onChange={e=>{if(!selected||!primary)return;const code=e.target.value;if(code===primary.scenario)return;if(!window.confirm(`Change workflow to ${SCENARIO_LABELS[code]||code}? Current stage progress for ${primary.id} will restart.`))return;mutate("/scenario",{vehicle_id:selected.id,ticket_id:primary.id,scenario:code})}}>{data.workflows.map(w=><option key={w.code} value={w.code}>{SCENARIO_LABELS[w.code]||w.name}</option>)}</select><small>{primary?.id}</small></div>}
-       {workflowExpanded&&<ol className={styles.workflowStages}>{currentSteps.map(s=>{
-        const canComplete = s.status==="current" && !busy && !savingChecklist && checklistReady(s.step_index) && Boolean(selected) && primary?.status==="open";
-        return <li key={`${primary?.id}-${s.step_index}`} className={(s.status==="done"||s.status==="skipped")?styles.stageDone:s.status==="current"?styles.stageCurrent:styles.stagePending}>
-         <button type="button" className={styles.stageButton} disabled={!canComplete}
-          aria-label={`${s.status==="done"?"Completed":canComplete?"Complete":"Upcoming"} stage: ${s.label}`}
-          title={s.status==="done"?"Completed":s.status==="current"?"Complete this stage":"Complete the current stage first"}
-          onClick={()=>{if(canComplete && selected && primary)mutate("/checklists/advance",{vehicle_id:selected.id,ticket_id:primary.id});}}>
-          <span className={styles.stageMarker}>{s.status==="done"?"✓":s.status==="skipped"?"N/R":s.step_index+1}</span>
-          <span className={styles.stageLabel}>{s.label}</span>
-          {s.status==="current"&&<span className={styles.stageAction}>✓ Finish</span>}
-         </button>
-          <div className={styles.stageChecklist} aria-label={`Checklist for ${s.label}`}>
-            {stageList(s.step_index).map(item=><label className={styles.checklistEntry} key={item.key}>
-              {item.type==="date"?<><span>{item.label}</span><input type="date" disabled={savingChecklist||busy||s.status==="done"} value={checklist[`${s.step_index}:${item.key}`]?.value||""} onChange={e=>void saveChecklist(s.step_index,item.key,Boolean(e.target.value),e.target.value||null)}/></>:
-                <><input type="checkbox" disabled={savingChecklist||busy||s.status==="done"} checked={checklist[`${s.step_index}:${item.key}`]?.checked||false} onChange={e=>void saveChecklist(s.step_index,item.key,e.target.checked)}/><span>{item.label}{item.required===false?" (optional)":""}</span></>}
-            </label>)}
-            {s.status==="current"&&!checklistReady(s.step_index)&&<small className={styles.checklistHint}>Complete the checklist to finish this stage.</small>}
-            {s.status==="done"&&!checklistReady(s.step_index)&&<small className={styles.checklistHint}>Historical completion: checklist was not recorded.</small>}
-          </div>
+       {workflowExpanded&&<ol className={styles.workflowStages} aria-label="Repair workflow stages">{currentSteps.map(s=>{
+        const completed = s.status==="done";
+        const skipped = s.status==="skipped";
+        const active = s.status==="current";
+        const opened = expandedStage===s.step_index || (expandedStage===null && active);
+        const canComplete = active && !busy && !savingChecklist && checklistReady(s.step_index) && Boolean(selected) && primary?.status==="open";
+        const items = stageList(s.step_index);
+        const doneItems = items.filter(item=>checklist[`${s.step_index}:${item.key}`]?.checked).length;
+        return <li key={`${primary?.id}-${s.step_index}`} className={completed||skipped?styles.stageDone:active?styles.stageCurrent:styles.stagePending}>
+          <button type="button" className={styles.stageButton} aria-expanded={opened} aria-label={`${s.label}, ${completed?"completed":skipped?"not required":active?"in progress":"pending"}; ${opened?"collapse":"expand"} checklist`}
+             onClick={()=>setExpandedStage(opened?-1:s.step_index)}>
+            <span className={styles.stageMarker}>{completed?"✓":skipped?"N/R":s.step_index+1}</span>
+            <span className={styles.stageLabel}>{s.label}</span>
+            {completed&&<span className={styles.stageStateDone}>✓ Done</span>}
+            {skipped&&<span className={styles.stageStateDone}>Not required</span>}
+            {active&&<span className={styles.stageStateActive}>{doneItems}/{items.length} checks</span>}
+            <span className={styles.stageChevron} aria-hidden="true">{opened?"⌃":"⌄"}</span>
+          </button>
+          {opened && <div className={styles.stageChecklist} aria-label={`Checklist for ${s.label}`}>
+            {completed && doneItems===0 ? <p className={styles.historicStep}>Completed before checklist tracking was recorded.</p> : <>
+              {items.length===0 && <p className={styles.historicStep}>No checklist configured for this stage.</p>}
+              {items.map(item=><label className={styles.checklistEntry} key={item.key}>
+                {item.type==="date" ? <>
+                  <span>{item.label}{item.required===false?" (optional)":""}</span>
+                  <input type="date" disabled={savingChecklist||busy||!active} value={checklist[`${s.step_index}:${item.key}`]?.value||""}
+                    onChange={e=>void saveChecklist(s.step_index,item.key,Boolean(e.target.value),e.target.value||null)}/>
+                </> : <>
+                  <input type="checkbox" disabled={savingChecklist||busy||!active} checked={checklist[`${s.step_index}:${item.key}`]?.checked||false}
+                    onChange={e=>void saveChecklist(s.step_index,item.key,e.target.checked)}/>
+                  <span>{item.label}{item.required===false?" (optional)":""}</span>
+                </>}
+              </label>)}
+            </>}
+            {active && <div className={styles.stageFooter}>
+              {!checklistReady(s.step_index)&&<span>Complete all mandatory checks to continue.</span>}
+              <button type="button" className={styles.stageFinish} disabled={!canComplete}
+                 onClick={()=>{if(canComplete&&selected&&primary)mutate("/checklists/advance",{vehicle_id:selected.id,ticket_id:primary.id})}}>
+                 ✓ Finish stage
+              </button>
+            </div>}
+          </div>}
         </li>;
        })}</ol>}
        {currentSteps.length===0&&<p className={styles.workflowEmpty}>No stages assigned to this ticket.</p>}
