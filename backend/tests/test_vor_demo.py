@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.vor import router
+from app.api.vor_checklist import CHECKLIST, router as checklist_router
+from datetime import date
 from app.services import vor_store
 
 
@@ -14,7 +16,37 @@ def make_client(monkeypatch, tmp):
     monkeypatch.setenv("VOR_DEMO_DB_PATH", str(tmp / "demo.sqlite3"))
     app = FastAPI()
     app.include_router(router, prefix="/api")
+    app.include_router(checklist_router, prefix="/api")
     return TestClient(app)
+
+
+def _complete_workflow_checklist(client, vehicle_id: int, ticket_id: str) -> None:
+    """Complete this ticket's current required checklist before advancing."""
+    snapshot = client.get("/api/vor/bootstrap")
+    assert snapshot.status_code == 200
+    current = next(
+        (
+            step
+            for step in snapshot.json()["steps"]
+            if step["ticket_id"] == ticket_id and step["status"] == "current"
+        ),
+        None,
+    )
+    assert current is not None
+    index = current["step_index"]
+    keys = CHECKLIST[index] if index < len(CHECKLIST) else ()
+    for key in keys:
+        item = {
+            "vehicle_id": vehicle_id,
+            "ticket_id": ticket_id,
+            "step_index": index,
+            "key": key,
+            "checked": True,
+        }
+        if key == "diagnosis_date":
+            item["value"] = date.today().isoformat()
+        response = client.post("/api/vor/checklists", json=item)
+        assert response.status_code == 200, response.text
 
 
 def test_seed_and_auth(monkeypatch, tmp_path):
@@ -82,6 +114,7 @@ def test_mutations(monkeypatch, tmp_path):
             },
         )
         assert r.status_code == 200, r.text
+        _complete_workflow_checklist(client, v["id"], t["id"])
         assert (
             client.post(
                 "/api/vor/advance", json={"vehicle_id": v["id"], "ticket_id": t["id"]}

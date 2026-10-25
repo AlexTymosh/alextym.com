@@ -1,4 +1,5 @@
 """Protected synthetic defect-intake endpoints for Fleet VOR Hub v2 only."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -9,7 +10,9 @@ from pydantic import BaseModel, Field
 from app.api.vor import required, same_origin
 from app.services import vor_intake
 
-router = APIRouter(prefix="/vor/intake", tags=["Fleet VOR v2 intake"], dependencies=[Depends(required)])
+router = APIRouter(
+    prefix="/vor/intake", tags=["Fleet VOR v2 intake"], dependencies=[Depends(required)]
+)
 
 
 class DefectIntake(BaseModel):

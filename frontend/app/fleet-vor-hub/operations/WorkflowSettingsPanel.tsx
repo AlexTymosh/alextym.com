@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "./workflow-settings.module.css";
+import WorkflowLibraryPanel from "./WorkflowLibraryPanel";
 
 type Item = { stage_index: number; item_key: string; label: string; required: boolean };
 const STAGES = [
@@ -82,6 +83,7 @@ export default function WorkflowSettingsPanel() {
 
   const requiredCount = items.filter(item => item.required).length;
   return <div className={styles.page}>
+    <WorkflowLibraryPanel/>
     <header className={styles.hero}>
       <div className={styles.heroCopy}>
         <span className={styles.eyebrow}>OPERATIONS CONFIGURATION</span>

@@ -249,7 +249,14 @@ def test_hung_operation_times_out_without_hanging_cleanup(monkeypatch, blocked_p
 
     asyncio.run(run())
     assert redis.commands[0][3:] == ["EX", 60]
-    assert redis.commands[-1][0] == blocked_phase
+    # PR-18: best-effort cleanup may issue DEL after the timed-out command.
+    phases = [command[0] for command in redis.commands]
+    expected = {
+        "SET": ["SET"],
+        "GET": ["SET", "GET"],
+        "DEL": ["SET", "GET", "DEL"],
+    }[blocked_phase]
+    assert phases == expected or (blocked_phase in {"SET", "GET"} and phases == [*expected, "DEL"])
 
 
 def test_concurrent_checks_use_independent_keys_without_blocking():

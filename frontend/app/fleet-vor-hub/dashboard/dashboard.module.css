@@ -131,3 +131,17 @@
 @media(max-width:860px){.chartLayout,.bottomLayout{grid-template-columns:minmax(0,1fr)!important}}
 
 .metricIcon svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* PR14 STAGE PIE + GARAGE 100% CAPACITY */
+.stagePieLayout{display:grid;grid-template-columns:minmax(150px,38%) minmax(0,1fr);align-items:center;gap:18px;padding:15px 5px 14px;min-height:217px}
+.stagePie{width:min(180px,100%);aspect-ratio:1;border-radius:50%;position:relative;display:grid;place-items:center;justify-self:center}
+.stagePieHole{position:absolute;inset:24%;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;text-align:center}
+.stagePieHole strong{font-size:24px;color:#152e48}.stagePieHole span{font-size:10px;color:#718493}
+.stagePieLegend{display:grid;gap:8px;min-width:0}.stagePieLegend>div{display:grid;grid-template-columns:9px minmax(0,1fr) 25px 35px;align-items:center;gap:7px;font-size:11px;border-bottom:1px solid #eff3f5;padding-bottom:5px}
+.stagePieLegend i{height:9px;width:9px;border-radius:50%}.stagePieLegend span{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.stagePieLegend strong{text-align:right}.stagePieLegend small{color:#6b8396;text-align:right}
+.garageCapacity{display:grid;gap:12px;padding:12px 4px 6px}.garageCapacityRow{display:grid;grid-template-columns:minmax(74px,105px) minmax(0,1fr) 54px 30px;align-items:center;gap:9px;font-size:11px}
+.garageCapacityRow>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#355068}.garageCapacityRow strong{text-align:right;font-size:11px}.garageCapacityRow small{color:#648094;text-align:right}
+.garageCapacityTrack{height:15px;border-radius:6px;background:repeating-linear-gradient(to right,#edf2f5 0,#edf2f5 calc(25% - 1px),#cfd8e1 calc(25% - 1px),#cfd8e1 25%);overflow:hidden}
+.garageCapacityTrack i{display:block;height:100%;border-radius:6px;transition:width .2s}.garageScale{display:flex;justify-content:space-between;margin:0 78px 0 114px;font-size:10px;color:#718799}
+.garageCapacityNote{margin:0!important;font-size:10px!important;color:#627e91!important;line-height:1.4}
+@media(max-width:1150px){.stagePieLayout{grid-template-columns:1fr}.garageCapacityRow{grid-template-columns:95px minmax(0,1fr) 52px 30px}}

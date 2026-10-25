@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from app.api.vor_workflow_admin import router as vor_workflow_admin_router
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     app.include_router(vor_router, prefix="/api")
+    app.include_router(vor_workflow_admin_router, prefix="/api")
     app.include_router(vor_reporting_router, prefix="/api")
     app.include_router(vor_reconciliation_router, prefix="/api")
     app.include_router(vor_operations_router, prefix="/api")

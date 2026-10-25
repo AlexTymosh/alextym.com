@@ -12,7 +12,9 @@ import pytest
 
 def _freeze_module():
     root = Path(__file__).resolve().parents[2]
-    spec = importlib.util.spec_from_file_location("freeze_vor_v1", root / "scripts" / "freeze_vor_v1.py")
+    spec = importlib.util.spec_from_file_location(
+        "freeze_vor_v1", root / "scripts" / "freeze_vor_v1.py"
+    )
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -75,4 +77,17 @@ def test_backup_closes_destination_before_renaming(monkeypatch, tmp_path):
     with closing(tool.open_source(source)) as read:
         tool.backup_to(read, target)
     assert target.exists()
-    tool.ensure_count_match({name: 0 for name in ("vehicles", "tickets", "events", "ticket_steps", "contacts", "subscriptions")}, target)
+    tool.ensure_count_match(
+        {
+            name: 0
+            for name in (
+                "vehicles",
+                "tickets",
+                "events",
+                "ticket_steps",
+                "contacts",
+                "subscriptions",
+            )
+        },
+        target,
+    )

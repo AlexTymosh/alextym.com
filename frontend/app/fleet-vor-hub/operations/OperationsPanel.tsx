@@ -35,7 +35,7 @@ export default function OperationsPanel({vehicleId,ticketId,onSaved}:{vehicleId:
  const [reason,setReason]=useState("");const [confirmed,setConfirmed]=useState(false);const [override,setOverride]=useState(false);
  const [skipReason,setSkipReason]=useState("");const [skipActor,setSkipActor]=useState("Fleet Department");
  const load=useCallback(async()=>{if(!ticketId){setData(null);return;} const query=`?vehicle_id=${vehicleId}&ticket_id=${encodeURIComponent(ticketId)}`;setData(await api<Details>(`/details${query}`));},[vehicleId,ticketId]);
- useEffect(()=>{let active=true;if(!ticketId){setData(null);return;}const query=`?vehicle_id=${vehicleId}&ticket_id=${encodeURIComponent(ticketId)}`;
+ useEffect(()=>{let active=true;if(!ticketId){void Promise.resolve().then(()=>{if(active)setData(null)});return()=>{active=false};}const query=`?vehicle_id=${vehicleId}&ticket_id=${encodeURIComponent(ticketId)}`;
  api<Details>(`/details${query}`).then(d=>{if(active)setData(d)}).catch(e=>{if(active)setError((e as Error).message)});return()=>{active=false};},[vehicleId,ticketId]);
  const act=async(path:string,body:object,message:string)=>{setBusy(true);setError("");setNotice("");try{await api(path,body);await load();await onSaved();setNotice(message)}catch(e){setError((e as Error).message)}finally{setBusy(false)}};
  if(!ticketId)return <div className={styles.panel}><h3>Operational Control</h3><p>Select a ticket to manage follow-ups.</p></div>;

@@ -36,8 +36,11 @@ def database_path() -> Path:
     raw = os.getenv("VOR_V1_DB_PATH", "").strip()
     frozen_path = Path(raw).expanduser().resolve() if raw else LOCAL_FILE
     active_raw = os.getenv("VOR_DEMO_DB_PATH", "").strip()
-    active_path = (Path(active_raw).expanduser().resolve() if active_raw else
-                   Path(__file__).resolve().parents[2] / "_local" / "vor_hub.sqlite3")
+    active_path = (
+        Path(active_raw).expanduser().resolve()
+        if active_raw
+        else Path(__file__).resolve().parents[2] / "_local" / "vor_hub.sqlite3"
+    )
     if frozen_path == active_path:
         raise RuntimeError("v1 and v2 cannot share the same SQLite database")
     return frozen_path
@@ -48,7 +51,9 @@ def connection() -> Iterator[sqlite3.Connection]:
     path = database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.is_file():
-        raise FileNotFoundError(f"Frozen v1 SQLite is missing: {path}; run scripts/freeze_vor_v1.py")
+        raise FileNotFoundError(
+            f"Frozen v1 SQLite is missing: {path}; run scripts/freeze_vor_v1.py"
+        )
     db = sqlite3.connect(path, timeout=15)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys=ON")

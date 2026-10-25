@@ -64,7 +64,7 @@ export default function ReconciliationPanel(){
  const [error,setError]=useState("");
  const [message,setMessage]=useState("");
  const refresh=useCallback(async()=>{const b=await api<BatchPayload>("/batches");const h=await api<History[]>("/runs");const d=await api<Detail>(`/latest${selectedRun?`?run_id=${selectedRun}`:""}`);setBatches(b);setRuns(h);setDetail(d);setHothId(v=>v||(b.latest.hoth?String(b.latest.hoth.id):""));setFleetId(v=>v||(b.latest.fleet?String(b.latest.fleet.id):""));},[selectedRun]);
- useEffect(()=>{void refresh().catch(e=>setError((e as Error).message))},[refresh]);
+ useEffect(()=>{let active=true;void Promise.resolve().then(()=>{if(active)return refresh()}).catch(e=>{if(active)setError((e as Error).message)});return()=>{active=false}},[refresh]);
  const counts=useMemo(()=>({open:detail.issues.filter(x=>x.resolution==="open").length,reviewed:detail.issues.filter(x=>x.resolution!=="open").length}),[detail.issues]);
  const rows=useMemo(()=>detail.issues.filter(i=>(filter==="all"||i.resolution===filter)&&`${i.registration} ${i.category} ${i.owner}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>Number(a.resolution!=="open")-Number(b.resolution!=="open")),[detail.issues,filter,query]);
  const upload=async()=>{if(!file)return;setBusy(true);setError("");setMessage("");try{

@@ -38,7 +38,7 @@ export default function NewDefectPanel({navigate,onRegistered}:{navigate:(sectio
   const [roadside,setRoadside]=useState(false);
   const [requestId,setRequestId]=useState("");
   const refresh=useCallback(async()=>{setOptions(await request<IntakeOptions>("/options"));},[]);
-  useEffect(()=>{refresh().catch(e=>setError((e as Error).message));},[refresh]);
+  useEffect(()=>{let active=true;void Promise.resolve().then(()=>{if(active)return refresh()}).catch(e=>{if(active)setError((e as Error).message)});return()=>{active=false}},[refresh]);
   async function submit(event:FormEvent){
     event.preventDefault();setError("");setSaving(true);
     // Reuse the same idempotency key for network retries; reset only for a new case.

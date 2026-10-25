@@ -3,6 +3,7 @@
 A defect creates a case and a linked PTS tracking ticket, but never updates
 vehicle availability. Specialist work remains with the HOTH-owned team.
 """
+
 from __future__ import annotations
 
 import json
@@ -86,8 +87,15 @@ def _ticket_id(db) -> str:
 
 
 def register_defect(
-    *, vehicle_id: int, pathway: str, reason: str, description: str,
-    hoth_reference: str, source: str, reported_vor: bool, roadside_reported: bool,
+    *,
+    vehicle_id: int,
+    pathway: str,
+    reason: str,
+    description: str,
+    hoth_reference: str,
+    source: str,
+    reported_vor: bool,
+    roadside_reported: bool,
     request_id: str,
 ) -> dict:
     if pathway not in PATHWAYS:
@@ -129,8 +137,10 @@ def register_defect(
                     raise ValueError("Request identifier reused for a different defect")
                 db.commit()
                 return {
-                    "case_id": previous["id"], "ticket_id": previous["legacy_ticket_id"],
-                    "repeated": True, "availability_changed": False,
+                    "case_id": previous["id"],
+                    "ticket_id": previous["legacy_ticket_id"],
+                    "repeated": True,
+                    "availability_changed": False,
                 }
             vehicle = db.execute(
                 "SELECT id,registration,is_archived FROM vehicles WHERE id=?", (vehicle_id,)
@@ -155,15 +165,24 @@ def register_defect(
                 (id,vehicle_id,kind,title,status,severity,scenario,opened_at,closed_at,
                  key2_reference,hoth_reference,is_demo)
                 VALUES(?,?,? ,?,'open','Medium',?,?,NULL,NULL,?,1)""",
-                (ticket, vehicle_id, "DEFECT" if pathway == "standard" else "EXTERNAL",
-                 description.strip(), code, created, hoth_reference.strip()),
+                (
+                    ticket,
+                    vehicle_id,
+                    "DEFECT" if pathway == "standard" else "EXTERNAL",
+                    description.strip(),
+                    code,
+                    created,
+                    hoth_reference.strip(),
+                ),
             )
             if steps:
                 db.executemany(
                     """INSERT INTO ticket_steps(ticket_id,step_index,label,status)
                        VALUES(?,?,?,?)""",
-                    [(ticket, i, step, "current" if i == 0 else "pending")
-                     for i, step in enumerate(steps)],
+                    [
+                        (ticket, i, step, "current" if i == 0 else "pending")
+                        for i, step in enumerate(steps)
+                    ],
                 )
             cur = db.execute(
                 """INSERT INTO vor_cases
@@ -171,13 +190,25 @@ def register_defect(
                     hoth_reference,opened_at,closed_at,status,created_at,intake_request_id,
                     reported_vor,roadside_reported)
                    VALUES(?,?,?,?,?,?,?,?,NULL,'open',?,?,?,?)""",
-                (vehicle_id, ticket, pathway, description.strip(), reason, source,
-                 hoth_reference.strip(), created, created, request_id,
-                 int(reported_vor), int(roadside_reported)),
+                (
+                    vehicle_id,
+                    ticket,
+                    pathway,
+                    description.strip(),
+                    reason,
+                    source,
+                    hoth_reference.strip(),
+                    created,
+                    created,
+                    request_id,
+                    int(reported_vor),
+                    int(roadside_reported),
+                ),
             )
             # Display latest defect in the current workspace. NO KEY2 or VOR state update.
             next_action = (
-                "Awaiting service company acknowledgement" if pathway == "standard"
+                "Awaiting service company acknowledgement"
+                if pathway == "standard"
                 else "HOTH team manages repair — PTS Fleet monitors status"
             )
             db.execute(
@@ -188,20 +219,26 @@ def register_defect(
             db.execute(
                 """INSERT INTO events(vehicle_id,ticket_id,kind,author,body,created_at,is_demo)
                    VALUES(?,?,'internal','Fleet Hub',?,?,1)""",
-                (vehicle_id, ticket,
-                 f"Defect received via {source}. HOTH: {hoth_reference.strip()}. "
-                 f"Pathway: {label}. Reason: {reason}. "
-                 f"Reported VOR: {'Yes' if reported_vor else 'No'}. "
-                 f"Roadside: {'Yes (separate process)' if roadside_reported else 'No'}. "
-                 "KEY2 status unchanged; any update requires explicit Fleet confirmation.",
-                 created),
+                (
+                    vehicle_id,
+                    ticket,
+                    f"Defect received via {source}. HOTH: {hoth_reference.strip()}. "
+                    f"Pathway: {label}. Reason: {reason}. "
+                    f"Reported VOR: {'Yes' if reported_vor else 'No'}. "
+                    f"Roadside: {'Yes (separate process)' if roadside_reported else 'No'}. "
+                    "KEY2 status unchanged; any update requires explicit Fleet confirmation.",
+                    created,
+                ),
             )
             db.commit()
             return {
-                "case_id": int(cur.lastrowid), "ticket_id": ticket,
-                "repeated": False, "availability_changed": False,
+                "case_id": int(cur.lastrowid),
+                "ticket_id": ticket,
+                "repeated": False,
+                "availability_changed": False,
                 "registration": vehicle["registration"],
-                "pathway": pathway, "requires_pts_workflow": bool(steps),
+                "pathway": pathway,
+                "requires_pts_workflow": bool(steps),
             }
         except Exception:
             db.rollback()

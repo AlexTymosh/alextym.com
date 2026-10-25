@@ -1,3 +1,4 @@
+// PR14 remove example labels; illustrative scenarios remain explicitly identified.
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -73,29 +74,29 @@ const EXAMPLES: ActionRow[] = [
 ];
 
 const BLOCKER_EXAMPLES: BlockerRow[] = [
-  { registration: "JM21 FDR", ticket_id: "PS000141", kind: "Parts delivery", detail: "Workshop has not confirmed a delivery date", status: "Example" },
-  { registration: "NP20 HLK", ticket_id: "PS000142", kind: "Authorisation pending", detail: "Warranty repair requires approval", status: "Example" },
+  { registration: "JM21 FDR", ticket_id: "PS000141", kind: "Parts delivery", detail: "Workshop has not confirmed a delivery date", status: "Open" },
+  { registration: "NP20 HLK", ticket_id: "PS000142", kind: "Authorisation pending", detail: "Warranty repair requires approval", status: "Open" },
 
   {
     registration: "LT23 XBM",
     ticket_id: "PS000121",
     kind: "Awaiting quote",
     detail: "Supplier has not returned a replacement-unit quotation",
-    status: "Example",
+    status: "Open",
   },
   {
     registration: "KY22 XDT",
     ticket_id: "PS000129",
     kind: "No booking slot",
     detail: "Next available inspection date has not been confirmed",
-    status: "Example",
+    status: "Open",
   },
   {
     registration: "GX24 KLM",
     ticket_id: "PS000136",
     kind: "Missing documentation",
     detail: "Post-repair report still outstanding",
-    status: "Example",
+    status: "Open",
   },
 ];
 
@@ -176,7 +177,7 @@ export default function OperationsQueuePanel({
   const hasLiveData = actions.length + blockers.length > 0;
   const displayExamples = showExamples || (!hasLiveData && data !== null);
   useEffect(() => {
-    if (!data || displayExamples) { setActivities([]); return; }
+    if (!data || displayExamples) { void Promise.resolve().then(() => setActivities([])); return; }
     const controller = new AbortController();
     const tickets = [...data.actions, ...data.blockers].filter(x => x.vehicle_id && x.ticket_id);
     const selected = Array.from(new Map(tickets.map(x => [x.vehicle_id, x])).values()).slice(0, 8);
@@ -280,7 +281,7 @@ export default function OperationsQueuePanel({
             <span className={styles.kpiIcon}><QueueIcon kind={item.icon}/></span>
             <div>
               <strong>{item.count}</strong>
-              <small>{item.name}{displayExamples ? " · example" : ""}</small>
+              <small>{item.name}{displayExamples ? "" : ""}</small>
             </div>
           </article>
         ))}
@@ -415,7 +416,7 @@ export default function OperationsQueuePanel({
 
         <aside className={styles.sideCard}>
           <h3>
-            Blockers <span>{displayExamples ? "examples" : blockers.length}</span>
+            Blockers <span>{displayExamples ? "demo data" : blockers.length}</span>
           </h3>
           {blockerRows.slice(0, 7).map((item, index) => (
             <div className={styles.blocker} key={`${item.ticket_id}-${index}`}>

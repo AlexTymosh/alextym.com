@@ -32,11 +32,21 @@ def test_frozen_api_login_and_bidirectional_mutations(monkeypatch, tmp_path):
     app.include_router(v1_router, prefix="/api")
     app.include_router(v2_router, prefix="/api")
     with TestClient(app) as client:
-        assert client.post("/api/vor-01/login", json={"password": "fixture-secret-not-a-production-password"}).status_code == 200
+        assert (
+            client.post(
+                "/api/vor-01/login", json={"password": "fixture-secret-not-a-production-password"}
+            ).status_code
+            == 200
+        )
         assert client.get("/api/vor-01/bootstrap").status_code == 200
         # Version-specific path and cookie: v1 login MUST NOT unlock v2.
         assert client.get("/api/vor/bootstrap").status_code == 401
-        assert client.post("/api/vor/login", json={"password": "fixture-secret-not-a-production-password"}).status_code == 200
+        assert (
+            client.post(
+                "/api/vor/login", json={"password": "fixture-secret-not-a-production-password"}
+            ).status_code
+            == 200
+        )
         assert client.get("/api/vor/bootstrap").status_code == 200
         assert client.cookies.get("vor_demo_session")
         assert client.cookies.get("vor_01_demo_session")
@@ -63,13 +73,40 @@ def test_frozen_api_login_and_bidirectional_mutations(monkeypatch, tmp_path):
             assert active["is_archived"] == 0
         vehicle = v1_before["vehicles"][0]
         reg = vehicle["registration"]
-        open_tickets = [t for t in v1_before["tickets"] if t["vehicle_id"] == vehicle["id"] and t["status"] == "open"]
+        open_tickets = [
+            t
+            for t in v1_before["tickets"]
+            if t["vehicle_id"] == vehicle["id"] and t["status"] == "open"
+        ]
 
         # Write to frozen v1 and verify v2's *entire* snapshot is unchanged.
         requests = [
-            ("/api/vor-01/messages", {"vehicle_id": vehicle["id"], "ticket_id": None, "kind": "internal", "text": "Legacy-only regression marker"}),
-            ("/api/vor-01/bookings", {"vehicle_id": vehicle["id"], "kind": "MOT", "booked_date": "2031-12-31", "garage": "Regression Garage"}),
-            ("/api/vor-01/contacts", {"name": "Legacy Test Contact", "email": "legacy-contact@example.invalid", "role": "external"}),
+            (
+                "/api/vor-01/messages",
+                {
+                    "vehicle_id": vehicle["id"],
+                    "ticket_id": None,
+                    "kind": "internal",
+                    "text": "Legacy-only regression marker",
+                },
+            ),
+            (
+                "/api/vor-01/bookings",
+                {
+                    "vehicle_id": vehicle["id"],
+                    "kind": "MOT",
+                    "booked_date": "2031-12-31",
+                    "garage": "Regression Garage",
+                },
+            ),
+            (
+                "/api/vor-01/contacts",
+                {
+                    "name": "Legacy Test Contact",
+                    "email": "legacy-contact@example.invalid",
+                    "role": "external",
+                },
+            ),
         ]
         legacy_contact_id = None
         for url, body in requests:
@@ -78,21 +115,39 @@ def test_frozen_api_login_and_bidirectional_mutations(monkeypatch, tmp_path):
             if url.endswith("/contacts"):
                 legacy_contact_id = response.json()["id"]
         assert legacy_contact_id is not None
-        r = client.post("/api/vor-01/subscribers", json={
-            "vehicle_id": vehicle["id"], "contact_id": legacy_contact_id, "subscribed": True,
-        })
+        r = client.post(
+            "/api/vor-01/subscribers",
+            json={
+                "vehicle_id": vehicle["id"],
+                "contact_id": legacy_contact_id,
+                "subscribed": True,
+            },
+        )
         assert r.status_code == 200, r.text
         if open_tickets:
-            r = client.post("/api/vor-01/advance", json={"vehicle_id": vehicle["id"], "ticket_id": open_tickets[0]["id"]})
+            r = client.post(
+                "/api/vor-01/advance",
+                json={"vehicle_id": vehicle["id"], "ticket_id": open_tickets[0]["id"]},
+            )
             assert r.status_code == 200, r.text
         assert read(v2_path_api) == v2_before
         assert read(v1_path_api) != v1_before
 
         # Independently mutate v2; no back-propagation into frozen v1.
         frozen_after = read(v1_path_api)
-        r = client.post("/api/vor/workshop", json={"vehicle_id": vehicle["id"], "garage": "Other Garage"})
+        r = client.post(
+            "/api/vor/workshop", json={"vehicle_id": vehicle["id"], "garage": "Other Garage"}
+        )
         assert r.status_code == 200, r.text
-        r = client.post("/api/vor/messages", json={"vehicle_id": vehicle["id"], "ticket_id": None, "kind": "internal", "text": "Active-only regression marker"})
+        r = client.post(
+            "/api/vor/messages",
+            json={
+                "vehicle_id": vehicle["id"],
+                "ticket_id": None,
+                "kind": "internal",
+                "text": "Active-only regression marker",
+            },
+        )
         assert r.status_code == 200, r.text
         assert read(v1_path_api) == frozen_after
         assert read(v2_path_api) != v2_before
@@ -100,7 +155,9 @@ def test_frozen_api_login_and_bidirectional_mutations(monkeypatch, tmp_path):
         # Both independent legacy export endpoints are still available.
         for prefix in ("/api/vor", "/api/vor-01"):
             excel = client.get(f"{prefix}/export.xlsx")
-            assert excel.status_code == 200 and excel.content.startswith(b"PK"), excel.text[:180] if excel.status_code != 200 else ""
+            assert excel.status_code == 200 and excel.content.startswith(b"PK"), (
+                excel.text[:180] if excel.status_code != 200 else ""
+            )
             calendar = client.get(f"{prefix}/calendar.ics")
             assert calendar.status_code == 200 and b"BEGIN:VCALENDAR" in calendar.content
 
@@ -108,10 +165,17 @@ def test_frozen_api_login_and_bidirectional_mutations(monkeypatch, tmp_path):
         assert client.post("/api/vor-01/logout").status_code == 200
         assert client.get("/api/vor-01/bootstrap").status_code == 401
         assert client.get("/api/vor/bootstrap").status_code == 200
-        assert any(e["body"] == "Active-only regression marker" for e in read(v2_path_api)["events"])
+        assert any(
+            e["body"] == "Active-only regression marker" for e in read(v2_path_api)["events"]
+        )
         assert not any(e["body"] == "Active-only regression marker" for e in frozen_after["events"])
         assert any(e["body"] == "Legacy-only regression marker" for e in frozen_after["events"])
-        assert client.post("/api/vor-01/login", json={"password": "fixture-secret-not-a-production-password"}).status_code == 200
+        assert (
+            client.post(
+                "/api/vor-01/login", json={"password": "fixture-secret-not-a-production-password"}
+            ).status_code
+            == 200
+        )
         assert client.post("/api/vor/logout").status_code == 200
         assert client.get("/api/vor/bootstrap").status_code == 401
         assert client.get("/api/vor-01/bootstrap").status_code == 200

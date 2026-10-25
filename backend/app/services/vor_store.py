@@ -401,7 +401,10 @@ def change_workflow_scenario(vehicle_id: int, ticket_id: str, scenario: str) -> 
             raise ValueError("Ticket does not belong to vehicle")
         if ticket["status"] != "open":
             raise ValueError("Only open tickets can change scenario")
-        if db.execute("SELECT 1 FROM vor_cases WHERE legacy_ticket_id=? AND pathway IN ('tyres','windscreen')", (ticket_id,)).fetchone():
+        if db.execute(
+            "SELECT 1 FROM vor_cases WHERE legacy_ticket_id=? AND pathway IN ('tyres','windscreen')",
+            (ticket_id,),
+        ).fetchone():
             raise ValueError("Specialist repairs are managed by the HOTH team")
         template = db.execute(
             "SELECT name,steps_json FROM workflow_templates WHERE code=?", (scenario,)
@@ -423,7 +426,9 @@ def change_workflow_scenario(vehicle_id: int, ticket_id: str, scenario: str) -> 
             (scenario, issue, ticket_kind, ticket_id),
         )
         for table_name in ("vor_step_checklists", "ops_stage_skips", "ops_release_checks"):
-            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table_name,)).fetchone():
+            if db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
+            ).fetchone():
                 db.execute(f"DELETE FROM {table_name} WHERE ticket_id=?", (ticket_id,))
         db.execute("DELETE FROM ticket_steps WHERE ticket_id=?", (ticket_id,))
         db.executemany(
@@ -458,6 +463,7 @@ def rows(db: sqlite3.Connection, query: str, args: tuple = ()) -> list[dict[str,
 
 def snapshot() -> dict[str, Any]:
     from app.services import vor_data
+
     with vor_data.database() as db:
         return {
             "vehicles": rows(

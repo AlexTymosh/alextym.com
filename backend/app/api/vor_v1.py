@@ -28,7 +28,10 @@ def enabled() -> bool:
 
 def secret() -> bytes:
     return hashlib.sha256(
-        ("alextym-vor-demo:archived-v1:" + (os.getenv("VOR_V1_PASSWORD") or os.getenv("VOR_DEMO_PASSWORD", ""))).encode()
+        (
+            "alextym-vor-demo:archived-v1:"
+            + (os.getenv("VOR_V1_PASSWORD") or os.getenv("VOR_DEMO_PASSWORD", ""))
+        ).encode()
     ).digest()
 
 
@@ -151,7 +154,7 @@ def login(body: Login, request: Request, response: Response) -> dict:
     same_origin(request)
     if not enabled():
         raise HTTPException(404, "Demo disabled")
-    configured = (os.getenv("VOR_V1_PASSWORD") or os.getenv("VOR_DEMO_PASSWORD", ""))
+    configured = os.getenv("VOR_V1_PASSWORD") or os.getenv("VOR_DEMO_PASSWORD", "")
     if not configured:
         raise HTTPException(503, "VOR_DEMO_PASSWORD must be configured")
     key = request.client.host if request.client else "unknown"

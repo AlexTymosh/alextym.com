@@ -387,7 +387,10 @@ def create_booking(body: NewBooking, request: Request) -> dict:
 def advance(body: NextStep, request: Request) -> dict:
     same_origin(request)
     from app.api.vor_checklist import AdvanceStage, advance_with_checks
-    return advance_with_checks(AdvanceStage(vehicle_id=body.vehicle_id, ticket_id=body.ticket_id), request)
+
+    return advance_with_checks(
+        AdvanceStage(vehicle_id=body.vehicle_id, ticket_id=body.ticket_id), request
+    )
 
 
 @router.post("/scenario", dependencies=[Depends(required)])

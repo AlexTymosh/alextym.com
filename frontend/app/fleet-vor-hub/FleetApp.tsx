@@ -3,6 +3,7 @@
 
 import {useEffect,useState} from "react";
 import VorHub from "./VorHub";
+import Image from "next/image";
 import VehicleRegisterPanel from "./register/Panel";
 import NewDefectPanel from "./new-defect/Panel";
 import ProcessPanel from "./process/Panel";
@@ -51,7 +52,7 @@ function NavIcon({name}:{name:IconKind}){
 export default function FleetApp(){
   const [section,setSection]=useState<Section>("workspace");
   const [collapsed,setCollapsed]=useState(false);
-  const [registerExpanded,setRegisterExpanded]=useState(true);
+  const [registerExpanded,setRegisterExpanded]=useState(false);
   const [authenticated,setAuthenticated]=useState<boolean|null>(null);
   const [authError,setAuthError]=useState("");
   const [focusedVehicle,setFocusedVehicle]=useState<string|null>(null);
@@ -77,7 +78,7 @@ export default function FleetApp(){
       <div className={styles.topbarActions}>
         <span className={styles.demoFlag}>DEMO v2</span>
         <a href="/api/vor/export.xlsx" download="fleet-vor-demo.xlsx" className={styles.exportButton}>↓ Export Excel</a>
-        <button type="button" className={styles.signOut} onClick={()=>void logout()}>Sign out</button>
+        {/* PR14 TOPBAR IDENTITY */}<span className={styles.headerBrandMark} title="Fleet VOR Hub">F</span><Image src="/images/profile/alex.webp" alt="Alex Tym profile" width={32} height={32} className={styles.headerAvatar}/><button type="button" className={styles.signOut} onClick={()=>void logout()}>Sign out</button>
       </div>
     </header>
     <div className={styles.body}>
@@ -107,7 +108,7 @@ export default function FleetApp(){
       </aside>
       <main className={styles.main} id="fleet-main">
         <div className={styles.contentBar}>
-          <div><span className={styles.breadcrumb}>Fleet Operations / {labels[section]}</span><h1>{labels[section]}</h1></div>
+          <div><span className={styles.breadcrumb}>Fleet Operations / {labels[section]}</span><h1>{labels[section]}{section==="reconciliation"&&<span className={styles.reconSummary}>Proposed automated comparison of Fleet (Key2) and HOTH records, with discrepancy review and resolution</span>}</h1></div>
           {section!=="new-defect"&&<button type="button" className={styles.primaryAction} onClick={()=>navigate("new-defect")}>+ New Defect</button>}
         </div>
         <div className={`${styles.content} ${isWorkspace?styles.workspaceContent:""}`} key={section}>

@@ -128,8 +128,8 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const [password,setPassword]=useState("");const [loginError,setLoginError]=useState("");
  const [data,setData]=useState<Data|null>(null);const [view,setView]=useState<Tab>("vehicles");
  const [reg,setReg]=useState<string>("GX24 KLM");const [search,setSearch]=useState("");
- useEffect(()=>{if(externalView)setView(externalView)},[externalView]);
- useEffect(()=>{if(initialVehicle)setReg(initialVehicle)},[initialVehicle]);
+ useEffect(()=>{let active=true;void Promise.resolve().then(()=>{if(active&&externalView)setView(externalView)});return()=>{active=false}},[externalView]);
+ useEffect(()=>{let active=true;void Promise.resolve().then(()=>{if(active&&initialVehicle)setReg(initialVehicle)});return()=>{active=false}},[initialVehicle]);
  const [railMode,setRailMode]=useState<"vehicles"|"tickets">("vehicles");
  const [filter,setFilter]=useState<Filter>("all");const [ticketFilter,setTicketFilter]=useState<string>("all");
  const [composeKind,setComposeKind]=useState<"internal"|"email">("internal");const [message,setMessage]=useState("");
@@ -151,13 +151,13 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  useEffect(()=>{request<{enabled:boolean;authenticated:boolean;liveEmail:boolean}>("/session").then(s=>{setSession(s);onAuthChange?.(s.authenticated);if(s.authenticated) load().catch(e=>setNotice(e.message))}).catch(e=>setLoginError(e.message))},[load]);
  const login=async(e:FormEvent)=>{e.preventDefault();setLoginError("");setBusy(true);try{await request("/login",{method:"POST",body:JSON.stringify({password})});setSession(x=>({...x!,authenticated:true}));onAuthChange?.(true);setPassword("");await load()}catch(err){setLoginError((err as Error).message)}finally{setBusy(false)}};
  const mutate=async(path:string,body:object,after?:()=>void)=>{setBusy(true);setNotice("");try{await request(path,{method:"POST",body:JSON.stringify(body)});await load();after?.()}catch(err){setNotice((err as Error).message)}finally{setBusy(false)}};
- useEffect(()=>{const requested=new URLSearchParams(window.location.search).get("vehicle");if(requested)setReg(requested);},[]);
+ useEffect(()=>{let active=true;void Promise.resolve().then(()=>{const requested=new URLSearchParams(window.location.search).get("vehicle");if(active&&requested)setReg(requested)});return()=>{active=false}},[]);
  const selected=data?.vehicles.find(v=>v.registration===reg)||data?.vehicles[0];
  const tickets=(data?.tickets||[]).filter(t=>t.vehicle_id===selected?.id);
  const primary=tickets.find(t=>t.id===ticketFilter)||tickets.find(t=>t.status==="open")||tickets[0];
  
  // PR13 COLLAPSED WORKFLOW DEFAULT: switching ticket resets expanded stage details.
- useEffect(()=>{setWorkflowExpanded(false)},[selected?.id,primary?.id]);
+ useEffect(()=>{let active=true;void Promise.resolve().then(()=>{if(active)setWorkflowExpanded(false)});return()=>{active=false}},[selected?.id,primary?.id]);
  const ticketIndex=tickets.findIndex(t=>t.id===primary?.id);
  const currentSteps=(data?.steps||[]).filter(s=>s.ticket_id===primary?.id).sort((a,b)=>a.step_index-b.step_index);
 
@@ -170,10 +170,10 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
         for(const item of r.items){(byStage[item.stage_index]??=[]).push({key:item.item_key,label:item.label,required:item.required,type:item.item_key==="diagnosis_date"?"date":undefined});}
         setConfiguredStages(byStage);}).catch(()=>{});
  },[session?.authenticated]);
- const stageList=(i:number):{key:string;label:string;required?:boolean;type?:"date"}[]=>configuredStages[i]||WORKFLOW_ITEMS[i]||[];
+ const stageList=(i:number):{key:string;label:string;required?:boolean;type?:"date"}[]=>primary?.scenario?.startsWith("custom_")?[]:(configuredStages[i]||WORKFLOW_ITEMS[i]||[]); // PR14_CUSTOM_STAGES
 
  useEffect(()=>{let active=true;
-   if(!primary?.id){setChecklist({});return;}
+   if(!primary?.id){void Promise.resolve().then(()=>{if(active)setChecklist({})});return()=>{active=false};}
    request<{items:ChecklistItem[]}>(`/checklists/${encodeURIComponent(primary.id)}`)
      .then(r=>{if(active)setChecklist(Object.fromEntries(r.items.map(x=>[`${x.step_index}:${x.key}`,{checked:x.checked,value:x.value}])));})
      .catch(e=>{if(active)setNotice((e as Error).message)});

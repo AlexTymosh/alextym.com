@@ -53,7 +53,7 @@ export default function VehicleRegisterPanel({section,navigate}:{section:"regist
   const [archived,setArchived]=useState(false);
   const [selectedVehicleId,setSelectedVehicleId]=useState<number|null>(null);
   const refresh=useCallback(async()=>{setData(await call<Data>("/register"));},[]);
-  useEffect(()=>{refresh().catch(e=>setError(e.message));},[refresh]);
+  useEffect(()=>{let active=true;void Promise.resolve().then(()=>{if(active)return refresh()}).catch(e=>{if(active)setError((e as Error).message)});return()=>{active=false}},[refresh]);
   async function perform(work:()=>Promise<void>){setBusy(true);setError("");setNotice("");try{await work();await refresh();}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
   function add(e:FormEvent){e.preventDefault();void perform(async()=>{const added=await call<{registration:string}>("/vehicles",{registration:reg,model,garage});setNotice(`Vehicle ${added.registration} added`);setReg("");setModel("");setGarage("")})}
   async function doPreview(){if(!selected)return;await perform(async()=>{const b64=await toBase64(selected);setEncoded(b64);const p=await call<Preview>("/imports/preview",{filename:selected.name,content_b64:b64,mode});setPreview(p);setNotice(`Preview: ${p.count} valid rows, ${p.errors.length} errors`)})}

@@ -121,6 +121,27 @@ function DashboardIcon({kind}:{kind:string}) {
   return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg>;
 }
 
+// PR14 STAGE PIE + workshop illustrative capacity
+const PR14_COLORS=["#58b98b","#62a4ef","#f7bd59","#f57682","#ac94ee","#53bdb8","#a4b3c0","#ed995d"];
+function StagePie({rows}:{rows:{label:string;count:number}[]}){
+  const total=rows.reduce((sum,r)=>sum+r.count,0);
+  const gradients=rows.map((r,i)=>{
+    const earlier=rows.slice(0,i).reduce((sum,item)=>sum+item.count,0);
+    const start=total?earlier/total*100:0;
+    const end=total?(earlier+r.count)/total*100:0;
+    return `${PR14_COLORS[i%PR14_COLORS.length]} ${start}% ${end}%`;
+  });
+  return total>0?<div className={styles.stagePieLayout}>
+    <div className={styles.stagePie} style={{background:`conic-gradient(${gradients.join(",")})`}} role="img" aria-label={rows.map(r=>`${r.label}: ${r.count}`).join(", ")}>
+      <div className={styles.stagePieHole}><strong>{total}</strong><span>open tickets</span></div></div>
+    <div className={styles.stagePieLegend}>{rows.map((r,i)=><div key={`${r.label}-${i}`}><i style={{background:PR14_COLORS[i%PR14_COLORS.length]}}/><span title={r.label}>{r.label}</span><strong>{r.count}</strong><small>{Math.round(100*r.count/total)}%</small></div>)}</div>
+  </div>:<p className={styles.dataNote}>No open tickets with recorded stages.</p>;
+}
+const PR14_CAPACITIES:Record<string,number>={"Basingstoke":9,"Oxford":8,"Didcot":7,"Nursling":7,"Portsmouth":6,"Winchester":7,"Isle of Wight":6,"Southampton":8,"Aylesbury":7,"Reading":8,"Hook":6};
+function demoCapacity(garage:string,open:number):number{
+  return Math.max(open+2,PR14_CAPACITIES[garage]||8);
+}
+
 export default function DashboardPanel() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [snapshot, setSnapshot] = useState<FleetSnapshot | null>(null);
@@ -141,7 +162,7 @@ export default function DashboardPanel() {
     const q = new URLSearchParams();
     if (start) q.set("start", start); if (end) q.set("end", end);
     if (garage) q.set("garage", garage); if (reason) q.set("reason", reason); if (model) q.set("model", model);
-    q.set("exclude_outliers", String(outliers)); setBusy(true);
+    q.set("exclude_outliers", String(outliers)); void Promise.resolve().then(()=>{if(!cancelled)setBusy(true)});
     fetch(`/api/vor/reporting/dashboard?${q}`, { credentials: "same-origin", cache: "no-store" })
       .then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({ detail: `HTTP ${r.status}` })); throw new Error(e.detail || `HTTP ${r.status}`); } return r.json(); })
       .then((d: DashboardData) => { if (!cancelled) { setData(d); setError(""); } })
@@ -222,8 +243,8 @@ export default function DashboardPanel() {
       <div className={styles.chartLayout}><TrendChart points={data.trend}/><AvailabilityChart data={data} snapshot={snapshot}/></div>
       <div className={styles.secondaryLayout}>
         <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Top VOR reasons · last 30 days</h3><span className={styles.cardNote} title="Unknown reasons are grouped from vehicle defect descriptions when available.">Cases in selected filters · ⓘ</span></div><div className={styles.reasonRows}>{reasonRows.slice(0,8).map((r,i)=><div key={r.reason} className={styles.reasonRow}><span title={r.reason}>{r.reason}</span><div className={styles.reasonTrack}><i style={{width:`${percent(r.count,Math.max(1,...reasonRows.map(x=>x.count)))}%`,background:["#f36c73","#f7aa64","#70a9f3","#a995ee","#59b59b","#54c5c9","#abb7c0"][i%7]}}/></div><strong>{r.count}</strong><small>{Math.round(percent(r.count,reasonRows.reduce((a,b)=>a+b.count,0)))}%</small></div>)}{!reasonRows.length&&<p>No VOR cases in this period.</p>}</div></section>
-        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Repair stage distribution</h3><span className={styles.cardNote}>Open tickets · current stage</span></div>{snapshot?<div className={styles.stageSummary}>{stageDistribution.slice(0,8).map((item,index)=><div key={item.label} className={styles.stageRow}><span title={item.label}>{item.label}</span><div className={styles.stageTrack}><i style={{width:`${percent(item.count,Math.max(1,...stageDistribution.map(x=>x.count)))}%`,background:["#72abeb","#61bd96","#f5b857","#f08883","#a89bf4","#64bccb","#a3b5bf"][index%7]}}/></div><strong>{item.count}</strong><small>{Math.round(percent(item.count,stageDistribution.reduce((a,b)=>a+b.count,0)))}%</small></div>)}{!stageDistribution.length&&<p className={styles.dataNote}>No open tickets with recorded stages.</p>}</div>:<p className={styles.dataNote}>Stage detail unavailable.</p>}</section>
-        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Garage workload</h3><span className={styles.cardNote}>Open repair cases</span></div>{garageLoad.length?<div className={styles.garageBars}>{garageLoad.map((g,i)=><div className={styles.garageColumn} key={g.garage}><div className={styles.garageValue}>{g.count}</div><div className={styles.garageBar} style={{height:`${Math.max(7,percent(g.count,Math.max(1,...garageLoad.map(x=>x.count))))}%`,background:["#50b588","#62a5f7","#ffc15e","#f47a7f","#b69aef","#70bccb"][i]}}/><span title={g.garage}>{g.garage}</span></div>)}</div>:<p className={styles.dataNote}>No active workshop assignments.</p>}</section>
+        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Repair stage distribution</h3><span className={styles.cardNote}>Open tickets · current stage</span></div>{snapshot?<StagePie rows={stageDistribution}/>:<p className={styles.dataNote}>Stage detail unavailable.</p>}</section>
+        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Garage workload</h3><span className={styles.cardNote}>Open jobs · illustrative workshop capacity</span></div>{garageLoad.length?<div className={styles.garageCapacity} aria-label="Workshop capacity utilisation, illustrative capacity">{garageLoad.map((g,i)=>{const capacity=demoCapacity(g.garage,g.count);const load=Math.round(100*g.count/capacity);return <div key={g.garage} className={styles.garageCapacityRow}><span title={g.garage}>{g.garage}</span><div className={styles.garageCapacityTrack} role="progressbar" aria-label={`${g.garage}: ${g.count} open jobs from ${capacity} illustrative slots`} aria-valuenow={load} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${load}%`,background:["#52b483","#6aa8f5","#efba53","#ee7479","#b89ced","#65bfc8"][i%6]}}/></div><strong>{g.count} jobs</strong><small>{load}%</small></div>})}<div className={styles.garageScale}><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div><p className={styles.garageCapacityNote}>Counts from open tickets; workshop capacities are synthetic examples, not real availability.</p></div>:<p className={styles.dataNote}>No active workshop assignments.</p>}</section>
         {data.case_duration.retained > 0 && <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Completed case duration</h3><span className={styles.cardNote}>Days · not technician labour time</span></div><div className={styles.durationGrid}>{[{label:"Mean",v:data.case_duration.mean},{label:"Median",v:data.case_duration.median},{label:"P90",v:data.case_duration.p90}].map(x=><div key={x.label}><small>{x.label}</small><strong>{fmt(x.v," d")}</strong></div>)}</div><p className={styles.dataNote}>{data.case_duration_basis} {data.outlier_method} Included: {data.case_duration.retained}; excluded: {data.case_duration.excluded}.</p></section>}
         {data.workshops.length > 0 && <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Garage duration comparison</h3><span className={styles.cardNote}>Completed cases</span></div><div className={styles.tableScroll}><table><thead><tr><th>Workshop</th><th>Cases</th><th>Median</th></tr></thead><tbody>{data.workshops.slice(0,7).map(w=><tr key={w.garage}><td>{w.garage}</td><td>{w.cases}</td><td>{fmt(w.median," d")}</td></tr>)}</tbody></table></div></section>}
       </div>
