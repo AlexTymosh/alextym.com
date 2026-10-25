@@ -37,6 +37,14 @@ type BlockerRow = {
 };
 
 const EXAMPLES: ActionRow[] = [
+  { registration: "JM21 FDR", ticket_id: "PS000141", title: "Chase parts delivery with workshop", owner: "Fleet planner", due_at: "", status: "Example" },
+  { registration: "HF73 PZR", ticket_id: "PS000118", title: "Confirm diagnostic appointment", owner: "Fleet coordinator", due_at: "", status: "Example" },
+  { registration: "NP20 HLK", ticket_id: "PS000142", title: "Review warranty approval", owner: "Fleet analyst", due_at: "", status: "Example" },
+  { registration: "WR21 BNV", ticket_id: "PS000145", title: "Arrange vehicle collection", owner: "Fleet coordinator", due_at: "", status: "Example" },
+  { registration: "GF21 WZT", ticket_id: "PS000139", title: "Obtain inspection update", owner: "Fleet planner", due_at: "", status: "Example" },
+  { registration: "RP72 LCN", ticket_id: "PS000148", title: "Verify completion documentation", owner: "Fleet analyst", due_at: "", status: "Example" },
+  { registration: "MX23 RYT", ticket_id: "PS000150", title: "Confirm garage estimate", owner: "Fleet coordinator", due_at: "", status: "Example" },
+
   {
     registration: "LT23 XBM",
     ticket_id: "PS000121",
@@ -64,6 +72,9 @@ const EXAMPLES: ActionRow[] = [
 ];
 
 const BLOCKER_EXAMPLES: BlockerRow[] = [
+  { registration: "JM21 FDR", ticket_id: "PS000141", kind: "Parts delivery", detail: "Workshop has not confirmed a delivery date", status: "Example" },
+  { registration: "NP20 HLK", ticket_id: "PS000142", kind: "Authorisation pending", detail: "Warranty repair requires approval", status: "Example" },
+
   {
     registration: "LT23 XBM",
     ticket_id: "PS000121",
@@ -97,6 +108,8 @@ export default function OperationsQueuePanel({
   const [view, setView] = useState<View>("actions");
   const [search, setSearch] = useState("");
   const [showExamples, setShowExamples] = useState(false);
+  const [sort, setSort] = useState<"due" | "vehicle">("due");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     fetch("/api/vor/ops/queue", {
@@ -130,12 +143,13 @@ export default function OperationsQueuePanel({
             due_at: item.due_at || "",
             status: item.status,
           })))
+        .filter((item) => statusFilter === "all" || item.status.toLowerCase() === statusFilter)
         .filter((item) =>
           `${item.registration} ${item.ticket_id} ${item.title} ${item.owner}`
             .toLowerCase()
             .includes(search.toLowerCase()),
         ),
-    [displayExamples, actions, search],
+    [displayExamples, actions, search, statusFilter],
   );
 
   const blockerRows = useMemo<BlockerRow[]>(
@@ -156,6 +170,10 @@ export default function OperationsQueuePanel({
         ),
     [displayExamples, blockers, search],
   );
+
+  const sortedActionRows = [...actionRows].sort((a, b) => sort === "vehicle"
+    ? a.registration.localeCompare(b.registration)
+    : (a.due_at || "9999-12-31").localeCompare(b.due_at || "9999-12-31"));
 
   const overdue = actions.filter(
     (item) =>
@@ -187,12 +205,12 @@ export default function OperationsQueuePanel({
 
       <section className={styles.kpis} aria-label="Live operational summary">
         {[
-          { name: "Open actions", count: actions.length, icon: "▣" },
-          { name: "Active blockers", count: blockers.length, icon: "!" },
-          { name: "Overdue actions", count: overdue, icon: "◷" },
+          { name: "Open actions", count: displayExamples ? EXAMPLES.length : actions.length, icon: "▣" },
+          { name: "Active blockers", count: displayExamples ? BLOCKER_EXAMPLES.length : blockers.length, icon: "!" },
+          { name: "Overdue actions", count: displayExamples ? "—" : overdue, icon: "◷" },
           {
             name: "Vehicles affected",
-            count: new Set([...actions, ...blockers].map((item) => item.vehicle_id)).size,
+            count: displayExamples ? new Set([...EXAMPLES, ...BLOCKER_EXAMPLES].map(item => item.registration)).size : new Set([...actions, ...blockers].map((item) => item.vehicle_id)).size,
             icon: "▤",
           },
         ].map((item) => (
@@ -200,7 +218,7 @@ export default function OperationsQueuePanel({
             <span className={styles.kpiIcon}>{item.icon}</span>
             <div>
               <strong>{item.count}</strong>
-              <small>{item.name}</small>
+              <small>{item.name}{displayExamples ? " · example" : ""}</small>
             </div>
           </article>
         ))}
@@ -232,10 +250,18 @@ export default function OperationsQueuePanel({
               value={search}
               onChange={(event: { target: { value: string } }) => setSearch(event.target.value)}
             />
-            <span>
-              {displayExamples
-                ? "Illustrative scenarios · not stored"
-                : "Live records"}
+            <label className={styles.filterLabel}>Status
+              <select aria-label="Filter action status" value={statusFilter} onChange={(event: { target: { value: string } }) => setStatusFilter(event.target.value)} disabled={view !== "actions"}>
+                <option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting">Waiting</option><option value="closed">Closed</option><option value="example">Example</option>
+              </select>
+            </label>
+            <label className={styles.filterLabel}>Sort by
+              <select aria-label="Sort actions" value={sort} onChange={(event: { target: { value: string } }) => setSort(event.target.value as "due" | "vehicle")} disabled={view !== "actions"}>
+                <option value="due">Due date (earliest)</option><option value="vehicle">Vehicle</option>
+              </select>
+            </label>
+            <span className={styles.sourceLabel}>
+              {displayExamples ? "Illustrative only · not stored" : "Live records"}
             </span>
           </div>
 
@@ -253,7 +279,7 @@ export default function OperationsQueuePanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {actionRows.map((item, index) => (
+                  {sortedActionRows.map((item, index) => (
                     <tr key={`${item.ticket_id}-${index}`}>
                       <td><span className={styles.ticket}>{item.ticket_id}</span></td>
                       <td>

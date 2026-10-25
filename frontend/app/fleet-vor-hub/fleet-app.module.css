@@ -43,3 +43,25 @@
 .content,.workspaceContent{background:var(--iy-bg)}
 @media(max-width:760px){.topbar{padding:0 10px}.sidebar,.sidebar:not(.collapsed){flex-basis:57px}.sidebar .navItem{justify-content:center;padding:10px 5px}.contentBar{padding:7px 10px;min-height:56px;flex-basis:56px}.brand strong{font-size:12px}}
 /* PR08_INSYTLY_VISUAL_END */
+
+/* PR10 stable dashboard/workspace shell aligned to reference */
+.app{--fleet-ink:#24374b;--fleet-green:#419e63;--fleet-bg:#eff4f8;background:var(--fleet-bg)!important;color:var(--fleet-ink)!important}
+.topbar{height:53px!important;min-height:53px!important;padding:0 20px!important;background:#fff!important;border-bottom:1px solid #dce5ee!important;box-shadow:none!important}
+.brandIcon{width:32px!important;height:32px!important;border-radius:8px!important;font-size:17px!important;background:linear-gradient(140deg,#62b67b,#339a5e)!important}
+.brand strong{font-size:13px!important;font-weight:850!important;color:#203347!important}
+.brand small{font-size:10px!important;color:#8c9dad!important}
+.demoFlag{border-radius:5px!important;background:#e7f8eb!important;color:#2b8951!important;letter-spacing:.25px!important}
+.exportButton{background:#fff!important;border-color:#dce6eb!important;border-radius:6px!important;color:#344f63!important;padding:7px 10px!important}
+.sidebar{background:#fbfcfe!important;border-right:1px solid #dce5ed!important;padding:11px 9px!important;gap:14px!important;flex-basis:205px!important}
+.groupLabel{font-size:9px!important;color:#91a1ae!important;letter-spacing:1px!important;padding:7px 10px!important}
+.navItem{font-size:11.5px!important;border-radius:7px!important;padding:8px 10px!important;color:#536b7b!important;gap:11px!important}
+.navItem.selected{background:#e1f4e7!important;color:#25824a!important;box-shadow:inset 3px 0 #459d64!important}
+.navItem svg{width:16px!important;height:16px!important}
+.navItem:hover{background:#f0f5f8!important}
+.contentBar{background:#fff!important;border-color:#e0e9ef!important;min-height:61px!important;flex-basis:61px!important;padding:9px 18px!important}
+.contentBar h1{font-size:18px!important;color:#172e44!important;font-weight:850!important;margin-top:2px!important}
+.breadcrumb{font-size:9.5px!important;color:#90a3af!important}
+.primaryAction{background:#419c61!important;color:#fff!important;border:1px solid #368e57!important;border-radius:7px!important;box-shadow:none!important;padding:9px 14px!important}
+.content{background:var(--fleet-bg)!important}.workspaceContent{background:var(--fleet-bg)!important}
+@media(max-width:800px){.sidebar,.sidebar:not(.collapsed){flex-basis:57px!important}.sidebar .navItem{padding:10px 6px!important}.contentBar{padding:8px 11px!important}}
+

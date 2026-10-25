@@ -88,31 +88,31 @@ export default function DashboardPanel() {
     const a = document.createElement("a"); a.href = url; a.download = `vor-report-${data.as_of}.csv`; a.click(); URL.revokeObjectURL(url);
   };
   return <main className={styles.page}>
-    <header className={styles.heading}><div><h2>Fleet performance</h2><p>Operational coverage, vehicle issues and completed-case analytics</p></div><button onClick={download} disabled={!data}>↓ Daily VOR report (.csv)</button></header>
+    <header className={styles.heading}><div><h2>Dashboard</h2><p>Live view of fleet performance, VOR trends and operational workload</p></div><button onClick={download} disabled={!data}>↓ Daily VOR report (.csv)</button></header>
     <section className={styles.filters} aria-label="Dashboard filters">
-      <label>From<input type="date" value={start} onChange={e => setStart(e.target.value)}/></label><label>To<input type="date" value={end} onChange={e => setEnd(e.target.value)}/></label>
-      <label>Workshop<select value={garage} onChange={e => setGarage(e.target.value)}><option value="">All workshops</option>{data?.available_garages.map(v => <option key={v}>{v}</option>)}</select></label>
-      <label>VOR reason<select value={reason} onChange={e => setReason(e.target.value)}><option value="">All reasons</option>{data?.available_reasons.map(v => <option key={v}>{v}</option>)}</select></label>
-      <label>Vehicle model<select value={model} onChange={e => setModel(e.target.value)}><option value="">All models</option>{data?.available_models.map(v => <option key={v}>{v}</option>)}</select></label>
-      <label className={styles.toggle}><input type="checkbox" checked={outliers} onChange={e => setOutliers(e.target.checked)}/> Exclude outliers</label>
+      <label>From<input type="date" value={start} onChange={(e: {target: {value: string}}) => setStart(e.target.value)}/></label><label>To<input type="date" value={end} onChange={(e: {target: {value: string}}) => setEnd(e.target.value)}/></label>
+      <label>Workshop<select value={garage} onChange={(e: {target: {value: string}}) => setGarage(e.target.value)}><option value="">All workshops</option>{data?.available_garages.map(v => <option key={v}>{v}</option>)}</select></label>
+      <label>VOR reason<select value={reason} onChange={(e: {target: {value: string}}) => setReason(e.target.value)}><option value="">All reasons</option>{data?.available_reasons.map(v => <option key={v}>{v}</option>)}</select></label>
+      <label>Vehicle model<select value={model} onChange={(e: {target: {value: string}}) => setModel(e.target.value)}><option value="">All models</option>{data?.available_models.map(v => <option key={v}>{v}</option>)}</select></label>
+      <label className={styles.toggle}><input type="checkbox" checked={outliers} onChange={(e: {target: {checked: boolean}}) => setOutliers(e.target.checked)}/> Exclude outliers</label>
       <button onClick={() => { setStart(""); setEnd(""); setGarage(""); setReason(""); setModel(""); setOutliers(false); }}>Reset</button>
     </section>
     {busy && <p role="status" className={styles.dataNote}>Refreshing dashboard…</p>}{error && <p role="alert" className={styles.error}>{error}</p>}
     {data && <>
       <section className={styles.metrics} aria-label="Summary KPIs">
         {[
-          { n: "Requirement", v: fmt(data.required), sub: "Whole-fleet target", tone: "neutral" },
-          { n: "Available today", v: data.operational, sub: "Recorded operational", tone: "green" },
-          { n: "VOR today", v: data.vor, sub: "Vehicle off road", tone: "red" },
-          { n: "Availability", v: `${percent(data.operational, data.vehicle_count)}%`, sub: `${data.vehicle_count} active vehicles`, tone: "green" },
-          { n: "Open issues", v: data.open_cases, sub: "Cases in selected period", tone: "amber" },
-          { n: "Overdue actions", v: data.overdue, sub: `${data.actions_open} actions open`, tone: "red" },
-        ].map(x => <article key={x.n} className={`${styles.metric} ${styles[x.tone]}`}><small>{x.n}</small><strong>{x.v}</strong><span>{x.sub}</span></article>)}
+          { n: "Requirement", v: fmt(data.required), sub: "Target vehicles", tone: "neutral", icon: "▤" },
+          { n: "Operational today", v: data.operational, sub: "Recorded status", tone: "green", icon: "▣" },
+          { n: "VOR today", v: data.vor, sub: "Vehicles", tone: "red", icon: "⚒" },
+          { n: "Availability %", v: `${percent(data.operational, data.vehicle_count)}%`, sub: `of ${data.vehicle_count} vehicles`, tone: "green", icon: "◕" },
+          { n: "Open issues", v: data.open_cases, sub: "Current issues", tone: "red", icon: "!" },
+          { n: "Overdue actions", v: data.overdue, sub: `${data.actions_open} actions open`, tone: "amber", icon: "◷" },
+        ].map(x => <article key={x.n} className={`${styles.metric} ${styles[x.tone]}`}><i className={styles.metricIcon} aria-hidden="true">{x.icon}</i><div className={styles.metricText}><small>{x.n}</small><strong>{x.v}</strong><span>{x.sub}</span></div></article>)}
       </section>
       <section className={styles.coverageStrip} aria-label="Required coverage"><span>Operational requirement: <strong>{fmt(data.required)}</strong></span><span>Surplus / shortfall: <strong>{data.deviation == null ? "—" : `${data.deviation > 0 ? "+" : ""}${data.deviation}`}</strong></span>{data.scope_warning && <span>{data.scope_warning}</span>}</section>
       <div className={styles.chartLayout}><TrendChart points={data.trend} description={data.trend_note}/><AvailabilityChart data={data}/></div>
       <div className={styles.secondaryLayout}>
-        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Top VOR reasons</h3><span className={styles.cardNote}>Selected period</span></div><div className={styles.reasonRows}>{data.counts_by_reason.slice(0,8).map(r => <div key={r.reason} className={styles.reasonRow}><span title={r.reason}>{r.reason}</span><div className={styles.reasonTrack}><i style={{width:`${percent(r.count,Math.max(1,...data.counts_by_reason.map(x=>x.count)))}%`}}/></div><strong>{r.count}</strong></div>)}{!data.counts_by_reason.length && <p>No VOR cases in this period.</p>}</div></section>
+        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Top VOR reasons · selected period</h3><span className={styles.cardNote}>Selected period</span></div><div className={styles.reasonRows}>{data.counts_by_reason.slice(0,8).map(r => <div key={r.reason} className={styles.reasonRow}><span title={r.reason}>{r.reason}</span><div className={styles.reasonTrack}><i style={{width:`${percent(r.count,Math.max(1,...data.counts_by_reason.map(x=>x.count)))}%`}}/></div><strong>{r.count}</strong></div>)}{!data.counts_by_reason.length && <p>No VOR cases in this period.</p>}</div></section>
         <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Completed case duration</h3><span className={styles.cardNote}>Days · not technician labour time</span></div><div className={styles.durationGrid}>{[{label:"Mean",v:data.case_duration.mean},{label:"Median",v:data.case_duration.median},{label:"P90",v:data.case_duration.p90}].map(x=><div key={x.label}><small>{x.label}</small><strong>{fmt(x.v," d")}</strong></div>)}</div><p className={styles.dataNote}>{data.case_duration_basis} {data.outlier_method} Included: {data.case_duration.retained}; excluded: {data.case_duration.excluded}.</p></section>
         <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Garage workload</h3><span className={styles.cardNote}>Completed cases</span></div><div className={styles.tableScroll}><table><thead><tr><th>Workshop</th><th>Cases</th><th>Median</th></tr></thead><tbody>{data.workshops.slice(0,7).map(w=><tr key={w.garage}><td>{w.garage}</td><td>{w.cases}</td><td>{fmt(w.median," d")}</td></tr>)}</tbody></table></div></section>
       </div>
