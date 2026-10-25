@@ -38,8 +38,12 @@ class Upload(BaseModel):
 def response_or_bad_request(callback):
     try:
         return callback()
-    except (ValueError, RuntimeError) as exc:
-        raise HTTPException(400, str(exc)) from exc
+    except ValueError:
+        # Do not expose database paths, parser internals or exception chaining.
+        raise HTTPException(status_code=400, detail="Invalid fleet data request") from None
+    except RuntimeError:
+        # Includes the v1/v2 isolation guard; keep internal configuration private.
+        raise HTTPException(status_code=503, detail="Fleet data service unavailable") from None
 
 
 @router.get("/register")
