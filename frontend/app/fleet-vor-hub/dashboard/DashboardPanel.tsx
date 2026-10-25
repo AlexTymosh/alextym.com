@@ -16,6 +16,12 @@ type DashboardData = {
   cases: Case[]; available_garages: string[]; available_reasons: string[]; available_models: string[];
   daily_reporting_warning: string; outlier_method: string;
 };
+type FleetSnapshot = {
+  vehicles: {id:number;registration:string;garage:string;mot_due:string;inspection_due:string;service_due:string}[];
+  tickets: {id:string;status:string;vehicle_id:number}[];
+  steps: {ticket_id:string;label:string;status:string}[];
+  bookings: {vehicle_id:number;kind:string;booked_date:string}[];
+};
 const fmt = (value: number | null, suffix = "") => value == null ? "—" : `${value}${suffix}`;
 const percent = (a: number, b: number) => b > 0 ? Math.round(a / b * 1000) / 10 : 0;
 
@@ -62,6 +68,15 @@ function AvailabilityChart({ data }: { data: DashboardData }) {
 
 export default function DashboardPanel() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [snapshot, setSnapshot] = useState<FleetSnapshot | null>(null);
+  useEffect(() => {
+    let cancelled=false;
+    fetch("/api/vor/bootstrap",{credentials:"same-origin",cache:"no-store"})
+      .then(async r=>r.ok?await r.json() as FleetSnapshot:null)
+      .then(value=>{if(!cancelled&&value&&Array.isArray(value.vehicles))setSnapshot(value)})
+      .catch(()=>{});
+    return ()=>{cancelled=true};
+  },[]);
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const [start, setStart] = useState(""); const [end, setEnd] = useState("");
   const [garage, setGarage] = useState(""); const [reason, setReason] = useState(""); const [model, setModel] = useState("");
@@ -80,6 +95,24 @@ export default function DashboardPanel() {
     return () => { cancelled = true; };
   }, [start, end, garage, reason, model, outliers]);
   const rows = useMemo(() => data?.cases || [], [data]);
+  const stageDistribution = useMemo(() => {
+    if (!snapshot) return [] as {label:string;count:number}[];
+    const counts = new Map<string,number>();
+    for (const ticket of snapshot.tickets.filter(t=>t.status==="open")) {
+      const stage=snapshot.steps.find(step=>step.ticket_id===ticket.id && step.status==="current");
+      const key=stage?.label || "Unassigned";
+      counts.set(key,(counts.get(key)||0)+1);
+    }
+    return Array.from(counts.entries()).map(([label,count])=>({label,count})).sort((a,b)=>b.count-a.count);
+  },[snapshot]);
+  const bookingRisk = useMemo(() => {
+    if (!snapshot||!data) return [] as {registration:string;kind:string;date:string;garage:string}[];
+    const end=new Date(`${data.as_of.slice(0,10)}T12:00:00`);end.setDate(end.getDate()+14);
+    const until=`${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,"0")}-${String(end.getDate()).padStart(2,"0")}`;
+    return snapshot.vehicles.flatMap(v=>[{kind:"MOT",date:v.mot_due},{kind:"Inspection",date:v.inspection_due},{kind:"Service",date:v.service_due}]
+      .filter(x=>x.date&&x.date<=until && !snapshot.bookings.some(b=>b.vehicle_id===v.id&&b.kind===x.kind&&b.booked_date>=data.as_of.slice(0,10)&&b.booked_date<=until))
+      .map(x=>({...x,registration:v.registration,garage:v.garage}))).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+  },[snapshot,data]);
   const download = () => {
     if (!data) return;
     const table: (string | number)[][] = [["Vehicle", "Reason", "Case status", "Opened", "Garage", "Completed case duration (days)"], ...rows.map(c => [c.registration, c.reason, c.status, c.opened_at, c.garage, c.days ?? ""])];
@@ -113,10 +146,12 @@ export default function DashboardPanel() {
       <div className={styles.chartLayout}><TrendChart points={data.trend} description={data.trend_note}/><AvailabilityChart data={data}/></div>
       <div className={styles.secondaryLayout}>
         <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Top VOR reasons · selected period</h3><span className={styles.cardNote}>Selected period</span></div><div className={styles.reasonRows}>{data.counts_by_reason.slice(0,8).map(r => <div key={r.reason} className={styles.reasonRow}><span title={r.reason}>{r.reason}</span><div className={styles.reasonTrack}><i style={{width:`${percent(r.count,Math.max(1,...data.counts_by_reason.map(x=>x.count)))}%`}}/></div><strong>{r.count}</strong></div>)}{!data.counts_by_reason.length && <p>No VOR cases in this period.</p>}</div></section>
+        <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Repair stage distribution</h3><span className={styles.cardNote}>Open tickets · live workflow</span></div>{snapshot ? <div className={styles.stageSummary}>{stageDistribution.map((item,index)=><div key={item.label} className={styles.stageRow}><span className={styles.stageDot} style={{background:["#72abeb","#f5b857","#6abc91","#f08883","#a3b5bf"][index%5]}}/><span title={item.label}>{item.label}</span><strong>{item.count}</strong><div className={styles.stageTrack}><i style={{width:`${percent(item.count,Math.max(1,...stageDistribution.map(x=>x.count)))}%`,background:["#72abeb","#f5b857","#6abc91","#f08883","#a3b5bf"][index%5]}}/></div></div>)}{!stageDistribution.length&&<p className={styles.dataNote}>No open tickets with recorded stages.</p>}</div>:<p className={styles.dataNote}>Stage detail not available from the snapshot.</p>}</section>
         <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Completed case duration</h3><span className={styles.cardNote}>Days · not technician labour time</span></div><div className={styles.durationGrid}>{[{label:"Mean",v:data.case_duration.mean},{label:"Median",v:data.case_duration.median},{label:"P90",v:data.case_duration.p90}].map(x=><div key={x.label}><small>{x.label}</small><strong>{fmt(x.v," d")}</strong></div>)}</div><p className={styles.dataNote}>{data.case_duration_basis} {data.outlier_method} Included: {data.case_duration.retained}; excluded: {data.case_duration.excluded}.</p></section>
         <section className={styles.chartCard}><div className={styles.cardHeading}><h3>Garage workload</h3><span className={styles.cardNote}>Completed cases</span></div><div className={styles.tableScroll}><table><thead><tr><th>Workshop</th><th>Cases</th><th>Median</th></tr></thead><tbody>{data.workshops.slice(0,7).map(w=><tr key={w.garage}><td>{w.garage}</td><td>{w.cases}</td><td>{fmt(w.median," d")}</td></tr>)}</tbody></table></div></section>
       </div>
-      <div className={styles.bottomLayout}><section className={styles.chartCard}><div className={styles.cardHeading}><h3>Recent VOR cases</h3><span className={styles.cardNote}>{rows.length} matching cases</span></div><div className={styles.tableScroll}><table><thead><tr><th>Vehicle</th><th>Issue</th><th>Workshop</th><th>Status</th><th>Duration</th></tr></thead><tbody>{rows.slice(0,12).map((c,i)=><tr key={`${c.registration}-${c.opened_at}-${i}`}><td><strong>{c.registration}</strong></td><td>{c.reason}</td><td>{c.garage}</td><td><span className={styles.statusPill}>{c.status}</span></td><td>{fmt(c.days," d")}</td></tr>)}</tbody></table></div></section><section className={styles.chartCard}><h3>Operational priorities</h3><div className={styles.priority}><div><strong>{data.actions_open}</strong><span>Outstanding actions</span></div><div><strong>{data.overdue}</strong><span>Overdue</span></div><div><strong>{data.blockers}</strong><span>Active blockers</span></div><div><strong>{data.open_cases}</strong><span>Open cases</span></div></div><p className={styles.dataNote}>{data.daily_reporting_warning}</p></section></div>
+      <div className={styles.bottomLayout}><section className={styles.chartCard}><div className={styles.cardHeading}><h3>Recent VOR cases</h3><span className={styles.cardNote}>{rows.length} matching cases</span></div><div className={styles.tableScroll}><table><thead><tr><th>Vehicle</th><th>Issue</th><th>Workshop</th><th>Status</th><th>Duration</th></tr></thead><tbody>{rows.slice(0,12).map((c,i)=><tr key={`${c.registration}-${c.opened_at}-${i}`}><td><strong>{c.registration}</strong></td><td>{c.reason}</td><td>{c.garage}</td><td><span className={styles.statusPill}>{c.status}</span></td><td>{fmt(c.days," d")}</td></tr>)}</tbody></table></div></section><section className={styles.chartCard}><div className={styles.cardHeading}><h3>Upcoming bookings at risk</h3><span className={styles.cardNote}>Fleet-wide · next 14 days</span></div>{snapshot?<div className={styles.tableScroll}><table><thead><tr><th>Due</th><th>Vehicle</th><th>Type</th><th>Base</th><th>Status</th></tr></thead><tbody>{bookingRisk.map((x,i)=><tr key={`${x.registration}-${x.kind}-${i}`}><td>{x.date}</td><td><strong>{x.registration}</strong></td><td>{x.kind}</td><td>{x.garage}</td><td><span className={styles.riskPill}>{x.date < data.as_of.slice(0,10)?"Overdue":"Unbooked"}</span></td></tr>)}</tbody></table>{!bookingRisk.length&&<p className={styles.dataNote}>No unbooked maintenance due in this period.</p>}</div>:<p className={styles.dataNote}>Booking snapshot unavailable.</p>}</section>
+      <section className={styles.chartCard}><h3>Operational priorities</h3><div className={styles.priority}><div><strong>{data.actions_open}</strong><span>Outstanding actions</span></div><div><strong>{data.overdue}</strong><span>Overdue</span></div><div><strong>{data.blockers}</strong><span>Active blockers</span></div><div><strong>{data.open_cases}</strong><span>Open cases</span></div></div><p className={styles.dataNote}>{data.daily_reporting_warning}</p></section></div>
     </>}
   </main>;
 }

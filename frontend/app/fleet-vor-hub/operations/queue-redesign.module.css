@@ -45,3 +45,19 @@
 @media(max-width:1300px){.grid{grid-template-columns:minmax(0,1.4fr) minmax(260px,.9fr)}}
 @media(max-width:1050px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.page{padding:9px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis article{padding:10px}.kpiIcon{height:32px;width:32px;flex-basis:32px;font-size:15px}.searchRow{align-items:stretch}.sourceLabel{flex:1 1 100%}}
+
+/* PR11 layout refinement: live queue and audited activity */
+.page{font-size:13px!important;padding:18px 19px 28px!important}
+.titleRow h2{font-size:22px!important}.titleRow p{font-size:12px!important}
+.kpis article{min-height:111px!important;padding:17px 18px!important}.kpis strong{font-size:30px!important}.kpis small{font-size:12px!important}
+.kpiIcon{height:48px!important;width:48px!important;font-size:23px!important}
+.grid{grid-template-columns:minmax(0,1.75fr) minmax(305px,.77fr)!important;gap:13px!important}
+.tabs button{font-size:13px!important;padding:15px 17px!important}
+.searchRow{padding:13px!important;gap:10px!important}.searchRow input{min-height:39px!important;font-size:12px!important}
+.searchRow .filterLabel select{min-height:39px!important;font-size:11px!important}
+.tableWrap table{font-size:12px!important;min-width:720px!important}.tableWrap th{font-size:11px!important;padding:12px 10px!important}
+.tableWrap td{font-size:11.5px!important;padding:12px 10px!important}.ticket{font-size:11px!important}.link{font-size:12px!important}
+.state{font-size:11px!important}.attention{font-size:10px;font-weight:800;border-radius:6px;color:#995d14;background:#fff2dc;padding:5px 7px;white-space:nowrap}
+.sideCard h3{font-size:16px!important}.blocker{padding:12px!important}.blocker strong{font-size:12px!important}.blocker p,.blocker small{font-size:11px!important}.help strong{font-size:12px!important}.help p{font-size:11px!important}
+.activitySection{border-top:1px solid #e1eaf0;margin-top:17px;padding-top:16px}.activitySection h3{margin:0 0 10px;font-size:15px}.activityEntry{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf1f4}.activityMark{background:#e2f7e9;border-radius:50%;width:29px;height:29px;flex:0 0 29px;display:grid;place-items:center;color:#2e9355;font-weight:800}.activityEntry strong{font-size:12px;display:block;text-transform:capitalize}.activityEntry p{font-size:11px;line-height:1.4;color:#536e80;margin:4px 0}.activityEntry small{font-size:10px;color:#8aa0ac}
+@media(max-width:1180px){.grid{grid-template-columns:1fr!important}.kpis{grid-template-columns:repeat(2,1fr)!important}}

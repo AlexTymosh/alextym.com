@@ -65,3 +65,13 @@
 .content{background:var(--fleet-bg)!important}.workspaceContent{background:var(--fleet-bg)!important}
 @media(max-width:800px){.sidebar,.sidebar:not(.collapsed){flex-basis:57px!important}.sidebar .navItem{padding:10px 6px!important}.contentBar{padding:8px 11px!important}}
 
+/* PR11 harmonised shell with approved mockups */
+.app{--fleet-bg:#f1f5f9!important;background:#f1f5f9!important}
+.topbar{height:58px!important;min-height:58px!important;padding:0 18px!important}
+.brand strong{font-size:15px!important}.brand small{font-size:11px!important}
+.brandIcon{width:36px!important;height:36px!important;font-size:19px!important}
+.sidebar{flex-basis:210px!important;gap:15px!important;padding:13px 11px!important}
+.groupLabel{font-size:10px!important}.navItem{font-size:13px!important;min-height:37px!important;padding:9px 10px!important}
+.contentBar{min-height:70px!important;flex-basis:70px!important;padding:11px 19px!important}
+.contentBar h1{font-size:21px!important}.breadcrumb{font-size:11px!important}.primaryAction{font-size:12px!important;padding:10px 14px!important}
+@media(max-width:800px){.sidebar{flex-basis:60px!important}}

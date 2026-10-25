@@ -53,3 +53,27 @@
 @media(max-width:1350px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.chartLayout{grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr)}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))}.secondaryLayout>:last-child{grid-column:span 2}}
 @media(max-width:960px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr}.secondaryLayout>:last-child{grid-column:auto}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.page{padding:9px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric{padding:10px 8px;gap:7px}.metricIcon{width:30px;height:30px;flex-basis:30px;font-size:14px}.metric strong{font-size:22px}.donutLayout{flex-wrap:wrap}.lineGraph{height:190px}}
+
+/* PR11 dashboard hierarchy matched to approved reference without fake KPI values */
+.page{font-size:13px;padding:19px clamp(16px,2vw,30px) 36px!important}
+.heading{padding:0 0 13px!important}.heading h2{font-size:22px!important}.heading p{font-size:12px!important}
+.heading button{padding:11px 14px!important;font-size:12px!important}
+.filters{padding:13px 16px!important;margin:4px 0 17px!important;gap:13px!important;border-radius:11px!important}
+.filters label{font-size:11px!important;gap:6px!important}.filters input,.filters select{font-size:12px!important;min-height:36px!important}
+.metrics{gap:12px!important}.metric{padding:17px 13px!important;min-height:123px!important;gap:12px!important;border-radius:11px!important}
+.metricIcon{width:45px!important;height:45px!important;flex-basis:45px!important;font-size:22px!important}.metric small{font-size:12px!important}.metric strong{font-size:34px!important}.metric span{font-size:11px!important}
+.coverageStrip{font-size:12px!important;margin:13px 0 15px!important;padding:10px 13px!important}
+.chartLayout{grid-template-columns:minmax(0,1.8fr) minmax(325px,.95fr)!important;gap:14px!important}
+.chartCard{padding:18px!important;border-radius:12px!important}.chartCard h3{font-size:15px!important}.cardNote,.chartLegend span{font-size:11px!important}
+.cardHeading{margin-bottom:11px!important}.lineGraph{height:262px!important}.donutLayout{min-height:270px!important;gap:22px!important}.donut{width:200px!important;height:200px!important;flex-basis:200px!important}.donutHole{width:134px!important;height:134px!important}.donutHole strong{font-size:32px!important}
+.donutLegend>div{font-size:12px!important;grid-template-columns:10px minmax(0,1fr) 29px 43px!important}.donutLegend strong,.donutLegend small{font-size:12px!important}
+.secondaryLayout,.bottomLayout{gap:14px!important;margin-top:14px!important}.secondaryLayout .chartCard{min-height:255px!important}
+.reasonRow{font-size:11px!important}.tableScroll th,.tableScroll td{font-size:11px!important;padding:9px 8px!important}.durationGrid small{font-size:11px!important}.durationGrid strong{font-size:23px!important}.dataNote{font-size:11px!important}.priority strong{font-size:24px!important}.priority span{font-size:11px!important}
+@media(max-width:1390px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important}.chartLayout{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr)!important}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.secondaryLayout>:last-child{grid-column:span 2!important}}
+@media(max-width:980px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}.secondaryLayout>:last-child{grid-column:auto!important}}
+@media(max-width:520px){.metrics{grid-template-columns:repeat(2,1fr)!important}.metric{padding:11px 8px!important;gap:6px!important}.metricIcon{width:29px!important;height:29px!important;flex-basis:29px!important}.metric strong{font-size:24px!important}}
+/* Additional live cards based on existing bootstrap snapshot; no invented trends */
+.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.secondaryLayout .chartCard{min-height:235px!important}.secondaryLayout>:last-child{grid-column:auto!important}
+.bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.stageSummary{display:grid;gap:10px;align-content:start}.stageRow{display:grid;grid-template-columns:10px minmax(0,1fr) 24px 85px;gap:9px;align-items:center;color:#5c778b;font-size:11px}.stageDot{height:9px;width:9px;border-radius:50%}.stageRow>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stageTrack{height:8px;border-radius:6px;background:#eef3f5;overflow:hidden}.stageTrack i{display:block;height:100%;border-radius:6px}.riskPill{background:#fff1e4;color:#b77c29;border:1px solid #f7dfc0;border-radius:5px;padding:4px 6px;font-size:10px}
+@media(max-width:950px){.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}}

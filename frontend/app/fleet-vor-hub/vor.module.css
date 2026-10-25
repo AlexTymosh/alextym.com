@@ -1725,3 +1725,49 @@
 @media(max-width:950px){.root .workspace{grid-template-columns:1fr!important;grid-template-rows:auto!important;overflow:auto!important}.root .workspace>.vehiclePane{grid-column:1!important;grid-row:auto!important;max-height:300px!important}.root .workspace .contentPane{grid-column:1!important;grid-row:auto!important;min-height:650px!important}.root .calendarLayout{height:auto!important;overflow:auto!important}.root .calendarLayout>.outstandingPanel{height:280px!important}.root .calendarLayout>.panel:first-child{min-height:580px!important}}
 @media(max-width:690px){.root .workspace .contentPane{display:flex!important;flex-direction:column!important;height:auto!important}.root .workspace .contentPane .caseColumn>.details{display:flex!important;flex-direction:column!important}.root .workspace .caseColumn .detailsBody{display:grid!important;grid-template-columns:1fr!important}.root .workspace .caseColumn .detailsBody>*{grid-column:1!important;grid-row:auto!important}.root .workspace .contentPane>.chatterPane{min-height:520px!important}.root .workspace .contentPane .caseColumn>.middlePane{min-height:480px!important}.root .calendarLayout{display:flex!important;flex-direction:column!important}.root .calendarLayout>.outstandingPanel{flex:0 0 280px!important}.root .calendarLayout>.panel:first-child{flex:0 0 620px!important}}
 
+/* PR11 REFERENCE RECONSTRUCTION: isolated to V2 Issue Hub, avoids changing frozen V1 */
+.root .workspace{--rail:clamp(248px,19vw,290px);gap:14px!important;padding:15px 18px!important}
+.root .workspace .vehiclePane{border-radius:12px!important}
+.root .workspace .sideHeader{padding:12px 13px!important}
+.root .workspace .railTabs button{font-size:13px!important;min-height:41px!important}
+.root .workspace .sideHeader input{min-height:39px!important;font-size:12px!important}
+.root .workspace .vehicleScroll{padding:10px!important}
+.root .workspace .vehicleScroll .vehicleCard{padding:11px 12px!important;border-radius:10px!important;margin-bottom:8px!important;gap:5px!important}
+.root .workspace .vehicleScroll .vehicleCard .vehicleTitle b{font-size:14px!important}
+.root .workspace .vehicleScroll .vehicleCard > small{font-size:11px!important}
+.root .workspace .vehicleScroll .vehicleCard p{font-size:11px!important;line-height:1.35!important}
+.root .workspace .vehicleScroll .vehicleCard .vehicleWorkshop span,.root .workspace .vehicleScroll .vehicleCard .vehicleWorkshop strong{font-size:10px!important}
+.root .workspace .contentPane{grid-template-columns:minmax(400px,1.7fr) minmax(290px,.94fr)!important;grid-template-rows:auto minmax(0,1fr)!important;gap:13px!important}
+.root .workspace .contentPane .caseColumn>.details{grid-template-columns:minmax(405px,1fr) minmax(0,1.55fr)!important;min-height:145px!important;border:1px solid #dee9ef!important;border-radius:11px!important}
+.root .workspace .caseColumn .detailsHead{display:grid!important;grid-template-columns:148px minmax(0,1fr) auto!important;align-items:center!important;gap:13px!important;padding:12px 15px!important;border-right:1px solid #e2ebef!important}
+.root .workspace .caseColumn .detailsHead h1{font-size:28px!important;line-height:1.06!important;margin:4px 0!important}
+.root .workspace .caseColumn .detailsHead p{font-size:12px!important}
+.root .workspace .caseColumn .detailsHead .miniMeta{align-self:start!important;font-size:10px!important;max-width:95px}
+.root .workspace .caseColumn .ticketChip{font-size:10px!important;padding:4px 6px!important}
+.root .workspace .caseColumn .detailsBody{grid-template-columns:minmax(180px,1.2fr) minmax(150px,.85fr) minmax(230px,1.15fr)!important;padding:13px!important;gap:8px 12px!important}
+.root .workspace .caseColumn .detailsBody .problemLabel,.root .workspace .caseColumn .infoPair label,.root .workspace .caseColumn .maintenanceTitle{font-size:10px!important}
+.root .workspace .caseColumn .detailsBody .issueBox{font-size:12px!important;line-height:1.4!important}
+.root .workspace .caseColumn .infoPair select{font-size:11px!important;min-height:31px!important}
+.root .workspace .caseColumn .maintenanceGrid>div{padding:8px!important}
+.root .workspace .caseColumn .maintenanceGrid small,.root .workspace .caseColumn .maintenanceGrid strong,.root .workspace .caseColumn .maintenanceGrid button{font-size:10px!important}
+.root .workspace .chatterPane .chatterTop{padding:15px 16px 10px!important}
+.root .workspace .chatterPane .chatterTop .panelHeading h2{font-size:15px!important}
+.root .workspace .chatterPane .filterBar button{font-size:11px!important;min-height:32px!important}
+.root .workspace .chatterPane .ticketFilter button{font-size:11px!important;min-height:30px!important}
+.root .workspace .chatterPane .timeline{gap:9px!important;padding:12px!important}
+.root .workspace .chatterPane .timeline .event{padding:13px 15px!important;gap:13px!important;min-height:61px}
+.root .workspace .chatterPane .eventAvatar{width:39px!important;height:39px!important;flex-basis:39px!important;border-radius:50%!important;font-size:12px!important}
+.root .workspace .chatterPane .eventContent .eventMeta{font-size:12px!important}
+.root .workspace .chatterPane .eventContent p{font-size:12px!important;line-height:1.5!important}
+.root .workspace .chatterPane .composeBottom textarea{height:49px!important;min-height:49px!important;font-size:12px!important}
+.root .workspace .middlePane .workflow{padding:14px!important}
+.root .workspace .middlePane .workflowTopRow h2{font-size:15px!important}
+.root .workspace .middlePane .workflowStages{gap:6px!important}
+.root .workspace .middlePane .workflowStages .stageButton{min-height:37px!important;padding:8px 9px!important}
+.root .workspace .middlePane .workflowStages .stageLabel{font-size:11px!important}
+.root .workspace .middlePane .workflowStages .stageChecklist label{font-size:11px!important}
+.root .workspace .middlePane .workflowTicketNav button{font-size:11px!important}
+.root .workspace .middlePane .operations button,.root .workspace .middlePane .operations input{font-size:11px}
+@media(max-width:1490px){.root .workspace{--rail:245px}.root .workspace .caseColumn .detailsHead{grid-template-columns:116px minmax(0,1fr) auto!important;gap:10px!important}.root .workspace .contentPane .caseColumn>.details{grid-template-columns:minmax(330px,1fr) minmax(0,1.55fr)!important}.root .workspace .caseColumn .detailsBody{grid-template-columns:minmax(145px,1.1fr) minmax(125px,.8fr) minmax(190px,1.05fr)!important;gap:6px!important}}
+@media(max-width:1200px){.root .workspace .contentPane{grid-template-columns:minmax(0,1fr)!important;overflow-y:auto!important}.root .workspace .contentPane .caseColumn>.details{grid-column:1!important}.root .workspace .contentPane>.chatterPane{grid-column:1!important;grid-row:2!important;min-height:380px!important}.root .workspace .contentPane .caseColumn>.middlePane{grid-column:1!important;grid-row:3!important;min-height:340px!important;overflow:visible!important}.root .workspace .caseColumn .detailsHead{grid-template-columns:116px minmax(0,1fr) auto!important}}
+@media(max-width:780px){.root .workspace{display:flex!important;flex-direction:column!important;overflow:auto!important}.root .workspace .vehiclePane{max-height:300px!important;flex:none!important}.root .workspace .contentPane{display:flex!important;flex-direction:column!important;overflow:visible!important}.root .workspace .contentPane .caseColumn>.details{display:flex!important;flex-direction:column!important}.root .workspace .caseColumn .detailsHead{grid-template-columns:100px minmax(0,1fr) auto!important}.root .workspace .caseColumn .detailsBody{display:flex!important;flex-direction:column!important;align-items:stretch!important}.root .workspace .caseColumn .maintenanceInside{width:100%}.root .workspace .contentPane>.chatterPane{min-height:490px!important}.root .workspace .contentPane .caseColumn>.middlePane{min-height:290px!important}}

@@ -18,6 +18,7 @@ type Item = {
 
 type Queue = { actions: Item[]; blockers: Item[] };
 type View = "actions" | "blockers";
+type Activity = { action: string; actor: string; details: string; created_at: string; vehicle: string; ticket: string };
 
 type ActionRow = {
   registration: string;
@@ -110,6 +111,8 @@ export default function OperationsQueuePanel({
   const [showExamples, setShowExamples] = useState(false);
   const [sort, setSort] = useState<"due" | "vehicle">("due");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     fetch("/api/vor/ops/queue", {
@@ -130,6 +133,23 @@ export default function OperationsQueuePanel({
   const blockers = data?.blockers || [];
   const hasLiveData = actions.length + blockers.length > 0;
   const displayExamples = showExamples || (!hasLiveData && data !== null);
+  useEffect(() => {
+    if (!data || displayExamples) { setActivities([]); return; }
+    const controller = new AbortController();
+    const tickets = [...data.actions, ...data.blockers].filter(x => x.vehicle_id && x.ticket_id);
+    const selected = Array.from(new Map(tickets.map(x => [x.vehicle_id, x])).values()).slice(0, 8);
+    void Promise.all(selected.map(async x => {
+      try {
+        const response = await fetch(`/api/vor/ops/details?vehicle_id=${encodeURIComponent(x.vehicle_id)}&ticket_id=${encodeURIComponent(x.ticket_id)}`, { credentials: "same-origin", signal: controller.signal });
+        if (!response.ok) return [] as Activity[];
+        const payload = await response.json() as { audit?: { action: string; actor: string; details: string; created_at: string }[] };
+        return (payload.audit || []).map(a => ({ ...a, vehicle: x.registration, ticket: x.ticket_id }));
+      } catch { return [] as Activity[]; }
+    })).then(rows => {
+      if (!controller.signal.aborted) setActivities(Array.from(new Map(rows.flat().map(a=>[`${a.vehicle}|${a.created_at}|${a.action}|${a.details}`,a])).values()).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0, 8));
+    });
+    return () => controller.abort();
+  }, [data, displayExamples]);
 
   const actionRows = useMemo<ActionRow[]>(
     () =>
@@ -147,9 +167,9 @@ export default function OperationsQueuePanel({
         .filter((item) =>
           `${item.registration} ${item.ticket_id} ${item.title} ${item.owner}`
             .toLowerCase()
-            .includes(search.toLowerCase()),
+            .includes(search.toLowerCase()) && (ownerFilter === "all" || item.owner === ownerFilter),
         ),
-    [displayExamples, actions, search, statusFilter],
+    [displayExamples, actions, search, statusFilter, ownerFilter],
   );
 
   const blockerRows = useMemo<BlockerRow[]>(
@@ -255,6 +275,12 @@ export default function OperationsQueuePanel({
                 <option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting">Waiting</option><option value="closed">Closed</option><option value="example">Example</option>
               </select>
             </label>
+            <label className={styles.filterLabel}>Owner
+              <select aria-label="Filter action owner" value={ownerFilter} onChange={(event: {target:{value:string}})=>setOwnerFilter(event.target.value)} disabled={view !== "actions"}>
+                <option value="all">All owners</option>
+                {Array.from(new Set((displayExamples ? EXAMPLES : actions).map(item=>item.owner).filter((value): value is string => typeof value === "string" && value.length > 0))).sort().map(owner=><option key={owner} value={owner}>{owner}</option>)}
+              </select>
+            </label>
             <label className={styles.filterLabel}>Sort by
               <select aria-label="Sort actions" value={sort} onChange={(event: { target: { value: string } }) => setSort(event.target.value as "due" | "vehicle")} disabled={view !== "actions"}>
                 <option value="due">Due date (earliest)</option><option value="vehicle">Vehicle</option>
@@ -275,7 +301,7 @@ export default function OperationsQueuePanel({
                     <th>Action</th>
                     <th>Owner</th>
                     <th>Due date</th>
-                    <th>Status</th>
+                    <th>Status</th><th>Attention</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -296,6 +322,7 @@ export default function OperationsQueuePanel({
                       <td>{item.owner}</td>
                       <td>{item.due_at || "—"}</td>
                       <td><span className={styles.state}>{item.status}</span></td>
+                      <td><span className={styles.attention}>{displayExamples?"Illustrative":item.due_at && item.due_at.slice(0,10)<new Date().toISOString().slice(0,10)?"Overdue":item.due_at?"Scheduled":"Unscheduled"}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -361,6 +388,10 @@ export default function OperationsQueuePanel({
           {blockerRows.length === 0 && (
             <p className={styles.empty}>No outstanding blockers.</p>
           )}
+          <section className={styles.activitySection} aria-label="Recorded recent activity">
+            <h3>Recent activity</h3>
+            {displayExamples ? <p className={styles.empty}>No real activity is shown in illustrative mode.</p> : activities.length ? activities.map((event,index)=><article key={`${event.created_at}-${index}`} className={styles.activityEntry}><span className={styles.activityMark}>✓</span><div><strong>{event.action.replaceAll("_"," ")}</strong><p>{event.details}</p><small>{event.actor} · {event.vehicle} · {event.created_at.slice(0,16).replace("T"," ")}</small></div></article>) : <p className={styles.empty}>No recent audit records for vehicles in the active queue.</p>}
+          </section>
           <div className={styles.help}>
             <strong>How to manage live records</strong>
             <p>
