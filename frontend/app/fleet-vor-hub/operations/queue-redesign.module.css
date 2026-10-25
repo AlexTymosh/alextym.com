@@ -61,3 +61,20 @@
 .sideCard h3{font-size:16px!important}.blocker{padding:12px!important}.blocker strong{font-size:12px!important}.blocker p,.blocker small{font-size:11px!important}.help strong{font-size:12px!important}.help p{font-size:11px!important}
 .activitySection{border-top:1px solid #e1eaf0;margin-top:17px;padding-top:16px}.activitySection h3{margin:0 0 10px;font-size:15px}.activityEntry{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf1f4}.activityMark{background:#e2f7e9;border-radius:50%;width:29px;height:29px;flex:0 0 29px;display:grid;place-items:center;color:#2e9355;font-weight:800}.activityEntry strong{font-size:12px;display:block;text-transform:capitalize}.activityEntry p{font-size:11px;line-height:1.4;color:#536e80;margin:4px 0}.activityEntry small{font-size:10px;color:#8aa0ac}
 @media(max-width:1180px){.grid{grid-template-columns:1fr!important}.kpis{grid-template-columns:repeat(2,1fr)!important}}
+
+/* PR13 DISTINCT QUEUE ICONOGRAPHY AND STATUS SEMANTICS */
+.kpiIcon{display:grid!important;place-items:center!important;line-height:1!important;border-radius:12px!important;}
+.kpiIcon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.kpis article:nth-child(1) .kpiIcon{color:#256bd6;background:#edf5ff}
+.kpis article:nth-child(2) .kpiIcon{color:#dd4850;background:#fff0f1}
+.kpis article:nth-child(3) .kpiIcon{color:#df871c;background:#fff4e8}
+.kpis article:nth-child(4) .kpiIcon{color:#20925d;background:#eaf8f0}
+.attention,.state{display:inline-flex;align-items:center;gap:5px;font-weight:750!important;border-radius:7px!important;padding:5px 9px!important}
+.attentionRed,.stateRed{color:#c43b48!important;background:#ffe7e9!important;border-color:#ffced3!important}
+.attentionAmber,.stateAmber{color:#ad6d0f!important;background:#fff0d2!important;border-color:#f9dda8!important}
+.attentionBlue,.stateBlue{color:#296ba4!important;background:#e7f2ff!important;border-color:#d2e8fc!important}
+.attentionGreen,.stateGreen{color:#238351!important;background:#e0f6e9!important;border-color:#c6ebd4!important}
+.attentionPurple,.statePurple{color:#7b4aa5!important;background:#f4e9ff!important;border-color:#e7d3fa!important}
+.attentionGray,.stateGray{color:#62788b!important;background:#ecf2f6!important;border-color:#e1e7ee!important}
+.warning{display:grid!important;place-items:center!important;color:#d64a50!important;background:#fff0f0!important}
+.warning svg{height:20px;width:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}

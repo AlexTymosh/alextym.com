@@ -143,7 +143,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const [contactEmail,setContactEmail]=useState("");
  const [contactRole,setContactRole]=useState<"internal"|"external">("internal");
  const [editContactId,setEditContactId]=useState<number|null>(null);
- const [workflowExpanded,setWorkflowExpanded]=useState(true);
+ const [workflowExpanded,setWorkflowExpanded]=useState(false);
  const [expandedStage,setExpandedStage]=useState<number|null>(null);
  const [showSubscribers,setShowSubscribers]=useState(false);
  const timelineRef = useRef<HTMLDivElement>(null);
@@ -155,6 +155,9 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const selected=data?.vehicles.find(v=>v.registration===reg)||data?.vehicles[0];
  const tickets=(data?.tickets||[]).filter(t=>t.vehicle_id===selected?.id);
  const primary=tickets.find(t=>t.id===ticketFilter)||tickets.find(t=>t.status==="open")||tickets[0];
+ 
+ // PR13 COLLAPSED WORKFLOW DEFAULT: switching ticket resets expanded stage details.
+ useEffect(()=>{setWorkflowExpanded(false)},[selected?.id,primary?.id]);
  const ticketIndex=tickets.findIndex(t=>t.id===primary?.id);
  const currentSteps=(data?.steps||[]).filter(s=>s.ticket_id===primary?.id).sort((a,b)=>a.step_index-b.step_index);
 

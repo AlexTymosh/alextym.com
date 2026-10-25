@@ -38,13 +38,13 @@ type BlockerRow = {
 };
 
 const EXAMPLES: ActionRow[] = [
-  { registration: "JM21 FDR", ticket_id: "PS000141", title: "Chase parts delivery with workshop", owner: "Fleet planner", due_at: "", status: "Example" },
-  { registration: "HF73 PZR", ticket_id: "PS000118", title: "Confirm diagnostic appointment", owner: "Fleet coordinator", due_at: "", status: "Example" },
-  { registration: "NP20 HLK", ticket_id: "PS000142", title: "Review warranty approval", owner: "Fleet analyst", due_at: "", status: "Example" },
-  { registration: "WR21 BNV", ticket_id: "PS000145", title: "Arrange vehicle collection", owner: "Fleet coordinator", due_at: "", status: "Example" },
-  { registration: "GF21 WZT", ticket_id: "PS000139", title: "Obtain inspection update", owner: "Fleet planner", due_at: "", status: "Example" },
-  { registration: "RP72 LCN", ticket_id: "PS000148", title: "Verify completion documentation", owner: "Fleet analyst", due_at: "", status: "Example" },
-  { registration: "MX23 RYT", ticket_id: "PS000150", title: "Confirm garage estimate", owner: "Fleet coordinator", due_at: "", status: "Example" },
+  { registration: "JM21 FDR", ticket_id: "PS000141", title: "Chase parts delivery with workshop", owner: "Fleet planner", due_at: "", status: "waiting" },
+  { registration: "HF73 PZR", ticket_id: "PS000118", title: "Confirm diagnostic appointment", owner: "Fleet coordinator", due_at: "", status: "in_progress" },
+  { registration: "NP20 HLK", ticket_id: "PS000142", title: "Review warranty approval", owner: "Fleet analyst", due_at: "", status: "waiting" },
+  { registration: "WR21 BNV", ticket_id: "PS000145", title: "Arrange vehicle collection", owner: "Fleet coordinator", due_at: "", status: "closed" },
+  { registration: "GF21 WZT", ticket_id: "PS000139", title: "Obtain inspection update", owner: "Fleet planner", due_at: "", status: "open" },
+  { registration: "RP72 LCN", ticket_id: "PS000148", title: "Verify completion documentation", owner: "Fleet analyst", due_at: "", status: "in_progress" },
+  { registration: "MX23 RYT", ticket_id: "PS000150", title: "Confirm garage estimate", owner: "Fleet coordinator", due_at: "", status: "pending_approval" },
 
   {
     registration: "LT23 XBM",
@@ -52,7 +52,7 @@ const EXAMPLES: ActionRow[] = [
     title: "Request updated quotation from service partner",
     owner: "Fleet coordinator",
     due_at: "",
-    status: "Example",
+    status: "waiting",
   },
   {
     registration: "KY22 XDT",
@@ -60,7 +60,7 @@ const EXAMPLES: ActionRow[] = [
     title: "Confirm inspection booking slot",
     owner: "Fleet planner",
     due_at: "",
-    status: "Example",
+    status: "open",
   },
   {
     registration: "GX24 KLM",
@@ -68,7 +68,7 @@ const EXAMPLES: ActionRow[] = [
     title: "Request diagnosis report",
     owner: "Fleet analyst",
     due_at: "",
-    status: "Example",
+    status: "in_progress",
   },
 ];
 
@@ -98,6 +98,48 @@ const BLOCKER_EXAMPLES: BlockerRow[] = [
     status: "Example",
   },
 ];
+
+// PR13 queue presentation: real statuses come from the API; examples remain illustrative.
+function QueueIcon({kind}:{kind:string}) {
+  const common={viewBox:"0 0 24 24",width:23,height:23,fill:"none",stroke:"currentColor",strokeWidth:1.9,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true as const};
+  if(kind==="clipboard") return <svg {...common}><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h6"/></svg>;
+  if(kind==="clock") return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>;
+  if(kind==="vehicles") return <svg {...common}><path d="M5 16 7 7h10l2 9M5 16h14M4 16v3h3v-3m10 0v3h3v-3M7 11h10"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></svg>;
+  return <svg {...common}><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg>;
+}
+function queueStatusTone(status:string):string {
+ const s=status.toLowerCase().replace(/[ _-]/g,"");
+ if(/overdue|blocked|critical/.test(s)) return "Red";
+ if(/waiting|pending|awaiting|review/.test(s)) return "Amber";
+ if(/inprogress|scheduled|assigned/.test(s)) return "Blue";
+ if(/closed|complete|resolved|approved/.test(s)) return "Green";
+ if(/escalat/.test(s)) return "Purple";
+ return "Gray";
+}
+function queueStatusLabel(status:string):string {
+ const normalized=status.replace(/_/g," ").trim();
+ return normalized ? normalized.slice(0,1).toUpperCase()+normalized.slice(1) : "Open";
+}
+function queueAttention(action:ActionRow,example:boolean):{label:string;tone:string} {
+ if(example){
+   if(/part|deliver/i.test(action.title)) return {label:"Parts delay",tone:"Red"};
+   if(/warranty|approval|authoris/i.test(action.title)) return {label:"Approval",tone:"Amber"};
+   if(/book|appointment/i.test(action.title)) return {label:"Booking",tone:"Blue"};
+   if(/document|report/i.test(action.title)) return {label:"Documents",tone:"Purple"};
+   if(/quote|estimate/i.test(action.title)) return {label:"Quotation",tone:"Amber"};
+   if(/collection|handover/i.test(action.title)) return {label:"Ready to collect",tone:"Green"};
+   return {label:"Follow-up",tone:"Gray"};
+ }
+ const s=action.status.toLowerCase();
+ if(/closed|complete|resolved/.test(s)) return {label:"Resolved",tone:"Green"};
+ const due=action.due_at?.slice(0,10)||"";
+ const today=new Date().toLocaleDateString("en-CA",{year:"numeric",month:"2-digit",day:"2-digit",timeZone:"Europe/London"});
+ if(due && due<today) return {label:"Overdue",tone:"Red"};
+ if(/blocked|waiting|pending/.test(s)) return {label:"Waiting",tone:"Amber"};
+ if(due===today) return {label:"Due today",tone:"Amber"};
+ if(due) return {label:"Scheduled",tone:"Blue"};
+ return {label:"No deadline",tone:"Gray"};
+}
 
 export default function OperationsQueuePanel({
   onOpenVehicle,
@@ -225,17 +267,17 @@ export default function OperationsQueuePanel({
 
       <section className={styles.kpis} aria-label="Live operational summary">
         {[
-          { name: "Open actions", count: displayExamples ? EXAMPLES.length : actions.length, icon: "▣" },
-          { name: "Active blockers", count: displayExamples ? BLOCKER_EXAMPLES.length : blockers.length, icon: "!" },
-          { name: "Overdue actions", count: displayExamples ? "—" : overdue, icon: "◷" },
+          { name: "Open actions", count: displayExamples ? EXAMPLES.length : actions.length, icon: "clipboard" },
+          { name: "Active blockers", count: displayExamples ? BLOCKER_EXAMPLES.length : blockers.length, icon: "alert" },
+          { name: "Overdue actions", count: displayExamples ? "—" : overdue, icon: "clock" },
           {
             name: "Vehicles affected",
             count: displayExamples ? new Set([...EXAMPLES, ...BLOCKER_EXAMPLES].map(item => item.registration)).size : new Set([...actions, ...blockers].map((item) => item.vehicle_id)).size,
-            icon: "▤",
+            icon: "vehicles",
           },
         ].map((item) => (
           <article key={item.name}>
-            <span className={styles.kpiIcon}>{item.icon}</span>
+            <span className={styles.kpiIcon}><QueueIcon kind={item.icon}/></span>
             <div>
               <strong>{item.count}</strong>
               <small>{item.name}{displayExamples ? " · example" : ""}</small>
@@ -321,8 +363,8 @@ export default function OperationsQueuePanel({
                       <td>{item.title}</td>
                       <td>{item.owner}</td>
                       <td>{item.due_at || "—"}</td>
-                      <td><span className={styles.state}>{item.status}</span></td>
-                      <td><span className={styles.attention}>{displayExamples?"Illustrative":item.due_at && item.due_at.slice(0,10)<new Date().toISOString().slice(0,10)?"Overdue":item.due_at?"Scheduled":"Unscheduled"}</span></td>
+                      <td><span className={`${styles.state} ${styles[`state${queueStatusTone(item.status)}`]}`}>{queueStatusLabel(item.status)}</span></td>
+                      <td><span className={`${styles.attention} ${styles[`attention${queueAttention(item,displayExamples).tone}`]}`}>{queueAttention(item,displayExamples).label}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -359,7 +401,7 @@ export default function OperationsQueuePanel({
                       </td>
                       <td>{item.kind}</td>
                       <td>{item.detail}</td>
-                      <td><span className={styles.state}>{item.status}</span></td>
+                      <td><span className={`${styles.state} ${styles[`state${queueStatusTone(item.status)}`]}`}>{queueStatusLabel(item.status)}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -377,7 +419,7 @@ export default function OperationsQueuePanel({
           </h3>
           {blockerRows.slice(0, 7).map((item, index) => (
             <div className={styles.blocker} key={`${item.ticket_id}-${index}`}>
-              <span className={styles.warning}>!</span>
+              <span className={styles.warning}><QueueIcon kind="alert"/></span>
               <div>
                 <strong>{item.kind}</strong>
                 <small>{item.registration} · {item.ticket_id}</small>

@@ -120,3 +120,14 @@
 @media(max-width:1150px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.chartLayout{grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr)!important}}
 @media(max-width:870px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}}
 @media(max-width:520px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.reasonRow,.stageRow{grid-template-columns:minmax(80px,1.2fr) minmax(50px,1fr) 18px 28px!important}}
+
+/* PR13 BALANCED CHART GRID — equal width at normal zoom */
+.chartLayout,.bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+.chartLayout>.chartCard,.bottomLayout>.chartCard{min-width:0!important}
+.chartLayout>.chartCard .lineGraph{min-height:210px!important;max-width:100%!important}
+.chartLayout>.chartCard .donutLayout{width:100%;justify-content:space-evenly;gap:12px!important}
+.chartLayout>.chartCard .donutLegend{min-width:0;flex:1}
+@media(max-width:1120px){.chartLayout,.bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:860px){.chartLayout,.bottomLayout{grid-template-columns:minmax(0,1fr)!important}}
+
+.metricIcon svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}

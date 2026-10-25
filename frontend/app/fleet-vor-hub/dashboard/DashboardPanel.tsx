@@ -110,6 +110,17 @@ const STAGE_GROUPS:[RegExp,string][]=[
   [/requested|registered|report/i,"Defect registered"],
 ];
 
+// PR13: inline outline SVG icons rather than font-dependent glyphs.
+function DashboardIcon({kind}:{kind:string}) {
+  const common={viewBox:"0 0 24 24",width:22,height:22,fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true as const};
+  if(kind==="requirement") return <svg {...common}><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>;
+  if(kind==="operational") return <svg {...common}><path d="M5 16 7 7h10l2 9M5 16h14M4 16v3h3v-3m10 0v3h3v-3M7 11h10"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></svg>;
+  if(kind==="repair") return <svg {...common}><path d="M14.5 6.2a4 4 0 0 0-5.2 5.1L3.8 16.8a2 2 0 0 0 2.9 2.8l5.5-5.5a4 4 0 0 0 5.1-5.2l-2.4 2.3-2.7-.7-.7-2.7z"/></svg>;
+  if(kind==="availability") return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.4 6.4"/></svg>;
+  if(kind==="overdue") return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>;
+  return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg>;
+}
+
 export default function DashboardPanel() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [snapshot, setSnapshot] = useState<FleetSnapshot | null>(null);
@@ -199,13 +210,13 @@ export default function DashboardPanel() {
     {data && <>
       <section className={styles.metrics} aria-label="Summary KPIs">
         {[
-          { n: "Requirement", v: fmt(data.required), sub: "Target vehicles", tone: "neutral", icon: "▤" },
-          { n: "Operational today", v: data.operational, sub: "Recorded status", tone: "green", icon: "▣" },
-          { n: "VOR today", v: data.vor, sub: "Vehicles", tone: "red", icon: "⚒" },
-          { n: "Availability %", v: `${percent(data.operational, data.vehicle_count)}%`, sub: `of ${data.vehicle_count} vehicles`, tone: "green", icon: "◕" },
-          { n: "Open issues", v: data.open_cases, sub: "Current issues", tone: "red", icon: "!" },
-          { n: "Overdue actions", v: data.overdue, sub: `${data.actions_open} actions open`, tone: "amber", icon: "◷" },
-        ].map(x => <article key={x.n} className={`${styles.metric} ${styles[x.tone]}`}><i className={styles.metricIcon} aria-hidden="true">{x.icon}</i><div className={styles.metricText}><small>{x.n}</small><strong>{x.v}</strong><span>{x.sub}</span></div></article>)}
+          { n: "Requirement", v: fmt(data.required), sub: "Target vehicles", tone: "neutral", icon: "requirement" },
+          { n: "Operational today", v: data.operational, sub: "Recorded status", tone: "green", icon: "operational" },
+          { n: "VOR today", v: data.vor, sub: "Vehicles", tone: "red", icon: "repair" },
+          { n: "Availability %", v: `${percent(data.operational, data.vehicle_count)}%`, sub: `of ${data.vehicle_count} vehicles`, tone: "green", icon: "availability" },
+          { n: "Open issues", v: data.open_cases, sub: "Current issues", tone: "red", icon: "issues" },
+          { n: "Overdue actions", v: data.overdue, sub: `${data.actions_open} actions open`, tone: "amber", icon: "overdue" },
+        ].map(x => <article key={x.n} className={`${styles.metric} ${styles[x.tone]}`}><i className={styles.metricIcon} aria-hidden="true"><DashboardIcon kind={x.icon}/></i><div className={styles.metricText}><small>{x.n}</small><strong>{x.v}</strong><span>{x.sub}</span></div></article>)}
       </section>
       <section className={styles.coverageStrip} aria-label="Required coverage"><span>Operational requirement: <strong>{fmt(data.required)}</strong></span><span>Surplus / shortfall: <strong>{data.deviation == null ? "—" : `${data.deviation > 0 ? "+" : ""}${data.deviation}`}</strong></span>{data.scope_warning && <span>{data.scope_warning}</span>}</section>
       <div className={styles.chartLayout}><TrendChart points={data.trend}/><AvailabilityChart data={data} snapshot={snapshot}/></div>
