@@ -1771,3 +1771,37 @@
 @media(max-width:1490px){.root .workspace{--rail:245px}.root .workspace .caseColumn .detailsHead{grid-template-columns:116px minmax(0,1fr) auto!important;gap:10px!important}.root .workspace .contentPane .caseColumn>.details{grid-template-columns:minmax(330px,1fr) minmax(0,1.55fr)!important}.root .workspace .caseColumn .detailsBody{grid-template-columns:minmax(145px,1.1fr) minmax(125px,.8fr) minmax(190px,1.05fr)!important;gap:6px!important}}
 @media(max-width:1200px){.root .workspace .contentPane{grid-template-columns:minmax(0,1fr)!important;overflow-y:auto!important}.root .workspace .contentPane .caseColumn>.details{grid-column:1!important}.root .workspace .contentPane>.chatterPane{grid-column:1!important;grid-row:2!important;min-height:380px!important}.root .workspace .contentPane .caseColumn>.middlePane{grid-column:1!important;grid-row:3!important;min-height:340px!important;overflow:visible!important}.root .workspace .caseColumn .detailsHead{grid-template-columns:116px minmax(0,1fr) auto!important}}
 @media(max-width:780px){.root .workspace{display:flex!important;flex-direction:column!important;overflow:auto!important}.root .workspace .vehiclePane{max-height:300px!important;flex:none!important}.root .workspace .contentPane{display:flex!important;flex-direction:column!important;overflow:visible!important}.root .workspace .contentPane .caseColumn>.details{display:flex!important;flex-direction:column!important}.root .workspace .caseColumn .detailsHead{grid-template-columns:100px minmax(0,1fr) auto!important}.root .workspace .caseColumn .detailsBody{display:flex!important;flex-direction:column!important;align-items:stretch!important}.root .workspace .caseColumn .maintenanceInside{width:100%}.root .workspace .contentPane>.chatterPane{min-height:490px!important}.root .workspace .contentPane .caseColumn>.middlePane{min-height:290px!important}}
+
+/* PR12 TRUE REFERENCE REBUILD: message layout and vehicle-summary hierarchy, v2 only */
+.root .workspace{font-size:12px!important;gap:10px!important;padding:10px!important}
+.root .workspace .vehicleScroll .vehicleCard{padding:8px 10px!important;gap:2px!important;margin-bottom:5px!important;min-height:0!important;line-height:1.17!important}
+.root .workspace .vehicleScroll .vehicleCard .vehicleTitle b{font-size:13px!important}
+.root .workspace .vehicleScroll .vehicleCard p{margin:3px 0!important;line-height:1.25!important}
+.root .workspace .vehicleScroll .vehicleCard .vehicleWorkshop{margin-top:3px!important;padding-top:3px!important}
+.root .workspace .vehicleScroll .vehicleCard .vehicleWorkshop span,.root .workspace .vehicleScroll .vehicleCard .vehicleWorkshop strong{font-size:9px!important}
+.root .workspace .contentPane .caseColumn>.details{min-height:139px!important}
+.root .workspace .caseColumn .detailsHead{grid-template-columns:116px minmax(0,1fr) auto!important;padding:10px!important;gap:11px!important}
+.root .workspace .caseColumn .detailsHead h1{font-size:25px!important}
+.root .workspace .caseColumn .detailsBody{grid-template-columns:minmax(180px,1.25fr) minmax(150px,.85fr) minmax(250px,1.2fr)!important;gap:9px!important;padding:10px!important;align-items:stretch!important}
+.root .workspace .caseColumn .problemGroup{display:flex!important;flex-direction:column;grid-column:1;grid-row:1/3;min-width:0;min-height:0;gap:4px}
+.root .workspace .caseColumn .problemGroup .problemLabel{display:block!important;grid-area:auto!important;color:#688299!important;font-weight:800}
+.root .workspace .caseColumn .problemGroup .issueBox{grid-area:auto!important;flex:1;min-height:45px;margin:0!important;padding:8px!important;border:1px solid #dbe7ea!important;border-left:3px solid #4baa77!important;border-radius:5px!important;background:#f5faf8!important}
+.root .workspace .caseColumn .problemGroup .ticketRowHead{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:6px!important;margin:0!important;max-width:100%}
+.root .workspace .caseColumn .problemGroup .ticketRowHead>small{font-size:9px!important;color:#688299!important}
+.root .workspace .caseColumn .problemGroup .ticketRowHead>div{display:flex;gap:4px;flex-wrap:wrap}
+.root .workspace .caseColumn .problemGroup .ticketChip{font-size:9px!important;padding:3px 6px!important}
+.root .workspace .caseColumn .detailsBody .infoPair{grid-column:2;grid-row:1/3;margin:0!important}
+.root .workspace .caseColumn .detailsBody .maintenanceInside{grid-column:3;grid-row:1/3;margin:0!important;min-width:0!important}
+.root .workspace .caseColumn .detailsBody .maintenanceGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.root .workspace .caseColumn .detailsBody .maintenanceGrid>div{min-width:0!important;padding:6px!important}
+.root .workspace .chatterPane .timeline{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:7px!important;padding:10px!important;overflow-y:auto!important;min-height:0!important;background:#f5f8fb!important;scroll-behavior:smooth}
+.root .workspace .chatterPane .timeline>*{flex-shrink:0!important}
+.root .workspace .chatterPane .chatterTop{padding:12px 13px 8px!important}
+.root .workspace .chatterPane .compose{padding:7px 10px 9px!important}
+.root .workspace .chatterPane .composeBottom textarea{height:44px!important;min-height:44px!important}
+.root .workspace .caseColumn .middlePane .workflowStages .stageButton{min-height:32px!important;padding:6px 8px!important}
+.root .workspace .caseColumn .middlePane .workflowStages{gap:3px!important}
+.root .workspace .caseColumn .middlePane .stageLabel{font-size:11px!important}
+@media(max-width:1490px){.root .workspace .caseColumn .detailsBody{grid-template-columns:minmax(160px,1.3fr) minmax(130px,.85fr) minmax(205px,1.2fr)!important}.root .workspace .caseColumn .detailsHead{grid-template-columns:100px minmax(0,1fr) auto!important}}
+@media(max-width:1100px){.root .workspace .caseColumn .detailsBody{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}.root .workspace .caseColumn .problemGroup{grid-column:1/3;grid-row:auto}.root .workspace .caseColumn .detailsBody .infoPair{grid-column:1;grid-row:auto}.root .workspace .caseColumn .detailsBody .maintenanceInside{grid-column:2;grid-row:auto}}
+@media(max-width:700px){.root .workspace .caseColumn .detailsBody{display:flex!important;flex-direction:column!important}.root .workspace .caseColumn .detailsBody .infoPair,.root .workspace .caseColumn .detailsBody .maintenanceInside{width:100%!important}}

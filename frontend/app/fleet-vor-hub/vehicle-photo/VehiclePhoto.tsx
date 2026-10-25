@@ -11,7 +11,7 @@ export default function VehiclePhoto({ model, registration }: { model: string; r
     <figure className={styles.figure} title={`Illustrative model photograph only · ${registration}`}>
       {van ? <Image className={styles.image} src={demoVan} alt={`Illustrative panel van photograph for ${model}; not the actual vehicle ${registration}`} width={160} height={116} priority />
            : <div className={styles.placeholder} role="img" aria-label={`No demonstration photograph for ${model}`}><span aria-hidden="true">▱</span><small>Image unavailable</small></div>}
-      <figcaption>Illustrative photo</figcaption>
+      
     </figure>
   );
 }

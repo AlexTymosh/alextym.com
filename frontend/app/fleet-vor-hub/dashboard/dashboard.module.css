@@ -77,3 +77,46 @@
 .bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 .stageSummary{display:grid;gap:10px;align-content:start}.stageRow{display:grid;grid-template-columns:10px minmax(0,1fr) 24px 85px;gap:9px;align-items:center;color:#5c778b;font-size:11px}.stageDot{height:9px;width:9px;border-radius:50%}.stageRow>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stageTrack{height:8px;border-radius:6px;background:#eef3f5;overflow:hidden}.stageTrack i{display:block;height:100%;border-radius:6px}.riskPill{background:#fff1e4;color:#b77c29;border:1px solid #f7dfc0;border-radius:5px;padding:4px 6px;font-size:10px}
 @media(max-width:950px){.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}}
+
+/* PR12 REFERENCE-ACCURATE DASHBOARD: dense at 100% zoom and real data visualizations */
+.page{padding:11px clamp(12px,1.35vw,23px) 25px!important;font-size:12px!important}
+.heading{padding:0 0 7px!important}.heading h2{font-size:19px!important}.heading p{font-size:11px!important}
+.filters{padding:10px 12px!important;margin:4px 0 10px!important;gap:11px!important}.filters label{font-size:10px!important}.filters input,.filters select{min-height:32px!important;font-size:11px!important}
+.metrics{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:10px!important}
+.metric{min-height:91px!important;padding:11px!important;gap:9px!important;align-items:center!important}
+.metricIcon{width:37px!important;height:37px!important;flex-basis:37px!important;font-size:19px!important}
+.metric small{font-size:11px!important}.metric strong{font-size:27px!important}.metric span{font-size:10px!important}
+.coverageStrip{margin:8px 0 10px!important;padding:7px 12px!important}
+.chartLayout{grid-template-columns:minmax(0,1.9fr) minmax(345px,.93fr)!important;gap:10px!important}
+.chartCard{padding:12px 13px!important;border-radius:10px!important}
+.chartCard h3{font-size:13px!important}.cardHeading{margin-bottom:7px!important;border-bottom:0!important}
+.chartLegend{display:flex;align-items:center;gap:9px!important;flex-wrap:wrap}
+.chartLegend select{font-size:10px;color:#52748c;background:#fff;border:1px solid #d8e5ee;padding:5px 6px;border-radius:5px;margin-left:5px}
+.chartInfo{color:#86a0ae;font-size:11px;cursor:help}
+.lineGraph{display:block;width:100%;height:207px!important}
+.donutLayout{min-height:220px!important;gap:14px!important}
+.donut{width:174px!important;height:174px!important;flex-basis:174px!important}
+.donutHole{width:115px!important;height:115px!important}.donutHole strong{font-size:27px!important}.donutHole small{font-size:10px;color:#8ba0a8}
+.donutLegend{gap:8px!important}.donutLegend>div{grid-template-columns:9px minmax(0,1fr) 22px 34px!important;gap:7px!important;font-size:11px!important}
+.secondaryLayout{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;margin-top:10px!important}
+.secondaryLayout .chartCard{min-height:202px!important}
+.secondaryLayout>:last-child{grid-column:auto!important}
+.reasonRows,.stageSummary{gap:7px!important}
+.reasonRow{grid-template-columns:minmax(120px,1.55fr) minmax(65px,1fr) 18px 30px!important;gap:8px!important;font-size:11px!important}
+.reasonRow small,.stageRow small{font-size:10px;color:#678296;text-align:right}
+.reasonTrack,.stageTrack{height:12px!important;background:#edf2f5!important;border-radius:3px!important}
+.reasonTrack i,.stageTrack i{height:100%;display:block;border-radius:3px!important}
+.stageRow{grid-template-columns:minmax(100px,1.35fr) minmax(65px,1fr) 18px 30px!important;gap:8px!important;font-size:11px!important}
+.stageRow>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.garageBars{height:163px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;padding:18px 4px 4px;border-bottom:1px solid #dce7ee;background:repeating-linear-gradient(to top,transparent 0px,transparent 37px,#edf3f6 38px)}
+.garageColumn{height:100%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
+.garageBar{width:min(55px,76%);min-height:5px;border-radius:4px 4px 0 0;flex:none;box-shadow:0 2px 7px #1e48600c}
+.garageValue{color:#2d5971;font-weight:800;font-size:11px}
+.garageColumn>span{font-size:9px;line-height:1.2;color:#6b8193;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;height:22px;text-align:center}
+.bottomLayout{grid-template-columns:1.4fr 1.05fr!important;gap:10px!important;margin-top:10px!important}
+.bottomLayout .chartCard{min-height:170px!important}
+.dataNote{font-size:10px!important;line-height:1.4!important}
+@media(max-width:1500px){.metric{padding:9px!important;gap:6px!important}.metric strong{font-size:23px!important}.metricIcon{width:31px!important;height:31px!important;flex-basis:31px!important}.chartLayout{grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr)!important}}
+@media(max-width:1150px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.chartLayout{grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr)!important}}
+@media(max-width:870px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}}
+@media(max-width:520px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.reasonRow,.stageRow{grid-template-columns:minmax(80px,1.2fr) minmax(50px,1fr) 18px 28px!important}}
