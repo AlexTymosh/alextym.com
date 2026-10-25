@@ -252,3 +252,20 @@ def test_active_case_prevents_accidental_archive(databases):
         vor_data.archive_vehicle(1, True)
     state = vor_data.register_list()
     assert state["vehicles"][0]["is_archived"] == 0
+
+
+# CodeQL PR-20: preserve row numbers but never disclose internal exception text.
+def test_import_preview_hides_internal_row_validation_errors(databases, monkeypatch):
+    private_detail = "internal database C:/private/backup.db and secret token"
+
+    def reject_registration(_registration):
+        raise ValueError(private_detail)
+
+    monkeypatch.setattr(vor_data, "normalise_reg", reject_registration)
+    preview = vor_data.prepare_import(
+        "fleet.csv",
+        encode(csv_data([["AB26 XYZ", "Ford Transit", "Basingstoke"]])),
+        "skip",
+    )
+    assert preview["errors"] == [{"row": "2", "error": "Invalid row data"}]
+    assert private_detail not in str(preview)

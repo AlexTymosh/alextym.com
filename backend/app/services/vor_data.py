@@ -499,8 +499,9 @@ def prepare_import(filename: str, content_b64: str, mode: str) -> dict:
                     "row_number": r["row_number"],
                 }
             )
-        except ValueError as exc:
-            errors.append({"row": r["row_number"], "error": str(exc)})
+        except ValueError:
+            # Never return exception text in a user-visible import preview.
+            errors.append({"row": r["row_number"], "error": "Invalid row data"})
     sha = hashlib.sha256(binary).hexdigest()
     with database() as db:
         existing = {
