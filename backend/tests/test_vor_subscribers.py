@@ -1,10 +1,43 @@
-"""v1.2: subscriber notifications, narrow directory, overdue dates, migration safety."""
+"""Active VOR subscriber notifications, allowlisting and overdue-date tests."""
 
 from datetime import date
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.api.vor import router
 from app.services import vor_store
+
+
+def configure_subscribers(client, vehicle_id):
+    """Build independent test subscriber lists instead of relying on seed contacts."""
+    snapshot = client.get("/api/vor/bootstrap").json()
+    for entry in snapshot["subscriptions"]:
+        if entry["vehicle_id"] == vehicle_id and entry["is_subscriber"]:
+            response = client.post(
+                "/api/vor/subscribers",
+                json={
+                    "vehicle_id": vehicle_id,
+                    "contact_id": entry["contact_id"],
+                    "subscribed": False,
+                },
+            )
+            assert response.status_code == 200, response.text
+    emails = ("alex@unit.example", "victoria@unit.example", "garage@example.test")
+    for index, email in enumerate(emails):
+        contact = client.post(
+            "/api/vor/contacts",
+            json={
+                "name": f"Fixture recipient {index}",
+                "email": email,
+                "role": "external" if index == 2 else "internal",
+            },
+        )
+        assert contact.status_code == 200, contact.text
+        subscribed = client.post(
+            "/api/vor/subscribers",
+            json={"vehicle_id": vehicle_id, "contact_id": contact.json()["id"], "subscribed": True},
+        )
+        assert subscribed.status_code == 200, subscribed.text
+    return set(emails)
 
 
 def test_subscribers_and_simulated_notification(monkeypatch, tmp_path):
@@ -20,17 +53,16 @@ def test_subscribers_and_simulated_notification(monkeypatch, tmp_path):
         assert c.post("/api/vor/login", json={"password": "Victoria"}).status_code == 200
         snap = c.get("/api/vor/bootstrap").json()
         assert len(snap["vehicles"]) == 20
-        assert len(snap["contacts"]) == 4
+        v = next(x for x in snap["vehicles"] if x["registration"] == "GX24 KLM")
+        expected_emails = configure_subscribers(c, v["id"])
+        snap = c.get("/api/vor/bootstrap").json()
         contacts = {x["id"]: x for x in snap["contacts"]}
-        for v in snap["vehicles"]:
-            emails = {
-                contacts[s["contact_id"]]["email"]
-                for s in snap["subscriptions"]
-                if s["vehicle_id"] == v["id"]
-            }
-            assert "alex@unit.example" in emails
-            assert "victoria@unit.example" in emails
-            assert len(emails) == 3
+        subscribed = {
+            contacts[item["contact_id"]]["email"]
+            for item in snap["subscriptions"]
+            if item["vehicle_id"] == v["id"] and item["is_subscriber"]
+        }
+        assert subscribed == expected_emails
         overdue = sum(
             v[col] < str(date.today())
             for v in snap["vehicles"]
@@ -91,7 +123,9 @@ def test_live_send_blocked_until_every_subscriber_allowlisted(monkeypatch, tmp_p
     with TestClient(app) as c:
         assert c.post("/api/vor/login", json={"password": "Victoria"}).status_code == 200
         snap = c.get("/api/vor/bootstrap").json()
-        v = snap["vehicles"][0]
+        v = next(x for x in snap["vehicles"] if x["registration"] == "GX24 KLM")
+        configure_subscribers(c, v["id"])
+        snap = c.get("/api/vor/bootstrap").json()
         message = {
             "vehicle_id": v["id"],
             "kind": "email",

@@ -1,7 +1,7 @@
 """Integrate the single-route Fleet VOR Hub app shell on top of PR-03.
 
 Run from the repository root after extracting this zip. Only changes the v2
-VorHub component and CSS; frozen /fleet-vor-hub-01 is never touched.
+VorHub component and CSS.
 Idempotent: a second invocation reports Already patched without duplicating code.
 """
 from __future__ import annotations
@@ -27,13 +27,11 @@ PATCHES=[
  ('</header>\n  {notice&&',
   '</header>}\n  {notice&&'),
 ]
-CSS_ADD='\n/* Embedded in the single-route FleetApp shell; frozen v1 is untouched. */\n.root.embeddedRoot{position:relative;inset:auto;z-index:auto;width:100%;height:100%;min-height:0;overflow:hidden;}\n'
+CSS_ADD='\n/* Embedded in the single-route FleetApp shell. */\n.root.embeddedRoot{position:relative;inset:auto;z-index:auto;width:100%;height:100%;min-height:0;overflow:hidden;}\n'
 
 
 def main()->None:
     required=[
-      ROOT/'backend/app/services/vor_store_v1.py',
-      ROOT/'frontend/app/fleet-vor-hub-01/page.tsx',
       ROOT/'frontend/app/fleet-vor-hub/FleetApp.tsx',
       ROOT/'frontend/app/fleet-vor-hub/register/Panel.tsx',
       ROOT/'frontend/app/fleet-vor-hub/new-defect/Panel.tsx',

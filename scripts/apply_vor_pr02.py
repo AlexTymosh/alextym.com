@@ -30,8 +30,6 @@ def preflight():
         for marker in items:
             if marker not in txt and not (path==main and 'from app.api.vor_data import router as vor_data_router' in txt) and not (path==store and 'WHERE COALESCE(is_archived,0)=0' in txt) and not (path==ui and '/fleet-vor-hub/register' in txt):
                 raise RuntimeError(f'Unsupported version; missing marker {marker!r} in {path}')
-    assert (root/'backend/app/services/vor_store_v1.py').is_file(), 'Frozen v1 must exist before v2 migration'
-    assert (root/'backend/_local/vor_hub_01.sqlite3').is_file(), 'Frozen v1 SQLite missing: do not proceed'
 
 
 def main_run():

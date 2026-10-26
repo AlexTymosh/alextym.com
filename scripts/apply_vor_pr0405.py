@@ -2,7 +2,7 @@
 
 Run from any directory: python scripts/apply_vor_pr0405.py
 Fails before writing if expected PR-03 integration anchors are absent. Re-running is safe.
-Never writes to the frozen /fleet-vor-hub-01 source or SQLite.
+Only updates active Fleet VOR Hub v2 files.
 """
 from __future__ import annotations
 from pathlib import Path
@@ -32,12 +32,9 @@ def apply():
         ROOT/'frontend/app/fleet-vor-hub/operations/OperationsPanel.tsx',
         ROOT/'frontend/app/fleet-vor-hub/operations/WorkflowSettingsPanel.tsx',
         ROOT/'frontend/app/fleet-vor-hub/operations/OperationsQueuePanel.tsx',
-        ROOT/'backend/app/services/vor_store_v1.py',
-        ROOT/'frontend/app/fleet-vor-hub-01/page.tsx']
+        ]
     for path in prerequisite:
         if not path.is_file():raise RuntimeError(f'Missing file: {path.relative_to(ROOT)}')
-    if not (ROOT/'backend/_local/vor_hub_01.sqlite3').is_file():
-        raise RuntimeError('Frozen v1 SQLite missing; do not proceed')
     front=FRONT.read_text(encoding='utf-8')
     shell=SHELL.read_text(encoding='utf-8')
     main=MAIN.read_text(encoding='utf-8')

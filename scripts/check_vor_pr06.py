@@ -8,6 +8,4 @@ assert 'reconciliation:"Reconciliation"' in shell
 assert 'section==="reconciliation"&&<ReconciliationPanel/>' in shell
 assert 'import ReconciliationPanel' in shell
 assert 'id:"reconciliation"' in shell
-assert (root/'frontend/app/fleet-vor-hub-01/page.tsx').exists()
-assert (root/'backend/app/services/vor_store_v1.py').exists()
 print('PASS: PR-06 reconciliation integration, v2-only endpoints and single-route menu')
