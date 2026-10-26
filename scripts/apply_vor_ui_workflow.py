@@ -111,10 +111,9 @@ def replace_once(src:str, old:str, new:str, name:str)->str:
 
 
 def apply()->None:
-    required=[ROOT/'frontend/app/fleet-vor-hub/FleetApp.tsx',ROOT/'frontend/app/fleet-vor-hub-01/page.tsx',ROOT/'backend/app/services/vor_store_v1.py',ROOT/'backend/app/api/vor_checklist.py',EXPORTS]
+    required=[ROOT/'frontend/app/fleet-vor-hub/FleetApp.tsx',ROOT/'backend/app/api/vor_checklist.py',EXPORTS]
     for path in required:
         if not path.is_file():raise RuntimeError(f'Missing PR prerequisite: {path.relative_to(ROOT)}')
-    if not (ROOT/'backend/_local/vor_hub_01.sqlite3').is_file():raise RuntimeError('Frozen v1 database is missing')
     frontend=FRONT.read_text(encoding='utf-8')
     if 'WORKFLOW_ITEMS: Record<number,' not in frontend:
         frontend=replace_once(frontend,'const two = (x:number)',ITEMS+'\nconst two = (x:number)','workflow constants')

@@ -27,7 +27,7 @@ def apply() -> None:
         ROOT/'frontend/app/fleet-vor-hub/reconciliation/reconciliation.module.css',
         ROOT/'backend/app/services/vor_reconciliation.py',
         ROOT/'backend/app/api/vor_reconciliation.py',
-        ROOT/'backend/app/services/vor_store_v1.py']
+        ]
     for path in required:
         if not path.is_file():
             raise RuntimeError(f'Missing prerequisite: {path.relative_to(ROOT)}')

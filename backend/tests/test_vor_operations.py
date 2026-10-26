@@ -1,17 +1,16 @@
-"""PR-04+05: real SQLite operational controls; frozen v1 must remain byte-identical."""
+"""V2 SQLite operational controls and workflow release checks."""
 
 import sqlite3
 from contextlib import contextmanager
 from datetime import date, timedelta
 
 import pytest
-from app.services import vor_data, vor_operations as ops, vor_store, vor_store_v1
+from app.services import vor_data, vor_operations as ops, vor_store
 
 
 @pytest.fixture
 def dbs(monkeypatch, tmp_path):
     v2 = tmp_path / "active.sqlite3"
-    v1 = tmp_path / "frozen.sqlite3"
     schema = """
       PRAGMA foreign_keys=ON;
       CREATE TABLE vehicles(id INTEGER PRIMARY KEY,registration TEXT NOT NULL UNIQUE,model TEXT NOT NULL,
@@ -45,9 +44,8 @@ def dbs(monkeypatch, tmp_path):
       INSERT INTO ticket_steps(ticket_id,step_index,label,status) VALUES('PS001',1,'Diagnosis Scheduled','pending');
       INSERT INTO ticket_steps(ticket_id,step_index,label,status) VALUES('PS001',2,'Awaiting Quotation','pending');
     """
-    for p in [v1, v2]:
-        with sqlite3.connect(p) as db:
-            db.executescript(schema)
+    with sqlite3.connect(v2) as db:
+        db.executescript(schema)
 
     @contextmanager
     def connection():
@@ -60,14 +58,11 @@ def dbs(monkeypatch, tmp_path):
             conn.close()
 
     monkeypatch.setattr(vor_store, "database_path", lambda: v2)
-    monkeypatch.setattr(vor_store_v1, "database_path", lambda: v1)
     monkeypatch.setattr(vor_store, "connection", connection)
-    return v2, v1
+    return v2
 
 
-def test_actions_deadlines_blockers_docs_and_v1_integrity(dbs):
-    active, frozen = dbs
-    before = frozen.read_bytes()
+def test_actions_deadlines_blockers_docs(dbs):
     deadline = (date.today() - timedelta(days=2)).isoformat()
     action = ops.add_action(1, "PS001", "Follow up supplier", "Test User", deadline)
     assert action["id"] > 0
@@ -82,12 +77,11 @@ def test_actions_deadlines_blockers_docs_and_v1_integrity(dbs):
     overview = ops.overview()["vehicles"]["1"]
     assert overview["actions"] == 0 and overview["overdue"] == 0 and overview["blockers"] == 0
     assert ops.queue() == {"actions": [], "blockers": []}
-    assert frozen.read_bytes() == before
     assert len(ops.details(1, "PS001")["audit"]) >= 6
 
 
 def test_explicit_manual_status_and_release_gate(dbs):
-    active, frozen = dbs
+    active = dbs
     with pytest.raises(ValueError, match="confirmation"):
         ops.confirm_status(1, "PS001", "Operational", "Repair confirmed", False)
     with pytest.raises(ValueError, match="checklist incomplete"):
@@ -111,7 +105,7 @@ def test_explicit_manual_status_and_release_gate(dbs):
 
 
 def test_override_and_stage_skip_are_audited(dbs):
-    active, _ = dbs
+    active = dbs
     assert ops.confirm_status(
         1, "PS001", "Operational", "Emergency override with justification", True, True
     )["changed"]
@@ -132,7 +126,6 @@ def test_override_and_stage_skip_are_audited(dbs):
 
 
 def test_template_required_flags_and_ticket_ownership(dbs):
-    active, _ = dbs
     stage = ops.templates()["items"]
     assert stage and any(x["item_key"] == "notification_sent" for x in stage)
     ops.update_template(0, "response_received", "Response received from garage", False)

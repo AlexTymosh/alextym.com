@@ -1,4 +1,4 @@
-"""v1.3 manage and provider delivery regression tests. No external requests."""
+"""Active Fleet VOR contact management and provider delivery tests."""
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

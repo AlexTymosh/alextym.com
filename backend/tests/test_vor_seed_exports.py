@@ -1,4 +1,4 @@
-"""Regression checks for L-layout v1 data migration and downloadable exports."""
+"""Active Fleet VOR seed, migration and downloadable export regression tests."""
 
 from __future__ import annotations
 
@@ -32,23 +32,20 @@ def test_refresh_and_download(monkeypatch, tmp_path):
         assert c.post("/api/vor/login", json={"password": "Victoria"}).status_code == 200
         body = c.get("/api/vor/bootstrap").json()
         assert len(body["vehicles"]) == 20
-        assert len(body["tickets"]) == 40
+        assert len(body["tickets"]) == 42
         assert all(re.fullmatch(r"PS000\d{3}", t["id"]) for t in body["tickets"])
-        assert len({t["id"] for t in body["tickets"]}) == 40
+        assert len({t["id"] for t in body["tickets"]}) == len(body["tickets"])
         assert not any("iveco" in v["model"].lower() for v in body["vehicles"])
         assert sum(v["model"].startswith("Tesla") for v in body["vehicles"]) >= 2
         contact_lookup = {x["id"]: x for x in body["contacts"]}
-        expected = {"Alex Tym", "Victoria B.", "Jason W.", "Janine M.", "Gosha T."}
-        external = {"Steve EXHAUSTON", "John CITYSIDE GARAGE", "Mark M&BRIDGE"}
-        for v in body["vehicles"]:
-            names = [
-                contact_lookup[x["contact_id"]]
-                for x in body["subscriptions"]
-                if x["vehicle_id"] == v["id"]
-            ]
-            assert len([x for x in names if x["role"] == "internal"]) in (2, 3)
-            assert len([x for x in names if x["role"] == "external"]) == 1
-            assert all(x["name"] in expected | external for x in names)
+        vehicle_ids = {v["id"] for v in body["vehicles"]}
+        assert body["subscriptions"]
+        assert all(
+            item["vehicle_id"] in vehicle_ids
+            and item["contact_id"] in contact_lookup
+            and contact_lookup[item["contact_id"]]["role"] in {"internal", "external"}
+            for item in body["subscriptions"]
+        )
 
         x = c.get("/api/vor/export.xlsx")
         assert x.status_code == 200

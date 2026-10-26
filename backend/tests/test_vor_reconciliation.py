@@ -1,4 +1,4 @@
-"""PR-06: independent synthetic source snapshots, review audit, v1 isolation."""
+"""Independent synthetic reconciliation snapshots and review audit."""
 
 import sqlite3
 import zipfile
@@ -6,13 +6,12 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import pytest
-from app.services import vor_reconciliation as recon, vor_store, vor_store_v1
+from app.services import vor_reconciliation as recon, vor_store
 
 
 @pytest.fixture
 def dbs(monkeypatch, tmp_path):
     v2 = tmp_path / "v2.sqlite3"
-    v1 = tmp_path / "v1.sqlite3"
     schema = """
       CREATE TABLE vehicles(id INTEGER PRIMARY KEY, registration TEXT UNIQUE NOT NULL,
         availability_status TEXT NOT NULL CHECK(availability_status IN ('VOR','Operational')));
@@ -23,9 +22,8 @@ def dbs(monkeypatch, tmp_path):
       INSERT INTO vehicles VALUES(2,'AB26 XYZ','Operational');
       INSERT INTO vehicles VALUES(3,'CD25 ABC','VOR');
     """
-    for p in (v1, v2):
-        with sqlite3.connect(p) as db:
-            db.executescript(schema)
+    with sqlite3.connect(v2) as db:
+        db.executescript(schema)
 
     @contextmanager
     def connection():
@@ -38,9 +36,8 @@ def dbs(monkeypatch, tmp_path):
             conn.close()
 
     monkeypatch.setattr(vor_store, "database_path", lambda: v2)
-    monkeypatch.setattr(vor_store_v1, "database_path", lambda: v1)
     monkeypatch.setattr(vor_store, "connection", connection)
-    return v2, v1
+    return v2
 
 
 def _timestamp():
@@ -48,8 +45,7 @@ def _timestamp():
 
 
 def test_seed_compare_and_audit_persist_without_status_change(dbs):
-    active, frozen = dbs
-    pristine = frozen.read_bytes()
+    active = dbs
     b = recon.batches()
     assert len(b["batches"]) == 2
     result = recon.compare()
@@ -75,7 +71,6 @@ def test_seed_compare_and_audit_persist_without_status_change(dbs):
         assert [
             row[0] for row in db.execute("SELECT availability_status FROM vehicles ORDER BY id")
         ] == ["VOR", "Operational", "VOR"]
-    assert frozen.read_bytes() == pristine
 
 
 def test_import_snapshot_and_new_comparison_immutable_previous_run(dbs):

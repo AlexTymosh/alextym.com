@@ -55,17 +55,8 @@ def normalise_header(label: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[_\-]+", " ", str(label).strip().lower()))
 
 
-def _guard_v1_path() -> None:
-    """Fail closed: no v2 writes if v1 and v2 point to one SQLite file."""
-    from app.services import vor_store_v1
-
-    if vor_store.database_path().resolve() == vor_store_v1.database_path().resolve():
-        raise RuntimeError("v1 and v2 database paths must be different")
-
-
 @contextmanager
 def database() -> Iterator[sqlite3.Connection]:
-    _guard_v1_path()
     with vor_store.connection() as db:
         # Contextmanager above closes connection, not automatically committing.
         _migrate(db)
