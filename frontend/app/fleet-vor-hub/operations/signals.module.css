@@ -1,0 +1,17 @@
+.group{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:6px}.tag{display:inline-flex;align-items:center;gap:3px;padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700;background:#e8ece8;color:#61716a}
+.danger{background:#fee8e8;color:#bd444e}.pending{background:#f9eed5;color:#956b2e}.success{background:#dff2e3;color:#3d8554}
+.progress{display:flex;flex:0 0 100%;gap:2px;margin-top:2px}.progress span{height:4px;flex:1;background:#dfe7df;border-radius:2px}.progress .complete{background:#63ad73}.next{color:#6e7b70;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;font-size:9px}
+
+/*PR08_INSYTLY_VISUAL_BEGIN*/
+/* Fleet Hub PR-08 — Insytly Mission Control-style indicator tiles. */
+.group{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin:3px 0 0;padding-top:4px;border-top:1px solid #edf1f5;min-width:0}
+.tag{display:inline-flex;align-items:center;gap:4px;min-height:20px;padding:3px 6px;border-radius:4px;border:1px solid #e5eaef;background:#f7f9fb;color:#647482;font-size:9px;font-weight:800;line-height:1.1;white-space:nowrap}
+.tag svg{width:12px;height:12px;flex:0 0 12px}
+.danger{background:#fa666b;color:white;border-color:#fa666b}
+.pending{background:#fff0d9;color:#91602f;border-color:#f5dbb2}
+.success{background:#64ae72;color:white;border-color:#64ae72}
+.progress{display:flex;flex:0 0 100%;gap:3px;margin-top:3px}
+.progress span{height:4px;flex:1;background:#e3e9ed;border-radius:2px}
+.progress .complete{background:#64ae72}
+.next{font-size:9px;color:#6f8090;line-height:1.25;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* PR08_INSYTLY_VISUAL_END */

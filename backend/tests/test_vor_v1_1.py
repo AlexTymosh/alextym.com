@@ -7,6 +7,37 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.vor import router
+from app.api.vor_checklist import CHECKLIST, router as checklist_router
+from datetime import date
+
+
+def _complete_workflow_checklist(client, vehicle_id: int, ticket_id: str) -> None:
+    """Complete this ticket's current required checklist before advancing."""
+    snapshot = client.get("/api/vor/bootstrap")
+    assert snapshot.status_code == 200
+    current = next(
+        (
+            step
+            for step in snapshot.json()["steps"]
+            if step["ticket_id"] == ticket_id and step["status"] == "current"
+        ),
+        None,
+    )
+    assert current is not None
+    index = current["step_index"]
+    keys = CHECKLIST[index] if index < len(CHECKLIST) else ()
+    for key in keys:
+        item = {
+            "vehicle_id": vehicle_id,
+            "ticket_id": ticket_id,
+            "step_index": index,
+            "key": key,
+            "checked": True,
+        }
+        if key == "diagnosis_date":
+            item["value"] = date.today().isoformat()
+        response = client.post("/api/vor/checklists", json=item)
+        assert response.status_code == 200, response.text
 
 
 def test_scenario_and_responsible_keep_existing_data(monkeypatch, tmp_path):
@@ -17,6 +48,7 @@ def test_scenario_and_responsible_keep_existing_data(monkeypatch, tmp_path):
     monkeypatch.setenv("VOR_DEMO_SEND_REAL_EMAIL", "false")
     app = FastAPI()
     app.include_router(router, prefix="/api")
+    app.include_router(checklist_router, prefix="/api")
     with TestClient(app) as c:
         assert c.get("/api/vor/bootstrap").status_code == 401
         assert c.post("/api/vor/login", json={"password": "Victoria"}).status_code == 200
@@ -82,6 +114,7 @@ def test_scenario_and_responsible_keep_existing_data(monkeypatch, tmp_path):
             "Keep this note through scenario updates" in e["body"] for e in payload["events"]
         )
         assert any("Workflow changed" in e["body"] for e in payload["events"])
+        _complete_workflow_checklist(c, vehicle["id"], ticket["id"])
         assert (
             c.post(
                 "/api/vor/advance", json={"vehicle_id": vehicle["id"], "ticket_id": ticket["id"]}

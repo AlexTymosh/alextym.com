@@ -5,6 +5,9 @@ const appRoot = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  experimental: {
+    agentUpgrade: false,
+  },
   turbopack: {
     root: appRoot,
   },

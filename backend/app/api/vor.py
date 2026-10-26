@@ -386,11 +386,11 @@ def create_booking(body: NewBooking, request: Request) -> dict:
 @router.post("/advance", dependencies=[Depends(required)])
 def advance(body: NextStep, request: Request) -> dict:
     same_origin(request)
-    try:
-        vor_store.advance_workflow(body.vehicle_id, body.ticket_id)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    return {"ok": True}
+    from app.api.vor_checklist import AdvanceStage, advance_with_checks
+
+    return advance_with_checks(
+        AdvanceStage(vehicle_id=body.vehicle_id, ticket_id=body.ticket_id), request
+    )
 
 
 @router.post("/scenario", dependencies=[Depends(required)])

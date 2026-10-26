@@ -1,0 +1,147 @@
+.page{box-sizing:border-box;min-height:100%;height:100%;padding:16px 18px 28px;overflow:auto;background:#eff3f8;color:#273b49;font-family:inherit}
+.page *{box-sizing:border-box}.heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.heading h2{font-size:19px;margin:0 0 4px;color:#273949}.heading p{font-size:11px;margin:0;color:#82929e}.heading button,.filters button{background:#fff;border:1px solid #d9e4eb;color:#466778;border-radius:7px;padding:9px 12px;cursor:pointer;font-weight:700;font-size:11px}.heading button:disabled{opacity:.5}.filters{display:flex;flex-wrap:wrap;gap:9px;background:#fff;border:1px solid #dee7ed;border-radius:10px;padding:10px 12px;margin:14px 0}.filters label{display:flex;flex-direction:column;gap:4px;font-size:10px;color:#607582;font-weight:700}.filters input,.filters select{border:1px solid #d7e2e8;padding:7px 9px;border-radius:6px;min-width:105px;max-width:190px;color:#2e4656;background:#fff;font:inherit;font-size:11px}.filters .toggle{flex-direction:row;align-items:center}.filters .toggle input{min-width:0}.filters button{align-self:end}.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.metric,.chartCard{background:#fff;border:1px solid #dbe5ec;border-radius:10px;box-shadow:0 2px 9px #2e45520a;min-width:0}.metric{padding:16px 12px;display:grid;gap:7px;border-top:3px solid #aebec8}.metric small{font-size:11px;font-weight:750;color:#536978}.metric strong{font-size:26px;font-weight:820;line-height:1.1;color:#263b49}.metric span{font-size:10px;color:#86949f}.metric.green{border-top-color:#64ae72}.metric.red{border-top-color:#f16d72}.metric.amber{border-top-color:#efb764}.coverageStrip{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0 13px;font-size:11px;color:#647887}.coverageStrip strong{color:#345943}.chartLayout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(310px,1fr);gap:10px}.chartCard{padding:15px 16px;margin:0;min-width:0}.cardHeading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}.chartCard h3{font-size:13px;font-weight:800;margin:0;color:#2d4252;border-left:3px solid #64ae72;padding-left:8px}.cardNote{font-size:10px;color:#80929e}.chartLegend{display:flex;gap:10px;font-size:10px;color:#627586}.chartLegend span{display:flex;align-items:center;gap:4px}.chartLegend i{width:8px;height:8px;border-radius:50%;display:inline-block}.legendRed{background:#ef7579}.legendGreen{background:#58aa78}.lineGraph{width:100%;height:230px;overflow:visible}.dataNote{font-size:10px;line-height:1.45;color:#8294a0;margin:8px 0 0}.donutLayout{display:flex;align-items:center;justify-content:center;gap:18px;min-height:245px}.donut{height:174px;width:174px;flex:none;border-radius:50%;display:grid;place-items:center}.donutHole{height:122px;width:122px;border-radius:50%;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px}.donutHole strong{font-size:26px;color:#263f4a}.donutHole span{font-size:10px;color:#82919c}.donutLegend{flex:1;display:grid;gap:12px;min-width:0}.donutLegend>div{display:grid;grid-template-columns:8px minmax(0,1fr) 25px 38px;gap:6px;align-items:center;font-size:11px;color:#5d7280}.donutLegend i{width:8px;height:8px;border-radius:50%}.greenDot{background:#55aa78}.redDot{background:#f16d72}.greyDot{background:#bfced8}.donutLegend strong,.donutLegend small{text-align:right;font-size:11px}.donutLegend small{color:#8494a0}.secondaryLayout{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px;margin-top:10px}.reasonRows{display:grid;gap:8px}.reasonRow{display:grid;grid-template-columns:minmax(95px,1.7fr) minmax(80px,1fr) 26px;align-items:center;gap:9px;font-size:10px;color:#597080}.reasonRow span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.reasonRow strong{text-align:right}.reasonTrack{height:10px;border-radius:3px;background:#f0f4f6;overflow:hidden}.reasonTrack i{display:block;background:#f7a6a6;height:100%;border-radius:3px}.reasonRow:nth-child(2) .reasonTrack i{background:#f5bd8c}.reasonRow:nth-child(3) .reasonTrack i{background:#f1d18f}.durationGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.durationGrid>div{background:#f5f9f6;border:1px solid #e4ece6;border-radius:8px;padding:14px 9px}.durationGrid small{font-size:10px;color:#758e82;display:block;margin-bottom:8px}.durationGrid strong{font-size:20px;color:#2f6450}.tableScroll{overflow-x:auto;max-height:270px;overflow-y:auto}.tableScroll table{border-collapse:collapse;width:100%;font-size:10px}.tableScroll th,.tableScroll td{border-bottom:1px solid #edf0f4;padding:8px 6px;text-align:left;white-space:nowrap}.tableScroll th{color:#748797;font-weight:800}.bottomLayout{display:grid;grid-template-columns:1.55fr 1fr;gap:10px;margin-top:10px}.statusPill{display:inline-block;background:#e7f5e9;color:#327a49;border-radius:5px;padding:3px 6px}.priority{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.priority>div{background:#f3f8f7;border:1px solid #e4edef;border-radius:8px;padding:11px;display:grid;gap:5px}.priority strong{font-size:20px;color:#295341}.priority span{font-size:10px;color:#6e828d}.emptyChart{padding:70px 15px;color:#85919b;text-align:center}.error{background:#fff0f0;color:#a93e4c;border:1px solid #f5c2c3;padding:10px;border-radius:7px}
+@media(max-width:1350px){.metrics{grid-template-columns:repeat(3,1fr)}.chartLayout{grid-template-columns:1fr}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))}.secondaryLayout>:last-child{grid-column:span 2}}
+@media(max-width:820px){.metrics{grid-template-columns:repeat(2,1fr)}.secondaryLayout,.bottomLayout{grid-template-columns:1fr}.secondaryLayout>:last-child{grid-column:auto}.chartLayout{grid-template-columns:1fr}.donutLayout{flex-wrap:wrap}.page{padding:10px}.lineGraph{height:185px}}
+
+/* PR10 reference-fit dashboard: richer KPI cards and precise scale */
+.page{--dline:#dfe8ee;--dtext:#20364b;background:#eff4f8;padding:15px clamp(13px,1.7vw,28px) 26px;max-width:none;margin:0;}
+.heading{align-items:center;gap:18px;padding:0 1px 10px}
+.heading h2{font-size:19px;color:#162c44;font-weight:850}
+.heading p{font-size:11px}
+.heading button{border:1px solid #dce7ed;border-radius:7px;color:#477a5a;background:white}
+.filters{margin:6px 0 12px;padding:9px 12px;gap:9px;border:1px solid #dee7ec;box-shadow:0 1px 4px #21384b08;background:#fff}
+.filters input,.filters select{font-size:11px;min-height:31px}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0}
+.metric{display:flex;align-items:flex-start;gap:11px;padding:15px 12px;min-height:110px;border:1px solid var(--dline);border-radius:10px;border-top:1px solid var(--dline);box-shadow:0 3px 10px #1b355008;background:#fff}
+.metricIcon{width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;font-style:normal;font-size:20px;font-weight:850;border-radius:10px;color:#2876ad;background:#edf5fc}
+.metric.green .metricIcon{color:#29985e;background:#e9f7ed}
+.metric.red .metricIcon{color:#e35a65;background:#fff0f1}
+.metric.amber .metricIcon{color:#d69232;background:#fff4e9}
+.metricText{display:grid;gap:6px;min-width:0;align-content:start}
+.metric small{font-size:10.5px;color:#506a80;font-weight:800;white-space:normal}
+.metric strong{font-size:28px;font-weight:850;line-height:1.06;color:#172e46}
+.metric span{font-size:10px;color:#8599a7;white-space:normal}
+.coverageStrip{padding:8px 11px;margin:9px 0 12px;background:#e7f5eb;border-radius:7px;border:1px solid #d4e9dc;color:#44795a}
+.coverageStrip strong{color:#277a48}
+.chartLayout{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(290px,.94fr);gap:12px}
+.chartCard{padding:15px 16px 16px;min-width:0;border:1px solid var(--dline);border-radius:10px;background:#fff;box-shadow:0 3px 12px #17354b0a}
+.cardHeading{padding:0 0 6px;margin:0 0 7px;border-bottom:1px solid #f0f4f6;min-height:28px}
+.chartCard h3{font-size:13px;font-weight:850;color:#182f47;border-left:3px solid #5db77b;padding-left:8px}
+.chartLegend span{font-size:10px;color:#5e7588}
+.lineGraph{height:243px;width:100%;display:block}
+.donutLayout{display:flex;gap:16px;align-items:center;justify-content:center;min-height:246px}
+.donut{width:186px;height:186px;flex:0 0 186px;box-shadow:0 0 0 1px #e4e9ee}
+.donutHole{width:125px;height:125px;gap:5px;box-shadow:0 0 0 1px #f1f3f5}
+.donutHole strong{font-size:29px;font-weight:850}
+.donutHole span{font-size:10px;color:#788e9d}
+.donutLegend{gap:16px}
+.donutLegend>div{grid-template-columns:9px minmax(0,1fr) 24px 39px;gap:7px;font-size:10.5px}
+.donutLegend strong{color:#294659;font-weight:800}
+.secondaryLayout{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+.secondaryLayout .chartCard{min-height:229px}
+.reasonRows{gap:8px}
+.reasonRow{grid-template-columns:minmax(120px,1.4fr) minmax(90px,1fr) 22px;gap:10px;font-size:10px}
+.reasonTrack{height:11px}
+.durationGrid>div{border-radius:8px;padding:14px 10px}
+.durationGrid strong{font-size:21px}
+.bottomLayout{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px;margin-top:12px}
+.bottomLayout .chartCard{min-height:195px}
+.tableScroll{max-height:260px}
+.tableScroll th,.tableScroll td{font-size:10px;padding:7px 7px}
+.tableScroll th{background:#f6f9fb;font-weight:850;color:#627b90}
+.priority>div{padding:10px;background:#f7faf9}
+@media(max-width:1350px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.chartLayout{grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr)}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))}.secondaryLayout>:last-child{grid-column:span 2}}
+@media(max-width:960px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr}.secondaryLayout>:last-child{grid-column:auto}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:550px){.page{padding:9px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric{padding:10px 8px;gap:7px}.metricIcon{width:30px;height:30px;flex-basis:30px;font-size:14px}.metric strong{font-size:22px}.donutLayout{flex-wrap:wrap}.lineGraph{height:190px}}
+
+/* PR11 dashboard hierarchy matched to approved reference without fake KPI values */
+.page{font-size:13px;padding:19px clamp(16px,2vw,30px) 36px!important}
+.heading{padding:0 0 13px!important}.heading h2{font-size:22px!important}.heading p{font-size:12px!important}
+.heading button{padding:11px 14px!important;font-size:12px!important}
+.filters{padding:13px 16px!important;margin:4px 0 17px!important;gap:13px!important;border-radius:11px!important}
+.filters label{font-size:11px!important;gap:6px!important}.filters input,.filters select{font-size:12px!important;min-height:36px!important}
+.metrics{gap:12px!important}.metric{padding:17px 13px!important;min-height:123px!important;gap:12px!important;border-radius:11px!important}
+.metricIcon{width:45px!important;height:45px!important;flex-basis:45px!important;font-size:22px!important}.metric small{font-size:12px!important}.metric strong{font-size:34px!important}.metric span{font-size:11px!important}
+.coverageStrip{font-size:12px!important;margin:13px 0 15px!important;padding:10px 13px!important}
+.chartLayout{grid-template-columns:minmax(0,1.8fr) minmax(325px,.95fr)!important;gap:14px!important}
+.chartCard{padding:18px!important;border-radius:12px!important}.chartCard h3{font-size:15px!important}.cardNote,.chartLegend span{font-size:11px!important}
+.cardHeading{margin-bottom:11px!important}.lineGraph{height:262px!important}.donutLayout{min-height:270px!important;gap:22px!important}.donut{width:200px!important;height:200px!important;flex-basis:200px!important}.donutHole{width:134px!important;height:134px!important}.donutHole strong{font-size:32px!important}
+.donutLegend>div{font-size:12px!important;grid-template-columns:10px minmax(0,1fr) 29px 43px!important}.donutLegend strong,.donutLegend small{font-size:12px!important}
+.secondaryLayout,.bottomLayout{gap:14px!important;margin-top:14px!important}.secondaryLayout .chartCard{min-height:255px!important}
+.reasonRow{font-size:11px!important}.tableScroll th,.tableScroll td{font-size:11px!important;padding:9px 8px!important}.durationGrid small{font-size:11px!important}.durationGrid strong{font-size:23px!important}.dataNote{font-size:11px!important}.priority strong{font-size:24px!important}.priority span{font-size:11px!important}
+@media(max-width:1390px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important}.chartLayout{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr)!important}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.secondaryLayout>:last-child{grid-column:span 2!important}}
+@media(max-width:980px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}.secondaryLayout>:last-child{grid-column:auto!important}}
+@media(max-width:520px){.metrics{grid-template-columns:repeat(2,1fr)!important}.metric{padding:11px 8px!important;gap:6px!important}.metricIcon{width:29px!important;height:29px!important;flex-basis:29px!important}.metric strong{font-size:24px!important}}
+/* Additional live cards based on existing bootstrap snapshot; no invented trends */
+.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.secondaryLayout .chartCard{min-height:235px!important}.secondaryLayout>:last-child{grid-column:auto!important}
+.bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.stageSummary{display:grid;gap:10px;align-content:start}.stageRow{display:grid;grid-template-columns:10px minmax(0,1fr) 24px 85px;gap:9px;align-items:center;color:#5c778b;font-size:11px}.stageDot{height:9px;width:9px;border-radius:50%}.stageRow>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stageTrack{height:8px;border-radius:6px;background:#eef3f5;overflow:hidden}.stageTrack i{display:block;height:100%;border-radius:6px}.riskPill{background:#fff1e4;color:#b77c29;border:1px solid #f7dfc0;border-radius:5px;padding:4px 6px;font-size:10px}
+@media(max-width:950px){.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}}
+
+/* PR12 REFERENCE-ACCURATE DASHBOARD: dense at 100% zoom and real data visualizations */
+.page{padding:11px clamp(12px,1.35vw,23px) 25px!important;font-size:12px!important}
+.heading{padding:0 0 7px!important}.heading h2{font-size:19px!important}.heading p{font-size:11px!important}
+.filters{padding:10px 12px!important;margin:4px 0 10px!important;gap:11px!important}.filters label{font-size:10px!important}.filters input,.filters select{min-height:32px!important;font-size:11px!important}
+.metrics{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:10px!important}
+.metric{min-height:91px!important;padding:11px!important;gap:9px!important;align-items:center!important}
+.metricIcon{width:37px!important;height:37px!important;flex-basis:37px!important;font-size:19px!important}
+.metric small{font-size:11px!important}.metric strong{font-size:27px!important}.metric span{font-size:10px!important}
+.coverageStrip{margin:8px 0 10px!important;padding:7px 12px!important}
+.chartLayout{grid-template-columns:minmax(0,1.9fr) minmax(345px,.93fr)!important;gap:10px!important}
+.chartCard{padding:12px 13px!important;border-radius:10px!important}
+.chartCard h3{font-size:13px!important}.cardHeading{margin-bottom:7px!important;border-bottom:0!important}
+.chartLegend{display:flex;align-items:center;gap:9px!important;flex-wrap:wrap}
+.chartLegend select{font-size:10px;color:#52748c;background:#fff;border:1px solid #d8e5ee;padding:5px 6px;border-radius:5px;margin-left:5px}
+.chartInfo{color:#86a0ae;font-size:11px;cursor:help}
+.lineGraph{display:block;width:100%;height:207px!important}
+.donutLayout{min-height:220px!important;gap:14px!important}
+.donut{width:174px!important;height:174px!important;flex-basis:174px!important}
+.donutHole{width:115px!important;height:115px!important}.donutHole strong{font-size:27px!important}.donutHole small{font-size:10px;color:#8ba0a8}
+.donutLegend{gap:8px!important}.donutLegend>div{grid-template-columns:9px minmax(0,1fr) 22px 34px!important;gap:7px!important;font-size:11px!important}
+.secondaryLayout{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;margin-top:10px!important}
+.secondaryLayout .chartCard{min-height:202px!important}
+.secondaryLayout>:last-child{grid-column:auto!important}
+.reasonRows,.stageSummary{gap:7px!important}
+.reasonRow{grid-template-columns:minmax(120px,1.55fr) minmax(65px,1fr) 18px 30px!important;gap:8px!important;font-size:11px!important}
+.reasonRow small,.stageRow small{font-size:10px;color:#678296;text-align:right}
+.reasonTrack,.stageTrack{height:12px!important;background:#edf2f5!important;border-radius:3px!important}
+.reasonTrack i,.stageTrack i{height:100%;display:block;border-radius:3px!important}
+.stageRow{grid-template-columns:minmax(100px,1.35fr) minmax(65px,1fr) 18px 30px!important;gap:8px!important;font-size:11px!important}
+.stageRow>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.garageBars{height:163px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;padding:18px 4px 4px;border-bottom:1px solid #dce7ee;background:repeating-linear-gradient(to top,transparent 0px,transparent 37px,#edf3f6 38px)}
+.garageColumn{height:100%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}
+.garageBar{width:min(55px,76%);min-height:5px;border-radius:4px 4px 0 0;flex:none;box-shadow:0 2px 7px #1e48600c}
+.garageValue{color:#2d5971;font-weight:800;font-size:11px}
+.garageColumn>span{font-size:9px;line-height:1.2;color:#6b8193;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;height:22px;text-align:center}
+.bottomLayout{grid-template-columns:1.4fr 1.05fr!important;gap:10px!important;margin-top:10px!important}
+.bottomLayout .chartCard{min-height:170px!important}
+.dataNote{font-size:10px!important;line-height:1.4!important}
+@media(max-width:1500px){.metric{padding:9px!important;gap:6px!important}.metric strong{font-size:23px!important}.metricIcon{width:31px!important;height:31px!important;flex-basis:31px!important}.chartLayout{grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr)!important}}
+@media(max-width:1150px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important}.secondaryLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}.chartLayout{grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr)!important}}
+@media(max-width:870px){.chartLayout,.secondaryLayout,.bottomLayout{grid-template-columns:1fr!important}}
+@media(max-width:520px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.reasonRow,.stageRow{grid-template-columns:minmax(80px,1.2fr) minmax(50px,1fr) 18px 28px!important}}
+
+/* PR13 BALANCED CHART GRID — equal width at normal zoom */
+.chartLayout,.bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+.chartLayout>.chartCard,.bottomLayout>.chartCard{min-width:0!important}
+.chartLayout>.chartCard .lineGraph{min-height:210px!important;max-width:100%!important}
+.chartLayout>.chartCard .donutLayout{width:100%;justify-content:space-evenly;gap:12px!important}
+.chartLayout>.chartCard .donutLegend{min-width:0;flex:1}
+@media(max-width:1120px){.chartLayout,.bottomLayout{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:860px){.chartLayout,.bottomLayout{grid-template-columns:minmax(0,1fr)!important}}
+
+.metricIcon svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* PR14 STAGE PIE + GARAGE 100% CAPACITY */
+.stagePieLayout{display:grid;grid-template-columns:minmax(150px,38%) minmax(0,1fr);align-items:center;gap:18px;padding:15px 5px 14px;min-height:217px}
+.stagePie{width:min(180px,100%);aspect-ratio:1;border-radius:50%;position:relative;display:grid;place-items:center;justify-self:center}
+.stagePieHole{position:absolute;inset:24%;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;text-align:center}
+.stagePieHole strong{font-size:24px;color:#152e48}.stagePieHole span{font-size:10px;color:#718493}
+.stagePieLegend{display:grid;gap:8px;min-width:0}.stagePieLegend>div{display:grid;grid-template-columns:9px minmax(0,1fr) 25px 35px;align-items:center;gap:7px;font-size:11px;border-bottom:1px solid #eff3f5;padding-bottom:5px}
+.stagePieLegend i{height:9px;width:9px;border-radius:50%}.stagePieLegend span{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.stagePieLegend strong{text-align:right}.stagePieLegend small{color:#6b8396;text-align:right}
+.garageCapacity{display:grid;gap:12px;padding:12px 4px 6px}.garageCapacityRow{display:grid;grid-template-columns:minmax(74px,105px) minmax(0,1fr) 54px 30px;align-items:center;gap:9px;font-size:11px}
+.garageCapacityRow>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#355068}.garageCapacityRow strong{text-align:right;font-size:11px}.garageCapacityRow small{color:#648094;text-align:right}
+.garageCapacityTrack{height:15px;border-radius:6px;background:repeating-linear-gradient(to right,#edf2f5 0,#edf2f5 calc(25% - 1px),#cfd8e1 calc(25% - 1px),#cfd8e1 25%);overflow:hidden}
+.garageCapacityTrack i{display:block;height:100%;border-radius:6px;transition:width .2s}.garageScale{display:flex;justify-content:space-between;margin:0 78px 0 114px;font-size:10px;color:#718799}
+.garageCapacityNote{margin:0!important;font-size:10px!important;color:#627e91!important;line-height:1.4}
+@media(max-width:1150px){.stagePieLayout{grid-template-columns:1fr}.garageCapacityRow{grid-template-columns:95px minmax(0,1fr) 52px 30px}}

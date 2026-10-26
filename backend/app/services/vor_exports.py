@@ -131,7 +131,7 @@ def build_xlsx(snapshot: dict) -> bytes:
                 "Status",
                 "Severity",
                 "Scenario",
-                "KEY2",
+                "Status register",
                 "HOTH",
             ],
             [

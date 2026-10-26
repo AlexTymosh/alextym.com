@@ -1,0 +1,80 @@
+.page{box-sizing:border-box;min-height:100%;height:100%;overflow:auto;background:#eff3f8;color:#2e4350;padding:17px 18px 28px}.page *{box-sizing:border-box}.titleRow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.titleRow h2{margin:0 0 4px;font-size:19px}.titleRow p{margin:0;font-size:11px;color:#718798}.exampleToggle{background:#fff;border:1px solid #cfdee6;color:#437056;padding:9px 12px;border-radius:7px;font-weight:750;cursor:pointer}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:13px}.kpis article{min-width:0;background:#fff;border:1px solid #dae5eb;border-radius:10px;padding:15px;display:flex;align-items:center;gap:14px}.kpiIcon{width:42px;height:42px;flex:none;display:grid;place-items:center;background:#eaf6ed;border-radius:10px;color:#319356;font-size:20px;font-weight:800}.kpis article:nth-child(2) .kpiIcon{color:#e35d65;background:#fceeee}.kpis article:nth-child(3) .kpiIcon{color:#d38c36;background:#fff4e8}.kpis strong{font-size:23px;display:block;line-height:1}.kpis small{display:block;margin-top:6px;font-size:10px;color:#8295a0}.grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(260px,.8fr);gap:11px}.contentCard,.sideCard{background:#fff;border:1px solid #dbe5ec;border-radius:11px;min-width:0;box-shadow:0 2px 10px #29465a0a}.tabs{display:flex;gap:12px;padding:0 15px;border-bottom:1px solid #e2eaf0}.tabs button{background:transparent;border:0;border-bottom:3px solid transparent;padding:14px 16px;color:#6f8495;cursor:pointer;font-weight:750}.tabs button.active{color:#348450;border-bottom-color:#5cad72}.searchRow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 13px}.searchRow input{width:100%;max-width:420px;min-width:0;padding:9px 11px;border:1px solid #dce5eb;border-radius:7px;background:#fff;color:#28475a}.searchRow span{white-space:nowrap;font-size:10px;color:#81939d}.tableWrap{overflow-x:auto}.tableWrap table{border-collapse:collapse;width:100%;font-size:11px}.tableWrap th{background:#f7f9fb;color:#6d8192;text-align:left;padding:11px 9px;white-space:nowrap;font-weight:800}.tableWrap td{border-bottom:1px solid #edf1f4;padding:12px 9px;vertical-align:middle}.tableWrap tr:hover td{background:#f9fcff}.ticket{display:inline-block;background:#e9f7ec;color:#328252;font-weight:800;padding:5px 7px;border-radius:5px}.link{background:none;border:0;color:#284d62;font-weight:800;text-align:left;cursor:pointer}.link:disabled{opacity:1;cursor:default}.state{background:#f2f5f7;color:#647b8b;padding:5px 8px;border-radius:5px}.sideCard{padding:14px}.sideCard h3{margin:0 0 12px;display:flex;justify-content:space-between;font-size:14px}.sideCard h3 span{font-size:11px;color:#8294a0}.blocker{padding:11px 0;display:flex;gap:10px;border-bottom:1px solid #edf1f4}.warning{width:30px;height:30px;border-radius:8px;background:#fff0e4;color:#dc8241;display:grid;place-items:center;font-weight:800;flex:none}.blocker strong{font-size:11px;display:block}.blocker small{display:block;font-size:10px;color:#80929e;margin:4px 0}.blocker p{font-size:10px;color:#647987;margin:0;line-height:1.4}.help{border:1px solid #dceadf;border-radius:8px;background:#f4faf5;padding:12px;margin-top:14px}.help strong{font-size:11px;color:#426f51}.help p{font-size:10px;line-height:1.5;color:#607a69}.empty{font-size:11px;color:#8798a3;padding:13px}.error{background:#ffeded;color:#a6484f;padding:9px;border-radius:8px}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:650px){.page{padding:9px}.kpis{grid-template-columns:1fr 1fr}.titleRow{flex-direction:column;align-items:start}.searchRow{flex-direction:column;align-items:stretch}}
+
+/* PR10 reference-fit operations action board */
+.page{background:#eff4f8;padding:16px clamp(13px,1.7vw,27px) 30px;color:#1d364b}
+.titleRow{margin:0 0 13px;align-items:center}
+.titleRow h2{font-size:20px;font-weight:850;color:#172c43}
+.titleRow p{font-size:11px;color:#7790a2}
+.exampleToggle{background:#fff;color:#378751;border:1px solid #cfdfd5;border-radius:7px;padding:9px 13px;font-size:11px;white-space:nowrap}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:13px}
+.kpis article{border:1px solid #dfe8ee;border-radius:10px;padding:15px 17px;min-height:96px;background:#fff;box-shadow:0 2px 9px #263e5108}
+.kpis strong{font-size:27px;color:#1e3249;font-weight:850}
+.kpis small{font-size:11px;color:#8394a3}
+.kpiIcon{height:48px;width:48px;flex-basis:48px;border-radius:11px;font-size:22px;background:#eaf3fd;color:#3178b6}
+.kpis article:nth-child(2) .kpiIcon{background:#feeff0;color:#eb5367}
+.kpis article:nth-child(3) .kpiIcon{background:#fff3e9;color:#ec9731}
+.kpis article:nth-child(4) .kpiIcon{background:#ebf9ef;color:#269d5d}
+.grid{grid-template-columns:minmax(0,1.94fr) minmax(290px,.83fr);gap:13px}
+.contentCard,.sideCard{border:1px solid #dfe8ee;border-radius:10px;background:#fff;box-shadow:0 2px 10px #213f5e0b}
+.tabs{gap:5px;padding:0 12px}
+.tabs button{font-size:12px;padding:13px 16px;font-weight:800}
+.tabs button.active{color:#24834a;border-color:#4cab69}
+.searchRow{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:end;gap:8px;padding:12px}
+.searchRow input{flex:1 1 240px;max-width:470px;min-height:35px;border-radius:7px;font-size:11px}
+.searchRow .filterLabel{display:grid;gap:3px;font-size:9px;color:#7b91a0;font-weight:800}
+.searchRow .filterLabel select{border:1px solid #dce6eb;border-radius:7px;padding:8px 9px;font-size:10px;min-height:35px;color:#446071;background:#fff}
+.sourceLabel{font-size:10px!important;color:#8a9baa!important;align-self:center!important}
+.tableWrap{overflow-x:auto}
+.tableWrap table{font-size:11px;border-collapse:collapse;min-width:610px}
+.tableWrap th{background:#f6f9fb;color:#748b9d;padding:11px;font-size:10px}
+.tableWrap td{border-bottom:1px solid #e8eff4;padding:10px 11px;line-height:1.45}
+.ticket{background:#e7f7ec;border:1px solid #cfebd8;color:#23854a;border-radius:5px;font-size:10px}
+.link{color:#214158;font-size:11px;font-weight:800}
+.state{background:#edf5fb;color:#347bae;border-radius:5px;font-size:10px;font-weight:750}
+.tableWrap tr:hover td{background:#f6fafc}
+.sideCard{padding:14px}
+.sideCard h3{font-weight:850;color:#1c344b;font-size:14px}
+.blocker{border:1px solid #e3eaf0;border-radius:8px;margin-bottom:8px;padding:9px;gap:10px}
+.blocker strong{font-size:11px;color:#20374c}
+.blocker small{color:#71899c}
+.blocker p{font-size:10px;color:#698090}
+.warning{width:35px;height:35px;border-radius:9px;background:#fff0f0;color:#d85163;font-size:19px}
+.help{border-radius:8px;background:#f3fbf6}
+@media(max-width:1300px){.grid{grid-template-columns:minmax(0,1.4fr) minmax(260px,.9fr)}}
+@media(max-width:1050px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.page{padding:9px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis article{padding:10px}.kpiIcon{height:32px;width:32px;flex-basis:32px;font-size:15px}.searchRow{align-items:stretch}.sourceLabel{flex:1 1 100%}}
+
+/* PR11 layout refinement: live queue and audited activity */
+.page{font-size:13px!important;padding:18px 19px 28px!important}
+.titleRow h2{font-size:22px!important}.titleRow p{font-size:12px!important}
+.kpis article{min-height:111px!important;padding:17px 18px!important}.kpis strong{font-size:30px!important}.kpis small{font-size:12px!important}
+.kpiIcon{height:48px!important;width:48px!important;font-size:23px!important}
+.grid{grid-template-columns:minmax(0,1.75fr) minmax(305px,.77fr)!important;gap:13px!important}
+.tabs button{font-size:13px!important;padding:15px 17px!important}
+.searchRow{padding:13px!important;gap:10px!important}.searchRow input{min-height:39px!important;font-size:12px!important}
+.searchRow .filterLabel select{min-height:39px!important;font-size:11px!important}
+.tableWrap table{font-size:12px!important;min-width:720px!important}.tableWrap th{font-size:11px!important;padding:12px 10px!important}
+.tableWrap td{font-size:11.5px!important;padding:12px 10px!important}.ticket{font-size:11px!important}.link{font-size:12px!important}
+.state{font-size:11px!important}.attention{font-size:10px;font-weight:800;border-radius:6px;color:#995d14;background:#fff2dc;padding:5px 7px;white-space:nowrap}
+.sideCard h3{font-size:16px!important}.blocker{padding:12px!important}.blocker strong{font-size:12px!important}.blocker p,.blocker small{font-size:11px!important}.help strong{font-size:12px!important}.help p{font-size:11px!important}
+.activitySection{border-top:1px solid #e1eaf0;margin-top:17px;padding-top:16px}.activitySection h3{margin:0 0 10px;font-size:15px}.activityEntry{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf1f4}.activityMark{background:#e2f7e9;border-radius:50%;width:29px;height:29px;flex:0 0 29px;display:grid;place-items:center;color:#2e9355;font-weight:800}.activityEntry strong{font-size:12px;display:block;text-transform:capitalize}.activityEntry p{font-size:11px;line-height:1.4;color:#536e80;margin:4px 0}.activityEntry small{font-size:10px;color:#8aa0ac}
+@media(max-width:1180px){.grid{grid-template-columns:1fr!important}.kpis{grid-template-columns:repeat(2,1fr)!important}}
+
+/* PR13 DISTINCT QUEUE ICONOGRAPHY AND STATUS SEMANTICS */
+.kpiIcon{display:grid!important;place-items:center!important;line-height:1!important;border-radius:12px!important;}
+.kpiIcon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.kpis article:nth-child(1) .kpiIcon{color:#256bd6;background:#edf5ff}
+.kpis article:nth-child(2) .kpiIcon{color:#dd4850;background:#fff0f1}
+.kpis article:nth-child(3) .kpiIcon{color:#df871c;background:#fff4e8}
+.kpis article:nth-child(4) .kpiIcon{color:#20925d;background:#eaf8f0}
+.attention,.state{display:inline-flex;align-items:center;gap:5px;font-weight:750!important;border-radius:7px!important;padding:5px 9px!important}
+.attentionRed,.stateRed{color:#c43b48!important;background:#ffe7e9!important;border-color:#ffced3!important}
+.attentionAmber,.stateAmber{color:#ad6d0f!important;background:#fff0d2!important;border-color:#f9dda8!important}
+.attentionBlue,.stateBlue{color:#296ba4!important;background:#e7f2ff!important;border-color:#d2e8fc!important}
+.attentionGreen,.stateGreen{color:#238351!important;background:#e0f6e9!important;border-color:#c6ebd4!important}
+.attentionPurple,.statePurple{color:#7b4aa5!important;background:#f4e9ff!important;border-color:#e7d3fa!important}
+.attentionGray,.stateGray{color:#62788b!important;background:#ecf2f6!important;border-color:#e1e7ee!important}
+.warning{display:grid!important;place-items:center!important;color:#d64a50!important;background:#fff0f0!important}
+.warning svg{height:20px;width:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}

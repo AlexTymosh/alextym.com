@@ -1,0 +1,83 @@
+.app{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;overflow:hidden;background:#EFF3F8;color:#263B44;color-scheme:light;font:14px/1.45 Inter,'Segoe UI',Arial,sans-serif}
+.app *{box-sizing:border-box}.app button,.app input,.app select,.app textarea{font:inherit}.app button{cursor:pointer}.app button:disabled{cursor:default;opacity:.55}.app h1,.app h2,.app p{margin-top:0}.loading,.fullScreenLogin{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#EFF3F8;color:#42604F}.error{position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:8px 13px;color:#A13E45;background:#FCE9EB;z-index:2}
+.topbar{height:65px;min-height:65px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:#FFF;border-bottom:1px solid #D6E3E6;padding:0 22px;box-shadow:0 1px 6px #2341;z-index:4}.brand{display:flex;align-items:center;gap:11px}.brandIcon{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:#64AE72;color:#fff;font-size:21px;font-weight:950}.brand strong{display:block;font-size:15px;letter-spacing:.2px}.brand small{display:block;font-size:10px;color:#718B93;margin-top:3px}.topbarActions{display:flex;align-items:center;gap:11px;white-space:nowrap}.demoFlag{font-size:10px;letter-spacing:.8px;color:#397A4E;font-weight:900;background:#E8F6EB;padding:7px 10px;border-radius:7px}.exportButton{text-decoration:none;background:#F6FAFB;color:#386B57;border:1px solid #CDDEDD;font-size:11px;font-weight:800;padding:8px 12px;border-radius:8px}.signOut{border:0;color:#6F838F;background:transparent;font-size:12px;font-weight:700;padding:8px}
+.body{min-height:0;flex:1;display:flex}.sidebar{background:#F8FBFC;border-right:1px solid #D6E2E7;display:flex;flex-direction:column;overflow-y:auto;flex:0 0 226px;padding:15px 10px;gap:16px;transition:flex-basis .16s}.sidebar.collapsed{flex-basis:66px}.collapse{background:transparent;border:1px solid transparent;border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:9px;color:#79919B;text-align:left;font-size:11px;font-weight:750}.collapse:hover{background:#EDF3F5}.collapse>span{font-size:19px;line-height:15px}.group{display:grid;gap:4px}.groupLabel{font-size:10px;font-weight:900;letter-spacing:1px;color:#95A6AD;padding:7px 12px}.navItem{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;border:0;background:transparent;color:#54707B;font-size:12px;font-weight:700;border-radius:9px;white-space:nowrap;text-align:left}.navItem svg{flex-shrink:0}.navItem:hover{background:#EBF3F2;color:#2F6950}.navItem.selected{background:#E3F3E7;color:#32794A;box-shadow:inset 3px 0 #64AE72}.navItem.selected svg{color:#47975B}.collapsed .navItem{justify-content:center;padding:12px}.sidebarFooter{margin-top:auto;color:#94A5AB;font-size:10px;line-height:1.6;padding:15px 13px;border-top:1px solid #E1EAEA}.onlineDot{display:inline-block;width:7px;height:7px;background:#64AE72;border-radius:50%;margin-right:6px}
+.main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}.contentBar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 20px;background:#FBFDFD;border-bottom:1px solid #D8E4E8;flex:0 0 70px;min-height:70px}.breadcrumb{font-size:10px;color:#85A0AA;display:block}.contentBar h1{font-size:17px;margin:4px 0 0;font-weight:850;letter-spacing:-.2px}.primaryAction{color:#fff;background:#64AE72;border:1px solid #559F64;padding:9px 14px;border-radius:9px;font-size:12px;font-weight:850;box-shadow:0 2px 5px #64AE7222}.primaryAction:hover{background:#4E985D}.content{flex:1;min-height:0;overflow:auto;background:#EFF3F8}.workspaceContent{overflow:hidden;background:#F4F5EF}
+@media(max-width:760px){.topbar{padding:0 10px}.sidebar{flex-basis:64px;padding:10px 5px}.sidebar:not(.collapsed){flex-basis:64px}.sidebar .groupLabel,.sidebar .navItem span,.sidebar .sidebarFooter,.sidebar .collapse{display:none}.sidebar .navItem{justify-content:center;padding:12px}.topbarActions{gap:4px}.demoFlag{display:none}.exportButton{font-size:10px;padding:7px}.contentBar{padding:10px 12px}.primaryAction{padding:8px 9px;font-size:11px}}
+
+/* Vehicle Register contains nested internal tools rather than top-level pages. */
+.registerRow{display:flex;align-items:center;min-width:0;gap:3px}
+.registerRow>.navItem{flex:1;min-width:0}
+.navExpand{border:0;background:transparent;padding:8px;color:#577A85;border-radius:6px;font-size:15px;cursor:pointer}
+.navExpand:hover{background:#EAF1F3}
+.subnav{display:grid;gap:3px;margin:0 2px 0 23px;padding:3px 0 5px 10px;border-left:2px solid #CDE2D4}
+.subnavItem{display:flex;align-items:center;gap:10px;min-width:0;border:0;text-align:left;padding:8px 8px;background:transparent;color:#577A85;font-size:11px;font-weight:650;border-radius:8px;cursor:pointer}
+.subnavItem svg{width:15px;height:15px;flex-shrink:0}
+.subnavItem:hover{background:#EDF5F2}
+.subnavItem.subSelected{background:#E3F3E7;color:#32794A}
+@media(max-width:760px){.sidebar .registerRow{justify-content:center}.sidebar .registerRow .navItem{justify-content:center;padding:12px}.sidebar .subnav,.sidebar .navExpand{display:none}}
+
+/*PR08_INSYTLY_VISUAL_BEGIN*/
+/* Fleet Hub PR-08 — Insytly-inspired shell; source: user-approved reference. */
+.app{--iy-green:#64ae72;--iy-red:#fa666b;--iy-amber:#f3b45b;--iy-surface:#fff;--iy-line:#dde5ed;--iy-bg:#eff3f8;background:var(--iy-bg);color:#2b3944}
+.topbar{height:55px;min-height:55px;padding:0 17px;background:#fff;border-bottom:1px solid var(--iy-line);box-shadow:0 1px 3px #1c344a0a}
+.brandIcon{width:32px;height:32px;border-radius:8px;background:var(--iy-green);font-size:17px}
+.brand strong{font-size:14px;font-weight:800;letter-spacing:0}
+.brand small{font-size:10px;margin-top:0;color:#80909f}
+.demoFlag{background:#e6f5e9;color:#347a48;border-radius:5px;padding:5px 8px}
+.exportButton{border-color:var(--iy-line);border-radius:6px;background:#fff;padding:6px 10px}
+.sidebar{background:#f8fafc;border-color:var(--iy-line);gap:12px;padding:12px 8px;flex-basis:210px}
+.sidebar.collapsed{flex-basis:57px}
+.group{gap:2px}
+.groupLabel{font-size:9px;letter-spacing:1.05px;padding:5px 10px;color:#91a0ae}
+.navItem{padding:8px 10px;border-radius:7px;color:#536977;font-size:11px;font-weight:680;gap:9px}
+.navItem:hover{background:#edf3f6}
+.navItem.selected{background:#e4f3e8;box-shadow:inset 3px 0 var(--iy-green);color:#287946}
+.navItem svg{width:16px;height:16px}
+.sidebarFooter{color:#8293a1}
+.contentBar{min-height:58px;flex-basis:58px;padding:8px 17px;background:#fff;border-color:var(--iy-line)}
+.contentBar h1{font-size:15px;font-weight:850;letter-spacing:0;margin:2px 0 0}
+.breadcrumb{font-size:9px}
+.primaryAction{border-radius:6px;background:var(--iy-green);border-color:#58a269;box-shadow:none;padding:7px 12px}
+.primaryAction:hover{background:#4b9d5e}
+.content,.workspaceContent{background:var(--iy-bg)}
+@media(max-width:760px){.topbar{padding:0 10px}.sidebar,.sidebar:not(.collapsed){flex-basis:57px}.sidebar .navItem{justify-content:center;padding:10px 5px}.contentBar{padding:7px 10px;min-height:56px;flex-basis:56px}.brand strong{font-size:12px}}
+/* PR08_INSYTLY_VISUAL_END */
+
+/* PR10 stable dashboard/workspace shell aligned to reference */
+.app{--fleet-ink:#24374b;--fleet-green:#419e63;--fleet-bg:#eff4f8;background:var(--fleet-bg)!important;color:var(--fleet-ink)!important}
+.topbar{height:53px!important;min-height:53px!important;padding:0 20px!important;background:#fff!important;border-bottom:1px solid #dce5ee!important;box-shadow:none!important}
+.brandIcon{width:32px!important;height:32px!important;border-radius:8px!important;font-size:17px!important;background:linear-gradient(140deg,#62b67b,#339a5e)!important}
+.brand strong{font-size:13px!important;font-weight:850!important;color:#203347!important}
+.brand small{font-size:10px!important;color:#8c9dad!important}
+.demoFlag{border-radius:5px!important;background:#e7f8eb!important;color:#2b8951!important;letter-spacing:.25px!important}
+.exportButton{background:#fff!important;border-color:#dce6eb!important;border-radius:6px!important;color:#344f63!important;padding:7px 10px!important}
+.sidebar{background:#fbfcfe!important;border-right:1px solid #dce5ed!important;padding:11px 9px!important;gap:14px!important;flex-basis:205px!important}
+.groupLabel{font-size:9px!important;color:#91a1ae!important;letter-spacing:1px!important;padding:7px 10px!important}
+.navItem{font-size:11.5px!important;border-radius:7px!important;padding:8px 10px!important;color:#536b7b!important;gap:11px!important}
+.navItem.selected{background:#e1f4e7!important;color:#25824a!important;box-shadow:inset 3px 0 #459d64!important}
+.navItem svg{width:16px!important;height:16px!important}
+.navItem:hover{background:#f0f5f8!important}
+.contentBar{background:#fff!important;border-color:#e0e9ef!important;min-height:61px!important;flex-basis:61px!important;padding:9px 18px!important}
+.contentBar h1{font-size:18px!important;color:#172e44!important;font-weight:850!important;margin-top:2px!important}
+.breadcrumb{font-size:9.5px!important;color:#90a3af!important}
+.primaryAction{background:#419c61!important;color:#fff!important;border:1px solid #368e57!important;border-radius:7px!important;box-shadow:none!important;padding:9px 14px!important}
+.content{background:var(--fleet-bg)!important}.workspaceContent{background:var(--fleet-bg)!important}
+@media(max-width:800px){.sidebar,.sidebar:not(.collapsed){flex-basis:57px!important}.sidebar .navItem{padding:10px 6px!important}.contentBar{padding:8px 11px!important}}
+
+/* PR11 harmonised shell with approved mockups */
+.app{--fleet-bg:#f1f5f9!important;background:#f1f5f9!important}
+.topbar{height:58px!important;min-height:58px!important;padding:0 18px!important}
+.brand strong{font-size:15px!important}.brand small{font-size:11px!important}
+.brandIcon{width:36px!important;height:36px!important;font-size:19px!important}
+.sidebar{flex-basis:210px!important;gap:15px!important;padding:13px 11px!important}
+.groupLabel{font-size:10px!important}.navItem{font-size:13px!important;min-height:37px!important;padding:9px 10px!important}
+.contentBar{min-height:70px!important;flex-basis:70px!important;padding:11px 19px!important}
+.contentBar h1{font-size:21px!important}.breadcrumb{font-size:11px!important}.primaryAction{font-size:12px!important;padding:10px 14px!important}
+@media(max-width:800px){.sidebar{flex-basis:60px!important}}
+
+/* PR14 TOPBAR CSS */
+.headerBrandMark{display:grid;place-items:center;background:#50a96d;border-radius:9px;width:31px;height:31px;flex:0 0 31px;color:white;font-size:16px;font-weight:800;box-shadow:inset 0 0 0 1px #ffffff33}
+.headerAvatar{display:block;width:32px;height:32px;object-fit:cover;border-radius:50%;border:2px solid #d6e9df}
+.reconSummary{display:inline-block;margin-left:12px;font-weight:450;font-size:12px;color:#5b7486;vertical-align:middle;max-width:730px;line-height:1.3}
+@media(max-width:700px){.headerBrandMark{display:none}.reconSummary{display:block;margin:4px 0 0}}
