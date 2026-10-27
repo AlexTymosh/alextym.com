@@ -21,7 +21,12 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "paths": {
+      "@fleet-hub": [
+        "../portfolio/fleet_hub/frontend/src/index.ts"
+      ]
+    }
   },
   "include": [
     "next-env.d.ts",
