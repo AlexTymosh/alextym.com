@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "fleet_hub",
+  "slug": "fleet-hub",
+  "title": "Fleet VOR Hub",
+  "summary": "Synthetic fleet defect tracking, workflows, operational controls and reconciliation.",
+  "category": "Operations Automation",
+  "technologies": [
+    "Next.js",
+    "React",
+    "TypeScript",
+    "FastAPI",
+    "Python",
+    "SQLite"
+  ],
+  "mode": "embedded",
+  "demo": {
+    "path": "/fleet-vor-hub",
+    "apiPrefix": "/api/vor"
+  },
+  "catalog": {
+    "visible": false,
+    "featured": false
+  }
+}

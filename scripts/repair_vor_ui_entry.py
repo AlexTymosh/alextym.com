@@ -1,7 +1,7 @@
 """Repair and diagnose the /fleet-vor-hub single-route entrypoint.
 
 Only changes frontend/app/fleet-vor-hub/page.tsx if it still renders
-legacy VorHub. Neither API, databases nor frozen v1 are modified.
+legacy VorHub. Neither API nor databases are modified.
 Run from repository root: python scripts/repair_vor_ui_entry.py
 """
 from pathlib import Path
@@ -21,7 +21,6 @@ def repair() -> int:
     required = {
         "main entrypoint": ENTRY,
         "unified app shell": UI / "FleetApp.tsx",
-        "frozen v1 page": ROOT / "frontend" / "app" / "fleet-vor-hub-01" / "page.tsx",
         **PANELS,
     }
     missing = [name + ": " + str(path.relative_to(ROOT)) for name, path in required.items() if not path.is_file()]
@@ -50,7 +49,7 @@ def repair() -> int:
         return 2
     for label in PANELS:
         print("OK:", label)
-    print("OK: All eight app sections declared. Frozen v1 and both SQLite files untouched.")
+    print("OK: All eight active app sections declared.")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""PR-03 tests against realistic seeded SQLite constraints and isolated frozen v1."""
+"""V2 defect intake tests against realistic SQLite constraints."""
 
 import sqlite3
 from contextlib import contextmanager
@@ -10,13 +10,12 @@ from fastapi.testclient import TestClient
 
 from app.api.vor import router as current_router
 from app.api.vor_intake import router as intake_router
-from app.services import vor_data, vor_intake, vor_store, vor_store_v1
+from app.services import vor_data, vor_intake, vor_store
 
 
 @pytest.fixture
 def env(monkeypatch, tmp_path):
     active = tmp_path / "active.sqlite3"
-    frozen = tmp_path / "frozen.sqlite3"
     schema = """
       PRAGMA foreign_keys=ON;
       CREATE TABLE vehicles (
@@ -47,10 +46,9 @@ def env(monkeypatch, tmp_path):
       VALUES(1,'GX24 KLM','Ford Transit 350','Operational','Low','No active defect','engine','Nursling',
         0,0,'None','Alex Tym','2026-11-01','2026-11-01','2026-11-01','2026-11-01','2026-09-01',24000,0);
     """
-    for path in [active, frozen]:
-        with sqlite3.connect(path) as db:
-            db.executescript(schema)
-            db.commit()
+    with sqlite3.connect(active) as db:
+        db.executescript(schema)
+        db.commit()
 
     @contextmanager
     def patched_connection():
@@ -61,11 +59,10 @@ def env(monkeypatch, tmp_path):
 
     monkeypatch.setattr(vor_store, "database_path", lambda: active)
     monkeypatch.setattr(vor_store, "connection", patched_connection)
-    monkeypatch.setattr(vor_store_v1, "database_path", lambda: frozen)
     monkeypatch.setenv("VOR_DEMO_ENABLED", "true")
     monkeypatch.setenv("VOR_DEMO_PASSWORD", "test-secret")
     monkeypatch.setenv("VOR_DEMO_SEND_REAL_EMAIL", "false")
-    return active, frozen
+    return active
 
 
 def body(pathway="standard", **changes):
@@ -85,8 +82,7 @@ def body(pathway="standard", **changes):
 
 
 def test_standard_creates_tracking_ticket_and_eight_steps_without_status_change(env):
-    active, frozen = env
-    frozen_bytes = frozen.read_bytes()
+    active = env
     result = vor_intake.register_defect(**body())
     assert result["ticket_id"].startswith("PS")
     assert result["requires_pts_workflow"] is True
@@ -98,14 +94,13 @@ def test_standard_creates_tracking_ticket_and_eight_steps_without_status_change(
         assert db.execute("SELECT COUNT(*) FROM ticket_steps").fetchone()[0] == 8
         assert db.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
         assert db.execute("SELECT reported_vor FROM vor_cases").fetchone()[0] == 1
-    assert frozen.read_bytes() == frozen_bytes
 
 
 def test_specialist_cases_no_pts_stages(env):
     for pathway in ("tyres", "windscreen"):
         response = vor_intake.register_defect(**body(pathway, hoth_reference=f"HOTH-{pathway}"))
         assert response["requires_pts_workflow"] is False
-    with sqlite3.connect(env[0]) as db:
+    with sqlite3.connect(env) as db:
         assert db.execute("SELECT COUNT(*) FROM vor_cases").fetchone()[0] == 2
         assert db.execute("SELECT COUNT(*) FROM ticket_steps").fetchone()[0] == 0
         assert db.execute("SELECT availability_status FROM vehicles").fetchone()[0] == "Operational"
@@ -117,7 +112,7 @@ def test_idempotent_retry_and_original_cases(env):
     two = vor_intake.register_defect(**params)
     assert two["repeated"] is True
     assert one["case_id"] == two["case_id"]
-    with sqlite3.connect(env[0]) as db:
+    with sqlite3.connect(env) as db:
         assert db.execute("SELECT COUNT(*) FROM vor_cases").fetchone()[0] == 1
         assert db.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
     with pytest.raises(ValueError, match="reused"):
@@ -129,7 +124,7 @@ def test_idempotent_retry_and_original_cases(env):
 def test_roadside_case_and_invalid_reason(env):
     resp = vor_intake.register_defect(**body(roadside_reported=True))
     assert resp["case_id"] > 0
-    with sqlite3.connect(env[0]) as db:
+    with sqlite3.connect(env) as db:
         assert db.execute("SELECT roadside_reported FROM vor_cases").fetchone()[0] == 1
     with pytest.raises(ValueError, match="reason"):
         vor_intake.register_defect(**body(reason="COMMS"))
@@ -168,7 +163,7 @@ def test_api_auth_and_no_automatic_email(env):
 
 def test_v2_real_seed_status_constraint_for_import(env):
     added = vor_data.register_vehicle("AB26 XYZ", "Transit", "Oxford")
-    with sqlite3.connect(env[0]) as db:
+    with sqlite3.connect(env) as db:
         assert (
             db.execute(
                 "SELECT availability_status FROM vehicles WHERE id=?", (added["id"],)

@@ -22,6 +22,4 @@ require('frontend/app/fleet-vor-hub/VorHub.tsx',['OperationsPanel','AssetSignals
 require('frontend/app/fleet-vor-hub/FleetApp.tsx',['WorkflowSettingsPanel','OperationsQueuePanel','operations-queue'])
 for file in ('OperationsPanel.tsx','WorkflowSettingsPanel.tsx','OperationsQueuePanel.tsx','AssetSignals.tsx'):
     require('frontend/app/fleet-vor-hub/operations/'+file,['export default function'])
-assert (ROOT/'frontend/app/fleet-vor-hub-01/page.tsx').exists(), 'Frozen v1 route missing'
-assert (ROOT/'backend/_local/vor_hub_01.sqlite3').exists(), 'Frozen v1 SQLite missing'
-print('PASS: PR-04/05 operational controls, configurable checklists, asset icons, queue, independent v1 files present')
+print('PASS: PR-04/05 operational controls, configurable checklists, asset icons, queue, active v2 checks present')

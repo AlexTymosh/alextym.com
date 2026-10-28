@@ -28,9 +28,6 @@ def patch(path: Path, original: str, replacement: str) -> None:
 
 def main() -> None:
     for path in [
-        ROOT / "backend/app/services/vor_store_v1.py",
-        ROOT / "backend/app/api/vor_v1.py",
-        ROOT / "frontend/app/fleet-vor-hub-01/page.tsx",
         ROOT / "backend/app/services/vor_data.py",
         ROOT / "backend/app/api/vor_data.py",
         ROOT / "backend/app/services/vor_intake.py",

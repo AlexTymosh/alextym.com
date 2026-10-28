@@ -1,4 +1,4 @@
-"""PR-02: v2 migration/import/case/status behaviours; never touches the frozen v1 DB."""
+"""V2 data migration, import, case and status behaviour tests."""
 
 import base64
 import csv
@@ -9,13 +9,12 @@ from contextlib import contextmanager
 
 import pytest
 
-from app.services import vor_data, vor_store, vor_store_v1
+from app.services import vor_data, vor_store
 
 
 @pytest.fixture
 def databases(monkeypatch, tmp_path):
     active = tmp_path / "v2.sqlite3"
-    frozen = tmp_path / "v1.sqlite3"
     # Self-contained representative legacy schema: exercise additive migrations.
     create = """
         PRAGMA foreign_keys=ON;
@@ -45,10 +44,9 @@ def databases(monkeypatch, tmp_path):
         INSERT INTO tickets(id,vehicle_id,title,scenario,status,hoth_reference,opened_at)
             VALUES('PS001',1,'Engine issue','engine','open','HOTH-X','2026-10-18T10:00:00');
     """
-    for path in (active, frozen):
-        with sqlite3.connect(path) as db:
-            db.executescript(create)
-            db.commit()
+    with sqlite3.connect(active) as db:
+        db.executescript(create)
+        db.commit()
 
     @contextmanager
     def connection():
@@ -62,8 +60,7 @@ def databases(monkeypatch, tmp_path):
 
     monkeypatch.setattr(vor_store, "database_path", lambda: active)
     monkeypatch.setattr(vor_store, "connection", connection)
-    monkeypatch.setattr(vor_store_v1, "database_path", lambda: frozen)
-    return active, frozen
+    return active
 
 
 def encode(data: bytes) -> str:
@@ -106,9 +103,8 @@ def xlsx_data():
     return output.getvalue()
 
 
-def test_backfill_idempotent_and_v1_untouched(databases):
-    active, frozen = databases
-    frozen_before = frozen.read_bytes()
+def test_backfill_idempotent(databases):
+    active = databases
     state = vor_data.register_list()
     assert len(state["vehicles"]) == 1
     assert len(state["cases"]) == 1
@@ -119,7 +115,6 @@ def test_backfill_idempotent_and_v1_untouched(databases):
     state_again = vor_data.register_list()
     assert state_again["cases"] == state["cases"]
     assert state_again["statuses"] == state["statuses"]
-    assert frozen.read_bytes() == frozen_before
     with sqlite3.connect(active) as db:
         assert db.execute("SELECT COUNT(*) FROM tickets").fetchone()[0] == 1
 
@@ -198,15 +193,6 @@ def test_validation_rejects_duplicates_bad_digest_formula(databases):
         vor_data.prepare_import("data.xls", encode(good), "skip")
     with pytest.raises(ValueError, match="registration"):
         vor_data.prepare_import("x.csv", encode(b"wrong,model,garage\na,ford,oxford"), "skip")
-
-
-def test_fail_closed_if_paths_share_one_file(databases, monkeypatch):
-    from app.services import vor_store_v1
-
-    active, _ = databases
-    monkeypatch.setattr(vor_store_v1, "database_path", lambda: active)
-    with pytest.raises(RuntimeError, match="different"):
-        vor_data.register_list()
 
 
 def test_xlsx_formula_cells_are_rejected(databases):

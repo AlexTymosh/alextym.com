@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 
 const rawCyrillicPattern = /[\u0400-\u04ff]/u;
@@ -21,7 +21,13 @@ for (const relativePath of trackedFiles) {
     continue;
   }
 
-  const fileBuffer = readFileSync(resolve(relativePath));
+  const fullPath = resolve(relativePath);
+  // Until deletions are staged, `git ls-files` still lists removed paths.
+  // A missing tracked file has no working-tree content to inspect.
+  if (!existsSync(fullPath)) {
+    continue;
+  }
+  const fileBuffer = readFileSync(fullPath);
   if (fileBuffer.includes(0)) {
     continue;
   }

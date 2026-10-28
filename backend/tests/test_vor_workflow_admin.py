@@ -1,4 +1,4 @@
-"""PR14: custom workflow creation, stage dependency gates and v1 isolation."""
+"""Custom workflow creation and stage dependency safeguards for active v2."""
 
 from __future__ import annotations
 
@@ -6,15 +6,13 @@ import sqlite3
 from contextlib import contextmanager
 
 import pytest
-from app.services import vor_store, vor_store_v1
+from app.services import vor_store
 from app.services import vor_workflow_admin as library
 
 
 @pytest.fixture
 def fixture_db(tmp_path, monkeypatch):
     active = tmp_path / "v2.sqlite3"
-    frozen = tmp_path / "v1.sqlite3"
-    frozen.write_bytes(b"frozen-v1-marker")
     with sqlite3.connect(active) as db:
         db.executescript("""
           PRAGMA foreign_keys=ON;
@@ -45,13 +43,10 @@ def fixture_db(tmp_path, monkeypatch):
 
     monkeypatch.setattr(vor_workflow_admin.vor_data, "database", connection)
     monkeypatch.setattr(vor_store, "database_path", lambda: active)
-    monkeypatch.setattr(vor_store_v1, "database_path", lambda: frozen)
-    return active, frozen
+    return active
 
 
-def test_create_add_rename_delete_and_v1_unchanged(fixture_db):
-    _, frozen = fixture_db
-    before = frozen.read_bytes()
+def test_create_add_rename_delete(fixture_db):
     result = library.create("Warranty repair", "New warranty case")
     code = result["code"]
     assert code.startswith("custom_")
@@ -66,11 +61,9 @@ def test_create_add_rename_delete_and_v1_unchanged(fixture_db):
     library.rename(code, "Custom warranty")
     library.remove_workflow(code)
     assert not any(w["code"] == code for w in library.catalogue()["workflows"])
-    assert frozen.read_bytes() == before
 
 
 def test_reference_blocks_delete_and_edit_even_on_closed_ticket(fixture_db):
-    _, frozen = fixture_db
     with pytest.raises(ValueError, match="referenced by"):
         library.remove_workflow("engine")
     with pytest.raises(ValueError, match="depend on this position"):
@@ -79,11 +72,10 @@ def test_reference_blocks_delete_and_edit_even_on_closed_ticket(fixture_db):
         library.change_stage("engine", 1, "Replace history")
     # Additions are prospective: historic ticket stage list remains unchanged.
     library.add_stage("engine", "Extra quality check")
-    with sqlite3.connect(fixture_db[0]) as db:
+    with sqlite3.connect(fixture_db) as db:
         assert (
             db.execute("SELECT count(*) FROM ticket_steps WHERE ticket_id='PS1'").fetchone()[0] == 2
         )
-    assert frozen.read_bytes() == b"frozen-v1-marker"
 
 
 def test_invalid_and_assigned_workflow_guards(fixture_db):
@@ -93,7 +85,7 @@ def test_invalid_and_assigned_workflow_guards(fixture_db):
     with pytest.raises(ValueError, match="already exists"):
         library.create("Engine repair", "New start")
     w = library.create("Review case", "Initial check")
-    with sqlite3.connect(fixture_db[0]) as db:
+    with sqlite3.connect(fixture_db) as db:
         db.execute("INSERT INTO vehicles VALUES(2,?)", (w["code"],))
         db.commit()
     with pytest.raises(ValueError, match="assigned"):

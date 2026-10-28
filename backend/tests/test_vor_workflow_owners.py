@@ -1,4 +1,4 @@
-"""Fleet VOR v1.1: scenario selection, vertical workflow state, responsible assignments."""
+"""Active Fleet VOR scenario selection, workflow and responsible assignments."""
 
 from __future__ import annotations
 

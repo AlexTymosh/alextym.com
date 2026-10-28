@@ -81,11 +81,17 @@ tasks:
     cmds:
       - node scripts/check-no-raw-cyrillic.mjs
 
+  portfolio:check:
+    desc: Validate the unpublished portfolio catalogue and module skeleton.
+    cmds:
+      - node scripts/check-portfolio-foundation.mjs
+
   repo:check:
     desc: Run repository hygiene checks.
     cmds:
       - task: repo:diff-check
       - task: repo:cyrillic-check
+      - task: portfolio:check
 
   config:check:
     desc: Validate shared public project configuration.
