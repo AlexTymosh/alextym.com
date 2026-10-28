@@ -1,5 +1,11 @@
 # SESSION_NOTES — Portfolio architecture and Fleet VOR Hub migration
 
+> **Progress (2026-10-27):** Foundation PR #208 merged to `main` at
+> `fe0470e76a9c3ec479881fc0e4f7640d9566905b`. PR 2 moves only the Fleet
+> frontend implementation; backend/SQLite remain untouched pending PR 3.
+> The historical baseline and PR 1 instructions below are retained as
+> project migration history.
+
 **Date:** 2026-10-26
 **Repository:** `AlexTymosh/alextym.com`
 **Baseline:** `main` after merged PR #207 (`b4601ac534e569e80f624c70dded8297a2d2d406`)

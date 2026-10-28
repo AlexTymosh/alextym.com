@@ -85,6 +85,7 @@ tasks:
     desc: Validate the unpublished portfolio catalogue and module skeleton.
     cmds:
       - node scripts/check-portfolio-foundation.mjs
+      - node scripts/check-fleet-frontend-boundaries.mjs
 
   repo:check:
     desc: Run repository hygiene checks.

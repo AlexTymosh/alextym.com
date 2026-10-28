@@ -4,6 +4,7 @@
 import {useEffect,useState} from "react";
 import VorHub from "./VorHub";
 import Image from "next/image";
+import fleetAvatar from "./assets/alex.webp";
 import VehicleRegisterPanel from "./register/Panel";
 import NewDefectPanel from "./new-defect/Panel";
 import ProcessPanel from "./process/Panel";
@@ -78,7 +79,7 @@ export default function FleetApp(){
       <div className={styles.topbarActions}>
         <span className={styles.demoFlag}>DEMO v2</span>
         <a href="/api/vor/export.xlsx" download="fleet-vor-demo.xlsx" className={styles.exportButton}>↓ Export Excel</a>
-        {/* PR14 TOPBAR IDENTITY */}<span className={styles.headerBrandMark} title="Fleet VOR Hub">F</span><Image src="/images/profile/alex.webp" alt="Alex Tym profile" width={32} height={32} className={styles.headerAvatar}/><button type="button" className={styles.signOut} onClick={()=>void logout()}>Sign out</button>
+        {/* PR14 TOPBAR IDENTITY */}<span className={styles.headerBrandMark} title="Fleet VOR Hub">F</span><Image src={fleetAvatar} alt="Alex Tym profile" width={32} height={32} className={styles.headerAvatar}/><button type="button" className={styles.signOut} onClick={()=>void logout()}>Sign out</button>
       </div>
     </header>
     <div className={styles.body}>
