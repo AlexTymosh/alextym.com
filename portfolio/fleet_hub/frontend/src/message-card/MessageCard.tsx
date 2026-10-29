@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import fleetAvatar from "../assets/alex.webp";
 import styles from "./message-card.module.css";
 
 type Message = {
@@ -33,7 +34,7 @@ export default function MessageCard({ event }: { event: Message }) {
   const displayedSubject = event.subject?.replace(/^\[PR12 DEMO\]\s*/, "");
   return <article className={`${styles.card} ${isAlex ? styles.personal : ""} ${isSystem ? styles.system : ""}`}>
     <div className={styles.avatar} aria-label={author}>
-      {isAlex ? <Image src="/images/profile/alex.webp" alt="Alex Tym" width={40} height={40} /> : isSystem ? <span className={styles.fleetLogo}>F</span> : isWorkshop ? <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6.2a4 4 0 0 0-5.2 5.1L3.8 16.8a2 2 0 0 0 2.9 2.8l5.5-5.5a4 4 0 0 0 5.1-5.2l-2.4 2.3-2.7-.7-.7-2.7z"/></svg> : isEmail ? <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> : <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.5-4.5 3.1-7 8-7s7.5 2.5 8 7"/></svg>}
+      {isAlex ? <Image src={fleetAvatar} alt="Alex Tym" width={40} height={40} /> : isSystem ? <span className={styles.fleetLogo}>F</span> : isWorkshop ? <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 6.2a4 4 0 0 0-5.2 5.1L3.8 16.8a2 2 0 0 0 2.9 2.8l5.5-5.5a4 4 0 0 0 5.1-5.2l-2.4 2.3-2.7-.7-.7-2.7z"/></svg> : isEmail ? <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> : <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.5-4.5 3.1-7 8-7s7.5 2.5 8 7"/></svg>}
     </div>
     <div className={styles.content}>
       <div className={styles.meta}><strong>{author}</strong><span className={styles.kind}>{senderRole(event.kind)}</span>{event.ticket_id&&<span className={styles.ticket}>{event.ticket_id}</span>}<time dateTime={event.created_at}>{messageDate(event.created_at)}</time></div>

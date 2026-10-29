@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const appRoot = dirname(fileURLToPath(import.meta.url));
@@ -9,7 +9,7 @@ const nextConfig = {
     agentUpgrade: false,
   },
   turbopack: {
-    root: appRoot,
+    root: resolve(appRoot, ".."),
   },
   async rewrites() {
     const backendOrigin = getBackendOrigin();

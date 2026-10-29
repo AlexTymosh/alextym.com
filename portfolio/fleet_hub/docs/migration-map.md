@@ -1,5 +1,10 @@
 # Fleet VOR Hub — source ownership and migration map
 
+PR 2 implementation update (2026-10-27): frontend components, CSS and bundled
+images have moved into `portfolio/fleet_hub/frontend/src/`. The four
+Next.js route files remain in the website host. The original inventory
+below is retained as a pre-migration audit record.
+
 Snapshot of `main` reviewed on 2026-10-26, after PR #207 merged. This is a **planning inventory**, not proof that code has already moved. Re-run a file-tree audit before each move.
 
 ## Frontend: 29 source and asset files
