@@ -2,9 +2,8 @@
 
 import hashlib
 import sqlite3
-from pathlib import Path
+from fleet_hub.services.vor_store import SEED_FILE as SEED
 
-SEED = Path(__file__).resolve().parents[1] / "app/services/vor_seed.sqlite3"
 SHA256 = "db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532"
 
 

@@ -3,8 +3,8 @@
 from datetime import date
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from app.api.vor import router
-from app.services import vor_store
+from fleet_hub.api.vor import router
+from fleet_hub.services import vor_store
 
 
 def configure_subscribers(client, vehicle_id):
@@ -104,6 +104,7 @@ def test_live_send_blocked_until_every_subscriber_allowlisted(monkeypatch, tmp_p
     monkeypatch.setenv("VOR_DEMO_VICTORIA_EMAIL", "victoria@unit.example")
     monkeypatch.setenv("VOR_DEMO_SEND_REAL_EMAIL", "true")
     monkeypatch.setenv("VOR_DEMO_ALLOWED_RECIPIENTS", "alex@unit.example,victoria@unit.example")
+    monkeypatch.setenv("VOR_DEMO_ALLOWED_EMAIL_DOMAINS", "")
     monkeypatch.setenv("RESEND_API_KEY", "fake-do-not-send")
     monkeypatch.setenv("VOR_DEMO_FROM_EMAIL", "demo@example.test")
     monkeypatch.setenv("VOR_DEMO_PUBLIC_URL", "https://alextym.com/fleet-vor-hub")
@@ -117,7 +118,7 @@ def test_live_send_blocked_until_every_subscriber_allowlisted(monkeypatch, tmp_p
         called.append(kwargs["json"])
         return Response()
 
-    monkeypatch.setattr("app.api.vor.httpx.post", fake_post)
+    monkeypatch.setattr("fleet_hub.api.vor.httpx.post", fake_post)
     app = FastAPI()
     app.include_router(router, prefix="/api")
     with TestClient(app) as c:
@@ -126,6 +127,12 @@ def test_live_send_blocked_until_every_subscriber_allowlisted(monkeypatch, tmp_p
         v = next(x for x in snap["vehicles"] if x["registration"] == "GX24 KLM")
         configure_subscribers(c, v["id"])
         snap = c.get("/api/vor/bootstrap").json()
+        # A third subscribed address is intentionally NOT on the exact-address allowlist.
+        assert set(vor_store.subscriber_emails(v["id"])) == {
+            "alex@unit.example",
+            "victoria@unit.example",
+            "garage@example.test",
+        }
         message = {
             "vehicle_id": v["id"],
             "kind": "email",

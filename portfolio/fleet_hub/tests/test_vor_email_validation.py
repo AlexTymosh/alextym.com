@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.vor import router, valid_email
+from fleet_hub.api.vor import router, valid_email
 
 
 @pytest.mark.parametrize(

@@ -3,10 +3,10 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.vor import router
-from app.api.vor_checklist import CHECKLIST, router as checklist_router
+from fleet_hub.api.vor import router
+from fleet_hub.api.vor_checklist import CHECKLIST, router as checklist_router
 from datetime import date
-from app.services import vor_store
+from fleet_hub.services import vor_store
 
 
 def make_client(monkeypatch, tmp):

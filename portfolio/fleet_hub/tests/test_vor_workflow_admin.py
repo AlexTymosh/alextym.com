@@ -6,8 +6,8 @@ import sqlite3
 from contextlib import contextmanager
 
 import pytest
-from app.services import vor_store
-from app.services import vor_workflow_admin as library
+from fleet_hub.services import vor_store
+from fleet_hub.services import vor_workflow_admin as library
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def fixture_db(tmp_path, monkeypatch):
 
     # Service uses vor_data.database; patch directly to keep these tests independent
     # of the broad v2 migrations and embedded seeded demo database.
-    from app.services import vor_workflow_admin
+    from fleet_hub.services import vor_workflow_admin
 
     monkeypatch.setattr(vor_workflow_admin.vor_data, "database", connection)
     monkeypatch.setattr(vor_store, "database_path", lambda: active)

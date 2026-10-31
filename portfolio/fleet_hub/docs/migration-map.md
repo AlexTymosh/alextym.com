@@ -1,3 +1,9 @@
+PR 3 backend implementation update (2026-10-29): the eight API routers, eight
+services, unchanged approved SQLite seed and 16 test files have moved under
+`portfolio/fleet_hub/`. `backend/app/main.py` mounts one Fleet router; tiny
+`app.api.vor*` and `app.services.vor*` aliases preserve legacy imports.
+The inventory below is the baseline and remains useful for auditing.
+
 # Fleet VOR Hub — source ownership and migration map
 
 PR 2 implementation update (2026-10-27): frontend components, CSS and bundled

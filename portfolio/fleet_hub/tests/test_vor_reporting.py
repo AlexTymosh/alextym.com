@@ -1,4 +1,4 @@
-from app.services.vor_reporting import _days, _dist, _pct
+from fleet_hub.services.vor_reporting import _days, _dist, _pct
 
 
 def test_completed_case_durations():

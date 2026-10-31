@@ -6,9 +6,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.vor import required
-from app.api.vor_data import router
-from app.services import vor_data
+from fleet_hub.api.vor import required
+from fleet_hub.api.vor_data import router
+from fleet_hub.services import vor_data
 
 SENSITIVE = "sqlite:///private/fleet.db password=never-expose traceback=secret"
 

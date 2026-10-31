@@ -86,6 +86,7 @@ tasks:
     cmds:
       - node scripts/check-portfolio-foundation.mjs
       - node scripts/check-fleet-frontend-boundaries.mjs
+      - node scripts/check-fleet-backend-boundaries.mjs
 
   repo:check:
     desc: Run repository hygiene checks.
@@ -146,26 +147,26 @@ tasks:
     desc: Run Ruff lint checks.
     dir: backend
     cmds:
-      - uv run ruff check .
+      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
 
   backend:format-check:
     desc: Check backend formatting.
     dir: backend
     cmds:
-      - uv run ruff format --check .
+      - uv run ruff format --check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
 
   backend:format:
     desc: Apply safe Ruff fixes and format backend code.
     dir: backend
     cmds:
-      - uv run ruff check . --fix
-      - uv run ruff format .
+      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests --fix
+      - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
 
   backend:compile:
     desc: Compile backend Python modules to catch syntax errors early.
     dir: backend
     cmds:
-      - uv run python -m compileall app scripts tests
+      - uv run python -m compileall app scripts tests ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
 
   backend:test:
     desc: Run backend tests.

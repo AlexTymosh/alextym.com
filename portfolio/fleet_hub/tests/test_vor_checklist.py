@@ -2,9 +2,9 @@
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from app.api.vor import router as vor_router
-from app.api.vor_checklist import router as checklist_router, CHECKLIST
-from app.services import vor_store
+from fleet_hub.api.vor import router as vor_router
+from fleet_hub.api.vor_checklist import router as checklist_router, CHECKLIST
+from fleet_hub.services import vor_store
 
 
 def test_persisted_checklist_blocks_until_complete_and_never_changes_vor(monkeypatch, tmp_path):

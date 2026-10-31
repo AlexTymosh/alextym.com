@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import pytest
-from app.services import vor_reconciliation as recon, vor_store
+from fleet_hub.services import vor_reconciliation as recon, vor_store
 
 
 @pytest.fixture

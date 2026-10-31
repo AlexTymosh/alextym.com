@@ -8,9 +8,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.vor import router as current_router
-from app.api.vor_intake import router as intake_router
-from app.services import vor_data, vor_intake, vor_store
+from fleet_hub.api.vor import router as current_router
+from fleet_hub.api.vor_intake import router as intake_router
+from fleet_hub.services import vor_data, vor_intake, vor_store
 
 
 @pytest.fixture
