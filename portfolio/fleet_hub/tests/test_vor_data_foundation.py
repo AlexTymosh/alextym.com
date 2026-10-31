@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from app.services import vor_data, vor_store
+from fleet_hub.services import vor_data, vor_store
 
 
 @pytest.fixture

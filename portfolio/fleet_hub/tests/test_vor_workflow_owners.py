@@ -6,8 +6,8 @@ import sqlite3
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.vor import router
-from app.api.vor_checklist import CHECKLIST, router as checklist_router
+from fleet_hub.api.vor import router
+from fleet_hub.api.vor_checklist import CHECKLIST, router as checklist_router
 from datetime import date
 
 

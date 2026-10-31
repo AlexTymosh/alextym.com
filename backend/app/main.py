@@ -1,8 +1,8 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from app.api.vor_workflow_admin import router as vor_workflow_admin_router
 from fastapi import FastAPI
+from fleet_hub.router import router as fleet_router
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.analytics import router as analytics_router
@@ -12,13 +12,6 @@ from app.api.escalation import router as escalation_router
 from app.api.health import router as health_router
 from app.api.redis_probe import router as redis_probe_router
 from app.api.telegram import router as telegram_router
-from app.api.vor import router as vor_router
-from app.api.vor_reporting import router as vor_reporting_router
-from app.api.vor_reconciliation import router as vor_reconciliation_router
-from app.api.vor_operations import router as vor_operations_router
-from app.api.vor_checklist import router as vor_checklist_router
-from app.api.vor_data import router as vor_data_router
-from app.api.vor_intake import router as vor_intake_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.loki import shutdown_loki_exporter
@@ -50,14 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(contact_router, prefix="/api")
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
-    app.include_router(vor_router, prefix="/api")
-    app.include_router(vor_workflow_admin_router, prefix="/api")
-    app.include_router(vor_reporting_router, prefix="/api")
-    app.include_router(vor_reconciliation_router, prefix="/api")
-    app.include_router(vor_operations_router, prefix="/api")
-    app.include_router(vor_checklist_router, prefix="/api")
-    app.include_router(vor_data_router, prefix="/api")
-    app.include_router(vor_intake_router, prefix="/api")
+    app.include_router(fleet_router, prefix="/api")
     app.include_router(analytics_router, prefix="/api")
     app.include_router(redis_probe_router)
     configure_metrics(app, settings)

@@ -1,7 +1,11 @@
-# Fleet Hub tests (planned destination)
+# Fleet Hub backend tests
 
-In PR 1, all existing tests remain in `backend/tests/`; this directory holds no executable tests yet.
+The original 16 tests were moved from `backend/tests/` during PR 3, with
+only import path and seed-location updates. A new wiring regression test verifies
+one FastAPI Fleet registration, compatibility imports, and stable SQLite paths. They are collected once by
+`backend/pyproject.toml`'s `pytest testpaths` and run in the existing
+`task backend:check` / GitHub CI backend job.
 
-Move relevant `test_vor_*.py`, including the SQLite seed contract, to a stable test location in the backend migration PR. Decide whether `pytest` collects directly from `portfolio/` or runs through a narrow host test adapter, then update CI **without dropping tests**.
-
-Test categories: seed content/integrity, auth/session, workflow stages, contacts/subscribers, live-email allowlisting/quota, import/export, reconciliation, reporting, integration contracts, and host boundaries.
+Tests cover authentication, vehicle data, workflows, reconciliation, subscribers,
+export formats, security rules, and exact approved synthetic seed integrity.
+Do not remove tests to make CI pass. Keep test SQLite in pytest `tmp_path`.

@@ -13,6 +13,7 @@ WORKDIR /app
 
 COPY backend/pyproject.toml backend/uv.lock ./
 COPY backend/app ./app
+COPY portfolio/fleet_hub/backend/src /portfolio/fleet_hub/backend/src
 COPY config ./config
 COPY content/public ./content/public
 

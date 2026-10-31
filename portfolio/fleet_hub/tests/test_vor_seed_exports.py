@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.vor import router
+from fleet_hub.api.vor import router
 
 
 def client(monkeypatch, tmp_path):

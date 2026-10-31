@@ -64,5 +64,5 @@ assert.doesNotMatch(linkScript, /const link = join\(repoRoot, "node_modules"\)/)
 const manifest = JSON.parse(readFileSync(join(root, "portfolio/fleet_hub/project.json"), "utf8"));
 assert.equal(manifest.catalog.visible, false);
 assert.equal(manifest.demo.path, "/fleet-vor-hub");
-assert.ok(existsSync(join(root, "backend/app/services/vor_seed.sqlite3")), "PR 2 must not move the SQLite seed");
+assert.ok(existsSync(join(root, "portfolio/fleet_hub/backend/src/fleet_hub/services/vor_seed.sqlite3")), "Fleet seed must be owned by portfolio");
 console.log(`Fleet frontend boundary check passed (${appFiles.length} project-owned source/assets, four host routes).`);

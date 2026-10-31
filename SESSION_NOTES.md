@@ -1,3 +1,14 @@
+# PR 3 in progress — backend migration (2026-10-29)
+
+Current branch: `refactor/fleet-hub-backend-module`, based on squash PR #209
+`30947e4eea3e115ad97bccf4b6ed58e024df3077`. The application backend
+is owned by `portfolio/fleet_hub/backend/src/fleet_hub/` and mounted once by
+`backend/app/main.py`. The exact v2 SQLite seed and API behavior must be
+verified locally and by CI before merging. Do not treat these proposed changes
+as production-deployed until their PR is reviewed and squash merged.
+
+---
+
 # SESSION_NOTES — Portfolio architecture and Fleet VOR Hub migration
 
 > **Progress (2026-10-27):** Foundation PR #208 merged to `main` at
