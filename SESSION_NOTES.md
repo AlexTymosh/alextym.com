@@ -1,3 +1,63 @@
+# Current handoff — PR 4: Website / Portfolio frontend boundaries
+
+**Updated:** 2026-11-01
+**Repository:** `AlexTymosh/alextym.com`
+**Verified GitHub main:** `dd7b7b730e4be4c9d056398b4b69ba5e72784575`
+**Proposed branch:** `refactor/website-portfolio-boundaries`
+
+## Verified merged milestones
+
+- PR #208 — portfolio modular-monolith foundation; merged 2026-10-27.
+- PR #209 — Fleet frontend moved to `portfolio/fleet_hub/frontend/src/`; merged 2026-10-28.
+- PR #213 — Fleet backend, SQLite seed and test migration; merged 2026-10-31.
+- PR #214 — Fleet Python package via local `uv` dependency; **merged 2026-11-01** at commit `dd7b7b730e4be4c9d056398b4b69ba5e72784575`. Local user validation before merge: `task ci` 8/8 PASS, Docker build PASS, runtime smoke PASS, 56 Fleet API methods, approved SHA-256 and `/app/_local/vor_hub.sqlite3` default preserved.
+
+## Current task — PR 4: website vs Fleet frontend boundaries
+
+**State:** Patch prepared for local application only. NOT committed, pushed, PR-created, merged, or deployed by this patch. Validate on the dedicated feature branch.
+
+1. Add `scripts/check-website-portfolio-boundaries.mjs` and wire it into `task portfolio:check` / `task ci`.
+2. Enforce that Fleet TypeScript imports remain inside project-owned code (plus explicitly allowed React/Next dependencies). The website must import Fleet through `@fleet-hub` in the single route adapter.
+3. Enforce project-only `.module.css`, with no `:global`, `@import` or document-global rules; keep website global CSS as the existing shared baseline.
+4. Remove the two unimported historical global CSS files: `src/issue-hub-redesign.css` and `src/operations/workflow-redesign.css`. Existing CSS Modules remain untouched.
+5. Add Playwright regression for demo `noindex` metadata and preserved host navigation on return to `/`.
+6. Update `docs/architecture/portfolio.md`, Fleet frontend README, and add `portfolio/fleet_hub/docs/css-boundary-audit.md`.
+7. No Next.js route-group or root-layout migration: the source audit did not establish a need. Do not alter Fleet styling, existing URLs, 3 redirects, authentication, APIs, seed, data, runtime DB, or deployment.
+
+### Local gates (PowerShell; from clean `main` after pulling PR #214)
+
+```powershell
+# Create one concern-specific branch if not already present:
+git switch -c refactor/website-portfolio-boundaries
+# Extract PR 4 ZIP outside the repository and run:
+python "$HOME\Downloads\website-portfolio-pr4\install_patch.py"
+python "$HOME\Downloads\website-portfolio-pr4\install_patch.py" --apply
+node scripts/check-website-portfolio-boundaries.mjs
+git diff --check
+task ci
+task docker:build
+```
+
+Review `git diff --stat`, `git diff` and smoke-test `/`, `/resume`, `/chat`, `/contact` and `/fleet-vor-hub` locally before committing. The installer creates backups outside the repo; no commit/push/merge/deploy.
+
+**Acceptance:** all 8 CI sections, Docker, and existing Playwright tests pass; removed CSS is unreferenced; Fleet noindex and 3 redirects preserved; no styling changes; website SEO/nav/footer intact; site and Fleet ownership boundary guard passes.
+
+## After PR 4 — PR 5 final architecture audit
+
+Audit legacy migration scripts and CI references before deleting anything. Add authenticated Fleet E2E flows and deployment regression. Update historical migration docs after successful PR4 merge, then verify Vercel/Render smoke. Keep catalogue hidden and infrastructure single-host, free-tier compliant.
+
+## Unchanged core contracts
+
+- One website on `alextym.com`; one Next.js host and one FastAPI host; embedded projects are not standalone deployments.
+- Preserve `/fleet-vor-hub`, three redirects and all `/api/vor/*` contracts; no `/portfolio` publication.
+- Approved SQLite seed: `db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532`.
+- Preserve `VOR_DEMO_DB_PATH`, Windows `backend/_local/vor_hub.sqlite3`, Docker `/app/_local/vor_hub.sqlite3`; never reset working databases.
+- Preserve cookies, sessions, CSRF, mail restrictions, Homepage, Resume, Chat, Contact, RAG and Telegram behavior.
+
+**Historical handoff notes follow; their old branch/status statements are archival.**
+
+---
+
 # Current handoff — Fleet packaging PR 3.1 (prepared, not merged)
 
 **Updated:** 2026-10-31
