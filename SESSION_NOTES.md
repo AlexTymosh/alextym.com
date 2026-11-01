@@ -1,3 +1,81 @@
+# Current handoff — PR 5: final portfolio architecture audit
+
+**Updated:** 2026-11-01
+**Repository:** `AlexTymosh/alextym.com`
+**Verified GitHub main:** `12cfca4fe8ec4c95794db54c5e52848dcecbf56b`
+**Working branch:** `refactor/portfolio-final-audit` (create from verified main)
+**Status:** PR 5 patch installed locally; first CI run found an incomplete browser-test mock, corrected in this incremental fix. Full CI rerun pending; no commit, push, merge or production deployment is confirmed.
+
+## Verified completed milestones
+
+- PR #208 — portfolio modular-monolith foundation; merged 2026-10-27.
+- PR #209 — embedded Fleet frontend module; merged 2026-10-28.
+- PR #213 — Fleet backend, seed and tests moved; merged 2026-10-31.
+- PR #214 — real Python package under local `uv` dependency; merged 2026-11-01.
+- PR #215 — website/Fleet import and CSS boundaries; merged 2026-11-01 at `12cfca4fe8ec4c95794db54c5e52848dcecbf56b`.
+
+## Scope of PR 5 (current work)
+
+1. Retire 19 obsolete one-shot `apply_vor_*`, `check_vor_*`, `install_vor_hub.py`, `repair_vor_ui_entry.py` scripts, subject to a fail-closed preflight that rejects any active references. Keep scripts in Git history and make pre-change backups.
+2. Preserve `start-vor-{backend,frontend}.ps1`, `backup_vor_v2.py`, `configure-vor-subscribers.ps1`, host CI/dev/Telegram tooling.
+3. Add `scripts/check-fleet-legacy-tooling.mjs` to existing `task portfolio:check` / `task ci` for future prevention of stale installers.
+4. Add `frontend/e2e/fleet-hub-authenticated.spec.ts`: mocked authenticated browser workspace, module navigation, and sign-out. No embedded credentials and no requests to production services.
+5. Add `portfolio/fleet_hub/docs/legacy-tooling-audit.md` and `deployment-smoke.md`. Update `docs/architecture/portfolio.md`, migration map and Fleet frontend README.
+6. No code/data/API changes, no route-group refactor, no deployment change. No new services.
+
+### Validation gates — mark only when actually completed
+
+- [x] `node scripts/check-fleet-legacy-tooling.mjs`
+- [x] `git diff --check`
+- [ ] `task ci` — all sections PASS, including real backend tests and mocked authenticated Playwright flows
+- [x] `task docker:build`
+- [ ] GitHub PR CI on dedicated branch
+- [ ] Post-merge manual Vercel/Render production smoke (`portfolio/fleet_hub/docs/deployment-smoke.md`)
+
+### First local CI results and E2E hotfix (2026-11-01)
+
+- [x] Repository hygiene, project config, setup wizard, deployment config.
+- [x] Backend: 605/605 Python tests passed.
+- [x] Free RAG and Docker build passed.
+- [x] Original 164 browser tests passed.
+- [ ] Added mocked-authenticated Playwright tests: first run failed 4/4
+  (desktop and mobile), solely because the mock omitted the genuine
+  `GET /api/vor/ops/details` request mounted by `OperationsPanel`.
+- [x] Test fixture amended with an explicit response matching the current
+  operations details contract and validating the selected vehicle/ticket.
+- [ ] Re-run the targeted Playwright file, then full `task ci` before PR.
+- [ ] GitHub Actions, squash merge and post-merge deployment smoke pending.
+
+### Workflow and commands
+
+```powershell
+# Starting from a clean, up-to-date main containing PR #215:
+git switch -c refactor/portfolio-final-audit
+$patch = "$HOME\Downloads\portfolio-pr5-final-v2\install_patch.py"
+python $patch
+python $patch --apply
+git diff --check
+task ci
+task docker:build
+git status --short --branch
+```
+
+**PR conventions:** PR tests use `- [x]` / `- [ ]`; squash commits include one title plus 2–4 concise descriptive lines; every subsequent PR must update `SESSION_NOTES.md` with real status, tests and next steps.
+
+## Acceptance / invariants
+
+- A single `alextym.com` Next.js host (Vercel) and FastAPI host (Render), with project-owned code under `portfolio/<id>/`.
+- Preserve `/fleet-vor-hub`, three redirects, 56 API methods, cookie/CSRF/access contracts, all hidden portfolio rules, site SEO, Resume, Chat, Contact, RAG and Telegram.
+- Approved immutable seed SHA-256: `db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532`.
+- Preserve `VOR_DEMO_DB_PATH` and existing runtime SQLite; do not reset, migrate or overwrite working/production databases.
+- Browser tests mock the Fleet API only; real backend password/cookie/CSRF behavior is covered by the separate FastAPI test suite. Browser E2E does not prove production end-to-end authorization.
+- After PR merge, follow deployment smoke with actual observed evidence. No GitHub/production write is performed by the patch.
+- Track `npm audit` findings as a separate dependency/security effort; avoid force-updating dependencies inside this architectural PR.
+
+**Everything below this line is archived handoff history, not the current project state.**
+
+---
+
 # Current handoff — PR 4: Website / Portfolio frontend boundaries
 
 **Updated:** 2026-11-01
