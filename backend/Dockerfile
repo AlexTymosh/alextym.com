@@ -11,9 +11,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# The local path dependency is resolved relative to /app/pyproject.toml.
+# Copy both its project metadata and source BEFORE uv sync --frozen.
 COPY backend/pyproject.toml backend/uv.lock ./
-COPY backend/app ./app
+COPY portfolio/fleet_hub/backend/pyproject.toml /portfolio/fleet_hub/backend/pyproject.toml
 COPY portfolio/fleet_hub/backend/src /portfolio/fleet_hub/backend/src
+COPY backend/app ./app
 COPY config ./config
 COPY content/public ./content/public
 

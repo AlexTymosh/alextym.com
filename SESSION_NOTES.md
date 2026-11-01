@@ -1,17 +1,108 @@
-# PR 3 in progress — backend migration (2026-10-29)
+# Current handoff — Fleet packaging PR 3.1 (prepared, not merged)
 
-Current branch: `refactor/fleet-hub-backend-module`, based on squash PR #209
-`30947e4eea3e115ad97bccf4b6ed58e024df3077`. The application backend
-is owned by `portfolio/fleet_hub/backend/src/fleet_hub/` and mounted once by
-`backend/app/main.py`. The exact v2 SQLite seed and API behavior must be
-verified locally and by CI before merging. Do not treat these proposed changes
-as production-deployed until their PR is reviewed and squash merged.
+**Updated:** 2026-10-31
+**Repository:** `AlexTymosh/alextym.com`
+**Verified GitHub main:** `a80cf3805ae106ce496e290d41cca9ad61394738`
+**Suggested working branch:** `refactor/fleet-hub-python-packaging`
+
+## Merged history
+
+- PR #208 — Portfolio modular-monolith foundation — merged 2026-10-27.
+- PR #209 — Fleet frontend move into `portfolio/fleet_hub/frontend/src/` — merged 2026-10-28.
+- PR #213 — Fleet backend, seed, and tests move — merged 2026-10-31.
+- After PR #213, GitHub's main CI reported success for `project`, `backend`,
+  `frontend`, `rag`, and `docker` jobs. PR #213 reported 603 Python tests,
+  162 Playwright tests, and preservation of 56 Fleet API method contracts.
+
+## Current work: PR 3.1 — replace Python import-path bridge with uv package
+
+**State:** Patch prepared for local installation. Do not claim merged, verified in
+GitHub CI, or deployed until the user has applied the patch, regenerated
+`backend/uv.lock`, run all required checks, reviewed and squash-merged the PR.
+
+Changed / added files:
+
+1. `portfolio/fleet_hub/backend/pyproject.toml`: declare the installable
+   `alextym-fleet-hub` source-layout Python distribution, explicitly include
+   `vor_seed.sqlite3` in the package.
+2. `backend/pyproject.toml`: declare `alextym-fleet-hub==0.1.0` and its local
+   editable source mapping in `[tool.uv.sources]`.
+3. `backend/app/__init__.py`: remove the import-time `sys.path` injection.
+4. `portfolio/fleet_hub/tests/conftest.py`: remove the test `sys.path` injection.
+5. `backend/Dockerfile`: copy the local package's metadata and source before
+   `uv sync --frozen --no-dev`; preserve `/app` as the host working directory.
+6. `portfolio/fleet_hub/tests/test_fleet_packaging.py`: add installed-package
+   and bundled-seed regression checks.
+7. `scripts/check-fleet-backend-boundaries.mjs`: enforce local package wiring,
+   absence of path injections, Docker copying, seed SHA and source ownership.
+8. `portfolio/fleet_hub/backend/README.md`: update operational documentation.
+9. `backend/uv.lock`: **must be regenerated** with `uv lock` and committed.
+
+### Local installation and gates (Windows PowerShell)
+
+From the root of a clean, current, dedicated feature branch:
+
+```powershell
+# Extract the provided patch ZIP elsewhere, then in the repository root:
+python C:\path\to\fleet-packaging-pr31\install_patch.py --apply
+
+git status --short
+node scripts/check-fleet-backend-boundaries.mjs
+task ci
+task docker:build
+# Optional Docker API smoke:
+docker run --rm --entrypoint python alextym-backend:latest -c "from app.main import app; assert '/api/vor/session' in app.openapi()['paths']; print('PASS: Fleet API imported from installed local package')"
+```
+
+The installer verifies the existing files against PR #213's blobs before
+replacing them, preserves a backup, regenerates `backend/uv.lock` through uv,
+and does not push or commit anything. It does not touch `vor_seed.sqlite3` or
+runtime SQLite databases.
+
+**Acceptance:** `uv lock --check` passes; `uv sync --extra dev` succeeds;
+`importlib.metadata.version('alextym-fleet-hub') == '0.1.0'`; no manual host/test
+`sys.path` injection; seed hash unchanged; 56 Fleet routes/methods unchanged;
+all repo/CI/Docker checks pass; Vercel/Render behavior unaffected.
+
+## Next stages after PR 3.1 merge
+
+**PR 4:** Audit Next.js host vs Fleet CSS and import boundaries, verify that
+website shell/global styles do not leak into the Fleet UI. Introduce Next.js
+route groups only if the evidence justifies them. Preserve routes, SEO,
+website behavior and appearance without accidental changes.
+
+**PR 5:** Final portfolio architecture audit: classify obsolete migration and
+patch scripts, update historical docs, strengthen authenticated Fleet E2E smoke,
+verify Vercel/Render deployment, and document addition of a future project.
+
+## Non-negotiable contracts
+
+- One public website, one shared Next.js host and one shared FastAPI host;
+  projects are embedded demos, not independently deployed apps or repos.
+- Keep `/fleet-vor-hub`, `/api/vor/*` and three redirects unchanged. Legacy
+  `/fleet-vor-hub-01` and `/api/vor-01` stay retired.
+- The approved immutable SQLite seed SHA-256 remains
+  `db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532`.
+  Seed dataset: 20 vehicles, 42 tickets, 219 events; reference GX24 KLM is
+  Basingstoke / Jason W.
+- Preserve `VOR_DEMO_DB_PATH`, backend `_local/vor_hub.sqlite3` default on
+  Windows, `/app/_local/vor_hub.sqlite3` inside Docker. Do not copy, overwrite,
+  migrate, truncate or reset an existing production runtime database.
+- Preserve all authentication, same-origin/CSRF, session cookies, email
+  allowlist and security safeguards. No new paid infrastructure.
+- Do not change Home, Resume, Chat, Contact, RAG, Telegram, or other cases.
+- Hidden catalogue only: do not expose `/portfolio` or add a Portfolio menu.
+- Fresh branch from main for each approved concern, and squash merge only
+  after all checks pass.
+
+**Historical migration plan follows.** Its past-tense baseline sections record
+what was intended in October 2026; the current status above takes precedence.
 
 ---
 
 # SESSION_NOTES — Portfolio architecture and Fleet VOR Hub migration
 
-> **Progress (2026-10-27):** Foundation PR #208 merged to `main` at
+> **Historical progress (2026-10-27):** Foundation PR #208 merged to `main` at
 > `fe0470e76a9c3ec479881fc0e4f7640d9566905b`. PR 2 moves only the Fleet
 > frontend implementation; backend/SQLite remain untouched pending PR 3.
 > The historical baseline and PR 1 instructions below are retained as
