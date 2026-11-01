@@ -1,6 +1,6 @@
 # Portfolio architecture — host and project boundaries
 
-**Status (2026-11-01):** Foundation and Fleet frontend/backend migrations, including Python packaging, are merged through PR #214. PR 4 adds explicit frontend ownership/CSS boundary checks without changing route layout.
+**Status (2026-11-01):** PRs #208, #209, #213, #214 and #215 are merged. PR 5 completes legacy tooling retirement, adds authenticated-state browser regression and documents post-merge deployment smoke. No new infrastructure or route layout is introduced.
 
 ## Target
 
@@ -53,10 +53,16 @@ No generic shared package or plugin discovery framework is required yet. If an a
 
 ## Implementation phases
 
-See `SESSION_NOTES.md` for detailed PR slices, checklists and recovery instructions. First PR establishes metadata and structural validation only; no code relocation, package workspace, Docker or Vercel changes.
+See the current header of `SESSION_NOTES.md` for validated PR milestones and the final acceptance checklist; earlier notes are archived below it. All Fleet source moves and Python packaging were completed in prior merged PRs.
 
 ## Implementation status — PR 4 (frontend isolation audit)
 
 The website retains its root layout, navigation, footer and shared browser-level resets. Fleet UI and assets live under `portfolio/fleet_hub/frontend/src/` with locally scoped CSS Modules. `scripts/check-website-portfolio-boundaries.mjs` rejects project-side global CSS, cross-boundary imports, direct website imports of Fleet internals, route changes and accidental publication of a portfolio menu. See `portfolio/fleet_hub/docs/css-boundary-audit.md` for evidence, limitations and acceptance criteria.
 
 Route groups were reviewed and deferred because they would change layout lifecycle without a verified need. Full browser-level isolation is not claimed: the single Next.js host necessarily shares document-wide CSS baseline and metadata. Existing Playwright regression tests guard the user-visible contract.
+
+## PR 5 — final source and tooling handoff
+
+Retire only obsolete, one-time Fleet migration installers and checks; preserve local launchers and SQLite backup tooling. New `scripts/check-fleet-legacy-tooling.mjs` rejects stale scripts in CI. See `portfolio/fleet_hub/docs/legacy-tooling-audit.md`.
+
+New browser tests cover mocked authenticated Fleet navigation and sign-out; existing Python tests cover real backend authentication and disposable SQLite. Real Vercel/Render deployment validation is a separate post-merge manual gate: `portfolio/fleet_hub/docs/deployment-smoke.md`.
