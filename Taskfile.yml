@@ -86,6 +86,7 @@ tasks:
     cmds:
       - node scripts/check-portfolio-foundation.mjs
       - node scripts/check-fleet-frontend-boundaries.mjs
+      - node scripts/check-website-portfolio-boundaries.mjs
       - node scripts/check-fleet-backend-boundaries.mjs
 
   repo:check:

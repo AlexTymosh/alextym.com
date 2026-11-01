@@ -1,6 +1,6 @@
 # Portfolio architecture — host and project boundaries
 
-**Status:** target architecture defined; migration not yet performed.
+**Status (2026-11-01):** Foundation and Fleet frontend/backend migrations, including Python packaging, are merged through PR #214. PR 4 adds explicit frontend ownership/CSS boundary checks without changing route layout.
 
 ## Target
 
@@ -54,3 +54,9 @@ No generic shared package or plugin discovery framework is required yet. If an a
 ## Implementation phases
 
 See `SESSION_NOTES.md` for detailed PR slices, checklists and recovery instructions. First PR establishes metadata and structural validation only; no code relocation, package workspace, Docker or Vercel changes.
+
+## Implementation status — PR 4 (frontend isolation audit)
+
+The website retains its root layout, navigation, footer and shared browser-level resets. Fleet UI and assets live under `portfolio/fleet_hub/frontend/src/` with locally scoped CSS Modules. `scripts/check-website-portfolio-boundaries.mjs` rejects project-side global CSS, cross-boundary imports, direct website imports of Fleet internals, route changes and accidental publication of a portfolio menu. See `portfolio/fleet_hub/docs/css-boundary-audit.md` for evidence, limitations and acceptance criteria.
+
+Route groups were reviewed and deferred because they would change layout lifecycle without a verified need. Full browser-level isolation is not claimed: the single Next.js host necessarily shares document-wide CSS baseline and metadata. Existing Playwright regression tests guard the user-visible contract.

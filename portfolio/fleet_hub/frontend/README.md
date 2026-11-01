@@ -19,4 +19,6 @@ This directory owns the frontend implementation of Fleet VOR Hub.
 Do not import website components, website business services or other portfolio
 projects here. Keep the main demo UI and internal panels under this directory.
 
-The backend and SQLite have NOT moved in PR 2. That is the dedicated PR 3.
+The backend, SQLite seed and tests moved in PR #213; the Fleet backend became an installable local uv package in PR #214.
+
+PR 4 introduces a no-global-CSS and import-boundary guard. See `../docs/css-boundary-audit.md`. Do not import standalone `.css`, use `:global` escapes, or import website implementation from Fleet. Host-owned baseline document styles are intentionally shared; route groups are not introduced in this PR.

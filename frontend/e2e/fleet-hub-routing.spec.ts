@@ -30,3 +30,16 @@ for (const oldRoute of routes) {
     await expect(page.getByRole("heading", { name: "Fleet VOR Hub" })).toBeVisible();
   });
 }
+
+
+test("Fleet demo remains noindex and website navigation survives returning home", async ({ page }) => {
+  await page.goto("/fleet-vor-hub");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.getByRole("heading", { name: "Fleet VOR Hub" })).toBeVisible();
+
+  // The shared host shell remains mounted; Fleet visually owns the workspace.
+  await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(1);
+  await page.goto("/");
+  await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+});
