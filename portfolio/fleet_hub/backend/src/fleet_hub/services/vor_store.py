@@ -50,11 +50,55 @@ def database_path() -> Path:
 def connection() -> Iterator[sqlite3.Connection]:
     path = database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
+    created_from_seed = not path.exists()
+    if created_from_seed:
         shutil.copy2(SEED_FILE, path)
     with open_sqlite(path) as db:
-        _initialize_store_schema(db)
+        if created_from_seed or not _legacy_store_schema_ready(db):
+            _initialize_store_schema(db)
         yield db
+
+
+def _legacy_store_schema_ready(db: sqlite3.Connection) -> bool:
+    """Avoid repeated v1 DDL and migration calls on an initialized database.
+
+    Missing tables, version markers or an incomplete booking initialization
+    always use the existing idempotent bootstrap, including recovery behaviour.
+    This check is read-only and uses persistent SQLite metadata, not a process
+    cache; separate workers and restarts therefore see the same state.
+    """
+    tables = {
+        row[0]
+        for row in db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name IN ('maintenance_bookings', 'vor_schema_versions')"
+        )
+    }
+    if tables != {"maintenance_bookings", "vor_schema_versions"}:
+        return False
+
+    required = (
+        "v1_ui_refresh_20261012",
+        "v1_1_workflow_owners_20261012",
+        "v1_2_subscribers_overdue_20261012",
+    )
+    completed = {
+        row[0]
+        for row in db.execute(
+            "SELECT name FROM vor_schema_versions WHERE name IN (?, ?, ?)", required
+        )
+    }
+    if len(completed) != len(required):
+        return False
+
+    # The previous bootstrap seeds bookings only when they are empty AND there
+    # is no initialization marker. Keep this precise recovery contract.
+    initialized = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='vor_bookings_initialized'"
+    ).fetchone()
+    if initialized is not None:
+        return True
+    return db.execute("SELECT 1 FROM maintenance_bookings LIMIT 1").fetchone() is not None
 
 
 def _initialize_store_schema(db: sqlite3.Connection) -> None:
