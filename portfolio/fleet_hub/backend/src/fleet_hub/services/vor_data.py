@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Iterator
 from xml.etree import ElementTree as ET
 
-from fleet_hub.persistence.schema import has_schema_objects
+from fleet_hub.persistence.schema import ensure_schema, has_schema_objects
 from fleet_hub.services import vor_store
 
 MAX_FILE_BYTES = 2_000_000
@@ -59,9 +59,8 @@ def normalise_header(label: str) -> str:
 @contextmanager
 def database() -> Iterator[sqlite3.Connection]:
     with vor_store.connection() as db:
-        # The connection is closed by the outer context manager.
-        if not _v2_schema_ready(db):
-            _migrate(db)
+        # Recheck readiness under an OS lock before running any v2 DDL.
+        ensure_schema(db, _v2_schema_ready, _migrate)
         yield db
 
 

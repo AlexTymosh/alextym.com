@@ -6,12 +6,14 @@ import os
 import json
 import shutil
 import sqlite3
-from contextlib import contextmanager
+import tempfile
+from contextlib import ExitStack, contextmanager
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterator
 
 from fleet_hub.persistence import migrations as fleet_migrations
+from fleet_hub.persistence.schema import bootstrap_lock
 from fleet_hub.persistence.sqlite import open_sqlite
 
 SEED_FILE = Path(__file__).with_name("vor_seed.sqlite3")
@@ -50,12 +52,26 @@ def database_path() -> Path:
 def connection() -> Iterator[sqlite3.Connection]:
     path = database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    created_from_seed = not path.exists()
-    if created_from_seed:
-        shutil.copy2(SEED_FILE, path)
-    with open_sqlite(path) as db:
-        if created_from_seed or not _legacy_store_schema_ready(db):
-            _initialize_store_schema(db)
+    # Hold the process lock through seed copying AND v1 migrations, but not
+    # during subsequent business operations. ExitStack keeps the connection
+    # open after the lock is released and closes it on every failure path.
+    with ExitStack() as stack:
+        with bootstrap_lock(path):
+            created_from_seed = not path.exists()
+            if created_from_seed:
+                # Never expose a partially copied seed as the runtime database.
+                with tempfile.NamedTemporaryFile(
+                    prefix=f".{path.name}.seed-", suffix=".tmp", dir=path.parent, delete=False
+                ) as staging:
+                    staging_path = Path(staging.name)
+                try:
+                    shutil.copy2(SEED_FILE, staging_path)
+                    os.replace(staging_path, path)
+                finally:
+                    staging_path.unlink(missing_ok=True)
+            db = stack.enter_context(open_sqlite(path))
+            if created_from_seed or not _legacy_store_schema_ready(db):
+                _initialize_store_schema(db)
         yield db
 
 

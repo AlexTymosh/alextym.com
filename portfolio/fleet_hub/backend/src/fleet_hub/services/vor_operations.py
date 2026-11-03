@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Any
 
-from fleet_hub.persistence.schema import has_schema_objects
+from fleet_hub.persistence.schema import ensure_schema, has_schema_objects
 from fleet_hub.services import vor_data
 
 CHECKS = (
@@ -99,8 +99,10 @@ def _ops_schema_ready(db: Any) -> bool:
 
 
 def _setup(db: Any) -> None:
-    if _ops_schema_ready(db):
-        return
+    ensure_schema(db, _ops_schema_ready, _initialize_ops_schema)
+
+
+def _initialize_ops_schema(db: Any) -> None:
     db.executescript("""
       CREATE TABLE IF NOT EXISTS ops_actions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
