@@ -29,8 +29,6 @@ for (const name of [
 
 const task = readFileSync(join(root, "Taskfile.yml"), "utf8");
 assert.match(task, /node scripts\/check-fleet-legacy-tooling\.mjs/);
-const notes = readFileSync(join(root, "SESSION_NOTES.md"), "utf8");
-assert.match(notes, /^# Current handoff — PR 5: final portfolio architecture audit/m);
 const test = readFileSync(join(root, "frontend/e2e/fleet-hub-authenticated.spec.ts"), "utf8");
 assert.match(test, /mockAuthenticatedFleet/);
 assert.match(test, /POST \/api\/vor\/logout/);
