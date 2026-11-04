@@ -1,11 +1,10 @@
 # Portfolio architecture — host and project boundaries
 
-**Status (2026-11-04):** Fleet source relocation and retirement of legacy
-migration tooling were completed in earlier merged PRs (through #216). The
-current `refactor/architecture-boundaries-2026-11-02` branch contains an
-additional Fleet SQLite lifecycle/migration refactor; it is **not yet merged**.
-The host remains one Next.js application on Vercel and one FastAPI application
-on Render. No extra service, public route or database product has been added.
+**Status (2026-11-04):** PR #223 (`refactor(fleet-db): isolate SQLite lifecycle
+and migrations`) has been squash-merged into `main` at `c020c813d452`.
+Fleet API auth and email delivery isolation are now under review on the
+unmerged branch `refactor/fleet-api-delivery-boundaries`. The deployment
+remains one Next.js host on Vercel and one FastAPI host on Render.
 
 ## Target
 
@@ -65,7 +64,7 @@ Fleet backend implementation lives in the installable
 public `@fleet-hub` entry; feature-local UI code remains under
 `portfolio/fleet_hub/frontend/src/`.
 
-The current unmerged architecture branch adds:
+The merged SQLite persistence refactor (PR #223) added:
 
 - `persistence/sqlite.py` for configured SQLite connections and closure.
 - `persistence/migrations.py` for versioned v1 migration implementations.
@@ -81,10 +80,16 @@ Incomplete schemas retain guarded, idempotent recovery. The v1 migration
 rollback guard protects pending writes for each version, but the full upgrade
 is **not one atomic transaction**: existing successful commit boundaries remain.
 
-**First PR remains pending:** verify the complete branch diff, focused tests,
-full `task ci`, GitHub PR checks and production smoke as applicable. Do not
-infer a merged state from local tests. See `SESSION_NOTES.md` for the dated
-checkpoint and `docs/architecture/boundaries-audit.md` for the original audit.
+**Next PR (not yet opened/merged):** Fleet API dependency and delivery boundaries
+in `refactor/fleet-api-delivery-boundaries`: `fleet_hub.api.dependencies` owns
+the session and Origin checks; `fleet_hub.services.message_delivery` owns
+recipient policy, quota and Resend orchestration. Keyed live email attempts
+use an additive SQLite journal and provider `Idempotency-Key`; existing
+unkeyed callers retain the legacy behavior. Accepted provider delivery
+and the subsequent local event write are not one atomic transaction.
+Unknown outcomes are held for manual reconciliation, not resent with
+the same request ID. Full PR CI and post-merge smoke are still pending.
+See `SESSION_NOTES.md` for the current checkpoint.
 
 ## Historical implementation — frontend and source relocation
 
