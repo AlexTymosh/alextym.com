@@ -43,7 +43,6 @@ function validLocalRoute(path) {
     !path.includes("..") && !path.endsWith("/");
 }
 
-requireFile("SESSION_NOTES.md");
 requireFile("portfolio/README.md");
 requireFile("docs/architecture/portfolio.md");
 

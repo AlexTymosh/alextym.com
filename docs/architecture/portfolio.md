@@ -1,6 +1,11 @@
 # Portfolio architecture — host and project boundaries
 
-**Status (2026-11-01):** PRs #208, #209, #213, #214 and #215 are merged. PR 5 completes legacy tooling retirement, adds authenticated-state browser regression and documents post-merge deployment smoke. No new infrastructure or route layout is introduced.
+**Status (2026-11-04):** Fleet source relocation and retirement of legacy
+migration tooling were completed in earlier merged PRs (through #216). The
+current `refactor/architecture-boundaries-2026-11-02` branch contains an
+additional Fleet SQLite lifecycle/migration refactor; it is **not yet merged**.
+The host remains one Next.js application on Vercel and one FastAPI application
+on Render. No extra service, public route or database product has been added.
 
 ## Target
 
@@ -51,9 +56,37 @@ No generic shared package or plugin discovery framework is required yet. If an a
 - No behavior change in Resume, Chat, Contact, RAG, Telegram or unrelated case studies.
 - No new paid infrastructure.
 
-## Implementation phases
+## Current lifecycle and rollout status
 
-See the current header of `SESSION_NOTES.md` for validated PR milestones and the final acceptance checklist; earlier notes are archived below it. All Fleet source moves and Python packaging were completed in prior merged PRs.
+Fleet backend implementation lives in the installable
+`portfolio/fleet_hub/backend/src/fleet_hub/` package. The host imports only
+`fleet_hub.router` and the public startup hook
+`fleet_hub.bootstrap.prepare_demo_database`. The frontend host uses the Fleet
+public `@fleet-hub` entry; feature-local UI code remains under
+`portfolio/fleet_hub/frontend/src/`.
+
+The current unmerged architecture branch adds:
+
+- `persistence/sqlite.py` for configured SQLite connections and closure.
+- `persistence/migrations.py` for versioned v1 migration implementations.
+- `persistence/schema.py` for per-DB schema readiness and interprocess locking.
+- Atomic seed publication, read-only ready-schema probes, and recovery paths.
+- Optional startup bootstrap in the FastAPI lifespan, with lazy fallback for
+  standalone Fleet tests and integrations.
+- Fault-injection, concurrent-open, and data-preservation tests on disposable
+  SQLite files.
+
+Ready databases avoid repeating v1 schema initialization or v2/operations DDL.
+Incomplete schemas retain guarded, idempotent recovery. The v1 migration
+rollback guard protects pending writes for each version, but the full upgrade
+is **not one atomic transaction**: existing successful commit boundaries remain.
+
+**First PR remains pending:** verify the complete branch diff, focused tests,
+full `task ci`, GitHub PR checks and production smoke as applicable. Do not
+infer a merged state from local tests. See `SESSION_NOTES.md` for the dated
+checkpoint and `docs/architecture/boundaries-audit.md` for the original audit.
+
+## Historical implementation — frontend and source relocation
 
 ## Implementation status — PR 4 (frontend isolation audit)
 

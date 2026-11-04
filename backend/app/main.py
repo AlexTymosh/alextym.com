@@ -1,8 +1,11 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fleet_hub.bootstrap import prepare_demo_database
 from fleet_hub.router import router as fleet_router
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.analytics import router as analytics_router
@@ -19,8 +22,20 @@ from app.core.metrics import configure_metrics
 from app.middleware.request_context import RequestContextMiddleware
 
 
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Prepare optional Fleet storage before serving requests. Failures must not
+    # take down the main portfolio/chat site; Fleet retains lazy retry on use.
+    _app.state.fleet_bootstrap_status = "disabled"
+    try:
+        if await run_in_threadpool(prepare_demo_database):
+            _app.state.fleet_bootstrap_status = "ready"
+    except Exception:
+        _app.state.fleet_bootstrap_status = "failed"
+        logger.exception("Optional Fleet SQLite initialization failed at startup")
     try:
         yield
     finally:

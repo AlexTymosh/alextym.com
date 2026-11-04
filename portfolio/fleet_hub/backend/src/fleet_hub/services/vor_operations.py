@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Any
 
+from fleet_hub.persistence.schema import ensure_schema, has_schema_objects
 from fleet_hub.services import vor_data
 
 CHECKS = (
@@ -69,7 +70,39 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+_OPS_REQUIRED_OBJECTS = frozenset(
+    {
+        "ops_actions",
+        "idx_ops_actions_vehicle",
+        "ops_blockers",
+        "idx_ops_blockers_vehicle",
+        "ops_documents",
+        "ops_release_checks",
+        "ops_stage_settings",
+        "ops_stage_skips",
+        "ops_audit",
+        "idx_ops_audit_vehicle",
+    }
+)
+
+
+def _ops_schema_ready(db: Any) -> bool:
+    """Keep customized stage settings, but repair missing default checklist keys."""
+    if not has_schema_objects(db, _OPS_REQUIRED_OBJECTS):
+        return False
+    expected = {(i, key) for i, items in enumerate(STAGE_ITEMS) for key, _ in items}
+    present = {
+        (int(row[0]), row[1])
+        for row in db.execute("SELECT stage_index, item_key FROM ops_stage_settings")
+    }
+    return expected.issubset(present)
+
+
 def _setup(db: Any) -> None:
+    ensure_schema(db, _ops_schema_ready, _initialize_ops_schema)
+
+
+def _initialize_ops_schema(db: Any) -> None:
     db.executescript("""
       CREATE TABLE IF NOT EXISTS ops_actions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
