@@ -1,7 +1,8 @@
 """One-time v1 Fleet SQLite migrations.
 
-Pure migration execution only: no HTTP or request handlers. Caller owns
-connection setup, transactions and legacy API compatibility wrappers.
+One-time per-version migration execution; no HTTP or request handlers.
+Each existing successful commit boundary is preserved. Failures roll back
+pending writes and restore the connection's original foreign-key setting.
 """
 
 from __future__ import annotations
@@ -10,8 +11,35 @@ import os
 import random
 import sqlite3
 from datetime import date, datetime, timedelta
+from functools import wraps
+from typing import Callable
 
 
+def _rollback_failed_migration(migrate: Callable[..., None]) -> Callable[..., None]:
+    """Leave the caller's connection usable when a migration is interrupted.
+
+    Migration implementations own their existing successful commits. On error,
+    undo uncommitted changes before resetting PRAGMA foreign_keys, because
+    SQLite cannot switch that pragma inside an active transaction.
+    """
+
+    @wraps(migrate)
+    def guarded(db: sqlite3.Connection, *args: object, **kwargs: object) -> None:
+        foreign_keys_before = bool(db.execute("PRAGMA foreign_keys").fetchone()[0])
+        try:
+            migrate(db, *args, **kwargs)
+        except BaseException:
+            db.rollback()
+            foreign_keys_after = bool(db.execute("PRAGMA foreign_keys").fetchone()[0])
+            if foreign_keys_before != foreign_keys_after:
+                setting = "ON" if foreign_keys_before else "OFF"
+                db.execute(f"PRAGMA foreign_keys={setting}")
+            raise
+
+    return guarded
+
+
+@_rollback_failed_migration
 def migrate_v1_demo(db: sqlite3.Connection) -> None:
     """One-time v1 data refresh, also applies to users' existing _local SQLite file.
 
@@ -123,6 +151,7 @@ def migrate_v1_demo(db: sqlite3.Connection) -> None:
     db.execute("PRAGMA foreign_keys=ON")
 
 
+@_rollback_failed_migration
 def migrate_v1_1_demo(db: sqlite3.Connection, responsible_names: tuple[str, ...]) -> None:
     """Assign five demo staff members as responsible owners once; retain custom user changes."""
     version = "v1_1_workflow_owners_20261012"
@@ -141,6 +170,7 @@ def migrate_v1_1_demo(db: sqlite3.Connection, responsible_names: tuple[str, ...]
     db.commit()
 
 
+@_rollback_failed_migration
 def migrate_v1_2_demo(db: sqlite3.Connection) -> None:
     """One-time demo contacts and random overdue dates migration. Existing activity remains."""
     version = "v1_2_subscribers_overdue_20261012"
