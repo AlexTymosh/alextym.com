@@ -52,13 +52,22 @@ def database_path() -> Path:
 def connection() -> Iterator[sqlite3.Connection]:
     path = database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Hold the process lock through seed copying AND v1 migrations, but not
-    # during subsequent business operations. ExitStack keeps the connection
-    # open after the lock is released and closes it on every failure path.
+    # A prepared database needs only a read-only schema probe, not an OS lock.
+    # Incomplete databases are rechecked after acquiring the interprocess lock,
+    # so a second worker can finish migration before this worker enters DDL.
     with ExitStack() as stack:
+        db: sqlite3.Connection | None = None
+        if path.exists():
+            db = stack.enter_context(open_sqlite(path))
+            if _legacy_store_schema_ready(db):
+                yield db
+                return
+
         with bootstrap_lock(path):
             created_from_seed = not path.exists()
             if created_from_seed:
+                if db is not None:
+                    raise RuntimeError("Fleet database disappeared during bootstrap")
                 # Never expose a partially copied seed as the runtime database.
                 with tempfile.NamedTemporaryFile(
                     prefix=f".{path.name}.seed-", suffix=".tmp", dir=path.parent, delete=False
@@ -69,7 +78,8 @@ def connection() -> Iterator[sqlite3.Connection]:
                     os.replace(staging_path, path)
                 finally:
                     staging_path.unlink(missing_ok=True)
-            db = stack.enter_context(open_sqlite(path))
+            if db is None:
+                db = stack.enter_context(open_sqlite(path))
             if created_from_seed or not _legacy_store_schema_ready(db):
                 _initialize_store_schema(db)
         yield db
