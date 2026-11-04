@@ -118,7 +118,7 @@ def test_live_send_blocked_until_every_subscriber_allowlisted(monkeypatch, tmp_p
         called.append(kwargs["json"])
         return Response()
 
-    monkeypatch.setattr("fleet_hub.api.vor.httpx.post", fake_post)
+    monkeypatch.setattr("fleet_hub.services.message_delivery.httpx.post", fake_post)
     app = FastAPI()
     app.include_router(router, prefix="/api")
     with TestClient(app) as c:

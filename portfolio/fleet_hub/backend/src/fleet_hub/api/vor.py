@@ -7,7 +7,6 @@ import secrets
 import time
 from typing import Literal
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
@@ -21,7 +20,8 @@ from fleet_hub.api.dependencies import (
     session_valid,
     sign,
 )
-from fleet_hub.services import vor_store
+from fleet_hub.services import message_delivery, vor_store
+from fleet_hub.services.message_delivery import valid_email
 from fleet_hub.services.vor_exports import build_xlsx, build_ics
 
 router = APIRouter(prefix="/vor", tags=["Fleet VOR demo"])
@@ -161,156 +161,39 @@ def export_calendar() -> Response:
     )
 
 
-_EMAIL_LOCAL_CHARS = frozenset(
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-/=?^_`{|}~."
-)
-
-
-def valid_email(email: str) -> bool:
-    """Validate common ASCII mailbox addresses in linear time (no regex backtracking)."""
-    if not 3 <= len(email) <= 254 or not email.isascii() or email.count("@") != 1:
-        return False
-
-    local, domain = email.split("@", 1)
-    if not 1 <= len(local) <= 64 or any(char not in _EMAIL_LOCAL_CHARS for char in local):
-        return False
-    if local.startswith(".") or local.endswith(".") or ".." in local:
-        return False
-
-    labels = domain.split(".")
-    if len(labels) < 2:
-        return False
-    return all(
-        1 <= len(label) <= 63
-        and label[0].isascii()
-        and label[0].isalnum()
-        and label[-1].isascii()
-        and label[-1].isalnum()
-        and all(char.isascii() and (char.isalnum() or char == "-") for char in label)
-        for label in labels
-    )
+_MESSAGE_HTTP_ERRORS: dict[str, tuple[int, str]] = {
+    "invalid_record": (422, "Invalid fleet message"),
+    "no_subscribers": (422, "This vehicle has no subscribers"),
+    "invalid_subscriber_email": (422, "Subscriber directory contains invalid emails"),
+    "policy_missing": (503, "Live sending requires an allowed email domain or recipient policy"),
+    "recipient_not_allowed": (
+        403,
+        "A subscribed address is outside permitted recipient domains. Check Manage.",
+    ),
+    "mail_config_missing": (
+        503,
+        "Live email requires a verified sender, RESEND_API_KEY and HTTPS VOR_DEMO_PUBLIC_URL",
+    ),
+    "public_url_unreachable": (503, "Public URL must be reachable by recipients"),
+    "daily_quota_exceeded": (429, "Daily recipient limit would be exceeded"),
+    "provider_unavailable": (502, "Email provider unavailable"),
+}
 
 
 @router.post("/messages", dependencies=[Depends(required)])
 def create_message(body: NewMessage, request: Request) -> dict:
     same_origin(request)
-    recipients: list[str] = []
-    direction = None
     try:
-        registration = vor_store.validate_vehicle_ticket(body.vehicle_id, body.ticket_id)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    subject = body.subject
-    if body.kind == "email":
-        recipients = vor_store.subscriber_emails(body.vehicle_id)
-        if not recipients:
-            raise HTTPException(422, "This vehicle has no subscribers")
-        if any(not valid_email(email) for email in recipients):
-            raise HTTPException(422, "Subscriber directory contains invalid emails")
-        prefix = f"[{registration}]" + (f"[{body.ticket_id}]" if body.ticket_id else "")
-        subject = f"{prefix} {body.subject or 'Fleet update'}"
-        real = os.getenv("VOR_DEMO_SEND_REAL_EMAIL", "false").lower() == "true"
-        if real:
-            # Recipients are always server-derived from the Manage directory, never from the POST body.
-            # One-off exact addresses and entire trusted domains are supported.
-            allowed = {
-                x.strip().lower()
-                for x in os.getenv("VOR_DEMO_ALLOWED_RECIPIENTS", "").split(",")
-                if x.strip()
-            }
-            domains = {
-                x.strip().lower().lstrip("@")
-                for x in os.getenv("VOR_DEMO_ALLOWED_EMAIL_DOMAINS", "").split(",")
-                if x.strip()
-            }
-            if not allowed and not domains:
-                raise HTTPException(
-                    503, "Live sending requires an allowed email domain or recipient policy"
-                )
-            # Explicit '*' permits any domain, but addresses must still belong to
-            # subscribed contacts and pass email validation and the daily quota.
-            any_domain = "*" in domains
-            unapproved = [
-                email
-                for email in recipients
-                if not (any_domain or email in allowed or email.rsplit("@", 1)[-1] in domains)
-            ]
-            if unapproved:
-                raise HTTPException(
-                    403,
-                    "A subscribed address is outside permitted recipient domains. Check Manage.",
-                )
-            limit = max(1, min(int(os.getenv("VOR_DEMO_EMAIL_LIMIT", "15")), 30))
-            token = os.getenv("RESEND_API_KEY", "")
-            from_email = os.getenv("VOR_DEMO_FROM_EMAIL", "") or os.getenv("CONTACT_FROM_EMAIL", "")
-            public_url = os.getenv("VOR_DEMO_PUBLIC_URL", "").strip()
-            if not token or not from_email or not public_url.startswith("https://"):
-                raise HTTPException(
-                    503,
-                    "Live email requires a verified sender, RESEND_API_KEY and HTTPS VOR_DEMO_PUBLIC_URL",
-                )
-            from urllib.parse import urlsplit
-
-            host = urlsplit(public_url).hostname or ""
-            if host in {"localhost", "127.0.0.1"}:
-                raise HTTPException(503, "Public URL must be reachable by recipients")
-            # Mail message is a notification, not a copy of internal chatter.
-            notification = (
-                "This is a test demonstration of the Fleet VOR management system.\n\n"
-                f"A new update has been posted for vehicle {registration}"
-                + (f" (ticket {body.ticket_id})" if body.ticket_id else "")
-                + ".\n\nOpen Fleet VOR Hub to read the update:\n"
-                + public_url
-                + "\n\nThis is a demonstration notification; no operational action is required. "
-                "Please do not reply to this email."
-            )
-            # All recipients receive one delivery, with all but the first in blind copy.
-            payload: dict = {
-                "from": from_email,
-                "to": [recipients[0]],
-                "subject": subject,
-                "text": notification,
-            }
-            if len(recipients) > 1:
-                payload["bcc"] = recipients[1:]
-            try:
-                reservation_id = vor_store.reserve_email_delivery(len(recipients), limit)
-            except ValueError:
-                raise HTTPException(429, "Daily recipient limit would be exceeded") from None
-            try:
-                result = httpx.post(
-                    "https://api.resend.com/emails",
-                    headers={"Authorization": f"Bearer {token}"},
-                    json=payload,
-                    timeout=12,
-                )
-                result.raise_for_status()
-            except httpx.HTTPError:
-                vor_store.finish_email_delivery(reservation_id, "failed_or_unknown")
-                raise HTTPException(502, "Email provider unavailable") from None
-            vor_store.finish_email_delivery(reservation_id, "accepted")
-            direction = "outgoing"
-        else:
-            direction = "simulated_outgoing"
-    try:
-        event_id = vor_store.add_event(
-            body.vehicle_id,
-            body.ticket_id,
-            body.kind,
-            body.text,
-            "Alex",
-            subject=subject,
-            recipient=",".join(recipients) if body.kind == "email" else None,
-            direction=direction,
+        return message_delivery.post_message(
+            vehicle_id=body.vehicle_id,
+            ticket_id=body.ticket_id,
+            kind=body.kind,
+            text=body.text,
+            subject=body.subject,
         )
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    return {
-        "id": event_id,
-        "delivery": direction or "internal",
-        "recipient_count": len(recipients),
-        "recipients": recipients,
-    }
+    except message_delivery.MessageDeliveryError as exc:
+        code, default_detail = _MESSAGE_HTTP_ERRORS[exc.reason]
+        raise HTTPException(code, exc.detail if exc.detail is not None else default_detail) from exc
 
 
 @router.post("/bookings", dependencies=[Depends(required)])
