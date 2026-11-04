@@ -164,3 +164,17 @@ Use **one coherent concern per PR** rather than a single giant refactor. Do not 
 - **High:** current source confirms the import inversion, Fleet/router responsibilities, DB lifecycle call sites, long modules and outdated repo notes.
 - **Medium:** exact optimal refactor decomposition and potential concurrency/performance implications; test first.
 - **Not established:** full repository-wide dependency graph, bugs at runtime, current CI status on the audit machine, external deployment health, original 14-issue report.
+
+## Implementation checkpoint (2026-11-04; unmerged branch)
+
+This is a **historical audit of `main@88b24f5`**, not a live description of
+all open findings. In branch `refactor/architecture-boundaries-2026-11-02`,
+GitHub HEAD `4da72d53b314` includes the Fleet SQLite extraction, v1/v2/ops
+readiness probes, interprocess bootstrap locking, startup hook, lock-free warm
+connection path, and v1 per-version failure rollback tests. The user reported
+green tests for the final code patch. The documentation synchronization and
+first architecture PR remain pending; independent PR CI is not claimed.
+
+Outstanding follow-up concerns remain Fleet HTTP/email boundaries, backend
+repository dependency inversion and Chat/SSE/controller structure. Do not
+conflate these later PRs with the Fleet SQLite release gate.

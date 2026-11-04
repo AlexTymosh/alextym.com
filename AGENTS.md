@@ -10,103 +10,39 @@ For detailed guidance, read only the relevant file from `docs/`.
 
 ---
 
-## Project Summary
+## Project summary
+## Project summary
 
-This repository contains `alextym`, a personal AI portfolio website for Alex.
+This is a reusable AI portfolio website for an Owner, with public routes
+`/`, `/resume`, `/chat`, `/contact`, plus the embedded `/fleet-vor-hub` demo.
+Use the configured public project identity rather than hard-coded personal names.
 
-The product has four public pages:
+## Current deployed architecture
 
-```text
-/          -> home page
-/resume    -> web resume + CV download
-/chat      -> AI chat page
-/contact   -> contact form + GitHub/LinkedIn links
-```
+- Frontend: Next.js, TypeScript, React and Tailwind CSS on Vercel.
+- Backend: one FastAPI host on Render, also mounting `fleet_hub.router`.
+- Public frontend `/api/*` requests use the `BACKEND_ORIGIN` rewrite.
+- Retrieval: Qdrant Cloud; LLM: OpenAI Responses API; email: Resend.
+- Hosting and DNS: Cloudflare DNS, Vercel, Render; see `docs/deployment.md`.
+- The Fleet demo uses a local SQLite seed and separate persistent runtime DB.
+  It has no standalone deployment or infrastructure.
 
-
----
-
-## Current MVP Architecture
-
-```text
-Frontend: Next.js + TypeScript + Tailwind CSS
-Frontend hosting: Vercel Free/Hobby
-
-Backend: FastAPI + Pydantic
-Backend hosting v1: Koyeb Free
-Backend fallback: Railway / Render / Fly.io
-
-Vector DB: Qdrant Cloud Free
-Email: Resend Free
-LLM: OpenAI/OpenRouter with budget limit
-
-Domain: alextym.com
-Registrar/DNS: Cloudflare
-Vercel DNS records: DNS Only, not proxied
-```
-
-Routing:
+## Repository layout
 
 ```text
-Frontend calls /api/*
-Next.js rewrites /api/* -> BACKEND_ORIGIN
-```
-
-Fallback routing:
-
-```text
-api.alextym.com + strict CORS
-```
-
-Use fallback only if Vercel rewrites break SSE streaming or cause timeout/proxy issues.
-
----
-
-## Repository Layout
-
-Expected structure:
-
-```text
-alextym/
-├─ private/
-│  └─ knowledge/
-├─ content/
-│  └─ public/
-│     └─ resume.md
-├─ frontend/
-│  ├─ app/
-│  │  ├─ page.tsx
-│  │  ├─ resume/page.tsx
-│  │  ├─ chat/page.tsx
-│  │  ├─ contact/page.tsx
-│  │  └─ layout.tsx
-│  ├─ components/
-│  ├─ public/resume/
-│  ├─ vercel.json
-│  └─ package.json
-├─ backend/
-│  ├─ app/
-│  │  ├─ api/
-│  │  ├─ schemas/
-│  │  ├─ services/
-│  │  ├─ rag/
-│  │  ├─ llm/
-│  │  └─ core/
-│  ├─ scripts/
-│  ├─ tests/
-│  ├─ Dockerfile
-│  ├─ .env.example
-│  ├─ .python-version
-│  ├─ pyproject.toml
-│  └─ uv.lock
-├─ docs/
-├─ scripts/
-├─ README.md
-├─ AGENTS.md
-├─ SESSION_NOTES.md
-├─ Taskfile.yml
-├─ .dockerignore
-└─ .gitignore
+frontend/                               Next.js host, routes and site components
+backend/app/                            FastAPI host, site/RAG/chat modules
+content/public/resume.md                Reviewed public RAG source
+config/project.config.json              Reusable public project configuration
+portfolio/fleet_hub/frontend/src/       Fleet UI, public entry at index.ts
+portfolio/fleet_hub/backend/src/fleet_hub/
+  router.py                              Public Fleet router for host registration
+  bootstrap.py                           Optional Fleet startup hook
+  api/, services/, persistence/          Fleet implementation and SQLite lifecycle
+portfolio/fleet_hub/tests/              Fleet regression tests
+backend/tests/                          Site and host/Fleet integration tests
+docs/                                   Architecture, deployment and contract docs
+SESSION_NOTES.md                        Human handoff ledger (never a CI gate)
 ```
 
 ---
@@ -115,13 +51,15 @@ alextym/
 
 Do not read all documents by default. Read only the documents relevant to the task.
 
+For Fleet module boundaries and persistence, also read `docs/architecture/portfolio.md` and `portfolio/fleet_hub/README.md`.
+
 Before changing architecture, repo structure, or service boundaries, read:
 
 ```text
 docs/architecture.md
 ```
 
-Before changing deployment, Docker, Vercel, Cloudflare, Koyeb, rewrites, DNS, or environment variables, read:
+Before changing deployment, Docker, Vercel, Cloudflare, Render, rewrites, DNS, or environment variables, read:
 
 ```text
 docs/deployment.md
@@ -145,13 +83,7 @@ Before changing secrets, logging, rate limiting, contact form, prompt injection 
 docs/security-privacy.md
 ```
 
-Always read:
-
-```text
-SESSION_NOTES.md
-```
-
-before starting work, because it contains the current stage and immediate task boundaries.
+Read `SESSION_NOTES.md` for the human handoff checkpoint before starting work. Never add CI, installer, hash, title or existence checks for that file; it is not a build contract.
 
 ---
 
@@ -202,6 +134,9 @@ Rules:
 - Put business orchestration in `app/services/`.
 - Put RAG logic in `app/rag/`.
 - Put LLM provider logic in `app/llm/`.
+- Fleet routes and services belong in the installable `fleet_hub` package, not in website service modules.
+- The optional Fleet startup hook prepares SQLite when enabled; preserve lazy initialization for standalone Fleet consumers.
+- Do not mutate the approved Fleet seed or overwrite runtime SQLite data.
 - Use Pydantic schemas for request and response models.
 - Do not expose raw provider errors to users.
 
@@ -265,7 +200,7 @@ Do not add health information, private contacts, names of colleagues, friends, m
 
 The assistant must:
 
-- answer as Alex's digital assistant, not as Alex directly;
+- answer as Owner's digital assistant, not as Owner directly;
 - use retrieved public context;
 - use short chat history only for conversational context, not as a source of facts;
 - avoid unsupported claims;
