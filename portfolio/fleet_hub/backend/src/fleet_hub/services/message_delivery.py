@@ -54,13 +54,15 @@ def valid_email(email: str) -> bool:
 
 
 def _send_live_email(
-    *, recipients: list[str], registration: str, ticket_id: str | None, subject: str
-) -> None:
-    """Enforce server-derived recipient policy, reserve quota, then call Resend.
-
-    Historical ordering is preserved for this extraction. A provider acceptance
-    followed by failure of the later event write is not reconciled here.
-    """
+    *,
+    recipients: list[str],
+    registration: str,
+    ticket_id: str | None,
+    subject: str,
+    request_id: str | None = None,
+    fingerprint: str | None = None,
+) -> tuple[int | None, dict | None]:
+    """Validate outbound policy; claim quota and optional durable idempotency key."""
     allowed = {
         x.strip().lower()
         for x in os.getenv("VOR_DEMO_ALLOWED_RECIPIENTS", "").split(",")
@@ -73,15 +75,11 @@ def _send_live_email(
     }
     if not allowed and not domains:
         raise MessageDeliveryError("policy_missing")
-
-    # '*' is an explicit opt-in; recipients always come from subscriptions.
     any_domain = "*" in domains
-    unapproved = [
-        email
+    if any(
+        not (any_domain or email in allowed or email.rsplit("@", 1)[-1] in domains)
         for email in recipients
-        if not (any_domain or email in allowed or email.rsplit("@", 1)[-1] in domains)
-    ]
-    if unapproved:
+    ):
         raise MessageDeliveryError("recipient_not_allowed")
 
     limit = max(1, min(int(os.getenv("VOR_DEMO_EMAIL_LIMIT", "15")), 30))
@@ -113,13 +111,31 @@ def _send_live_email(
         payload["bcc"] = recipients[1:]
 
     try:
-        reservation_id = vor_store.reserve_email_delivery(len(recipients), limit)
+        if request_id is not None:
+            if fingerprint is None:
+                raise RuntimeError("Idempotent delivery requires a message fingerprint")
+            reservation_id, previous_response = vor_store.reserve_email_delivery_once(
+                request_id, fingerprint, len(recipients), limit
+            )
+            if previous_response is not None:
+                return None, previous_response
+            assert reservation_id is not None
+        else:
+            reservation_id = vor_store.reserve_email_delivery(len(recipients), limit)
+    except vor_store.EmailRequestConflict:
+        raise MessageDeliveryError("request_id_conflict") from None
+    except vor_store.EmailRequestInProgress:
+        raise MessageDeliveryError("delivery_uncertain") from None
     except ValueError:
         raise MessageDeliveryError("daily_quota_exceeded") from None
+
+    headers = {"Authorization": f"Bearer {token}"}
+    if request_id is not None:
+        headers["Idempotency-Key"] = f"fleet-message/{request_id}"
     try:
         result = httpx.post(
             "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=headers,
             json=payload,
             timeout=12,
         )
@@ -128,6 +144,7 @@ def _send_live_email(
         vor_store.finish_email_delivery(reservation_id, "failed_or_unknown")
         raise MessageDeliveryError("provider_unavailable") from None
     vor_store.finish_email_delivery(reservation_id, "accepted")
+    return reservation_id if request_id else None, None
 
 
 def post_message(
@@ -137,14 +154,16 @@ def post_message(
     kind: Literal["internal", "email"],
     text: str,
     subject: str | None,
+    request_id: str | None = None,
 ) -> dict:
-    """Validate, optionally deliver, and record one Fleet message.
+    """Record one Fleet message, with durable replay protection for keyed live email.
 
-    Provider delivery precedes event persistence for compatibility. This
-    step intentionally does not add an idempotency key or modify quota states.
+    Existing callers without request_id retain their original behavior.
+    A pending/unknown keyed attempt never sends again without manual review.
     """
     recipients: list[str] = []
     direction = None
+    reservation_id = None
     try:
         registration = vor_store.validate_vehicle_ticket(vehicle_id, ticket_id)
     except ValueError as exc:
@@ -160,12 +179,35 @@ def post_message(
         subject = f"{prefix} {subject or 'Fleet update'}"
         real = os.getenv("VOR_DEMO_SEND_REAL_EMAIL", "false").lower() == "true"
         if real:
-            _send_live_email(
+            fingerprint = None
+            if request_id is not None:
+                import hashlib
+                import json
+
+                fingerprint = hashlib.sha256(
+                    json.dumps(
+                        {
+                            "vehicle_id": vehicle_id,
+                            "ticket_id": ticket_id,
+                            "kind": kind,
+                            "text": text,
+                            "subject": subject,
+                            "recipients": recipients,
+                        },
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode()
+                ).hexdigest()
+            reservation_id, previous_response = _send_live_email(
                 recipients=recipients,
                 registration=registration,
                 ticket_id=ticket_id,
                 subject=subject,
+                request_id=request_id,
+                fingerprint=fingerprint,
             )
+            if previous_response is not None:
+                return previous_response
             direction = "outgoing"
         else:
             direction = "simulated_outgoing"
@@ -184,9 +226,12 @@ def post_message(
     except ValueError as exc:
         raise MessageDeliveryError("invalid_record", str(exc)) from exc
 
-    return {
+    response = {
         "id": event_id,
         "delivery": direction or "internal",
         "recipient_count": len(recipients),
         "recipients": recipients,
     }
+    if reservation_id is not None and request_id is not None:
+        vor_store.complete_email_request(request_id, reservation_id, response)
+    return response

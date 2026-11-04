@@ -38,6 +38,9 @@ class NewMessage(BaseModel):
     kind: Literal["internal", "email"]
     text: str = Field(min_length=1, max_length=2500)
     subject: str | None = Field(default=None, max_length=200)
+    request_id: str | None = Field(
+        default=None, min_length=32, max_length=64, pattern=r"^[a-f0-9-]+$"
+    )
 
 
 class NewBooking(BaseModel):
@@ -177,6 +180,8 @@ _MESSAGE_HTTP_ERRORS: dict[str, tuple[int, str]] = {
     "public_url_unreachable": (503, "Public URL must be reachable by recipients"),
     "daily_quota_exceeded": (429, "Daily recipient limit would be exceeded"),
     "provider_unavailable": (502, "Email provider unavailable"),
+    "request_id_conflict": (422, "Request ID was reused for different email content"),
+    "delivery_uncertain": (409, "Email already attempted; verify delivery before retrying"),
 }
 
 
@@ -190,6 +195,7 @@ def create_message(body: NewMessage, request: Request) -> dict:
             kind=body.kind,
             text=body.text,
             subject=body.subject,
+            request_id=body.request_id,
         )
     except message_delivery.MessageDeliveryError as exc:
         code, default_detail = _MESSAGE_HTTP_ERRORS[exc.reason]
