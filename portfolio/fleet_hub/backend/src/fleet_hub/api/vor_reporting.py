@@ -1,7 +1,7 @@
 """Protected read-only reporting endpoints for synthetic v2."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from fleet_hub.api.vor import required
+from fleet_hub.api.dependencies import required
 from fleet_hub.services.vor_reporting import report
 
 router = APIRouter(
