@@ -34,7 +34,7 @@ from app.services.escalation_sessions import (
     EscalationSessionRecord,
     build_escalation_session_store,
 )
-from app.services.escalation_session_state import build_initial_session_record
+from app.domain.escalation_session import build_initial_session_record
 from app.services.handoff_availability import (
     AlwaysAvailableHandoffAvailabilityChecker,
     HandoffAvailabilityChecker,

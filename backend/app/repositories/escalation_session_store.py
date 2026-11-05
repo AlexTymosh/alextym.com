@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from app.services.escalation_session_state import EscalationSessionRecord
+from app.domain.escalation_session import EscalationSessionRecord
 
 
 class EscalationSessionStoreError(Exception):

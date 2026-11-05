@@ -7,7 +7,7 @@ from app.repositories.escalation_session_store import (
 from app.repositories.upstash_escalation_session_store import (
     UpstashRedisEscalationSessionStore,
 )
-from app.services.escalation_session_state import (
+from app.domain.escalation_session import (
     ESCALATION_SESSION_STATE_CLOSED,
     ESCALATION_SESSION_STATE_CONNECTED,
     ESCALATION_SESSION_STATE_WAITING_FOR_ALEX,

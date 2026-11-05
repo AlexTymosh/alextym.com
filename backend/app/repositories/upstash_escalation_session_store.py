@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 from starlette.concurrency import run_in_threadpool
 
 from app.repositories.escalation_session_store import EscalationSessionStoreError
-from app.services.escalation_session_state import (
+from app.domain.escalation_session import (
     EscalationSessionRecord,
     build_append_alex_message_transition,
     build_close_session_transition,
