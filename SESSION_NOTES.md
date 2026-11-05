@@ -55,3 +55,27 @@ without modifying escalation behaviour, wire formats, endpoints or infrastructur
 4. Start Step 07 separately: AST-based import-graph CI guard with positive and
    negative fixture tests; avoid a large dependency injection framework.
 5. Later, assess Chat SSE and the large frontend chat controller in separate PRs.
+
+
+## Step 07 — Python import-boundary CI guard
+
+Status: implementation staged on `test/backend-import-boundaries` after
+verified PR #225 squash merge `1827f8d35aca307492246a625cb58de628588461`.
+Step 06 is merged; its earlier planned action list above is historical.
+
+- Scope: AST-based direction checks for `app.domain`, `app.repositories`,
+  `fleet_hub.services` and Fleet HTTP sibling routers.
+- CI entry: `task backend:imports`, invoked from `backend:check` and therefore
+  by both local `task ci` and GitHub Actions backend job.
+- Known pre-existing API edge: `fleet_hub.api.vor` →
+  `fleet_hub.api.vor_checklist`; grandfathered exactly once. Remove in a
+  separate behaviour-preserving change; do not expand the exception.
+- Add positive/negative fixture tests. No runtime module, HTTP route,
+  Redis, SQLite, Docker, or frontend source changes.
+- Independent fixture testing passed when packaging; full local `task ci`,
+  GitHub PR checks and post-merge verification are not yet confirmed.
+- No script, test, CI check or preflight reads this ledger as a gate.
+
+Next: install, inspect diff, run targeted tests + full CI, commit and push,
+open a focused PR, then squash merge after GitHub checks pass. Next scope
+should be Chat SSE only after confirming the updated architecture guard.
