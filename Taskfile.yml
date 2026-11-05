@@ -164,6 +164,12 @@ tasks:
       - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests --fix
       - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
 
+  backend:imports:
+    desc: Check Python import direction across site and Fleet modules.
+    dir: backend
+    cmds:
+      - uv run python -m scripts.check_import_boundaries
+
   backend:compile:
     desc: Compile backend Python modules to catch syntax errors early.
     dir: backend
@@ -408,6 +414,7 @@ tasks:
       - task: backend:sync
       - task: backend:lint
       - task: backend:format-check
+      - task: backend:imports
       - task: backend:compile
       - task: backend:test
 
