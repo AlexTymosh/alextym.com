@@ -148,6 +148,7 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const [expandedStage,setExpandedStage]=useState<number|null>(null);
  const [showSubscribers,setShowSubscribers]=useState(false);
  const timelineRef = useRef<HTMLDivElement>(null);
+ const mailAttemptRef = useRef<{fingerprint:string;requestId:string}|null>(null);
  const load = useCallback(async ()=>{const payload=await request<Data>("/bootstrap");setData(payload);request<{vehicles:Record<string,OpsIndicator>}>("/ops/overview").then(r=>setOpsOverview(r.vehicles)).catch(()=>setOpsOverview({}));setClock(c=>c+1)},[]);
  useEffect(()=>{request<{enabled:boolean;authenticated:boolean;liveEmail:boolean}>("/session").then(s=>{setSession(s);onAuthChange?.(s.authenticated);if(s.authenticated) load().catch(e=>setNotice(e.message))}).catch(e=>setLoginError(e.message))},[load]);
  const login=async(e:FormEvent)=>{e.preventDefault();setLoginError("");setBusy(true);try{await request("/login",{method:"POST",body:JSON.stringify({password})});setSession(x=>({...x!,authenticated:true}));onAuthChange?.(true);setPassword("");await load()}catch(err){setLoginError((err as Error).message)}finally{setBusy(false)}};
@@ -196,7 +197,16 @@ export default function VorHub({embedded=false,externalView,initialVehicle,onAut
  const shown=(data?.vehicles||[]).filter(v=>`${v.registration} ${v.model} ${v.issue} ${v.garage}`.toLowerCase().includes(search.toLowerCase()));
  const post=()=>{if(!selected||!message.trim())return;
    if(composeKind==="email"&&selectedContacts.length===0){setNotice("Add subscribers to the vehicle first");return;}
-   mutate("/messages",{vehicle_id:selected.id,ticket_id:ticketFilter==="vehicle-only"?null:(ticketFilter==="all"?primary?.id:ticketFilter)||null,kind:composeKind,text:message.trim(),subject:composeKind==="email"?subject:null},()=>{setMessage("");setSubject("");setNotice(composeKind==="email"?(session?.liveEmail?"Notification sent to vehicle subscribers":"Notification simulated for all subscribers and saved in Chatter"):"Internal note saved")})
+   const body={vehicle_id:selected.id,ticket_id:ticketFilter==="vehicle-only"?null:(ticketFilter==="all"?primary?.id:ticketFilter)||null,kind:composeKind,text:message.trim(),subject:composeKind==="email"?subject:null};
+   let requestId: string|undefined;
+   if(composeKind==="email"&&session?.liveEmail){
+     const fingerprint=JSON.stringify(body);
+     if(mailAttemptRef.current?.fingerprint!==fingerprint){
+       mailAttemptRef.current={fingerprint,requestId:crypto.randomUUID()};
+     }
+     requestId=mailAttemptRef.current.requestId;
+   }
+   mutate("/messages",{...body,...(requestId?{request_id:requestId}:{})},()=>{mailAttemptRef.current=null;setMessage("");setSubject("");setNotice(composeKind==="email"?(session?.liveEmail?"Notification sent to vehicle subscribers":"Notification simulated for all subscribers and saved in Chatter"):"Internal note saved")})
  };
  const clearContactForm=()=>{setEditContactId(null);setContactName("");setContactEmail("");setContactRole("internal")};
  const selectContactForEdit=(c:Contact)=>{setEditContactId(c.id);setContactName(c.name);setContactEmail(c.email);setContactRole(c.role)};

@@ -105,7 +105,7 @@ def test_domain_permitted_resend_notice_and_daily_quota(monkeypatch, tmp_path):
             calls.append(kwargs["json"])
             return FakeResponse()
 
-        monkeypatch.setattr("fleet_hub.api.vor.httpx.post", fake_post)
+        monkeypatch.setattr("fleet_hub.services.message_delivery.httpx.post", fake_post)
         req = {
             "vehicle_id": v["id"],
             "ticket_id": None,
@@ -202,7 +202,7 @@ def test_wildcard_allows_different_domains_without_bypassing_quota(monkeypatch, 
             deliveries.append(kwargs["json"])
             return FakeResponse()
 
-        monkeypatch.setattr("fleet_hub.api.vor.httpx.post", fake_post)
+        monkeypatch.setattr("fleet_hub.services.message_delivery.httpx.post", fake_post)
         message = {
             "vehicle_id": vehicle_id,
             "kind": "email",

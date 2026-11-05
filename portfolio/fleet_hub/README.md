@@ -56,6 +56,27 @@ inside the website's `frontend/` or `backend/app/` modules.
 - Regression tests use disposable SQLite files (`tmp_path`) and verify
   concurrent bootstrap, recovery, data preservation, and foreign-key integrity.
 
+## Auth and email delivery
+
+- `fleet_hub.api.dependencies` owns FastAPI session and Origin checks;
+  sibling routers no longer import shared guards from `api.vor`.
+- `fleet_hub.services.message_delivery` owns email validation, server-derived
+  recipients, allowlists, quotas, provider dispatch and error categories.
+  The API adapter maps those categories to the existing HTTP status codes.
+- Live email clients can supply `request_id`; keyed attempts are claimed
+  in an additive SQLite journal, then dispatched with a Resend
+  `Idempotency-Key`. Replaying a successful request with the same payload
+  reuses its stored response without charging quota or resending.
+- Pending or uncertain keyed attempts return a conflict rather than retry
+  automatically. The local journal is durable, but provider acceptance,
+  event persistence, and journal completion are not atomic together.
+  Manual reconciliation is needed for indeterminate attempts.
+- Existing callers that omit `request_id` remain supported but do not
+  receive the durable deduplication guarantee. The browser-held request
+  key is not currently preserved across a full page reload.
+- Relevant regression tests: `test_vor_api_dependencies.py`,
+  `test_vor_message_delivery.py`, `test_vor_email_idempotency.py`.
+
 ## Verification and ownership
 
 Use `task ci` from the repository root and the tests under

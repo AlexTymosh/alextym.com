@@ -606,3 +606,110 @@ def finish_email_delivery(reservation_id: int, result: str) -> None:
             "UPDATE vor_email_delivery_attempts SET status=? WHERE id=?", (result, reservation_id)
         )
         db.commit()
+
+
+class EmailRequestConflict(Exception):
+    """A request ID was previously used for different message content."""
+
+
+class EmailRequestInProgress(Exception):
+    """A prior send may have reached the provider: never retry automatically."""
+
+
+def _ensure_email_request_schema(db: sqlite3.Connection) -> None:
+    """Create an additive, per-database delivery journal without touching the seed."""
+    from fleet_hub.persistence.schema import ensure_schema, has_schema_objects
+
+    def ready(conn: sqlite3.Connection) -> bool:
+        return has_schema_objects(conn, {"vor_email_delivery_attempts", "vor_email_requests"})
+
+    def initialize(conn: sqlite3.Connection) -> None:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS vor_email_delivery_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                day TEXT NOT NULL,
+                recipient_count INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending'
+            );
+            CREATE TABLE IF NOT EXISTS vor_email_requests (
+                request_id TEXT PRIMARY KEY,
+                fingerprint TEXT NOT NULL,
+                reservation_id INTEGER NOT NULL UNIQUE REFERENCES vor_email_delivery_attempts(id),
+                response_json TEXT,
+                created_at TEXT NOT NULL
+            );
+        """)
+
+    ensure_schema(db, ready, initialize)
+
+
+def reserve_email_delivery_once(
+    request_id: str, fingerprint: str, recipient_count: int, daily_limit: int
+) -> tuple[int | None, dict | None]:
+    """Atomically claim a logical email request and its daily quota.
+
+    Existing completed requests return their original response without resending.
+    Incomplete/unknown deliveries fail closed, even beyond Resend's 24h dedupe.
+    """
+    if recipient_count <= 0 or daily_limit <= 0:
+        raise ValueError("Invalid email reservation")
+    with connection() as db:
+        _ensure_email_request_schema(db)
+        db.execute("BEGIN IMMEDIATE")
+        try:
+            prior = db.execute(
+                "SELECT fingerprint,response_json FROM vor_email_requests WHERE request_id=?",
+                (request_id,),
+            ).fetchone()
+            if prior is not None:
+                if prior["fingerprint"] != fingerprint:
+                    raise EmailRequestConflict("Request ID belongs to another message")
+                if prior["response_json"] is None:
+                    raise EmailRequestInProgress("Earlier delivery must be reconciled")
+                response = json.loads(prior["response_json"])
+                db.commit()
+                return None, response
+
+            count = db.execute(
+                "SELECT COALESCE(SUM(recipient_count),0) "
+                "FROM vor_email_delivery_attempts WHERE day=?",
+                (date.today().isoformat(),),
+            ).fetchone()[0]
+            if count + recipient_count > daily_limit:
+                raise ValueError("Daily recipient limit would be exceeded")
+            created_at = datetime.now().isoformat(timespec="seconds")
+            reservation = db.execute(
+                "INSERT INTO vor_email_delivery_attempts(day,recipient_count,created_at) "
+                "VALUES(?,?,?)",
+                (date.today().isoformat(), recipient_count, created_at),
+            )
+            reservation_id = int(reservation.lastrowid)
+            db.execute(
+                "INSERT INTO vor_email_requests(request_id,fingerprint,reservation_id,created_at) "
+                "VALUES(?,?,?,?)",
+                (request_id, fingerprint, reservation_id, created_at),
+            )
+            db.commit()
+            return reservation_id, None
+        except BaseException:
+            db.rollback()
+            raise
+
+
+def complete_email_request(request_id: str, reservation_id: int, response: dict) -> None:
+    """Cache the successful HTTP result for safe replay; no second delivery."""
+    with connection() as db:
+        db.execute("BEGIN IMMEDIATE")
+        try:
+            updated = db.execute(
+                "UPDATE vor_email_requests SET response_json=? "
+                "WHERE request_id=? AND reservation_id=? AND response_json IS NULL",
+                (json.dumps(response, sort_keys=True), request_id, reservation_id),
+            ).rowcount
+            if updated != 1:
+                raise RuntimeError("Fleet email request journal mismatch")
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
