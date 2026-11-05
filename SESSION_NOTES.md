@@ -1,52 +1,57 @@
 # Architecture refactor — active execution ledger
 
-Updated: 2026-11-04. This is a human-maintained handoff document, not a CI
-contract. The Fleet API work is in branch `refactor/fleet-api-delivery-boundaries`.
-Last GitHub HEAD checked: `4526334dcf2dfd01f4c20b3a623beb46d5070286`.
+Updated: 2026-11-05. This is a human handoff document, **not** an input to
+CI, installers, guards or hash validation.
 
-## Operating rules
+## Verified merged foundation
 
-- One concern per reviewable PR; preserve all Fleet public routes and the
-  website Chat/RAG/SSE behavior.
-- Protect the Fleet seed (SHA-256:
-  `db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532`),
-  `VOR_DEMO_DB_PATH` and all existing runtime data.
-- Tests must use temporary SQLite copies; never reset production data.
-- Do not check this document's contents, title, hash or existence in CI,
-  installers or tests. The file is documentation, not a build gate.
-- Record test claims with their source: user-reported local passes are not
-  evidence of GitHub Actions or production deployment verification.
+- PR #223 merged Fleet SQLite lifecycle and legacy migrations into `main`.
+  Squash commit: `c020c813d45231442d1cebba20367fd4c4d49443`.
+- PR #224 merged Fleet HTTP authentication, email orchestration and keyed
+  delivery deduplication into `main` on 2026-11-05.
+  Squash commit: `dbc270ce32dd846d124792c3ad53e18092998e1c`.
+- GitHub Actions on the new `main` commit were checked after merge:
+  backend, project, docker, RAG and CodeQL passed; frontend was still
+  running at the last inspection. Do not assume full green or production
+  verification without checking their final results.
+- No new Fleet infrastructure is deployed. Approved Fleet SQLite seed
+  SHA-256 remains
+  `db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532`.
 
-## Completed milestones
+## Current branch / Step 06
 
-| Work | Status | Evidence |
-| --- | --- | --- |
-| Fleet persistence lifecycle / migrations | Merged | PR #223, squash merge `c020c813d452`, 2026-11-04 |
-| 05A — Shared session and Origin guards | Committed | `a06608cd`; `api/dependencies.py`, auth regression tests |
-| 05B — Email policy and Resend service | Committed | `328a4487`; `services/message_delivery.py`, provider/HTTP regression tests |
-| 05C — Keyed live-email deduplication | Committed | `4526334d`; SQLite request journal, API and browser request IDs, retry/failure tests; local tests reported green |
-| 05D — Documentation and final PR review | In progress | Docs sync, full diff review, final local `task ci`, GitHub PR checks pending |
+Branch: `refactor/backend-domain-dependencies`.
+Baseline `main` commit checked: `dbc270ce32dd846d124792c3ad53e18092998e1c`.
 
-## Current constraints and risks
+Goal: correct the site backend repository-to-service dependency direction
+without modifying escalation behaviour, wire formats, endpoints or infrastructure.
 
-- Successful keyed requests replay their saved API response without a second
-  provider call, event or quota reservation. Concurrent and uncertain keyed
-  requests fail closed pending investigation.
-- Provider acceptance, SQLite event creation and journal completion cannot be
-  committed atomically. Unknown outcomes require manual reconciliation.
-- Resend retains idempotency keys for 24 hours. Our local journal retains
-  keyed request history until removed administratively.
-- Legacy unkeyed API callers can still create repeated emails. The browser
-  currently retains a request key within a mounted component, not across a
-  full page reload.
-- There is no new infrastructure and no independent Fleet deployment.
+- Move pure session records, state names and transition functions from
+  `app.services.escalation_session_state` into `app.domain.escalation_session`.
+- Keep the old services import module as a re-export compatibility facade.
+- Point repository protocol and Upstash adapter directly at the domain model.
+- Point application services directly to the domain state implementation.
+- Add temporary-free, network-free tests covering import identity, record JSON,
+  TTL, transitions, Upstash command shape and repository import direction.
+- Treat Redis `GET` -> state transition -> `SET` concurrency as a separate
+  **unverified** risk; do not redesign or change Redis writes in Step 06.
 
-## Next task
+## Operating safeguards
 
-1. Inspect the entire `main...refactor/fleet-api-delivery-boundaries` diff.
-2. Run targeted Fleet tests and full `task ci`; review security/privacy and
-   verify the approved seed is unchanged.
-3. Push final documentation commit and open a single Fleet API PR into `main`.
-4. Wait for GitHub checks, then squash merge and verify deployment smoke.
-5. Next separate concern: site repository-to-domain dependency inversion and
-   cross-layer import guards, not another feature in this PR.
+- Keep existing `handoff_id`, state strings, message roles, JSON payload shape
+  and Redis TTL semantics. Legacy public function names are compatibility API.
+- Do not change Telegram, SSE, chat, Fleet, deployment or user-visible copy.
+- No production Redis access is required for regression tests.
+- Keep `SESSION_NOTES.md` out of CI and installer preflight; its contents,
+  title, hash and existence must never gate code changes.
+- Maintain small PRs and distinguish user-reported local `task ci` success,
+  GitHub Actions success and manual production smoke.
+
+## Next actions
+
+1. Apply Step 06 on the new branch; review `git diff` and run focused tests.
+2. Run the complete `task ci`, commit and push if green.
+3. Open one Step 06 PR; wait for GitHub CI, then squash merge.
+4. Start Step 07 separately: AST-based import-graph CI guard with positive and
+   negative fixture tests; avoid a large dependency injection framework.
+5. Later, assess Chat SSE and the large frontend chat controller in separate PRs.
