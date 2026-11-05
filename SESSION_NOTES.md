@@ -79,3 +79,22 @@ Step 06 is merged; its earlier planned action list above is historical.
 Next: install, inspect diff, run targeted tests + full CI, commit and push,
 open a focused PR, then squash merge after GitHub checks pass. Next scope
 should be Chat SSE only after confirming the updated architecture guard.
+
+## Step 08 — Chat stream transport boundary
+
+Status: working branch `refactor/chat-sse-boundaries`; base `main` merge of
+PR #226, `99936c50afbd87aff152ffbaea50b6845c35ed77`.
+
+- Step 07 architecture import guards were merged as PR #226 on 2026-11-05.
+- Chat application service and metrics now use `app.domain.chat_stream.ChatStreamEvent`
+  rather than SSE transport-specific schemas.
+- `app.api.chat` translates logical events to existing SSE bytes using `sse_event`.
+- Golden-wire, safe-error, disconnect and dependency-boundary tests cover the
+  move. Existing API/SSE/RAG/Telegram behavior must remain unchanged.
+- No Redis, Fleet seed, deployment or environment configuration changes.
+- Local full `task ci`, GitHub PR checks and deployment smoke are pending;
+  do not infer their success from isolated patch tests.
+
+Next: run focused backend tests and `task ci`; push this focused PR only when
+all checks pass. After squash merge, independently examine Chat cancellation,
+backpressure and the frontend chat controller in subsequent scoped work.

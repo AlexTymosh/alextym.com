@@ -22,7 +22,7 @@ from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
 from app.rag.retriever import Retriever
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.schemas.sse import ServerSentEvent
+from app.domain.chat_stream import ChatStreamEvent
 from app.services.chat import ChatService
 from app.services.chat_safety import is_prompt_injection_attempt
 from app.services.question_contextualizer import (
@@ -185,7 +185,7 @@ class MetricsChatService:
         )
         return response
 
-    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ServerSentEvent]:
+    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ChatStreamEvent]:
         done_payload: dict[str, object] | None = None
         try:
             async for event in self._service.stream_answer(request):
