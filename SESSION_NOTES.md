@@ -98,3 +98,20 @@ PR #226, `99936c50afbd87aff152ffbaea50b6845c35ed77`.
 Next: run focused backend tests and `task ci`; push this focused PR only when
 all checks pass. After squash merge, independently examine Chat cancellation,
 backpressure and the frontend chat controller in subsequent scoped work.
+
+
+## Step 09A — Chat response flow extraction (2026-11-06)
+
+- Step 08 was squash-merged as PR #227 at `19dae9b88832ef7c1f0f923b641097a212b14c01`.
+- Branch: `refactor/chat-response-flow`. Only SSE/JSON assistant response
+  orchestration moves from `use-chat-controller.ts` to
+  `frontend/lib/chat-response-flow.ts`.
+- React state, handoff, rendered transcript, abort ownership, focus, warmup,
+  API request payloads and public UI stay in the controller unchanged.
+- Six deterministic Playwright-runner tests cover done/sources, errors,
+  partial tokens, JSON fallback and abort. Existing browser E2E remains required.
+- Known pre-existing reset/cancellation race is *not* redesigned here; audit
+  callback ownership in a separate tested step before changing lifecycle logic.
+- No production secrets or Fleet/Redis/RAG changes.
+- Run focused tests, `task ci`, GitHub PR CI and then squash merge.
+- This ledger is never an installer/test/CI preflight input.

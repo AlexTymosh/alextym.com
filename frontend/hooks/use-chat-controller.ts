@@ -3,11 +3,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 
 import { chatHandoffCopy, chatNoticeCopy, chatShellCopy } from "../content/chat";
 import { useEscalationStream } from "../hooks/use-escalation-stream";
-import {
-  fetchJsonChatResponse,
-  isChatStreamError,
-  streamChatResponse,
-} from "../lib/chat-api";
+import { runChatResponseFlow } from "../lib/chat-response-flow";
 import { isAbortError } from "../lib/chat-errors";
 import { buildChatHistory } from "../lib/chat-history";
 import {
@@ -302,8 +298,6 @@ export function useChatController({
 
     const assistantId = createMessageId("assistant");
     const history = buildChatHistory(messages);
-    let rawStreamText = "";
-    let pendingSources: AssistantMessage["sources"] | undefined;
 
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
@@ -331,93 +325,15 @@ export function useChatController({
     setHandoffUnavailable(null);
 
     try {
-      await streamChatResponse({
+      await runChatResponseFlow({
         message: trimmedInput,
         history,
         signal: abortController.signal,
-        onToken: (token) => {
-          rawStreamText += token;
-          renderer.append(token);
-        },
-        onSources: (sources) => {
-          pendingSources = sources;
-        },
-        onDone: (done) =>
-          updateAssistantMessage(assistantId, {
-            confidence: done.confidence,
-            notEnoughData: done.not_enough_data,
-            retrievalStatus: done.retrieval_status,
-            handoffSuggested: done.handoff_suggested,
-            handoffReason: done.handoff_reason ?? null,
-            languageUnsupported: done.language_unsupported,
-            userRequestedHuman: done.user_requested_human,
-          }),
+        renderer,
+        onAssistantPatch: (patch) => updateAssistantMessage(assistantId, patch),
+        onNotice: setNotice,
       });
-      await renderer.finish();
-      if (pendingSources?.length) {
-        updateAssistantMessage(assistantId, { sources: pendingSources });
-      }
-    } catch (error) {
-      if (isAbortError(error)) {
-        return;
-      }
-
-      if (isChatStreamError(error) && error.kind === "backend_error") {
-        renderer.flush();
-        if (rawStreamText) {
-          setNotice(error.message || chatNoticeCopy.assistantUnavailable);
-          return;
-        }
-
-        updateAssistantMessage(assistantId, {
-          text: error.message || chatNoticeCopy.assistantErrorMessage,
-          confidence: "low",
-          notEnoughData: false,
-          handoffSuggested: false,
-          handoffReason: null,
-        });
-        setNotice(chatNoticeCopy.assistantUnavailable);
-        return;
-      }
-
-      if (!rawStreamText) {
-        try {
-          const fallbackResponse = await fetchJsonChatResponse(
-            trimmedInput,
-            history,
-            abortController.signal,
-          );
-          renderer.append(fallbackResponse.answer);
-          await renderer.finish();
-          updateAssistantMessage(assistantId, {
-            sources: fallbackResponse.sources,
-            confidence: fallbackResponse.confidence,
-            notEnoughData: fallbackResponse.not_enough_data,
-            retrievalStatus: fallbackResponse.retrieval_status,
-            handoffSuggested: fallbackResponse.handoff_suggested,
-            handoffReason: fallbackResponse.handoff_reason ?? null,
-            languageUnsupported: fallbackResponse.language_unsupported,
-            userRequestedHuman: fallbackResponse.user_requested_human,
-          });
-          setNotice(chatNoticeCopy.streamingFallbackUsed);
-        } catch (fallbackError) {
-          if (!isAbortError(fallbackError)) {
-            updateAssistantMessage(assistantId, {
-              text: chatNoticeCopy.assistantErrorMessage,
-              confidence: "low",
-              notEnoughData: false,
-              handoffSuggested: false,
-              handoffReason: null,
-            });
-            setNotice(chatNoticeCopy.assistantUnavailable);
-          }
-        }
-      } else {
-        renderer.flush();
-        setNotice(chatNoticeCopy.streamingEndedEarly);
-      }
     } finally {
-      renderer.cancel();
       if (abortControllerRef.current === abortController) {
         abortControllerRef.current = null;
       }
