@@ -159,6 +159,16 @@ class EscalationService:
 
         return EscalationCloseResponse(state=ESCALATION_SESSION_STATE_CLOSED)
 
+    async def purge(self, handoff_id: str) -> None:
+        """Delete an abandoned session. Missing keys are a successful no-op."""
+        if self._session_store is None:
+            raise EscalationConfigurationError("Escalation session storage is not configured.")
+
+        try:
+            await self._session_store.delete(handoff_id)
+        except EscalationSessionStoreError as exc:
+            raise EscalationDeliveryError("Escalation session could not be deleted.") from exc
+
     async def ensure_stream_available(self, handoff_id: str) -> None:
         if self._session_store is None:
             raise EscalationConfigurationError("Escalation session storage is not configured.")

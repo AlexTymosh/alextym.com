@@ -48,10 +48,11 @@ test("Reset ignores a handoff connect response that resolves afterward", async (
   const hold = new Promise<void>((resolve) => { releaseReply = resolve; });
   let routeCompleted!: () => void;
   const completed = new Promise<void>((resolve) => { routeCompleted = resolve; });
-  const closedIds: string[] = [];
-  await page.route("**/api/escalations/hnd_old/close", async (route) => {
-    closedIds.push("hnd_old");
-    await route.fulfill({ status: 200, json: { status: "ok", state: "closed" } });
+  const purgedIds: string[] = [];
+  await page.route("**/api/escalations/hnd_old", async (route) => {
+    expect(route.request().method()).toBe("DELETE");
+    purgedIds.push("hnd_old");
+    await route.fulfill({ status: 204, body: "" });
   });
 
   await page.route("**/api/escalations", async (route) => {
@@ -82,7 +83,7 @@ test("Reset ignores a handoff connect response that resolves afterward", async (
   await expect(page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }))
     .toHaveCount(0);
   await expect(page.getByLabel(chatShellCopy.inputAriaLabel)).toHaveValue("");
-  await expect.poll(() => closedIds.length).toBe(1);
+  await expect.poll(() => purgedIds.length).toBe(1);
 });
 
 test("queued events from an already-closed EventSource cannot revive a reset chat", async ({
@@ -128,10 +129,11 @@ test("queued events from an already-closed EventSource cannot revive a reset cha
     };
   });
 
-  const closedIds: string[] = [];
-  await page.route("**/api/escalations/hnd_old/close", async (route) => {
-    closedIds.push("hnd_old");
-    await route.fulfill({ status: 200, json: { status: "ok", state: "closed" } });
+  const purgedIds: string[] = [];
+  await page.route("**/api/escalations/hnd_old", async (route) => {
+    expect(route.request().method()).toBe("DELETE");
+    purgedIds.push("hnd_old");
+    await route.fulfill({ status: 204, body: "" });
   });
   await page.route("**/api/escalations", async (route) => {
     await route.fulfill({ status: 200, json: {
@@ -146,7 +148,7 @@ test("queued events from an already-closed EventSource cannot revive a reset cha
   await expect(page.getByRole("button", { name: chatShellCopy.handoffCloseLabel }))
     .toBeVisible();
   await page.getByRole("button", { name: chatShellCopy.resetLabel }).click();
-  await expect.poll(() => closedIds.length).toBe(1);
+  await expect.poll(() => purgedIds.length).toBe(1);
   await page.evaluate(() => {
     (window as unknown as { emitStaleHandoff: () => void }).emitStaleHandoff();
   });

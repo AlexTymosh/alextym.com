@@ -128,7 +128,11 @@ class UpstashRedisEscalationSessionStore:
         raise EscalationSessionStoreError("Too many concurrent session updates.")
 
     async def delete(self, handoff_id: str) -> None:
-        await self._execute(["DEL", _session_key(handoff_id)])
+        result = await self._execute(["DEL", _session_key(handoff_id)])
+        # Redis DEL returns 0 for absent keys and 1 for a removed key.
+        # Only a confirmed integer reply is sufficient for HTTP 204.
+        if type(result) is not int or result not in (0, 1):
+            raise EscalationSessionStoreError("Redis did not confirm session deletion.")
 
     async def _read_snapshot(self, handoff_id: str) -> tuple[str, EscalationSessionRecord] | None:
         raw = await self._execute(["GET", _session_key(handoff_id)])

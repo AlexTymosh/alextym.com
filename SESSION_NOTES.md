@@ -170,3 +170,17 @@ backpressure and the frontend chat controller in subsequent scoped work.
 - Follow-up Step 10C: decide cancellation confirmation, immediate purge vs
   TTL-based transcript retention, and operational failure policy.
 - This notes file never gates installation or CI.
+
+## Step 10C — idempotent Redis purge after Chat Reset (2026-11-07)
+
+- Step 10B was merged as PR #231 at `8db445a04899092d9311fa52f5a5a354325de5e2`.
+- `DELETE /api/escalations/{handoff_id}` gives an acknowledged idempotent
+  Redis session purge, distinct from manually closing a conversation.
+- `Reset chat` purges both active and already-closed known sessions; late-created
+  sessions are purged after an outdated response. Telegram copies are unaffected.
+- Backend only acknowledges `DEL` replies 0/1; failed Redis operations return
+  502, missing configuration returns 503. Existing `POST /close` is unchanged.
+- This change does not guarantee privacy deletion across network failures,
+  Telegram, backups, logs or in-flight notifications. All upstream TTLs remain.
+- Run tests and `task ci`, then GitHub CI. No production Redis access used.
+- `SESSION_NOTES.md` is an informational ledger only, never a preflight input.

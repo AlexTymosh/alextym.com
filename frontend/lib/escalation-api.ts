@@ -124,6 +124,21 @@ export async function submitEscalationClose(
   return (await response.json()) as EscalationCloseResponse;
 }
 
+/** DELETE is only used for abandoned sessions; manual close keeps SSE history. */
+export async function purgeEscalationSession(handoffId: string): Promise<void> {
+  const response = await fetch(
+    `/api/escalations/${encodeURIComponent(handoffId)}`,
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    },
+  );
+
+  if (response.status !== 204) {
+    throw new Error("Handoff purge was not acknowledged by the server.");
+  }
+}
+
 export function buildEscalationStreamUrl(handoffId: string): string {
   const streamPath = `/api/escalations/${encodeURIComponent(handoffId)}/stream`;
   return BROWSER_BACKEND_ORIGIN
