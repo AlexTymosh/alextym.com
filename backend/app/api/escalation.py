@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.api.rate_limit import (
     enforce_escalation_message_rate_limit,
@@ -54,7 +55,7 @@ async def escalate(
         return response
 
     try:
-        enforce_escalation_rate_limit(request, settings)
+        await run_in_threadpool(enforce_escalation_rate_limit, request, settings)
         response = await service.submit(escalation_request)
     except HandoffUnavailableError as exc:
         record_escalation_event(action="create", outcome="unavailable")
@@ -92,7 +93,7 @@ async def send_escalation_message(
         return EscalationMessageResponse()
 
     try:
-        enforce_escalation_message_rate_limit(request, settings)
+        await run_in_threadpool(enforce_escalation_message_rate_limit, request, settings)
         response = await service.submit_user_message(handoff_id, message_request)
     except EscalationConfigurationError as exc:
         record_escalation_event(action="message", outcome="configuration_error")

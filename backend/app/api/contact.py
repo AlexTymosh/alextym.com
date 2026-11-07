@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from starlette.concurrency import run_in_threadpool
 
 from app.api.rate_limit import enforce_contact_rate_limit
 from app.core.config import Settings, get_settings
@@ -26,7 +27,7 @@ async def contact(
         record_contact_submission("honeypot")
         return response
 
-    enforce_contact_rate_limit(request, settings)
+    await run_in_threadpool(enforce_contact_rate_limit, request, settings)
 
     try:
         response = await service.submit(contact_request)
