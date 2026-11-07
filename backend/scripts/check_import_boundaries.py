@@ -12,10 +12,6 @@ import importlib.util
 from dataclasses import dataclass
 from pathlib import Path
 
-# Existing cross-router dependency in the Fleet message/workflow HTTP adapter.
-# Do not expand this exception; decouple it in its own behaviour-preserving PR.
-KNOWN_ROUTER_EDGE = ("fleet_hub.api.vor", "fleet_hub.api.vor_checklist")
-
 
 @dataclass(frozen=True, order=True)
 class ImportViolation:
@@ -120,8 +116,6 @@ def _reason(module: str, imported: str) -> str | None:
         if target in {"fleet_hub.api.dependencies", "fleet_hub.api.__init__"}:
             return None
         if module == target or module.startswith(target + "."):
-            return None
-        if (module, target) == KNOWN_ROUTER_EDGE:
             return None
         return "Fleet router must not import another router"
 

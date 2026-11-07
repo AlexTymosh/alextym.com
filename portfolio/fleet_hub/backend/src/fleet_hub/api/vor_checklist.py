@@ -8,24 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from fleet_hub.api.dependencies import required, same_origin
-from fleet_hub.services import vor_store, vor_operations as ops
+from fleet_hub.services import vor_store
+from fleet_hub.services import vor_checklist_advance as checklist_service
 
 router = APIRouter(prefix="/vor/checklists", tags=["Fleet VOR demo checklists"])
-CHECKLIST: tuple[tuple[str, ...], ...] = (
-    ("notification_sent", "response_received"),
-    (
-        "information_forwarded",
-        "visit_date_agreed",
-        "maintenance_combination_reviewed",
-        "diagnosis_date",
-    ),
-    ("inspected", "initial_quote_received", "preliminary_estimate_confirmed"),
-    ("approval_recorded",),
-    ("work_started", "repair_finished"),
-    ("repair_verified", "release_checked"),
-    ("hoth_informed", "hoth_closed_confirmed"),
-    ("documents_received", "documents_checked"),
-)
+CHECKLIST = checklist_service.CHECKLIST
 
 
 class UpdateItem(BaseModel):
@@ -43,25 +30,14 @@ class AdvanceStage(BaseModel):
 
 
 def _init(db):
-    db.execute("""CREATE TABLE IF NOT EXISTS vor_step_checklists (
-        ticket_id TEXT NOT NULL REFERENCES tickets(id),
-        step_index INTEGER NOT NULL,
-        item_key TEXT NOT NULL,
-        checked INTEGER NOT NULL DEFAULT 0,
-        value TEXT,
-        updated_at TEXT NOT NULL,
-        PRIMARY KEY(ticket_id,step_index,item_key)
-    )""")
+    checklist_service.ensure_checklist_table(db)
 
 
 def _assert_ticket(db, vehicle_id: int, ticket_id: str):
-    row = db.execute(
-        "SELECT id,status,scenario FROM tickets WHERE id=? AND vehicle_id=?",
-        (ticket_id, vehicle_id),
-    ).fetchone()
-    if row is None:
-        raise HTTPException(404, "Ticket not found for vehicle")
-    return row
+    try:
+        return checklist_service.ticket_for_vehicle(db, vehicle_id, ticket_id)
+    except checklist_service.ChecklistAdvanceError as exc:
+        raise HTTPException(exc.status_code, exc.detail) from exc
 
 
 @router.get("/{ticket_id}", dependencies=[Depends(required)])
@@ -131,39 +107,10 @@ def update_item(body: UpdateItem, request: Request):
 @router.post("/advance", dependencies=[Depends(required)])
 def advance_with_checks(body: AdvanceStage, request: Request):
     same_origin(request)
-    with vor_store.connection() as db:
-        _init(db)
-        ticket = _assert_ticket(db, body.vehicle_id, body.ticket_id)
-        if ticket["status"] != "open":
-            raise HTTPException(409, "Ticket is not open")
-        step = db.execute(
-            "SELECT step_index FROM ticket_steps WHERE ticket_id=? AND status='current'",
-            (body.ticket_id,),
-        ).fetchone()
-        if step is None:
-            raise HTTPException(409, "No current stage")
-        index = int(step[0])
-        if index < len(CHECKLIST):
-            completed = {
-                r[0]
-                for r in db.execute(
-                    "SELECT item_key FROM vor_step_checklists WHERE ticket_id=? AND step_index=? AND checked=1",
-                    (body.ticket_id, index),
-                )
-            }
-            pending = (
-                set()
-                if str(ticket["scenario"]).startswith("custom_")
-                else ops.required_keys(db, index)
-            ) - completed
-            if pending:
-                raise HTTPException(409, "Complete the current stage checklist before advancing")
-    # Standard store method advances and audits the workflow. No vehicle status is changed.
     try:
-        vor_store.advance_workflow(body.vehicle_id, body.ticket_id)
-    except ValueError as exc:
-        raise HTTPException(409, str(exc)) from exc
-    return {"ok": True}
+        return checklist_service.advance_with_checks(body.vehicle_id, body.ticket_id)
+    except checklist_service.ChecklistAdvanceError as exc:
+        raise HTTPException(exc.status_code, exc.detail) from exc
 
 
 # PR14 CUSTOM WORKFLOW GATE: user-defined stage labels have no mandatory legacy checklist items.

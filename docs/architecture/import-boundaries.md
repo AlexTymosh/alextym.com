@@ -11,17 +11,17 @@ static-analysis or security tool.
 | `app.domain.*` | `app.*` outside `app.domain` |
 | `app.repositories.*` | `app.services.*`, `app.api.*` |
 | `fleet_hub.services.*` | `fleet_hub.api.*`, `app.api.*` |
-| `fleet_hub.api.*` | Sibling Fleet API routers (except shared `dependencies` and one documented historical edge) |
+| `fleet_hub.api.*` | Sibling Fleet API routers (except shared `dependencies`) |
 
 The public Fleet router composer `fleet_hub.router` is **not** part of the
 `sibling API routers` rule: it is intentionally responsible for wiring routers.
 
-The only allowed historical edge between sibling Fleet HTTP routers is
-`fleet_hub.api.vor → fleet_hub.api.vor_checklist`. It supports the existing
-`/api/vor/advance` entrypoint. Future refactoring should move the shared
-workflow adapter to a neutral module and remove this exception in a separate
-behaviour-preserving change. The guard must not be weakened or expanded to
-accommodate new sibling imports.
+The historical edge `fleet_hub.api.vor → fleet_hub.api.vor_checklist`
+was removed in Step 10D. Both routers now call a neutral Fleet service for
+checklist-gated stage advancement; shared HTTP dependencies remain in
+`fleet_hub.api.dependencies`. There are no remaining grandfathered sibling
+router import exceptions. Future cross-router dependencies must be rejected.
+
 
 ## Execution
 
