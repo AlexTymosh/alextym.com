@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 
 import { chatHandoffCopy, chatNoticeCopy, chatShellCopy } from "../content/chat";
 import { useEscalationStream } from "../hooks/use-escalation-stream";
 import { runChatResponseFlow } from "../lib/chat-response-flow";
+import { createChatRequestLifecycle } from "../lib/chat-request-lifecycle";
 import { isAbortError } from "../lib/chat-errors";
 import { buildChatHistory } from "../lib/chat-history";
 import {
@@ -65,7 +66,7 @@ export function useChatController({
   const [dismissedHandoffMessageId, setDismissedHandoffMessageId] = useState<
     string | null
   >(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [requestLifecycle] = useState(createChatRequestLifecycle);
 
   const handleEscalationStreamMeta = useCallback(() => {
     setNotice(null);
@@ -144,10 +145,10 @@ export function useChatController({
 
     return () => {
       isMounted = false;
-      abortControllerRef.current?.abort();
+      requestLifecycle.invalidate();
       closeEscalationStream();
     };
-  }, [closeEscalationStream]);
+  }, [closeEscalationStream, requestLifecycle]);
 
   useEffect(() => {
     if (isThinking || isEscalating || isSendingHandoffMessage || isClosingHandoff) {
@@ -212,8 +213,7 @@ export function useChatController({
   const hasActiveHandoff = isHumanHandoffActive(handoffId, handoffState);
 
   function resetChat() {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
+    requestLifecycle.invalidate();
     resetEscalationStream();
     setInput("");
     setMessages([]);
@@ -231,15 +231,12 @@ export function useChatController({
   }
 
   async function sendScriptedResponse(prompt: QuickPrompt) {
-    if (isInputDisabled) {
+    if (isInputDisabled || requestLifecycle.hasActiveAssistant()) {
       return;
     }
 
     const assistantId = createMessageId("assistant");
-    const abortController = new AbortController();
-
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = abortController;
+    const request = requestLifecycle.beginAssistantRequest();
 
     setMessages((currentMessages) => [
       ...currentMessages,
@@ -258,12 +255,14 @@ export function useChatController({
     setHandoffUnavailable(null);
 
     try {
-      await waitForScriptedResponse(abortController.signal);
-      updateAssistantMessage(assistantId, {
-        text: chooseScriptedResponse(prompt.responses),
-      });
+      await waitForScriptedResponse(request.signal);
+      if (request.isCurrent()) {
+        updateAssistantMessage(assistantId, {
+          text: chooseScriptedResponse(prompt.responses),
+        });
+      }
     } catch (error) {
-      if (!isAbortError(error)) {
+      if (!isAbortError(error) && request.isCurrent()) {
         updateAssistantMessage(assistantId, {
           text: chatNoticeCopy.assistantErrorMessage,
           confidence: "low",
@@ -274,11 +273,11 @@ export function useChatController({
         setNotice(chatNoticeCopy.assistantUnavailable);
       }
     } finally {
-      if (abortControllerRef.current === abortController) {
-        abortControllerRef.current = null;
+      if (request.isCurrent()) {
+        request.finish();
+        setIsThinking(false);
+        focusMessageInputSoon();
       }
-      setIsThinking(false);
-      focusMessageInputSoon();
     }
   }
 
@@ -287,7 +286,7 @@ export function useChatController({
     if (!trimmedInput) {
       return;
     }
-    if (isInputDisabled) {
+    if (isInputDisabled || requestLifecycle.hasActiveAssistant()) {
       return;
     }
 
@@ -299,13 +298,15 @@ export function useChatController({
     const assistantId = createMessageId("assistant");
     const history = buildChatHistory(messages);
 
-    abortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
+    const request = requestLifecycle.beginAssistantRequest();
 
     const renderer = createStreamTextRenderer({
-      signal: abortController.signal,
-      onUpdate: (text) => updateAssistantMessage(assistantId, { text }),
+      signal: request.signal,
+      onUpdate: (text) => {
+        if (request.isCurrent()) {
+          updateAssistantMessage(assistantId, { text });
+        }
+      },
     });
 
     setMessages((currentMessages) => [
@@ -328,17 +329,25 @@ export function useChatController({
       await runChatResponseFlow({
         message: trimmedInput,
         history,
-        signal: abortController.signal,
+        signal: request.signal,
         renderer,
-        onAssistantPatch: (patch) => updateAssistantMessage(assistantId, patch),
-        onNotice: setNotice,
+        onAssistantPatch: (patch) => {
+          if (request.isCurrent()) {
+            updateAssistantMessage(assistantId, patch);
+          }
+        },
+        onNotice: (nextNotice) => {
+          if (request.isCurrent()) {
+            setNotice(nextNotice);
+          }
+        },
       });
     } finally {
-      if (abortControllerRef.current === abortController) {
-        abortControllerRef.current = null;
+      if (request.isCurrent()) {
+        request.finish();
+        setIsThinking(false);
+        focusMessageInputSoon();
       }
-      setIsThinking(false);
-      focusMessageInputSoon();
     }
   }
 
@@ -360,18 +369,25 @@ export function useChatController({
       return;
     }
 
+    const isCurrentSession = requestLifecycle.captureSession();
     setIsSendingHandoffMessage(true);
     setNotice(null);
     setHandoffUnavailable(null);
 
     try {
       await submitEscalationMessage(handoffId, messageText);
+      if (!isCurrentSession()) {
+        return;
+      }
       setMessages((currentMessages) => [
         ...currentMessages,
         { id: createMessageId("user"), role: "user", text: messageText },
       ]);
       setInput("");
     } catch (error) {
+      if (!isCurrentSession()) {
+        return;
+      }
       if (isHandoffUnavailableError(error)) {
         showHandoffUnavailable(error);
         return;
@@ -382,8 +398,10 @@ export function useChatController({
       }
       setNotice(chatHandoffCopy.sendFailureMessage);
     } finally {
-      setIsSendingHandoffMessage(false);
-      focusMessageInputSoon();
+      if (isCurrentSession()) {
+        setIsSendingHandoffMessage(false);
+        focusMessageInputSoon();
+      }
     }
   }
 
@@ -392,6 +410,7 @@ export function useChatController({
       return;
     }
 
+    const isCurrentSession = requestLifecycle.captureSession();
     setIsEscalating(true);
     setNotice(null);
     setHandoffUnavailable(null);
@@ -400,6 +419,9 @@ export function useChatController({
       const response = await submitEscalation(
         buildEscalationTranscript(messages),
       );
+      if (!isCurrentSession()) {
+        return;
+      }
       const nextHandoffId = response.handoff_id || null;
       const nextState = normaliseHandoffState(response.state);
 
@@ -425,6 +447,9 @@ export function useChatController({
         },
       ]);
     } catch (error) {
+      if (!isCurrentSession()) {
+        return;
+      }
       if (isHandoffUnavailableError(error)) {
         showHandoffUnavailable(error);
         setDismissedHandoffMessageId(pendingHandoffSuggestion?.id ?? null);
@@ -436,8 +461,10 @@ export function useChatController({
       }
       setNotice(chatHandoffCopy.connectFailureMessage);
     } finally {
-      setIsEscalating(false);
-      focusMessageInputSoon();
+      if (isCurrentSession()) {
+        setIsEscalating(false);
+        focusMessageInputSoon();
+      }
     }
   }
 
@@ -446,12 +473,16 @@ export function useChatController({
       return;
     }
 
+    const isCurrentSession = requestLifecycle.captureSession();
     setIsClosingHandoff(true);
     setNotice(null);
     setHandoffUnavailable(null);
 
     try {
       await submitEscalationClose(handoffId);
+      if (!isCurrentSession()) {
+        return;
+      }
       closeEscalationStream();
       setHandoffState("closed");
       setEscalationSent(false);
@@ -466,10 +497,14 @@ export function useChatController({
         },
       ]);
     } catch {
-      setNotice(chatHandoffCopy.closeFailureMessage);
+      if (isCurrentSession()) {
+        setNotice(chatHandoffCopy.closeFailureMessage);
+      }
     } finally {
-      setIsClosingHandoff(false);
-      focusMessageInputSoon();
+      if (isCurrentSession()) {
+        setIsClosingHandoff(false);
+        focusMessageInputSoon();
+      }
     }
   }
 

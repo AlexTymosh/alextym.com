@@ -115,3 +115,23 @@ backpressure and the frontend chat controller in subsequent scoped work.
 - No production secrets or Fleet/Redis/RAG changes.
 - Run focused tests, `task ci`, GitHub PR CI and then squash merge.
 - This ledger is never an installer/test/CI preflight input.
+
+
+## Step 09B — stale async Chat request guards (2026-11-06)
+
+- Step 09A was squash-merged as PR #228 at `7f7c80e2739e46bf1ee08b1c3496f1d31f63dce4`.
+- Branch: `fix/chat-request-lifecycle`. An assistant request lease owns
+  response patches, notices, rendering updates, thinking-state cleanup and focus.
+- Reset/unmount invalidates both request leases and handoff session generations.
+  Late handoff connect/message/close outcomes are ignored by the cleared UI.
+- A closed/replaced EventSource may not deliver a queued callback into the
+  current chat. Keep native EventSource and existing Last-Event-ID semantics.
+- No backend, wire payload, Redis, Telegram or Fleet changes. A handoff POST
+  already accepted by the server cannot be undone by client-side Reset.
+- New pure lease tests and browser race regressions require complete `task ci`
+  and GitHub CI. Never treat this ledger as a test/preflight gate.
+
+## Step 09B lint correction
+
+- Initialize the request lifecycle via the lazy `useState` initializer; do not read or write React refs during render.
+- No API, state-machine, handoff, transport, or payload changes. Run `task frontend:lint`, `task frontend:typecheck`, and full `task ci` before committing.

@@ -53,10 +53,16 @@ export function useEscalationStream({
       eventSourceRef.current = eventSource;
 
       eventSource.addEventListener("meta", () => {
+        if (eventSourceRef.current !== eventSource) {
+          return;
+        }
         onMeta();
       });
 
       eventSource.addEventListener("message", (event) => {
+        if (eventSourceRef.current !== eventSource) {
+          return;
+        }
         const message = parseEscalationStreamMessage(event);
         if (!message) {
           return;
@@ -71,12 +77,18 @@ export function useEscalationStream({
       });
 
       eventSource.addEventListener("closed", (event) => {
+        if (eventSourceRef.current !== eventSource) {
+          return;
+        }
         const reason = parseEscalationStreamClosedReason(event);
         closeEscalationStream();
         onClosed(reason);
       });
 
       eventSource.addEventListener("error", () => {
+        if (eventSourceRef.current !== eventSource) {
+          return;
+        }
         onError();
       });
     },
