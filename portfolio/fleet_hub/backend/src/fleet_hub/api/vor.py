@@ -21,6 +21,7 @@ from fleet_hub.api.dependencies import (
     sign,
 )
 from fleet_hub.services import message_delivery, vor_store
+from fleet_hub.services import vor_checklist_advance as checklist_service
 from fleet_hub.services.message_delivery import valid_email
 from fleet_hub.services.vor_exports import build_xlsx, build_ics
 
@@ -222,11 +223,10 @@ def create_booking(body: NewBooking, request: Request) -> dict:
 @router.post("/advance", dependencies=[Depends(required)])
 def advance(body: NextStep, request: Request) -> dict:
     same_origin(request)
-    from fleet_hub.api.vor_checklist import AdvanceStage, advance_with_checks
-
-    return advance_with_checks(
-        AdvanceStage(vehicle_id=body.vehicle_id, ticket_id=body.ticket_id), request
-    )
+    try:
+        return checklist_service.advance_with_checks(body.vehicle_id, body.ticket_id)
+    except checklist_service.ChecklistAdvanceError as exc:
+        raise HTTPException(exc.status_code, exc.detail) from exc
 
 
 @router.post("/scenario", dependencies=[Depends(required)])

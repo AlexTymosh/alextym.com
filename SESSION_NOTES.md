@@ -184,3 +184,16 @@ backpressure and the frontend chat controller in subsequent scoped work.
   Telegram, backups, logs or in-flight notifications. All upstream TTLs remain.
 - Run tests and `task ci`, then GitHub CI. No production Redis access used.
 - `SESSION_NOTES.md` is an informational ledger only, never a preflight input.
+
+## Step 10D — Fleet sibling-router decoupling (2026-11-07)
+
+- PR #232 merged Step 10C into main at `06bcf2ade7be536e9319d69941a0f9e4f2908b25`.
+- Shared checklist gate and stage advancement live in `fleet_hub.services.vor_checklist_advance`.
+- Existing `/api/vor/advance` and `/api/vor/checklists/advance` routes
+  delegate to the same workflow service while keeping HTTP origin/auth/error mapping.
+- The historical `fleet_hub.api.vor → fleet_hub.api.vor_checklist` exception
+  is removed from the AST architecture guard; a negative fixture prevents recurrence.
+- No Fleet seed, SQLite schema, vehicle status semantics, email delivery, Redis,
+  Telegram or external API paths change.
+- Run Fleet regression, backend architecture tests, full `task ci`, GitHub CI
+  and manual smoke before squash merge. Ledger content is never a preflight gate.

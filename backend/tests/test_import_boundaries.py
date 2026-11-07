@@ -113,14 +113,25 @@ def test_fleet_service_cannot_import_api(repository: Path, source: str) -> None:
     assert len(errors(repository)) >= 1
 
 
-def test_fleet_router_dependency_and_known_existing_edge(repository: Path) -> None:
+def test_fleet_router_can_import_shared_service_without_sibling_router(repository: Path) -> None:
     put(
         repository,
         "portfolio/fleet_hub/backend/src/fleet_hub/api/vor.py",
         "from fleet_hub.api.dependencies import same_origin\n"
-        "from fleet_hub.api.vor_checklist import advance_with_checks\n",
+        "from fleet_hub.services.vor_checklist_advance import advance_with_checks\n",
     )
     assert errors(repository) == []
+
+
+def test_former_legacy_router_edge_is_now_forbidden(repository: Path) -> None:
+    put(
+        repository,
+        "portfolio/fleet_hub/backend/src/fleet_hub/api/vor.py",
+        "from fleet_hub.api.vor_checklist import advance_with_checks\n",
+    )
+    result = errors(repository)
+    assert result
+    assert any("fleet_hub.api.vor_checklist" in line for line in result)
 
 
 def test_new_sibling_router_imports_blocked_including_relative(repository: Path) -> None:
