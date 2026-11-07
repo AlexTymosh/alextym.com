@@ -4,6 +4,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { chatHandoffCopy, chatNoticeCopy, chatShellCopy } from "../content/chat";
 import { useEscalationStream } from "../hooks/use-escalation-stream";
 import { runChatResponseFlow } from "../lib/chat-response-flow";
+import { closeDetachedHandoff } from "../lib/handoff-cleanup";
 import { createChatRequestLifecycle } from "../lib/chat-request-lifecycle";
 import { isAbortError } from "../lib/chat-errors";
 import { buildChatHistory } from "../lib/chat-history";
@@ -213,8 +214,12 @@ export function useChatController({
   const hasActiveHandoff = isHumanHandoffActive(handoffId, handoffState);
 
   function resetChat() {
+    const activeHandoffId = handoffState !== "closed" ? handoffId : null;
     requestLifecycle.invalidate();
     resetEscalationStream();
+    if (activeHandoffId) {
+      void closeDetachedHandoff(activeHandoffId);
+    }
     setInput("");
     setMessages([]);
     setIsThinking(false);
@@ -420,6 +425,8 @@ export function useChatController({
         buildEscalationTranscript(messages),
       );
       if (!isCurrentSession()) {
+        // The server may have created a session after the local reset.
+        void closeDetachedHandoff(response.handoff_id);
         return;
       }
       const nextHandoffId = response.handoff_id || null;
