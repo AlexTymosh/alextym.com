@@ -1,22 +1,23 @@
-import { submitEscalationClose } from "./escalation-api";
+import { purgeEscalationSession } from "./escalation-api";
 
-export type HandoffClose = (handoffId: string) => Promise<unknown>;
+export type HandoffPurge = (handoffId: string) => Promise<unknown>;
 
 /**
- * Closing a local EventSource does not close its backend handoff session.
+ * Reset discards the server-side Redis transcript, unlike manual close.
  * Best-effort cleanup intentionally has no callback into the reset chat UI.
- * A network failure may leave the session live until its server TTL expires.
+ * A network failure can leave the session until its TTL; Telegram copies
+ * already delivered to the operator are outside this Redis purge.
  */
-export async function closeDetachedHandoff(
+export async function purgeDetachedHandoff(
   handoffId: string | null | undefined,
-  close: HandoffClose = submitEscalationClose,
+  purge: HandoffPurge = purgeEscalationSession,
 ): Promise<boolean> {
   if (!handoffId) {
     return false;
   }
 
   try {
-    await close(handoffId);
+    await purge(handoffId);
     return true;
   } catch {
     // A stale request must never show an error in a newer chat session.

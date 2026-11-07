@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
 from app.api.rate_limit import (
     enforce_escalation_message_rate_limit,
@@ -148,6 +148,38 @@ async def close_escalation(
 
     record_escalation_event(action="close", outcome="success")
     return response
+
+
+@router.delete(
+    "/escalations/{handoff_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def purge_escalation(
+    handoff_id: str,
+    service: EscalationService = Depends(get_escalation_service),
+) -> Response:
+    """Idempotently discard temporary Redis handoff data after Chat Reset.
+
+    The unguessable handoff ID is a capability token, as for existing handoff
+    routes. This does not revoke copies already delivered via Telegram.
+    """
+    try:
+        await service.purge(handoff_id)
+    except EscalationConfigurationError as exc:
+        record_escalation_event(action="purge", outcome="configuration_error")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Escalation session storage is not configured.",
+        ) from exc
+    except EscalationDeliveryError as exc:
+        record_escalation_event(action="purge", outcome="delivery_error")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not delete this handoff. Please try again later.",
+        ) from exc
+
+    record_escalation_event(action="purge", outcome="success")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/escalations/{handoff_id}/stream")

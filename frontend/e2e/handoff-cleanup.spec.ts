@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-import { closeDetachedHandoff } from "../lib/handoff-cleanup";
+import { purgeDetachedHandoff } from "../lib/handoff-cleanup";
 
-test("attempts backend close for an abandoned handoff", async () => {
-  const closed: string[] = [];
-  const success = await closeDetachedHandoff("hnd_old", async (handoffId) => {
-    closed.push(handoffId);
+test("attempts backend purge for an abandoned handoff", async () => {
+  const purged: string[] = [];
+  const success = await purgeDetachedHandoff("hnd_old", async (handoffId) => {
+    purged.push(handoffId);
   });
 
   expect(success).toBe(true);
-  expect(closed).toEqual(["hnd_old"]);
+  expect(purged).toEqual(["hnd_old"]);
 });
 
 test("does not call the backend without a handoff ID", async () => {
@@ -18,14 +18,14 @@ test("does not call the backend without a handoff ID", async () => {
     calls += 1;
   };
 
-  expect(await closeDetachedHandoff(null, close)).toBe(false);
-  expect(await closeDetachedHandoff(undefined, close)).toBe(false);
-  expect(await closeDetachedHandoff("", close)).toBe(false);
+  expect(await purgeDetachedHandoff(null, close)).toBe(false);
+  expect(await purgeDetachedHandoff(undefined, close)).toBe(false);
+  expect(await purgeDetachedHandoff("", close)).toBe(false);
   expect(calls).toBe(0);
 });
 
 test("reports cleanup failure without throwing into the new chat", async () => {
-  const success = await closeDetachedHandoff("hnd_old", async () => {
+  const success = await purgeDetachedHandoff("hnd_old", async () => {
     throw new Error("Remote session store unavailable");
   });
 
@@ -38,7 +38,7 @@ test("waits for the close request before reporting success", async () => {
     complete = resolve;
   });
   let settled = false;
-  const task = closeDetachedHandoff("hnd_old", async () => {
+  const task = purgeDetachedHandoff("hnd_old", async () => {
     await pending;
   }).then((result) => {
     settled = true;
