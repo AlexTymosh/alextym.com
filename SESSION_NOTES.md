@@ -135,3 +135,20 @@ backpressure and the frontend chat controller in subsequent scoped work.
 
 - Initialize the request lifecycle via the lazy `useState` initializer; do not read or write React refs during render.
 - No API, state-machine, handoff, transport, or payload changes. Run `task frontend:lint`, `task frontend:typecheck`, and full `task ci` before committing.
+
+
+## Step 10A — Reset server handoff cleanup (2026-11-07)
+
+- PR #229 merged Step 09B into `main` at
+  `222c0b93d091dca0fb09b1d5c03e52790360fa00`.
+- Branch: `fix/handoff-reset-server-cleanup`. Reset now makes a best-effort
+  server close request for a known active handoff; a handoff created by a
+  stale POST response is also closed rather than attached to a new chat.
+- The existing `/api/escalations/{handoff_id}/close` endpoint is reused.
+  No backend, Redis schema, Telegram, or RAG changes in this PR.
+- This is not guaranteed cancellation: a lost response/network failure may
+  leave an active session until TTL, and `close` retains the transcript.
+- Next: server-backed cancellation acknowledgement/retention policy and
+  atomic Redis GET→transition→SET for owner messages versus close.
+- Run targeted Playwright tests and full `task ci`; GitHub CI is required.
+- This ledger remains documentation, never a hash or preflight gate.
