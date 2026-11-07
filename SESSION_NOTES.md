@@ -152,3 +152,21 @@ backpressure and the frontend chat controller in subsequent scoped work.
   atomic Redis GET→transition→SET for owner messages versus close.
 - Run targeted Playwright tests and full `task ci`; GitHub CI is required.
 - This ledger remains documentation, never a hash or preflight gate.
+
+## Step 10B — atomic Upstash session updates (2026-11-07)
+
+- PR #230 was squash-merged to `main` at
+  `b1bd2669a8cc10252c319d9f92f52ccab54305a5`.
+- Branch `fix/escalation-session-atomic-updates` replaces the Redis
+  GET/SET read-modify-write sequence with an EVAL-based compare-and-swap.
+- Python domain transitions and existing JSON, TTL, state strings, roles,
+  Telegram, and SSE remain unchanged. At most eight retries on contention.
+- Existing domain-boundary test is updated for the new command contract.
+  A separate deterministic test suite forces simultaneous stale reads.
+- No changes to frontend, Redis key names, deployment or secrets.
+- Run focused tests and full `task ci`, then GitHub PR CI before merge.
+- Production Upstash Lua execution is NOT proven by the simulated tests;
+  integration smoke on a non-production instance is required independently.
+- Follow-up Step 10C: decide cancellation confirmation, immediate purge vs
+  TTL-based transcript retention, and operational failure policy.
+- This notes file never gates installation or CI.
