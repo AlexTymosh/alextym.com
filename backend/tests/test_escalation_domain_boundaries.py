@@ -92,7 +92,7 @@ def test_legacy_payload_coercion_and_closed_expiry_behaviour() -> None:
     assert expired.ttl_seconds is None
 
 
-def test_upstash_adapter_uses_domain_model_and_preserves_redis_commands() -> None:
+def test_upstash_adapter_uses_domain_model_and_atomic_redis_commands() -> None:
     async def scenario() -> None:
         adapter = redis.UpstashRedisEscalationSessionStore(
             rest_url="https://example.invalid/redis", rest_token="test-only"
@@ -103,6 +103,19 @@ def test_upstash_adapter_uses_domain_model_and_preserves_redis_commands() -> Non
         async def execute(command: list[object]) -> object:
             commands.append(command)
             action = command[0]
+            if action == "EVAL":
+                assert command[1] == redis.ATOMIC_CAS_SCRIPT
+                assert command[2] == "1"
+                key = str(command[3])
+                if stored.get(key) != str(command[4]):
+                    return 0
+                if command[5] == "delete":
+                    stored.pop(key, None)
+                elif command[5] == "set":
+                    stored[key] = str(command[6])
+                else:
+                    raise AssertionError(f"Unexpected CAS mode: {command[5]}")
+                return 1
             key = str(command[1])
             if action == "SET":
                 stored[key] = str(command[2])
@@ -131,8 +144,10 @@ def test_upstash_adapter_uses_domain_model_and_preserves_redis_commands() -> Non
         assert closed is not None and closed.state == domain.ESCALATION_SESSION_STATE_CLOSED
         assert closed.messages[-1]["content"] == "Finished"
         set_commands = [cmd for cmd in commands if cmd[0] == "SET"]
-        assert len(set_commands) == 3
-        assert all(cmd[3] == "EX" and 0 < int(cmd[4]) <= 120 for cmd in set_commands)
+        assert len(set_commands) == 1  # Initial creation only.
+        eval_commands = [cmd for cmd in commands if cmd[0] == "EVAL"]
+        assert len(eval_commands) == 2
+        assert all(cmd[5] == "set" and 0 < int(cmd[7]) <= 120 for cmd in eval_commands)
         assert json.loads(stored[f"escalation:session:{initial.handoff_id}"]) == closed.to_dict()
         assert await adapter.get(initial.handoff_id) == closed
 
