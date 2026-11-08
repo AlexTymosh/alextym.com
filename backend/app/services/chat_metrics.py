@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
+from contextlib import aclosing
 
 import structlog
 
@@ -114,8 +115,14 @@ class MetricsLLMClient:
 
         start_time = start_timer()
         try:
-            for token in stream_answer(prompt):
-                yield token
+            source_stream = stream_answer(prompt)
+            try:
+                for token in source_stream:
+                    yield token
+            finally:
+                closer = getattr(source_stream, "close", None)
+                if callable(closer):
+                    closer()
         except Exception:
             record_llm_request(
                 operation="stream",
@@ -188,10 +195,11 @@ class MetricsChatService:
     async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ChatStreamEvent]:
         done_payload: dict[str, object] | None = None
         try:
-            async for event in self._service.stream_answer(request):
-                if event.event == "done":
-                    done_payload = event.data
-                yield event
+            async with aclosing(self._service.stream_answer(request)) as events:
+                async for event in events:
+                    if event.event == "done":
+                        done_payload = event.data
+                    yield event
         except Exception:
             record_chat_request(
                 mode="stream",

@@ -1,6 +1,6 @@
 # Main website architecture refactor — execution ledger
 
-**Updated:** 2026-11-07 22:22 UTC
+**Updated:** 2026-11-08 12:59 UTC
 **Baseline:** `main` at `526cc88b44f166645deec3713d0af3a31741b502` (PR #233).
 **Active scope:** main Next.js website, FastAPI site application, Chat/Handoff, RAG/LLM,
 site-wide security, tests, observability, deployment and documentation.
@@ -74,7 +74,9 @@ message, and PR text with `## Summary`, `## Changes`, `## Testing`
 | 2026-11-07 | 11: PR #234 local verification | **LOCAL CI PASS; LIVE PENDING** | Local `task ci` PASS reported after formatting fixes; 4 integration tests SKIPPED; PR #234 Draft | Real non-production Upstash test and PR GitHub CI outstanding |
 | 2026-11-07 22:15 UTC | 12: site-only implementation | **DONE — LOCAL CI PASS; DEPLOYMENT REVIEW PENDING** | Added ASGI socket peer-only identity, threaded sync Redis calls in async endpoints and spoof/latency tests | No remote proxy verification; local focused tests, task ci and CI still required |
 | 2026-11-07 22:22 UTC | 12: local CI acceptance | **DONE — LOCAL CI PASS; DEPLOYMENT REVIEW PENDING** | Owner reported full local `task ci` PASS: repository, config, wizard, deployment, backend, frontend, RAG and Docker | GitHub PR CI and actual trusted-proxy verification still pending |
-| — | 13: async Chat/RAG/LLM network I/O | PLANNED | Event-loop health, cancellation, SSE safety | Baseline latency/concurrency first |
+| 2026-11-08 11:59 UTC | 13: async Chat/RAG/LLM network I/O | **DONE — LOCAL CI PASS** | Offload JSON and SSE retrieval/generation; close nested streaming iterators; add deterministic concurrency/cancel regressions | Run focused tests and task ci, then mark local DONE; GitHub CI and live production tests are independent gates |
+| 2026-11-08 12:56 UTC | 13: test routing correction | **IN PROGRESS** | First focused run: 3 failed, 19 passed; the fixture question 'What are your projects?' unintentionally matched assistant-intro substring 'what are you'. Updated fixture to a RAG-routed request. | Rerun focused tests and full task ci; auto-close Stage 13 only if both pass |
+| 2026-11-08 12:59 UTC | 13: local verification and acceptance | **DONE — LOCAL CI PASS** | Focused Chat async/streaming tests and full `task ci` PASS from local verifier | GitHub CI and production concurrency/load checks pending; Stage 11/12 external gates still open |
 | — | 14: Escalation SSE boundary | PLANNED | Application events vs HTTP serialization | Golden-wire and reconnect tests |
 | — | 15: site architecture guard | PLANNED | Direction rules for site services/RAG/LLM | False-positive and negative fixtures |
 | — | 16: chat frontend cohesion | PLANNED | Narrow lifecycle seams only where justified | Browser lifecycle regressions |
@@ -146,7 +148,7 @@ verify it independently before running.
 | Ruff / backend tests | PASS (reported, 2026-11-07) | Local Ruff lint and formatting fixed |
 | Real Upstash REST/EVAL | NOT RUN | Separate test Upstash credentials unavailable |
 | Full local `task ci` | PASS (reported, 2026-11-07) | Local success reported after formatting/whitespace repair |
-| GitHub PR CI | IN PROGRESS (2026-11-07) | PR #234: backend, RAG, frontend, project and Docker checks all green |
+| GitHub PR CI | PASS (5/5, 2026-11-07) | PR #234 GitHub Actions: backend, RAG, frontend, project and Docker all successful; live Upstash still pending |
 | Production impact | NONE INTENDED | Test and documentation files only; no deployment necessary |
 
 ## 5. Stage 12 — trusted client identity and rate limiter
@@ -187,7 +189,9 @@ Local DONE must never be described as confirmed production security.
 
 ## 6. Stage 13 — Chat/RAG/LLM non-blocking execution
 
-**Candidate branch:** `refactor/chat-async-provider-boundaries`
+**Implementation branch:** `refactor/chat-async-provider-boundaries`
+**Status:** DONE — LOCAL CI PASS.
+**Change scope:** `backend/app/api/chat.py`, `backend/app/services/chat.py`, `backend/app/services/chat_metrics.py`, `backend/app/llm/openai_client.py`, `backend/tests/test_chat_async_io_boundaries.py`, this ledger.
 **Priority:** P1 performance / correctness.
 **Observed source:** `ChatService.stream_answer` synchronously calls RAG
 retrieval/LLM clients inside an async generator, including iteration of a
@@ -319,9 +323,7 @@ accurate and the dated change log identifies the final release SHA.
   `git show 526cc88b:SESSION_NOTES.md`. The active plan replaces outdated
   instructions that formerly referred to Step 06 as still pending.
 
-**Next action:** run Stage 11 on isolated Upstash, record real results in the
-section 3 dated log, then proceed to Stage 12. Never call Stage 11 DONE solely
-because tests skip in ordinary CI.
+**Next action:** Stage 13 local validation, then an independent PR. Stage 11's live Upstash gate and Stage 12's production proxy audit remain open; green unit/CI tests alone cannot close them.
 
 
 ## Stage 12 implementation record — 2026-11-07 22:15 UTC
@@ -343,10 +345,10 @@ because tests skip in ordinary CI.
   if a real failure demands a separate change.
 - No Fleet source, frontend, Qdrant, Telegram or production data modified.
 
-**Not yet claimed:** local `task ci` after Stage 12, GitHub Actions,
-production trusted-proxy setup and live spoof tests. These are acceptance
-gates distinct from code delivery. Never declare production secure based
-on a code-only change.
+**Local Stage 12 verification:** full `task ci` PASS is recorded in the
+local verification note and dated log. **Not verified:** GitHub Actions
+for Stage 12, production trusted-proxy setup and live spoof tests.
+Never declare production secure based only on local CI.
 
 
 ### Stage 12 local verification
@@ -355,3 +357,49 @@ on a code-only change.
 - Full local `task ci`: **PASS** (reported from the current branch on 2026-11-07).
 - Production trusted-proxy/header rewrite: **NOT VERIFIED**; required before final security sign-off.
 - GitHub Actions on the Stage 12 PR: **PENDING** until pushed and run.
+
+
+## Stage 13 implementation record — 2026-11-08 11:59 UTC
+
+**Code complete; local acceptance pending.** This PR changes only the main
+website. No Fleet VOR Hub source, database or route is modified.
+
+- JSON `/api/chat` offloads synchronous `service.answer()` to the worker pool.
+- Streaming Chat offloads synchronous question contextualization, embeddings,
+  Qdrant retrieval, non-streaming fallback LLM answer, and each synchronous
+  OpenAI stream `next()` to worker threads. No new provider SDK or dependency.
+- SSE `meta/token/sources/done/error` ordering, RAG policy, safety output
+  buffer, wire formats, route methods, rate limits and metric names are unchanged.
+- Nested SSE generators are explicitly closed on stream cancellation or
+  disconnect; the OpenAI SDK response stream is closed on exhaustion/error.
+- Added no-network deterministic scheduling, fallback and generator lifecycle
+  regression tests; run alongside existing streaming/golden-wire tests.
+- Remaining limitations: cancellation cannot forcibly terminate an in-flight
+  synchronous network call; thread capacity/timeouts and actual provider
+  concurrency should be assessed in Stage 17 before making performance claims.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Implementation | COMPLETE | Narrow adapter changes plus tests |
+| Focused tests | PASS (local) | `tests/test_chat_async_io_boundaries.py` and Chat streaming/golden-wire suites |
+| Full local `task ci` | PASS (local) | Verified by `verify_stage13.ps1` before recording |
+| GitHub PR CI | NOT RUN | After push / PR creation |
+| Live performance / production | NOT RUN | Stage 17 release verification |
+
+
+### Stage 13 test-fixture correction
+
+- Recorded (UTC): 2026-11-08 12:56 UTC.
+- Initial focused verification: **3 failed, 19 passed** (RAG/LLM workers were never entered because the test question matched a pre-RAG assistant introduction pattern).
+- Changed test QUESTION only, no production behavior or Fleet changes.
+- Existing policy limitation: substring matching of `what are you` also matches `what are your ...`. Keep as a separate, tested Chat-intent issue; do not silently change user-visible routing in an I/O isolation PR.
+- Stage 13 focused suite and full `task ci`: **PENDING RERUN**. `verify_stage13.ps1` writes the DONE row only after PASS.
+
+
+### Stage 13 local verification
+
+- Date (UTC): 2026-11-08 12:59 UTC
+- Focused Chat concurrency, cancellation and SSE regression tests: **PASS**.
+- Full local `task ci` (including Fleet compatibility): **PASS**.
+- Actual provider/load performance: **NOT VERIFIED**; Stage 17 gate.
+- GitHub Actions on Stage 13 PR: **PENDING** until push.
