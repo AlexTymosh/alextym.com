@@ -81,7 +81,7 @@ def test_misconfigured_daily_rate_limiter_fails_explicitly() -> None:
         limiter.check(scope="chat", identifier="127.0.0.1", limit=1)
 
 
-def test_client_identifier_prefers_first_forwarded_for_ip() -> None:
+def test_client_identifier_ignores_untrusted_forwarded_for_ip() -> None:
     request = _request(
         headers={
             "x-forwarded-for": "203.0.113.10, 10.0.0.1",
@@ -90,10 +90,10 @@ def test_client_identifier_prefers_first_forwarded_for_ip() -> None:
         client_host="127.0.0.1",
     )
 
-    assert client_identifier_from_request(request) == "203.0.113.10"
+    assert client_identifier_from_request(request) == "127.0.0.1"
 
 
-def test_client_identifier_uses_real_ip_when_forwarded_for_is_blank() -> None:
+def test_client_identifier_ignores_untrusted_real_ip_when_forwarded_for_is_blank() -> None:
     request = _request(
         headers={
             "x-forwarded-for": "   ",
@@ -102,7 +102,7 @@ def test_client_identifier_uses_real_ip_when_forwarded_for_is_blank() -> None:
         client_host="127.0.0.1",
     )
 
-    assert client_identifier_from_request(request) == "198.51.100.20"
+    assert client_identifier_from_request(request) == "127.0.0.1"
 
 
 def test_client_identifier_falls_back_to_request_client_host() -> None:
@@ -144,3 +144,19 @@ def _request(
 ) -> SimpleNamespace:
     client = SimpleNamespace(host=client_host) if client_host is not None else None
     return SimpleNamespace(headers=headers, client=client)
+
+
+@pytest.mark.parametrize(
+    ("peer", "forged_headers"),
+    [
+        ("198.51.100.42", {"x-forwarded-for": "203.0.113.1"}),
+        ("2001:db8::42", {"x-real-ip": "203.0.113.1"}),
+        ("198.51.100.42", {"x-forwarded-for": "not-an-ip, 10.0.0.1"}),
+        ("2001:db8::42", {"x-forwarded-for": "203.0.113.1, ::1"}),
+    ],
+)
+def test_client_identifier_uses_normalized_asgi_peer(
+    peer: str, forged_headers: dict[str, str]
+) -> None:
+    request = _request(headers=forged_headers, client_host=peer)
+    assert client_identifier_from_request(request) == peer
