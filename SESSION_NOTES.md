@@ -1,7 +1,7 @@
 # Main website architecture refactor — execution ledger
 
-**Updated:** 2026-11-08 17:43 UTC
-**Baseline:** `main` at `526cc88b44f166645deec3713d0af3a31741b502` (PR #233).
+**Updated:** 2026-11-08 19:36 UTC
+**Baseline:** `main` at `eefd657cb67dd962b7f6126851f7e971dc76313a` (PR #235) before Stage 15.
 **Active scope:** main Next.js website, FastAPI site application, Chat/Handoff, RAG/LLM,
 site-wide security, tests, observability, deployment and documentation.
 **Explicitly deferred:** internal refactoring of the independent `portfolio/fleet_hub`
@@ -80,7 +80,9 @@ message, and PR text with `## Summary`, `## Changes`, `## Testing`
 | 2026-11-08 13:21 UTC | 11: PR #234 squash merged | **MERGED — LIVE TEST PENDING** | main `3a704510`; five GitHub Actions jobs PASS; Owner reported local task ci PASS | Run four opt-in tests against an isolated non-production Upstash |
 | 2026-11-08 17:39 UTC | 14: Escalation SSE boundary | **DONE — LOCAL CI PASS; REMOTE CHECKS PENDING** | Transport-independent events/heartbeat, HTTP-only SSE adapter and six deterministic regression tests; no Fleet changes | Run focused escalation tests and task ci before local DONE; GitHub CI and production smoke are separate gates |
 | 2026-11-08 17:43 UTC | 14: local CI verification | **DONE — LOCAL CI PASS; REMOTE CHECKS PENDING** | Focused Escalation tests, Ruff lint/format and full `task ci` PASS (verified locally by script, including Fleet compatibility) | GitHub Actions and production SSE smoke still pending |
-| — | 15: site architecture guard | PLANNED | Direction rules for site services/RAG/LLM | False-positive and negative fixtures |
+| 2026-11-08 18:01 UTC | 14: PR #235 squash merged | **MERGED; PRODUCTION SMOKE PENDING** | main `eefd657c`; GitHub Actions PASS (run `42507869229`); local focused and task ci PASS | Production SSE smoke remains a separate release gate |
+| 2026-11-08 18:51 UTC | 15: site architecture guard | **DONE — LOCAL CI PASS; GITHUB CI PENDING** | Added site-specific rules, typing-only exemption and import fixture tests | Run focused architecture tests and full task ci, then record DONE |
+| 2026-11-08 19:36 UTC | 15: local acceptance | **DONE — LOCAL CI PASS; GITHUB CI PENDING** | Architecture fixtures, Ruff and full task ci PASS on local checkout | Verify GitHub CI after push; production release sign-off remains Stage 17 |
 | — | 16: chat frontend cohesion | PLANNED | Narrow lifecycle seams only where justified | Browser lifecycle regressions |
 | — | 17: final site audit and release | PLANNED | Docs, security, CI, evaluations and production | Evidence-based sign-off |
 
@@ -417,4 +419,33 @@ website. No Fleet VOR Hub source, database or route is modified.
 - Add golden-wire, replay, service-type, architecture and disconnect cleanup regression tests.
 - No production Redis, Telegram, Fleet, configuration or public response contract changes.
 - Local focused tests and full `task ci`: **PASS**, verified on 2026-11-08 17:43 UTC by `verify_stage14.ps1`.
-- GitHub CI and live smoke: **PENDING**, independent release gates.
+- GitHub CI: **PASS** on main `eefd657c` (run `42507869229`); production SSE smoke: **PENDING**.
+
+
+## Stage 15 implementation record — 2026-11-08 18:51 UTC
+
+**Code implementation: COMPLETE. Local acceptance: DONE — LOCAL CI PASS.**
+
+- Extends the existing AST guard to `app.services`, `app.rag` and `app.llm`.
+- Rejects service/RAG/LLM references to `app.api`, and RAG references to `app.services`.
+- Preserves actual valid composition: `app.llm` may reference `app.services.question_contextualizer`; site services may reference RAG, LLM and repositories.
+- Recognizes `TYPE_CHECKING` imports as typing-only for newly added rules; existing domain/repository/Fleet rules are not relaxed.
+- Covers direct, relative and aliased static imports and literal dynamic imports; computed imports/reflection remain outside the AST scanner's guarantees.
+- Adds positive/negative fixtures with exact source path and line; does not modify Fleet sources.
+- Live Upstash and production proxy verification from earlier stages remain outstanding, independent of this code-only stage.
+- Local focused tests / `task ci`: PASS; GitHub Actions: PENDING.
+
+
+### Stage 15 legacy fixture correction ? 2026-11-08 19:33 UTC
+
+- Initial verification: 23 legacy tests FAILED because the fixture omitted new services/rag/llm package roots.
+- Fixed test fixture only; production scanner remains fail-closed.
+- Focused tests and full `task ci`: PENDING rerun.
+
+### Stage 15 local verification — 2026-11-08 19:36 UTC
+
+- New site architecture guard and fixture suite: **PASS**.
+- Full `task ci`, including the existing Fleet compatibility guard: **PASS**.
+- Stage 15 implementation: **DONE — LOCAL CI PASS**.
+- GitHub Actions on the Stage 15 PR: **PENDING**.
+- Site release/production audit remains in Stage 17.
