@@ -1,6 +1,6 @@
 # Main website architecture refactor — execution ledger
 
-**Updated:** 2026-11-08 12:59 UTC
+**Updated:** 2026-11-08 17:43 UTC
 **Baseline:** `main` at `526cc88b44f166645deec3713d0af3a31741b502` (PR #233).
 **Active scope:** main Next.js website, FastAPI site application, Chat/Handoff, RAG/LLM,
 site-wide security, tests, observability, deployment and documentation.
@@ -77,7 +77,9 @@ message, and PR text with `## Summary`, `## Changes`, `## Testing`
 | 2026-11-08 11:59 UTC | 13: async Chat/RAG/LLM network I/O | **DONE — LOCAL CI PASS** | Offload JSON and SSE retrieval/generation; close nested streaming iterators; add deterministic concurrency/cancel regressions | Run focused tests and task ci, then mark local DONE; GitHub CI and live production tests are independent gates |
 | 2026-11-08 12:56 UTC | 13: test routing correction | **IN PROGRESS** | First focused run: 3 failed, 19 passed; the fixture question 'What are your projects?' unintentionally matched assistant-intro substring 'what are you'. Updated fixture to a RAG-routed request. | Rerun focused tests and full task ci; auto-close Stage 13 only if both pass |
 | 2026-11-08 12:59 UTC | 13: local verification and acceptance | **DONE — LOCAL CI PASS** | Focused Chat async/streaming tests and full `task ci` PASS from local verifier | GitHub CI and production concurrency/load checks pending; Stage 11/12 external gates still open |
-| — | 14: Escalation SSE boundary | PLANNED | Application events vs HTTP serialization | Golden-wire and reconnect tests |
+| 2026-11-08 13:21 UTC | 11: PR #234 squash merged | **MERGED — LIVE TEST PENDING** | main `3a704510`; five GitHub Actions jobs PASS; Owner reported local task ci PASS | Run four opt-in tests against an isolated non-production Upstash |
+| 2026-11-08 17:39 UTC | 14: Escalation SSE boundary | **DONE — LOCAL CI PASS; REMOTE CHECKS PENDING** | Transport-independent events/heartbeat, HTTP-only SSE adapter and six deterministic regression tests; no Fleet changes | Run focused escalation tests and task ci before local DONE; GitHub CI and production smoke are separate gates |
+| 2026-11-08 17:43 UTC | 14: local CI verification | **DONE — LOCAL CI PASS; REMOTE CHECKS PENDING** | Focused Escalation tests, Ruff lint/format and full `task ci` PASS (verified locally by script, including Fleet compatibility) | GitHub Actions and production SSE smoke still pending |
 | — | 15: site architecture guard | PLANNED | Direction rules for site services/RAG/LLM | False-positive and negative fixtures |
 | — | 16: chat frontend cohesion | PLANNED | Narrow lifecycle seams only where justified | Browser lifecycle regressions |
 | — | 17: final site audit and release | PLANNED | Docs, security, CI, evaluations and production | Evidence-based sign-off |
@@ -403,3 +405,16 @@ website. No Fleet VOR Hub source, database or route is modified.
 - Full local `task ci` (including Fleet compatibility): **PASS**.
 - Actual provider/load performance: **NOT VERIFIED**; Stage 17 gate.
 - GitHub Actions on Stage 13 PR: **PENDING** until push.
+
+
+## Stage 14 implementation record — 2026-11-08 17:39 UTC
+
+**Implementation: COMPLETE. Local verification: PASS.**
+
+- EscalationService produces transport-independent domain events and heartbeats; only API module creates ServerSentEvent/ServerSentComment.
+- Preserve `meta`, `message` (with ID), `closed`, Last-Event-ID replay, heartbeat comments, exact JSON/SSE framing, HTTP status codes and polling rules.
+- Explicitly close the upstream async event generator when the HTTP stream disconnects or is cancelled.
+- Add golden-wire, replay, service-type, architecture and disconnect cleanup regression tests.
+- No production Redis, Telegram, Fleet, configuration or public response contract changes.
+- Local focused tests and full `task ci`: **PASS**, verified on 2026-11-08 17:43 UTC by `verify_stage14.ps1`.
+- GitHub CI and live smoke: **PENDING**, independent release gates.
