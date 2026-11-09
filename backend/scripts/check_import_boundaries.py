@@ -90,6 +90,43 @@ def _at_or_below(name: str, prefix: str) -> bool:
     return name == prefix or name.startswith(prefix + ".")
 
 
+def _type_only_import_lines(tree: ast.AST) -> set[int]:
+    """Find imports under recognized typing guards, not runtime if/else arms.
+
+    This exemption applies only to the NEW site rules. Existing domain,
+    repository and Fleet restrictions remain unchanged.
+    """
+    type_checking_names: set[str] = set()
+    typing_names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "typing":
+            type_checking_names.update(
+                alias.asname or alias.name for alias in node.names if alias.name == "TYPE_CHECKING"
+            )
+        elif isinstance(node, ast.Import):
+            typing_names.update(
+                alias.asname or alias.name for alias in node.names if alias.name == "typing"
+            )
+
+    def is_typing_guard(condition: ast.expr) -> bool:
+        return (isinstance(condition, ast.Name) and condition.id in type_checking_names) or (
+            isinstance(condition, ast.Attribute)
+            and condition.attr == "TYPE_CHECKING"
+            and isinstance(condition.value, ast.Name)
+            and condition.value.id in typing_names
+        )
+
+    lines: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If) or not is_typing_guard(node.test):
+            continue
+        for statement in node.body:
+            for descendant in ast.walk(statement):
+                if isinstance(descendant, (ast.Import, ast.ImportFrom, ast.Call)):
+                    lines.add(descendant.lineno)
+    return lines
+
+
 def _reason(module: str, imported: str) -> str | None:
     if _at_or_below(module, "app.repositories") and any(
         _at_or_below(imported, target) for target in ("app.services", "app.api")
@@ -102,6 +139,17 @@ def _reason(module: str, imported: str) -> str | None:
         and not _at_or_below(imported, "app.domain")
     ):
         return "domain must not depend on application or infrastructure"
+
+    if _at_or_below(module, "app.services") and _at_or_below(imported, "app.api"):
+        return "site service must not depend on HTTP API"
+
+    if _at_or_below(module, "app.rag") and any(
+        _at_or_below(imported, target) for target in ("app.api", "app.services")
+    ):
+        return "RAG implementation must not depend on HTTP API or services"
+
+    if _at_or_below(module, "app.llm") and _at_or_below(imported, "app.api"):
+        return "LLM provider must not depend on HTTP API"
 
     if _at_or_below(module, "fleet_hub.services") and (
         _at_or_below(imported, "fleet_hub.api") or _at_or_below(imported, "app.api")
@@ -128,6 +176,9 @@ def scan_import_boundaries(repo_root: Path) -> list[ImportViolation]:
     roots = (
         (repo_root / "backend/app/domain", "app", repo_root / "backend/app"),
         (repo_root / "backend/app/repositories", "app", repo_root / "backend/app"),
+        (repo_root / "backend/app/services", "app", repo_root / "backend/app"),
+        (repo_root / "backend/app/rag", "app", repo_root / "backend/app"),
+        (repo_root / "backend/app/llm", "app", repo_root / "backend/app"),
         (
             repo_root / "portfolio/fleet_hub/backend/src/fleet_hub/api",
             "fleet_hub",
@@ -150,8 +201,18 @@ def scan_import_boundaries(repo_root: Path) -> list[ImportViolation]:
             module, package = _module_for(path, package_root, prefix)
             relative = path.relative_to(repo_root).as_posix()
             tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=relative)
+            type_only_lines = _type_only_import_lines(tree)
             for line, imported in _imports(tree, package):
                 reason = _reason(module, imported)
+                if (
+                    reason
+                    and line in type_only_lines
+                    and any(
+                        _at_or_below(module, layer)
+                        for layer in ("app.services", "app.rag", "app.llm")
+                    )
+                ):
+                    continue
                 if reason:
                     failures.append(ImportViolation(relative, line, imported, reason))
     return sorted(set(failures))
@@ -169,7 +230,7 @@ def main() -> int:
         for failure in failures:
             print(f"  {failure.format()}")
         return 1
-    print("Import boundaries: PASS (domain, repositories, Fleet services and routers)")
+    print("Import boundaries: PASS (domain, repositories, site services/RAG/LLM, Fleet)")
     return 0
 
 

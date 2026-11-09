@@ -14,6 +14,9 @@ def repository(tmp_path: Path) -> Path:
     for folder in (
         "backend/app/domain",
         "backend/app/repositories",
+        "backend/app/services",
+        "backend/app/rag",
+        "backend/app/llm",
         "portfolio/fleet_hub/backend/src/fleet_hub/api",
         "portfolio/fleet_hub/backend/src/fleet_hub/services",
     ):
