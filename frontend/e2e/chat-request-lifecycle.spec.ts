@@ -74,3 +74,41 @@ test("repeated invalidation keeps all earlier leases obsolete", () => {
   expect(second()).toBe(false);
   expect(lifecycle.captureSession()()).toBe(true);
 });
+
+
+test("only one handoff POST action may run until its lease finishes", () => {
+  const lifecycle = createChatRequestLifecycle();
+  const first = lifecycle.beginHandoffAction();
+  expect(first).not.toBeNull();
+  expect(first?.isCurrent()).toBe(true);
+  expect(lifecycle.beginHandoffAction()).toBeNull();
+  first?.finish();
+  expect(first?.isCurrent()).toBe(false);
+  const second = lifecycle.beginHandoffAction();
+  expect(second?.isCurrent()).toBe(true);
+  second?.finish();
+});
+
+test("stale handoff completion cannot unlock the next session", () => {
+  const lifecycle = createChatRequestLifecycle();
+  const stale = lifecycle.beginHandoffAction();
+  lifecycle.invalidate();
+  const current = lifecycle.beginHandoffAction();
+  stale?.finish();
+  expect(stale?.isCurrent()).toBe(false);
+  expect(current?.isCurrent()).toBe(true);
+  expect(lifecycle.beginHandoffAction()).toBeNull();
+  current?.finish();
+  expect(lifecycle.beginHandoffAction()).not.toBeNull();
+});
+
+test("manual and SSE closure can claim only one notice per handoff", () => {
+  const lifecycle = createChatRequestLifecycle();
+  lifecycle.startHandoff();
+  expect(lifecycle.claimHandoffClosed()).toBe(true);
+  expect(lifecycle.claimHandoffClosed()).toBe(false);
+  lifecycle.startHandoff();
+  expect(lifecycle.claimHandoffClosed()).toBe(true);
+  lifecycle.invalidate();
+  expect(lifecycle.claimHandoffClosed()).toBe(true);
+});

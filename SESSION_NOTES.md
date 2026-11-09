@@ -1,7 +1,7 @@
 # Main website architecture refactor — execution ledger
 
-**Updated:** 2026-11-08 19:36 UTC
-**Baseline:** `main` at `eefd657cb67dd962b7f6126851f7e971dc76313a` (PR #235) before Stage 15.
+**Updated:** 2026-11-09 19:24 UTC
+**Baseline:** `main` at `0dd3d0118ac8f958f9827d5750fa75812af125b9` (PR #240) before Stage 16.
 **Active scope:** main Next.js website, FastAPI site application, Chat/Handoff, RAG/LLM,
 site-wide security, tests, observability, deployment and documentation.
 **Explicitly deferred:** internal refactoring of the independent `portfolio/fleet_hub`
@@ -83,7 +83,7 @@ message, and PR text with `## Summary`, `## Changes`, `## Testing`
 | 2026-11-08 18:01 UTC | 14: PR #235 squash merged | **MERGED; PRODUCTION SMOKE PENDING** | main `eefd657c`; GitHub Actions PASS (run `42507869229`); local focused and task ci PASS | Production SSE smoke remains a separate release gate |
 | 2026-11-08 18:51 UTC | 15: site architecture guard | **DONE — LOCAL CI PASS; GITHUB CI PENDING** | Added site-specific rules, typing-only exemption and import fixture tests | Run focused architecture tests and full task ci, then record DONE |
 | 2026-11-08 19:36 UTC | 15: local acceptance | **DONE — LOCAL CI PASS; GITHUB CI PENDING** | Architecture fixtures, Ruff and full task ci PASS on local checkout | Verify GitHub CI after push; production release sign-off remains Stage 17 |
-| — | 16: chat frontend cohesion | PLANNED | Narrow lifecycle seams only where justified | Browser lifecycle regressions |
+| 2026-11-09 | 16: chat frontend cohesion | **IMPLEMENTED — CI PENDING** | Synchronous handoff POST lease and one-time close notice; lifecycle and browser race regressions | Run Playwright on desktop/mobile and full `task ci`; verify GitHub Actions |
 | — | 17: final site audit and release | PLANNED | Docs, security, CI, evaluations and production | Evidence-based sign-off |
 
 **Status interpretation:** `MERGED` records prior GitHub merges; it is not a
@@ -449,3 +449,25 @@ website. No Fleet VOR Hub source, database or route is modified.
 - Stage 15 implementation: **DONE — LOCAL CI PASS**.
 - GitHub Actions on the Stage 15 PR: **PENDING**.
 - Site release/production audit remains in Stage 17.
+
+
+## Stage 16 implementation record — 2026-11-09
+
+**Branch:** `refactor/site-chat-controller-cohesion`
+**Baseline:** `0dd3d0118ac8f958f9827d5750fa75812af125b9`
+
+- PR #240 squash merged to main on 2026-11-09; main GitHub Actions push run `42682913169` passed.
+- Audit: handoff POST actions can overlap before React re-renders; manual POST close and SSE `closed` can each append a terminal message.
+- Centralize the POST action lease and terminal-message claim in the existing `createChatRequestLifecycle`, keeping the controller as the sole owner of React state.
+- Prevent a stale handoff completion from freeing a newer chat's action after Reset.
+- Add unit tests for duplicate actions, reset invalidation and one-time closure; add a browser-level close/SSE race test.
+- No API contract, backend, Redis, configuration, dependencies, Fleet code or user-visible copy changed.
+- **Validation: PENDING.** Run focused Chromium/mobile tests and full `task ci` before Stage 16 is DONE.
+- External release gates remain independent: live isolated Upstash, trusted-proxy production verification, Stage 17 smoke.
+
+
+### Stage 16 local acceptance ??? 2026-11-09 19:45 UTC
+
+- Frontend typecheck, lint, focused Playwright (Chromium and mobile), full `task ci`: **PASS (local)**.
+- Stage 16: **DONE ??? LOCAL CI PASS; GITHUB CI PENDING**.
+- Remote CI and production smoke are independent release gates.
