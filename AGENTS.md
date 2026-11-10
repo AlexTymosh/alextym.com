@@ -346,3 +346,5 @@ A task is done only when:
 Always check `SESSION_NOTES.md` for the current stage.
 
 If `SESSION_NOTES.md` says to work on one stage only, do not proceed to later stages without explicit instruction.
+
+For release verification and risk decisions, read `docs/runbooks/site-release-verification.md` and `docs/architecture/site-release-audit-2026-11-09.md`. CI success and a Vercel READY state do not constitute backend, RAG or security release sign-off. Keep Fleet internals out of the website audit.

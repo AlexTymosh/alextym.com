@@ -104,3 +104,11 @@ Route groups were reviewed and deferred because they would change layout lifecyc
 Retire only obsolete, one-time Fleet migration installers and checks; preserve local launchers and SQLite backup tooling. New `scripts/check-fleet-legacy-tooling.mjs` rejects stale scripts in CI. See `portfolio/fleet_hub/docs/legacy-tooling-audit.md`.
 
 New browser tests cover mocked authenticated Fleet navigation and sign-out; existing Python tests cover real backend authentication and disposable SQLite. Real Vercel/Render deployment validation is a separate post-merge manual gate: `portfolio/fleet_hub/docs/deployment-smoke.md`.
+
+## Tooling cleanup correction (2026-11-09)
+
+The PR 5 tool-retention paragraph above is historical. The one-time legacy
+migration audit is retired from CI; `task portfolio:check` retains the generic
+portfolio registry guard and all website/Fleet ownership boundaries. The
+pre-migration online SQLite backup helper and local Fleet launchers remain
+available for ongoing data safety and development.

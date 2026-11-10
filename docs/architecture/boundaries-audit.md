@@ -178,3 +178,7 @@ first architecture PR remain pending; independent PR CI is not claimed.
 Outstanding follow-up concerns remain Fleet HTTP/email boundaries, backend
 repository dependency inversion and Chat/SSE/controller structure. Do not
 conflate these later PRs with the Fleet SQLite release gate.
+
+## Current-status pointer (2026-11-09)
+
+This document is a historical 2026-11-02 architecture snapshot. Stages 11â€“16 have since changed the repository. Use `docs/architecture/site-release-audit-2026-11-09.md` and `SESSION_NOTES.md` for later verified release evidence; do not treat old prospective recommendations as uncompleted current work.

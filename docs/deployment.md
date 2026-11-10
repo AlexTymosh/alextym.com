@@ -862,3 +862,7 @@ OpenAI:
 - [ ] Set `OPENAI_API_KEY`.
 - [ ] Keep application rate limits enabled.
 - [ ] Verify chat still works after deployment.
+
+## Website release acceptance (Stage 17)
+
+The evidence matrix and non-destructive verification runbook are in `docs/architecture/site-release-audit-2026-11-09.md` and `docs/runbooks/site-release-verification.md`. Verify the actual Render service and frontend rewrite separately, and record all required external gates before declaring the release done. A Vercel READY state is build/deployment evidence only.

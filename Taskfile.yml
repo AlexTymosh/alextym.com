@@ -82,13 +82,12 @@ tasks:
       - node scripts/check-no-raw-cyrillic.mjs
 
   portfolio:check:
-    desc: Validate the unpublished portfolio catalogue and module skeleton.
+    desc: Validate the portfolio registry, modules, and ownership boundaries.
     cmds:
-      - node scripts/check-portfolio-foundation.mjs
+      - node scripts/check-portfolio-registry.mjs
       - node scripts/check-fleet-frontend-boundaries.mjs
       - node scripts/check-website-portfolio-boundaries.mjs
       - node scripts/check-fleet-backend-boundaries.mjs
-      - node scripts/check-fleet-legacy-tooling.mjs
 
   repo:check:
     desc: Run repository hygiene checks.
