@@ -1,8 +1,8 @@
 # Portfolio project modules
 
-This directory is the **future canonical home** for demonstration-only applications embedded in `alextym.com`.
+This directory is the **canonical home** for demonstration-only applications embedded in `alextym.com`.
 
-**Status:** foundation only. The existing Fleet Hub implementation has NOT moved. The host website and backend are unchanged until the dedicated migration PRs.
+**Status:** active. Fleet VOR Hub lives in `portfolio/fleet_hub/` and is mounted through the existing Next.js and FastAPI hosts. Other registered modules follow the same isolation contract.
 
 ## Directory contract
 
@@ -31,15 +31,15 @@ No independent site, repository, deployment or database service is planned for p
 
 ## Publication
 
-The presence of a `project.json` or an ID in `registry.json` **does not publish** a project. The future `/portfolio` page and its navigation entry are intentionally absent. The live Fleet Hub demo stays at `/fleet-vor-hub`.
+A `project.json` or registry entry **does not automatically publish** a project. Publication and site navigation are separate product decisions. The existing Fleet Hub demo remains at `/fleet-vor-hub`.
 
 ## Validate
 
 From the repository root:
 
 ```bash
-node scripts/check-portfolio-foundation.mjs
+node scripts/check-portfolio-registry.mjs
 task repo:check
 ```
 
-See `SESSION_NOTES.md` and `docs/architecture/portfolio.md` for the staged migration plan and acceptance gates.
+See `docs/architecture/portfolio.md` and the architecture release audit for the current module boundaries. Historical migration decisions are in Git history.

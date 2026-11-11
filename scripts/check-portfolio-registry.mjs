@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Validate unpublished portfolio metadata without importing any application runtime.
+// Validate registered portfolio modules; publication is a separate product decision.
 // This is deliberately a read-only, dependency-free check for the existing CI job.
 
 import assert from "node:assert/strict";
@@ -112,9 +112,6 @@ for (const id of expectedIds) {
     if (apiPathSet.has(apiPrefix)) fail(`Duplicate apiPrefix: ${apiPrefix}`);
     apiPathSet.add(apiPrefix);
   }
-  if (metadata.catalog?.visible !== false || metadata.catalog?.featured !== false) {
-    fail(`${prefix}/project.json: catalogue must remain hidden in foundation PR`);
-  }
 }
 
 // Detect forgotten or unregistered portfolio project directories.
@@ -128,25 +125,13 @@ if (existsSync(portfolio)) {
   }
 }
 
-// The architecture foundation must not accidentally publish the catalogue.
-if (existsSync(join(root, "frontend/app/portfolio/page.tsx")) ||
-    existsSync(join(root, "frontend/app/(website)/portfolio/page.tsx"))) {
-  fail("No public /portfolio page is permitted in the foundation PR");
-}
-try {
-  const nav = readFileSync(join(root, "frontend/lib/site-config.ts"), "utf8");
-  if (/href\s*:\s*["']\/portfolio["']/.test(nav)) {
-    fail("Do not add Portfolio navigation in the foundation PR");
-  }
-} catch (error) {
-  fail(`Cannot inspect website navigation: ${error.message}`);
-}
+// Publication policy belongs to the website and is checked separately.
 
 if (errors.length) {
-  console.error("Portfolio foundation check failed:");
+  console.error("Portfolio registry check failed:");
   for (const error of errors) console.error(`- ${error}`);
   process.exitCode = 1;
 } else {
   assert.equal(expectedIds.length, idSet.size);
-  console.log(`Portfolio foundation check passed (${idSet.size} unpublished project(s)).`);
+  console.log(`Portfolio registry check passed (${idSet.size} registered project(s)).`);
 }

@@ -61,3 +61,13 @@ is moved, and no runtime database is opened by the installer.
   cookie-gated bootstrap and disposable SQLite operations.
 - Production Vercel/Render smoke remains a manual post-merge gate; see
   `deployment-smoke.md`. Do not claim a production deployment based on CI alone.
+
+## Tooling policy after Stage 17 (2026-11-09)
+
+The old PR 5 tooling checklist above is a historical snapshot, not an active
+requirement to keep its one-time preservation guard. The generic registry and
+site/Fleet architecture checks remain in `task portfolio:check`. The one-time
+`check-fleet-legacy-tooling.mjs` and named-address setup helper have been
+retired. Keep the SQLite backup utility and local Fleet dev launchers, as they
+perform ongoing operational tasks. No Fleet application code or SQLite data was
+changed by this documentation/tooling cleanup.
