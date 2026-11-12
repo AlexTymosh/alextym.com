@@ -22,6 +22,8 @@
     "sync:project-config": "node scripts/sync-project-config.mjs"
   },
   "dependencies": {
+    "firebase": "^13.3.0",
+    "firebase-admin": "^14.5.1",
     "next": "^16.4.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
@@ -39,6 +41,7 @@
     "typescript": "^5.7.0"
   },
   "overrides": {
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "@grpc/grpc-js": "^1.14.6"
   }
 }

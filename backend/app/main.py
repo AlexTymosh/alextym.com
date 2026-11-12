@@ -13,6 +13,7 @@ from app.api.chat import router as chat_router
 from app.api.contact import router as contact_router
 from app.api.escalation import router as escalation_router
 from app.api.health import router as health_router
+from app.api.lab_identity import router as lab_identity_router
 from app.api.redis_probe import router as redis_probe_router
 from app.api.telegram import router as telegram_router
 from app.core.config import Settings, get_settings
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     )
     _configure_cors(app, settings)
     app.include_router(health_router, prefix="/api")
+    app.include_router(lab_identity_router, prefix="/api")
     app.include_router(chat_router, prefix="/api")
     app.include_router(contact_router, prefix="/api")
     app.include_router(escalation_router, prefix="/api")

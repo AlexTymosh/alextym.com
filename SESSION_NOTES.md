@@ -233,3 +233,19 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 5. Verify ADR, generic import/ownership guards, Fleet legacy access tests; run `task ci`, confirm all five GitHub CI jobs and update PR #243 before marking it ready for review. Do not merge before verification.
 
 **Next implementation branch after PR 1 is merged:** `feat/portfolio-firebase-identity`.
+## PR 2 active checkpoint — Firebase identity
+
+
+- Foundation PR #243 merged into `main` as `0389bf0e` on 2026-11-12.
+- Current working branch: `feat/portfolio-firebase-identity` (PR 2; do not reuse Foundation branch).
+- First PR 2 increment: feature-disabled-by-default Owner-only Firebase Auth client,
+  Next.js five-day server session cookie, separate direct FastAPI ID-token probe,
+  account-linking UI, negative tests and setup instructions.
+- This is **not** the full PR 2 acceptance gate. Missing: non-Owner invitation
+  admission, initial-password expiry and password setup, real OAuth provider tests,
+  and complete session/revocation/CSRF verification. Do not enable production Lab.
+- Config, examples and security gates: `docs/architecture/portfolio-lab-identity-setup.md`.
+- Run `npm install firebase firebase-admin` in frontend and `uv add 'firebase-admin>=7,<8'`
+  in backend; commit the two generated lockfiles. Run `task ci` before any PR.
+- Fleet legacy password remains unchanged until PR 5/6; never introduce a parallel
+  bypass or alter public Chat/RAG/Contact/Telegram routes in PR 2.
