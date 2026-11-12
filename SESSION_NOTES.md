@@ -1,8 +1,8 @@
 # Current project handoff — Portfolio Lab identity and access
 
 **Updated:** 2026-11-12  
-**Status:** Foundation PR #243 is in progress. No Firebase or new access system is deployed; six-PR plan remains in force.
-**Current PR:** [#243](https://github.com/AlexTymosh/alextym.com/pull/243), branch `feat/portfolio-lab-foundation` (draft until all acceptance checks pass).
+**Status:** Foundation PR #243 merged; PR #244 implementing Firebase Identity. No Portfolio Lab authorization is deployed; six-PR plan remains in force.
+**Current PR:** [#244](https://github.com/AlexTymosh/alextym.com/pull/244), branch `feat/portfolio-firebase-identity` (do not merge until identity release gates pass).
 
 ## Authoritative documents
 
@@ -249,3 +249,16 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
   in backend; commit the two generated lockfiles. Run `task ci` before any PR.
 - Fleet legacy password remains unchanged until PR 5/6; never introduce a parallel
   bypass or alter public Chat/RAG/Contact/Telegram routes in PR 2.
+
+## PR 2 incremental cross-host session transport
+
+- Firebase admin apps use the dedicated `portfolio-lab` name on both runtimes.
+- A Next.js BFF route `/lab/api/identity` now accepts the verified, revocable
+  website HttpOnly cookie, forwards it to a **fixed HTTPS** Render origin, and
+  verifies backend identity continuity. It never exposes the cookie to clients.
+- FastAPI accepts explicit `FirebaseSession` (BFF cookie) or `Bearer` (Firebase ID
+  token) schemes with separate, non-fallback verification, then checks Owner UID.
+- Negative backend tests and the disabled-feature Playwright test cover the
+  new transport; Firebase emulator/live-provider integration remains outstanding.
+- This remains Owner-only; invited-user admission and initial-password 1–90-day
+  lifecycle **must** be implemented/tested before PR #244 can merge.

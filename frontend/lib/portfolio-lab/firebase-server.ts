@@ -21,12 +21,17 @@ export function getOwnerUid(): string {
 export function getLabAdminAuth() {
   const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
   if (!projectId) throw new Error("Missing Firebase server project ID");
-  if (!getApps().length) {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    const credential = serviceAccount
-      ? cert(JSON.parse(serviceAccount))
-      : applicationDefault();
-    initializeApp({ credential, projectId });
+  const existingApp = getApps().find((app) => app.name === "portfolio-lab");
+  if (existingApp) {
+    if (existingApp.options.projectId !== projectId) {
+      throw new Error("Portfolio Lab Firebase project does not match configuration");
+    }
+    return getAuth(existingApp);
   }
-  return getAuth();
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const credential = serviceAccount
+    ? cert(JSON.parse(serviceAccount))
+    : applicationDefault();
+  const app = initializeApp({ credential, projectId }, "portfolio-lab");
+  return getAuth(app);
 }

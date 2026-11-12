@@ -14,6 +14,8 @@ export function getLabAuth(): Auth {
   if (Object.values(config).some((value) => !value)) {
     throw new Error("Firebase client configuration is incomplete");
   }
-  const app = getApps().length ? getApp() : initializeApp(config);
+  const app = getApps().some((item) => item.name === "portfolio-lab")
+    ? getApp("portfolio-lab")
+    : initializeApp(config, "portfolio-lab");
   return getAuth(app);
 }

@@ -70,6 +70,48 @@ task ci
 
 `npm install` updates `frontend/package.json` and `frontend/package-lock.json`; `uv add` updates `backend/pyproject.toml` and `backend/uv.lock`. Commit both lockfiles. The exact compatible version available at install time should be checked; do not bypass lockfile consistency or GitHub CI.
 
+## Cross-host identity transport (second PR 2 increment)
+
+A five-day website cookie does **not** automatically reach the Render domain. A
+Firebase `browserSessionPersistence` ID token can also disappear when the browser
+tab closes. The architecture therefore uses an explicit **same-origin BFF** for
+server-side protected requests, instead of relying on browser persistence:
+
+1. `GET /lab/api/identity` runs in Next.js (it is not covered by `/api/*` rewrites).
+2. Next.js verifies its own HttpOnly Firebase session cookie with revocation
+   checking and checks the configured Owner UID. It does not send the cookie
+   back to JavaScript or accept a user-controlled backend URL.
+3. Next.js forwards the signed Firebase session cookie **server-to-server** only
+   to the fixed `BACKEND_ORIGIN` as `Authorization: FirebaseSession <cookie>`.
+   In production, `BACKEND_ORIGIN` must use HTTPS with no URL path/credentials.
+4. FastAPI verifies that Firebase session cookie independently (signature,
+   expiry, revocation and project) and checks the same pinned Owner UID. Direct
+   Render requests with no valid credentials remain denied.
+5. FastAPI also retains the direct test protocol
+   `Authorization: Bearer <Firebase-ID-token>`. The schemes are **not** fallback
+   alternatives: invalid ID tokens cannot be reinterpreted as session cookies.
+
+The probe deliberately does not expose project functionality and is not a
+substitute for Firestore grants and capabilities (PR 3). This design avoids
+long-lived Firebase ID tokens in browser local storage, and supports private
+server-side calls even after a browser tab is closed. It does **not** make
+browser-to-Render CORS work automatically; future protected browser operations
+must use an explicit same-origin BFF or a fresh ID token validated by Render.
+
+For development smoke tests with `PORTFOLIO_LAB_ENABLED=true`, configure a local
+`BACKEND_ORIGIN` for Next.js and enable the Owner UID in both environments:
+
+- Without a cookie: `GET /lab/api/identity` returns 401.
+- With a valid Owner cookie and a reachable backend: returns 200.
+- A revoked/wrong-owner cookie or direct unauthenticated request to Render:
+  returns 401/403 as appropriate.
+- Backend offline: the probe returns 502; `/lab` login and dashboard do not
+  depend on Render availability.
+
+**Still blocking PR 2 release:** invited-user admission, initial-password
+expiry/change reconciliation, full provider/linking/recovery tests, and live
+cross-origin smoke. Keep the Lab feature flag off in production.
+
 ## Security integration gates still outstanding
 
 This is **not** an admission/RBAC release. Before PR 2 is ready for merge, implement and test the remaining identity requirements:

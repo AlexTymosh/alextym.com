@@ -13,5 +13,7 @@ test.describe("Portfolio Lab feature gate", () => {
     expect(signIn?.status()).toBe(404);
     const session = await request.get("/lab/session");
     expect(session.status()).toBe(404);
+    const backendBridge = await request.get("/lab/api/identity");
+    expect(backendBridge.status()).toBe(404);
   });
 });
