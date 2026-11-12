@@ -2,6 +2,8 @@
 
 > Documentation is available in English and Russian: [Russian version](README.ru.md).
 
+> **Planned Portfolio Lab:** [Authentication and project-access technical specification](docs/specifications/portfolio-lab-auth-access.md) · [Implementation handoff and PR plan](SESSION_NOTES.md). Not yet implemented.
+
 <p align="center">
   <em>A portfolio website built as a small AI-powered web product: interactive resume, RAG chat, real SSE streaming, SEO setup, video demo, contact flow, and human handoff via Telegram.</em>
 </p>
