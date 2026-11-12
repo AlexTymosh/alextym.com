@@ -82,10 +82,11 @@ tasks:
       - node scripts/check-no-raw-cyrillic.mjs
 
   portfolio:check:
-    desc: Validate the unpublished portfolio catalogue and module skeleton.
+    desc: Validate the portfolio registry, modules, and ownership boundaries.
     cmds:
-      - node scripts/check-portfolio-foundation.mjs
+      - node scripts/check-portfolio-registry.mjs
       - node scripts/check-fleet-frontend-boundaries.mjs
+      - node scripts/check-website-portfolio-boundaries.mjs
       - node scripts/check-fleet-backend-boundaries.mjs
 
   repo:check:
@@ -161,6 +162,12 @@ tasks:
     cmds:
       - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests --fix
       - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
+
+  backend:imports:
+    desc: Check Python import direction across site and Fleet modules.
+    dir: backend
+    cmds:
+      - uv run python -m scripts.check_import_boundaries
 
   backend:compile:
     desc: Compile backend Python modules to catch syntax errors early.
@@ -406,6 +413,7 @@ tasks:
       - task: backend:sync
       - task: backend:lint
       - task: backend:format-check
+      - task: backend:imports
       - task: backend:compile
       - task: backend:test
 

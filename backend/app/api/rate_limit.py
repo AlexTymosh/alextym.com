@@ -93,18 +93,14 @@ def _enforce_daily_rate_limit(
 
 
 def client_identifier_from_request(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        first_forwarded_ip = forwarded_for.split(",", 1)[0].strip()
-        if first_forwarded_ip:
-            return first_forwarded_ip
+    """Use the ASGI peer, never unverified forwarding headers from the request.
 
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-
-    if request.client and request.client.host:
-        return request.client.host
+    Uvicorn may normalize scope["client"] only for a configured trusted proxy.
+    Forwarded header sanitization and the trusted-proxy allowlist remain
+    deployment responsibilities; do not recreate that logic in the endpoint.
+    """
+    if request.client and request.client.host and request.client.host.strip():
+        return request.client.host.strip()
 
     return "unknown"
 

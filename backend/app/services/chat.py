@@ -2,8 +2,11 @@ import asyncio
 import re
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from contextlib import aclosing
 from dataclasses import dataclass
 from typing import Any
+
+from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
 from app.core.confidence import Confidence
 from app.core.project_config import get_project_config
@@ -15,7 +18,7 @@ from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBuilder, PromptBundle
 from app.rag.retriever import Retriever
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.schemas.sse import ServerSentEvent
+from app.domain.chat_stream import ChatStreamEvent
 from app.services.chat_confidence import confidence_from_chunks
 from app.services.chat_copy import (
     ASSISTANT_INTRO_ANSWER,
@@ -204,11 +207,12 @@ class ChatService:
             return self._prompt_injection_response()
         return self._rag_response(answer=answer, context=prepared_answer)
 
-    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ServerSentEvent]:
+    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ChatStreamEvent]:
         request_id = str(uuid.uuid4())
-        yield ServerSentEvent("meta", {"request_id": request_id, "status": "started"})
+        yield ChatStreamEvent("meta", {"request_id": request_id, "status": "started"})
 
-        prepared_answer = self._prepare_answer(request)
+        # Question contextualization, embeddings and Qdrant use sync clients.
+        prepared_answer = await run_in_threadpool(self._prepare_answer, request)
         if isinstance(prepared_answer, ChatPolicyResult):
             async for event in self._stream_response_payload(
                 request_id=request_id,
@@ -217,11 +221,11 @@ class ChatService:
                 yield event
             return
 
-        async for event in self._stream_rag_answer(
-            request_id=request_id,
-            context=prepared_answer,
-        ):
-            yield event
+        async with aclosing(
+            self._stream_rag_answer(request_id=request_id, context=prepared_answer)
+        ) as rag_events:
+            async for event in rag_events:
+                yield event
 
     def _prepare_answer(
         self,
@@ -290,7 +294,7 @@ class ChatService:
         *,
         request_id: str,
         context: RagAnswerContext,
-    ) -> AsyncIterator[ServerSentEvent]:
+    ) -> AsyncIterator[ChatStreamEvent]:
         if self._llm_client is None:
             response = self._rag_response(
                 answer=self._extractive_answer(context.chunks, context.prompt.context),
@@ -312,7 +316,9 @@ class ChatService:
             token_stream = None
 
         if token_stream is None:
-            answer = self._answer_from_prompt(context.prompt, context.chunks)
+            answer = await run_in_threadpool(
+                self._answer_from_prompt, context.prompt, context.chunks
+            )
             response = (
                 self._prompt_injection_response()
                 if is_unsafe_chat_output(answer)
@@ -326,38 +332,41 @@ class ChatService:
             return
 
         try:
-            for token in token_stream:
-                if not token:
-                    continue
-                streamed_answer += token
-                pending_output += token
+            # Each blocking SDK iterator step runs in a worker; closing the
+            # async generator also closes the underlying SDK stream.
+            async with aclosing(_offloaded_llm_tokens(token_stream)) as tokens:
+                async for token in tokens:
+                    if not token:
+                        continue
+                    streamed_answer += token
+                    pending_output += token
 
-                if is_unsafe_chat_output(streamed_answer):
-                    response = self._prompt_injection_response()
-                    if emitted_any_token:
-                        yield ServerSentEvent(
-                            "error",
-                            {"message": "Unsafe generated output was blocked."},
-                        )
-                        yield self._done_event(
-                            request_id=request_id,
-                            response=response,
-                        )
-                    else:
-                        async for event in self._stream_response_payload(
-                            request_id=request_id,
-                            response=response,
-                        ):
-                            yield event
-                    return
+                    if is_unsafe_chat_output(streamed_answer):
+                        response = self._prompt_injection_response()
+                        if emitted_any_token:
+                            yield ChatStreamEvent(
+                                "error",
+                                {"message": "Unsafe generated output was blocked."},
+                            )
+                            yield self._done_event(
+                                request_id=request_id,
+                                response=response,
+                            )
+                        else:
+                            async for event in self._stream_response_payload(
+                                request_id=request_id,
+                                response=response,
+                            ):
+                                yield event
+                        return
 
-                if len(pending_output) > STREAM_GUARD_BUFFER_CHARS:
-                    safe_output = pending_output[:-STREAM_GUARD_BUFFER_CHARS]
-                    pending_output = pending_output[-STREAM_GUARD_BUFFER_CHARS:]
-                    if safe_output:
-                        emitted_any_token = True
-                        yield ServerSentEvent("token", {"text": safe_output})
-                        await asyncio.sleep(0)
+                    if len(pending_output) > STREAM_GUARD_BUFFER_CHARS:
+                        safe_output = pending_output[:-STREAM_GUARD_BUFFER_CHARS]
+                        pending_output = pending_output[-STREAM_GUARD_BUFFER_CHARS:]
+                        if safe_output:
+                            emitted_any_token = True
+                            yield ChatStreamEvent("token", {"text": safe_output})
+                            await asyncio.sleep(0)
         except (ProviderConfigurationError, ProviderRequestError):
             response = self._rag_response(
                 answer=self._extractive_answer(context.chunks, context.prompt.context),
@@ -385,7 +394,7 @@ class ChatService:
         if is_unsafe_chat_output(streamed_answer):
             response = self._prompt_injection_response()
             if emitted_any_token:
-                yield ServerSentEvent(
+                yield ChatStreamEvent(
                     "error",
                     {"message": "Unsafe generated output was blocked."},
                 )
@@ -402,7 +411,7 @@ class ChatService:
             return
 
         if pending_output:
-            yield ServerSentEvent("token", {"text": pending_output})
+            yield ChatStreamEvent("token", {"text": pending_output})
 
         response = self._rag_response(answer=streamed_answer, context=context)
         yield self._sources_event(response)
@@ -413,9 +422,9 @@ class ChatService:
         *,
         request_id: str,
         response: ChatResponse,
-    ) -> AsyncIterator[ServerSentEvent]:
+    ) -> AsyncIterator[ChatStreamEvent]:
         for token in self._tokenize(response.answer):
-            yield ServerSentEvent("token", {"text": token})
+            yield ChatStreamEvent("token", {"text": token})
             await asyncio.sleep(0)
         yield self._sources_event(response)
         yield self._done_event(request_id=request_id, response=response)
@@ -450,14 +459,14 @@ class ChatService:
             user_requested_human=False,
         )
 
-    def _sources_event(self, response: ChatResponse) -> ServerSentEvent:
-        return ServerSentEvent(
+    def _sources_event(self, response: ChatResponse) -> ChatStreamEvent:
+        return ChatStreamEvent(
             "sources",
             {"sources": [source.model_dump() for source in response.sources]},
         )
 
-    def _done_event(self, *, request_id: str, response: ChatResponse) -> ServerSentEvent:
-        return ServerSentEvent(
+    def _done_event(self, *, request_id: str, response: ChatResponse) -> ChatStreamEvent:
+        return ChatStreamEvent(
             "done",
             {
                 "request_id": request_id,
@@ -562,6 +571,17 @@ class ChatService:
         tokens = [words[0]] if words else []
         tokens.extend(f" {word}" for word in words[1:])
         return tokens
+
+
+async def _offloaded_llm_tokens(tokens: Iterator[str]) -> AsyncIterator[str]:
+    """Run synchronous SDK iterator steps off-loop and release on cancellation."""
+    try:
+        async for token in iterate_in_threadpool(tokens):
+            yield token
+    finally:
+        closer = getattr(tokens, "close", None)
+        if callable(closer):
+            await run_in_threadpool(closer)
 
 
 def _llm_token_stream(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
+from contextlib import aclosing
 
 import structlog
 
@@ -22,7 +23,7 @@ from app.rag.models import KnowledgeChunk
 from app.rag.prompt_builder import PromptBundle
 from app.rag.retriever import Retriever
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.schemas.sse import ServerSentEvent
+from app.domain.chat_stream import ChatStreamEvent
 from app.services.chat import ChatService
 from app.services.chat_safety import is_prompt_injection_attempt
 from app.services.question_contextualizer import (
@@ -114,8 +115,14 @@ class MetricsLLMClient:
 
         start_time = start_timer()
         try:
-            for token in stream_answer(prompt):
-                yield token
+            source_stream = stream_answer(prompt)
+            try:
+                for token in source_stream:
+                    yield token
+            finally:
+                closer = getattr(source_stream, "close", None)
+                if callable(closer):
+                    closer()
         except Exception:
             record_llm_request(
                 operation="stream",
@@ -185,13 +192,14 @@ class MetricsChatService:
         )
         return response
 
-    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ServerSentEvent]:
+    async def stream_answer(self, request: ChatRequest) -> AsyncIterator[ChatStreamEvent]:
         done_payload: dict[str, object] | None = None
         try:
-            async for event in self._service.stream_answer(request):
-                if event.event == "done":
-                    done_payload = event.data
-                yield event
+            async with aclosing(self._service.stream_answer(request)) as events:
+                async for event in events:
+                    if event.event == "done":
+                        done_payload = event.data
+                    yield event
         except Exception:
             record_chat_request(
                 mode="stream",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from fleet_hub.api.vor import required, same_origin
+from fleet_hub.api.dependencies import required, same_origin
 from fleet_hub.services import vor_operations as ops
 
 router = APIRouter(

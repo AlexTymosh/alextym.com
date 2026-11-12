@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Iterator
 from xml.etree import ElementTree as ET
 
+from fleet_hub.persistence.schema import ensure_schema, has_schema_objects
 from fleet_hub.services import vor_store
 
 MAX_FILE_BYTES = 2_000_000
@@ -58,9 +59,53 @@ def normalise_header(label: str) -> str:
 @contextmanager
 def database() -> Iterator[sqlite3.Connection]:
     with vor_store.connection() as db:
-        # Contextmanager above closes connection, not automatically committing.
-        _migrate(db)
+        # Recheck readiness under an OS lock before running any v2 DDL.
+        ensure_schema(db, _v2_schema_ready, _migrate)
         yield db
+
+
+_V2_REQUIRED_OBJECTS = frozenset(
+    {
+        "vor_cases",
+        "idx_vor_cases_vehicle",
+        "vor_status_events",
+        "idx_vor_status_baseline",
+        "idx_vor_status_vehicle_time",
+        "vor_import_batches",
+        "vor_import_audit",
+        "idx_vor_import_audit_vehicle",
+        "vor_asset_events",
+        "idx_vor_asset_events_vehicle",
+    }
+)
+
+
+def _v2_schema_ready(db: sqlite3.Connection) -> bool:
+    """Return True only when v2 DDL and its historical backfill are complete.
+
+    The legacy v1 APIs can still create tickets/vehicles between v2 reads, so
+    object existence alone cannot safely replace the previous backfill pass.
+    """
+    if not has_schema_objects(db, _V2_REQUIRED_OBJECTS):
+        return False
+    if not any(row[1] == "is_archived" for row in db.execute("PRAGMA table_info(vehicles)")):
+        return False
+    if db.execute(
+        """SELECT 1 FROM tickets AS t
+        WHERE NOT EXISTS (
+            SELECT 1 FROM vor_cases AS c WHERE c.legacy_ticket_id = t.id
+        ) LIMIT 1"""
+    ).fetchone():
+        return False
+    if db.execute(
+        """SELECT 1 FROM vehicles AS v
+        WHERE NOT EXISTS (
+            SELECT 1 FROM vor_status_events AS s
+            WHERE s.vehicle_id = v.id AND s.event_kind = 'baseline'
+        ) LIMIT 1"""
+    ).fetchone():
+        return False
+    return True
 
 
 def _migrate(db: sqlite3.Connection) -> None:

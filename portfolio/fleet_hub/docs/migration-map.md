@@ -1,3 +1,11 @@
+# Final migration inventory update (PR 5, 2026-11-01)
+
+PRs #208, #209, #213, #214 and #215 are merged. The active Fleet frontend, backend and SQLite seed belong to `portfolio/fleet_hub/`; host adapters remain under `frontend/app/fleet-vor-hub/` and `backend/app/`. A local uv package supplies the backend project. PR 5 removes 19 obsolete one-time migration/check scripts, adds authenticated-state browser regression and records production validation as a manual post-merge step. See `legacy-tooling-audit.md` and `deployment-smoke.md`.
+
+**All earlier paths and warnings in the historical snapshot below are archival, not instructions to re-apply old patches.**
+
+---
+
 PR 3 backend implementation update (2026-10-29): the eight API routers, eight
 services, unchanged approved SQLite seed and 16 test files have moved under
 `portfolio/fleet_hub/`. `backend/app/main.py` mounts one Fleet router; tiny

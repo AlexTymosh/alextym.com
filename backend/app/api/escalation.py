@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.api.rate_limit import (
     enforce_escalation_message_rate_limit,
@@ -10,8 +12,17 @@ from app.api.rate_limit import (
 )
 from app.api.sse import SSE_HEADERS, SSE_MEDIA_TYPE, serialize_sse_item, sse_event
 from app.core.config import Settings, get_settings
+from app.domain.escalation_stream import (
+    EscalationHeartbeat,
+    EscalationStreamItem,
+)
 from app.core.domain_metrics import record_escalation_event
 from app.core.project_config import get_project_config
+from app.schemas.sse import (
+    ServerSentComment,
+    ServerSentEvent,
+    ServerSentStreamItem,
+)
 from app.schemas.escalation import (
     EscalationCloseResponse,
     EscalationMessageRequest,
@@ -54,7 +65,7 @@ async def escalate(
         return response
 
     try:
-        enforce_escalation_rate_limit(request, settings)
+        await run_in_threadpool(enforce_escalation_rate_limit, request, settings)
         response = await service.submit(escalation_request)
     except HandoffUnavailableError as exc:
         record_escalation_event(action="create", outcome="unavailable")
@@ -92,7 +103,7 @@ async def send_escalation_message(
         return EscalationMessageResponse()
 
     try:
-        enforce_escalation_message_rate_limit(request, settings)
+        await run_in_threadpool(enforce_escalation_message_rate_limit, request, settings)
         response = await service.submit_user_message(handoff_id, message_request)
     except EscalationConfigurationError as exc:
         record_escalation_event(action="message", outcome="configuration_error")
@@ -150,6 +161,38 @@ async def close_escalation(
     return response
 
 
+@router.delete(
+    "/escalations/{handoff_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def purge_escalation(
+    handoff_id: str,
+    service: EscalationService = Depends(get_escalation_service),
+) -> Response:
+    """Idempotently discard temporary Redis handoff data after Chat Reset.
+
+    The unguessable handoff ID is a capability token, as for existing handoff
+    routes. This does not revoke copies already delivered via Telegram.
+    """
+    try:
+        await service.purge(handoff_id)
+    except EscalationConfigurationError as exc:
+        record_escalation_event(action="purge", outcome="configuration_error")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Escalation session storage is not configured.",
+        ) from exc
+    except EscalationDeliveryError as exc:
+        record_escalation_event(action="purge", outcome="delivery_error")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not delete this handoff. Please try again later.",
+        ) from exc
+
+    record_escalation_event(action="purge", outcome="success")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/escalations/{handoff_id}/stream")
 async def stream_escalation_messages(
     handoff_id: str,
@@ -185,17 +228,20 @@ async def stream_escalation_messages(
 
     async def event_generator() -> AsyncIterator[str]:
         try:
-            async for event in service.stream_alex_messages(
-                handoff_id,
-                after_message_id=last_event_id,
-            ):
-                if await request.is_disconnected():
-                    record_escalation_event(
-                        action="stream",
-                        outcome="disconnected",
-                    )
-                    break
-                yield serialize_sse_item(event)
+            async with aclosing(
+                service.stream_alex_messages(
+                    handoff_id,
+                    after_message_id=last_event_id,
+                )
+            ) as stream:
+                async for event in stream:
+                    if await request.is_disconnected():
+                        record_escalation_event(
+                            action="stream",
+                            outcome="disconnected",
+                        )
+                        break
+                    yield serialize_sse_item(_as_sse_item(event))
         except EscalationDeliveryError:
             record_escalation_event(action="stream", outcome="delivery_error")
             yield sse_event(
@@ -208,6 +254,13 @@ async def stream_escalation_messages(
         media_type=SSE_MEDIA_TYPE,
         headers=SSE_HEADERS,
     )
+
+
+def _as_sse_item(item: EscalationStreamItem) -> ServerSentStreamItem:
+    """Only the HTTP adapter knows the SSE framing and heartbeat format."""
+    if isinstance(item, EscalationHeartbeat):
+        return ServerSentComment("heartbeat")
+    return ServerSentEvent(item.kind, item.payload, event_id=item.message_id)
 
 
 def _handoff_unavailable_http_exception(

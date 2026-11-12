@@ -1,6 +1,10 @@
 # Portfolio architecture — host and project boundaries
 
-**Status:** target architecture defined; migration not yet performed.
+**Status (2026-11-04):** PR #223 (`refactor(fleet-db): isolate SQLite lifecycle
+and migrations`) has been squash-merged into `main` at `c020c813d452`.
+Fleet API auth and email delivery isolation are now under review on the
+unmerged branch `refactor/fleet-api-delivery-boundaries`. The deployment
+remains one Next.js host on Vercel and one FastAPI host on Render.
 
 ## Target
 
@@ -51,6 +55,60 @@ No generic shared package or plugin discovery framework is required yet. If an a
 - No behavior change in Resume, Chat, Contact, RAG, Telegram or unrelated case studies.
 - No new paid infrastructure.
 
-## Implementation phases
+## Current lifecycle and rollout status
 
-See `SESSION_NOTES.md` for detailed PR slices, checklists and recovery instructions. First PR establishes metadata and structural validation only; no code relocation, package workspace, Docker or Vercel changes.
+Fleet backend implementation lives in the installable
+`portfolio/fleet_hub/backend/src/fleet_hub/` package. The host imports only
+`fleet_hub.router` and the public startup hook
+`fleet_hub.bootstrap.prepare_demo_database`. The frontend host uses the Fleet
+public `@fleet-hub` entry; feature-local UI code remains under
+`portfolio/fleet_hub/frontend/src/`.
+
+The merged SQLite persistence refactor (PR #223) added:
+
+- `persistence/sqlite.py` for configured SQLite connections and closure.
+- `persistence/migrations.py` for versioned v1 migration implementations.
+- `persistence/schema.py` for per-DB schema readiness and interprocess locking.
+- Atomic seed publication, read-only ready-schema probes, and recovery paths.
+- Optional startup bootstrap in the FastAPI lifespan, with lazy fallback for
+  standalone Fleet tests and integrations.
+- Fault-injection, concurrent-open, and data-preservation tests on disposable
+  SQLite files.
+
+Ready databases avoid repeating v1 schema initialization or v2/operations DDL.
+Incomplete schemas retain guarded, idempotent recovery. The v1 migration
+rollback guard protects pending writes for each version, but the full upgrade
+is **not one atomic transaction**: existing successful commit boundaries remain.
+
+**Next PR (not yet opened/merged):** Fleet API dependency and delivery boundaries
+in `refactor/fleet-api-delivery-boundaries`: `fleet_hub.api.dependencies` owns
+the session and Origin checks; `fleet_hub.services.message_delivery` owns
+recipient policy, quota and Resend orchestration. Keyed live email attempts
+use an additive SQLite journal and provider `Idempotency-Key`; existing
+unkeyed callers retain the legacy behavior. Accepted provider delivery
+and the subsequent local event write are not one atomic transaction.
+Unknown outcomes are held for manual reconciliation, not resent with
+the same request ID. Full PR CI and post-merge smoke are still pending.
+See `SESSION_NOTES.md` for the current checkpoint.
+
+## Historical implementation — frontend and source relocation
+
+## Implementation status — PR 4 (frontend isolation audit)
+
+The website retains its root layout, navigation, footer and shared browser-level resets. Fleet UI and assets live under `portfolio/fleet_hub/frontend/src/` with locally scoped CSS Modules. `scripts/check-website-portfolio-boundaries.mjs` rejects project-side global CSS, cross-boundary imports, direct website imports of Fleet internals, route changes and accidental publication of a portfolio menu. See `portfolio/fleet_hub/docs/css-boundary-audit.md` for evidence, limitations and acceptance criteria.
+
+Route groups were reviewed and deferred because they would change layout lifecycle without a verified need. Full browser-level isolation is not claimed: the single Next.js host necessarily shares document-wide CSS baseline and metadata. Existing Playwright regression tests guard the user-visible contract.
+
+## PR 5 — final source and tooling handoff
+
+Retire only obsolete, one-time Fleet migration installers and checks; preserve local launchers and SQLite backup tooling. New `scripts/check-fleet-legacy-tooling.mjs` rejects stale scripts in CI. See `portfolio/fleet_hub/docs/legacy-tooling-audit.md`.
+
+New browser tests cover mocked authenticated Fleet navigation and sign-out; existing Python tests cover real backend authentication and disposable SQLite. Real Vercel/Render deployment validation is a separate post-merge manual gate: `portfolio/fleet_hub/docs/deployment-smoke.md`.
+
+## Tooling cleanup correction (2026-11-09)
+
+The PR 5 tool-retention paragraph above is historical. The one-time legacy
+migration audit is retired from CI; `task portfolio:check` retains the generic
+portfolio registry guard and all website/Fleet ownership boundaries. The
+pre-migration online SQLite backup helper and local Fleet launchers remain
+available for ongoing data safety and development.

@@ -121,6 +121,11 @@ class OpenAIResponsesClient:
                     yield delta
         except Exception as exc:
             raise ProviderRequestError("OpenAI streaming response failed.") from exc
+        finally:
+            # A cancelled SSE consumer must release the upstream HTTP stream.
+            closer = getattr(stream, "close", None)
+            if callable(closer):
+                closer()
 
     def parse_structured(
         self,
