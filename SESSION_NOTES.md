@@ -1,8 +1,8 @@
 # Current project handoff — Portfolio Lab identity and access
 
 **Updated:** 2026-11-12  
-**Status:** Implementation not started; requirements agreed; six-PR rollout approved as the proposed execution plan.  
-**Current branch for the first implementation PR:** `feat/portfolio-lab-foundation` (create from an up-to-date `main`).
+**Status:** Foundation PR #243 is in progress. No Firebase or new access system is deployed; six-PR plan remains in force.
+**Current PR:** [#243](https://github.com/AlexTymosh/alextym.com/pull/243), branch `feat/portfolio-lab-foundation` (draft until all acceptance checks pass).
 
 ## Authoritative documents
 
@@ -226,10 +226,10 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 
 ## 7. Immediate next actions / handoff checkpoint
 
-1. Create `feat/portfolio-lab-foundation` from an up-to-date `main`.
+1. Continue existing draft PR #243 on branch `feat/portfolio-lab-foundation`; do not create another foundation branch.
 2. Ensure `docs/specifications/portfolio-lab-auth-access.md` exists in the working tree and matches version 1.0; do not overwrite the Owner's saved copy.
 3. Add this `SESSION_NOTES.md` and a root README link to the technical requirements; review the diff. This documentation handoff should be the **first** planned docs commit of PR 1, not a seventh PR.
 4. During PR 1, add the requirements link to `docs/architecture/portfolio.md`, add ADR and security/contract baselines, and generalize project boundary checks.
-5. Commit the documentation handoff, then continue PR 1 on the same branch. Do not open a PR until the PR 1 acceptance gate passes.
+5. Verify ADR, generic import/ownership guards, Fleet legacy access tests; run `task ci`, confirm all five GitHub CI jobs and update PR #243 before marking it ready for review. Do not merge before verification.
 
 **Next implementation branch after PR 1 is merged:** `feat/portfolio-firebase-identity`.

@@ -175,3 +175,56 @@ def test_invalid_python_is_not_silently_skipped(repository: Path) -> None:
     put(repository, "backend/app/repositories/bad.py", "from \n")
     with pytest.raises(SyntaxError):
         scan_import_boundaries(repository)
+
+
+def register_additional_project(repo: Path) -> None:
+    import json
+
+    put(repo, "portfolio/fleet_hub/backend/src/fleet_hub/__init__.py", "")
+    put(repo, "portfolio/recruitment_analytics/backend/src/recruit_analytics/__init__.py", "")
+    put(
+        repo,
+        "portfolio/recruitment_analytics/backend/src/recruit_analytics/services/__init__.py",
+        "",
+    )
+    put(
+        repo,
+        "portfolio/catalog/registry.json",
+        json.dumps({"schemaVersion": 1, "projectIds": ["fleet_hub", "recruitment_analytics"]}),
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("from app.services import mail", "website internals"),
+        ("import app.api", "website internals"),
+        ("from recruit_analytics.services import report", "another project"),
+        ("import recruit_analytics.services", "another project"),
+    ],
+)
+def test_registered_project_imports_cannot_cross_boundaries(
+    repository: Path, source: str, expected: str
+) -> None:
+    register_additional_project(repository)
+    put(repository, "portfolio/fleet_hub/backend/src/fleet_hub/services/illegal.py", source + "\n")
+    assert any(expected in message for message in errors(repository))
+
+
+def test_new_project_internal_imports_are_allowed(repository: Path) -> None:
+    register_additional_project(repository)
+    put(
+        repository,
+        "portfolio/recruitment_analytics/backend/src/recruit_analytics/services/report.py",
+        "from pathlib import Path\nfrom recruit_analytics.services import helper\n",
+    )
+    assert errors(repository) == []
+
+
+def test_missing_registered_backend_does_not_pass(repository: Path) -> None:
+    import shutil
+
+    register_additional_project(repository)
+    shutil.rmtree(repository / "portfolio/recruitment_analytics/backend")
+    with pytest.raises(FileNotFoundError, match="Registered project backend missing"):
+        scan_import_boundaries(repository)

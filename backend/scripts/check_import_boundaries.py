@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -127,6 +128,56 @@ def _type_only_import_lines(tree: ast.AST) -> set[int]:
     return lines
 
 
+def _registered_project_packages(
+    repo_root: Path,
+) -> tuple[list[tuple[Path, str, Path]], dict[str, str]]:
+    """Discover registered backend packages and their owning project IDs.
+
+    A missing registry is accepted only for the existing narrow fixture tests;
+    the separate repository registry guard requires it in the actual monorepo.
+    """
+    registry_path = repo_root / "portfolio/catalog/registry.json"
+    if not registry_path.is_file():
+        return [], {}
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    ids = registry.get("projectIds")
+    if not isinstance(ids, list) or not ids:
+        raise ValueError("Portfolio registry missing projectIds")
+    project_roots: list[tuple[Path, str, Path]] = []
+    package_owners: dict[str, str] = {}
+    for project_id in ids:
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("Invalid registered project ID")
+        source = repo_root / "portfolio" / project_id / "backend/src"
+        if not source.is_dir():
+            raise FileNotFoundError(f"Registered project backend missing: {source}")
+        packages = sorted(
+            item for item in source.iterdir() if item.is_dir() and (item / "__init__.py").is_file()
+        )
+        if not packages:
+            raise FileNotFoundError(f"No importable package found in {source}")
+        for package in packages:
+            if package.name == "app" or package.name in package_owners:
+                raise ValueError(f"Duplicate or reserved project package: {package.name}")
+            package_owners[package.name] = project_id
+            project_roots.append((package, package.name, package))
+    return project_roots, package_owners
+
+
+def _project_import_reason(
+    module: str, imported: str, package_owners: dict[str, str]
+) -> str | None:
+    owner = package_owners.get(module.partition(".")[0])
+    if owner is None:
+        return None
+    if _at_or_below(imported, "app"):
+        return "project must not import website internals"
+    for package, project_id in package_owners.items():
+        if project_id != owner and _at_or_below(imported, package):
+            return "project must not import another project"
+    return None
+
+
 def _reason(module: str, imported: str) -> str | None:
     if _at_or_below(module, "app.repositories") and any(
         _at_or_below(imported, target) for target in ("app.services", "app.api")
@@ -173,6 +224,7 @@ def _reason(module: str, imported: str) -> str | None:
 def scan_import_boundaries(repo_root: Path) -> list[ImportViolation]:
     """Scan each owned Python package. Missing roots and syntax errors fail closed."""
     repo_root = repo_root.resolve()
+    project_roots, package_owners = _registered_project_packages(repo_root)
     roots = (
         (repo_root / "backend/app/domain", "app", repo_root / "backend/app"),
         (repo_root / "backend/app/repositories", "app", repo_root / "backend/app"),
@@ -189,6 +241,7 @@ def scan_import_boundaries(repo_root: Path) -> list[ImportViolation]:
             "fleet_hub",
             repo_root / "portfolio/fleet_hub/backend/src/fleet_hub",
         ),
+        *project_roots,
     )
     failures: list[ImportViolation] = []
     for folder, prefix, package_root in roots:
@@ -203,7 +256,9 @@ def scan_import_boundaries(repo_root: Path) -> list[ImportViolation]:
             tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=relative)
             type_only_lines = _type_only_import_lines(tree)
             for line, imported in _imports(tree, package):
-                reason = _reason(module, imported)
+                reason = _project_import_reason(module, imported, package_owners) or _reason(
+                    module, imported
+                )
                 if (
                     reason
                     and line in type_only_lines

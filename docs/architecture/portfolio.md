@@ -20,6 +20,33 @@ portfolio/<id>/                    -X-> another project's internals
 
 Host adapters should be *thin*: routing, deployment configuration and explicitly provided external capabilities only; no fleet domain logic.
 
+## Planned Portfolio Lab identity and authorization
+
+**Status:** Requirements agreed; identity and access implementation is pending.
+The following is an intended architecture, not a claim about production.
+
+- [Portfolio Lab identity/access specification](../specifications/portfolio-lab-auth-access.md)
+- [ADR-0001: Identity and access boundaries](../adr/0001-portfolio-lab-identity-access.md)
+- [Six-PR implementation plan](../../SESSION_NOTES.md)
+
+The website host will own the shared Firebase identity and Firestore authorization
+control plane. The Git project registry and project manifests remain the canonical
+catalogue. Each protected FastAPI request, including calls to the direct Render
+origin, must independently enforce current identity, project role and capability.
+Front-end route visibility alone is not sufficient. Session transport between
+Vercel and Render must be proven in PR 2 before implementation proceeds.
+
+Each registered demonstration remains responsible for its domain logic, UI,
+API and business persistence. Fleet keeps its current SQLite lifecycle and routes
+until its separate authentication migration in PR 5. `View` is read-only;
+`Test`/`Admin` may initiate real actions within Owner-configured quotas.
+New projects receive no automatic non-Owner grants. Legacy password login must
+not be accepted in parallel with the new authorization after cutover.
+
+This is logical domain and data isolation, not separate process/CPU isolation.
+The current Fleet-specific regression checks remain in place alongside new
+generic project-boundary checks.
+
 ## Ownership
 
 | Layer | Owned by | Allowed responsibility |

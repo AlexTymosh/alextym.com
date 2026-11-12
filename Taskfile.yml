@@ -85,6 +85,7 @@ tasks:
     desc: Validate the portfolio registry, modules, and ownership boundaries.
     cmds:
       - node scripts/check-portfolio-registry.mjs
+      - node scripts/check-registered-project-boundaries.mjs
       - node scripts/check-fleet-frontend-boundaries.mjs
       - node scripts/check-website-portfolio-boundaries.mjs
       - node scripts/check-fleet-backend-boundaries.mjs
