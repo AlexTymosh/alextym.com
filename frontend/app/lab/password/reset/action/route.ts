@@ -5,6 +5,7 @@ import { hasSameOrigin } from "../../../../../lib/portfolio-lab/session-origin";
 import {
   completePasswordReset,
   eligibleForPasswordRecovery,
+  eligibleForPasswordCompletion,
   type ResetCodeCheck,
   validNewPassword,
   validResetCode,
@@ -105,20 +106,43 @@ export async function POST(request: NextRequest) {
         const snapshot = await db.collection("portfolio_lab_identities").doc(uid).get();
         return snapshot.exists ? snapshot.data() : null;
       },
-      revoke: (uid) => auth.revokeRefreshTokens(uid),
-      commit: async (uid) => {
+      begin: async (uid) => {
         const identity = db.collection("portfolio_lab_identities").doc(uid);
         const event = db.collection("portfolio_lab_invitation_events").doc();
         await db.runTransaction(async (transaction) => {
           const snapshot = await transaction.get(identity);
           if (!eligibleForPasswordRecovery(
             uid, ownerUid, snapshot.exists ? snapshot.data() : null,
-          )) throw new Error("Identity admission revoked during password reset");
+          )) throw new Error("Recovery admission changed or reset already pending");
+          const now = Date.now();
+          // Lock password-based admission BEFORE the Firebase password changes.
+          transaction.update(identity, {
+            password_state: "reset_pending",
+            password_reset_started_at_ms: now,
+          });
+          transaction.create(event, {
+            schema_version: 1,
+            uid,
+            action: "password_reset_started",
+            created_at_ms: now,
+          });
+        });
+      },
+      revoke: (uid) => auth.revokeRefreshTokens(uid),
+      commit: async (uid) => {
+        const identity = db.collection("portfolio_lab_identities").doc(uid);
+        const event = db.collection("portfolio_lab_invitation_events").doc();
+        await db.runTransaction(async (transaction) => {
+          const snapshot = await transaction.get(identity);
+          if (!eligibleForPasswordCompletion(
+            uid, ownerUid, snapshot.exists ? snapshot.data() : null,
+          )) throw new Error("Password reset state changed during confirmation");
           const now = Date.now();
           transaction.update(identity, {
             status: "active",
             password_state: "user_set",
             initial_password_expires_at_ms: FieldValue.delete(),
+            password_reset_started_at_ms: FieldValue.delete(),
             password_changed_at_ms: now,
           });
           transaction.create(event, {
@@ -133,8 +157,8 @@ export async function POST(request: NextRequest) {
     if (result === "invalid") return reply(400, "Link invalid or expired; request a new one");
     return reply(200, "Password updated. Sign in using your new password.");
   } catch {
-    // A consumed code plus a failed Firestore write is intentionally not
-    // retried with stale data. Owner must issue a fresh code and reconcile.
+    // A consumed code or interrupted confirmation leaves reset_pending.
+    // Only an audited Owner operation can repair this fail-closed state.
     return reply(503, "Unable to finish safely; contact the Owner for a new link");
   }
 }

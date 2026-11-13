@@ -5,6 +5,7 @@ export type PasswordResetEffects = {
   inspect: (code: string) => Promise<ResetCodeCheck | null>;
   lookupUser: (email: string) => Promise<ResetUser>;
   loadRecord: (uid: string) => Promise<unknown>;
+  begin: (uid: string) => Promise<void>;
   confirm: (code: string, newPassword: string) => Promise<ResetCodeCheck | null>;
   revoke: (uid: string) => Promise<void>;
   commit: (uid: string) => Promise<void>;
@@ -29,10 +30,20 @@ export function eligibleForPasswordRecovery(uid: string, ownerUid: string, recor
 }
 
 /**
- * Identity toolkit performs the actual password update only with a valid OOB
- * code. No client assertion of success can flip password_state to user_set.
- * A partial failure after consumption leaves admission closed or unchanged.
+ * After a valid Firebase code and trusted UID admission have been checked,
+ * atomically enter reset_pending BEFORE changing the Firebase password.
+ * Any ambiguous provider, revocation or Firestore failure leaves password
+ * admission denied. Recovery requires a separately audited Owner repair.
  */
+export function eligibleForPasswordCompletion(uid: string, ownerUid: string, record: unknown): boolean {
+  if (!uid || uid.includes("/") || !ownerUid || uid === ownerUid) return false;
+  if (!record || typeof record !== "object" || Array.isArray(record)) return false;
+  const data = record as Record<string, unknown>;
+  return data.schema_version === 1 && data.uid === uid &&
+    ["invited", "active"].includes(String(data.status)) &&
+    data.password_state === "reset_pending";
+}
+
 export async function completePasswordReset(
   effects: PasswordResetEffects,
   code: string,
@@ -47,6 +58,9 @@ export async function completePasswordReset(
     before.uid, ownerUid, await effects.loadRecord(before.uid),
   )) return "invalid";
 
+  // The durable transition must fail closed; a provider password mutation
+  // must never precede the reset_pending admission lock.
+  await effects.begin(before.uid);
   const confirmed = await effects.confirm(code, password);
   if (!confirmed || confirmed.requestType !== "PASSWORD_RESET" ||
       confirmed.email.toLowerCase() !== inspected.email.toLowerCase()) return "invalid";

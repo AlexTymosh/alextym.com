@@ -268,3 +268,66 @@ initial-password rule. To recover an expired/consumed link, issue a new one.
 - Complete live Firebase/Firestore emulator tests, OAuth provider smoke,
   account-link collision handling and multi-host integration before merging
   PR #244. Keep production feature flags off.
+
+## Reset-pending isolation and audited repair (sixth PR #244 increment)
+
+Previously the setup/reset endpoint confirmed the new Firebase password **before**
+blocking password-based admission in Firestore. A crash or Firestore outage
+between provider confirmation and durable state transition could leave
+previous signed sessions or initial-password policy in an ambiguous state.
+
+The revised server-side reset sequence is:
+
+1. Firebase validates the one-time OOB code (without consuming it).
+2. Server resolves the trusted Firebase UID and validates durable admission.
+3. **Firestore transaction** rechecks the UID/status and sets
+   `password_state=reset_pending`, recording `password_reset_started` in the
+   same transaction. `reset_pending` is already denied by both Next.js and
+   FastAPI identity admission; this is a safety boundary, not a grant.
+4. Firebase confirms the new password (consumes the OOB code).
+5. Firebase refresh tokens are revoked so old sessions cannot survive the
+   password change.
+6. A second Firestore transaction requires `reset_pending` and an eligible
+   UID/status before switching to `user_set` and writing a completion audit.
+
+If steps 4–6 fail or the process crashes, the account deliberately stays
+`reset_pending` and **password admission remains blocked**. An expired code does
+not automatically reset the state. This trades availability for a clearly
+defined fail-closed security outcome and avoids guessing which credentials
+were accepted by Firebase. Linked OAuth may remain usable for an active UID;
+all project grants still require RBAC in PR 3.
+
+### Operator repair procedure (development project only until live verification)
+
+1. Review the exact UID and Firebase/Firestore state. Do not infer UID from a
+   matching email and never mark a user as `user_set` to work around an error.
+2. The Owner explicitly runs the local CLI in a restricted environment:
+
+   ```powershell
+   Push-Location backend
+   uv run python -m scripts.repair_lab_password_reset --uid <firebase-uid> --project-id <dev-firebase-project-id>
+   # Only after reviewing the target and enabling the provisioning operator gate:
+   uv run python -m scripts.repair_lab_password_reset --uid <firebase-uid> --project-id <dev-firebase-project-id> --apply
+   Pop-Location
+   ```
+
+   `--apply` additionally requires `PORTFOLIO_LAB_PROVISIONING_ENABLED=true`,
+   a configured pinned `PORTFOLIO_LAB_OWNER_UID` and matching `FIREBASE_PROJECT_ID`.
+   The service account is a privileged operator credential; access to it must
+   be independently restricted. The CLI gate is **not** a substitute for IAM.
+
+3. The CLI revokes Firebase refresh tokens before a transaction that rechecks
+   `reset_pending`, writes `password_state=none`, removes
+   `password_reset_started_at_ms` and creates an Owner audit event. It never
+   sets `user_set`, sends mail, enables a disabled user, changes grants or
+   revives a revoked account.
+4. Generate a **new** Owner-controlled password setup link using
+   `scripts.generate_lab_setup_link` and deliver it privately. The recipient
+   redeems that new code. Existing `none` users cannot enter using a password.
+
+The code is unit-tested with offline fakes. It is **not yet tested against a live
+Firebase project** and must not be enabled in production without that test.
+Concurrency / ambiguous response and serverless interruption scenarios need
+integration validation, and the reset action requires abuse-rate controls before
+release. Avoid posting reset codes, service-account details or passwords in CI
+logs, GitHub or issue trackers.

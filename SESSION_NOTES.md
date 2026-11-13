@@ -289,3 +289,20 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 - New accounts stay `invited`/`password_state=none` until the action code is redeemed. No automatic mail and no project grants.
 - See `docs/architecture/portfolio-lab-identity-setup.md` for setup, caveats and recovery. Keep production Lab disabled.
 - Still required: live Firebase emulator/provider tests, OAuth collision/re-auth UX, account recovery/repair operations, abuse/rate-limit safeguards, and full security/production smoke before merging PR #244.
+
+## PR #244 — Sixth identity increment: password reset fail-closed isolation
+
+- Fifth commit `e2edc0de` added Owner-managed setup links, server-verified
+  Firebase reset-code redemption and password recovery UI. Its GitHub CI passed
+  all five jobs.
+- The sixth increment moves password-based admission to
+  `reset_pending` in an audited Firestore transaction **before** Firebase
+  accepts the new password. Completion requires token revocation and a second
+  audited transaction. Any crash or partial failure leaves password admission
+  closed, never incorrectly promoted to `user_set`.
+- Adds an explicit Owner-only repair CLI that revokes Firebase tokens and
+  conservatively moves `reset_pending` to `none`, requiring a new setup link.
+- The CLI's environment gate is not IAM. Dev Firebase integration tests,
+  actual OAuth/provider linking and collision scenarios, abuse controls and
+  end-to-end smoke remain mandatory. Keep production Lab disabled and PR #244
+  unmerged until verified.

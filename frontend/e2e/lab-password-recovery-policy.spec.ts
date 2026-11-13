@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   completePasswordReset,
   eligibleForPasswordRecovery,
+  eligibleForPasswordCompletion,
   validNewPassword,
   validResetCode,
   type PasswordResetEffects,
@@ -17,6 +18,7 @@ function harness() {
     inspect: async () => { calls.push("inspect"); return { email: "user@example.test", requestType: "PASSWORD_RESET" }; },
     lookupUser: async () => { calls.push("lookup"); return { uid: "test-uid", email: "user@example.test", disabled: false }; },
     loadRecord: async () => { calls.push("record"); return record; },
+    begin: async () => { calls.push("begin"); },
     confirm: async () => { calls.push("confirm"); return { email: "user@example.test", requestType: "PASSWORD_RESET" }; },
     revoke: async () => { calls.push("revoke"); },
     commit: async () => { calls.push("commit"); },
@@ -51,7 +53,7 @@ test.describe("Portfolio Lab password recovery contract", () => {
   test("reconciles only after real provider code redemption and token revocation", async () => {
     const { effects, calls } = harness();
     expect(await completePasswordReset(effects, code, password, "owner")).toBe("success");
-    expect(calls).toEqual(["inspect", "lookup", "record", "confirm", "lookup", "revoke", "commit"]);
+    expect(calls).toEqual(["inspect", "lookup", "record", "begin", "confirm", "lookup", "revoke", "commit"]);
   });
 
   test("invalid code cannot trigger a provider mutation", async () => {
@@ -85,6 +87,7 @@ test.describe("Portfolio Lab password recovery contract", () => {
     const { effects, calls } = harness();
     effects.confirm = async () => { calls.push("confirm"); return { email: "other@example.test", requestType: "PASSWORD_RESET" }; };
     expect(await completePasswordReset(effects, code, password, "owner")).toBe("invalid");
+    expect(calls).toContain("begin");
     expect(calls).not.toContain("revoke");
     expect(calls).not.toContain("commit");
   });
@@ -103,6 +106,30 @@ test.describe("Portfolio Lab password recovery contract", () => {
     effects.revoke = async () => { calls.push("revoke"); throw new Error("transient"); };
     await expect(completePasswordReset(effects, code, password, "owner")).rejects.toThrow();
     expect(calls).not.toContain("commit");
+  });
+
+  test("failed begin prevents all Firebase password mutations", async () => {
+    const { effects, calls } = harness();
+    effects.begin = async () => { calls.push("begin"); throw new Error("Firestore unavailable"); };
+    await expect(completePasswordReset(effects, code, password, "owner")).rejects.toThrow();
+    expect(calls).toEqual(["inspect", "lookup", "record", "begin"]);
+  });
+
+  test("provider failure after begin leaves password admission locked", async () => {
+    const { effects, calls } = harness();
+    effects.confirm = async () => { calls.push("confirm"); return null; };
+    expect(await completePasswordReset(effects, code, password, "owner")).toBe("invalid");
+    expect(calls).toContain("begin");
+    expect(calls).not.toContain("commit");
+  });
+
+  test("completion requires the distinct reset_pending state", () => {
+    const pending = { ...record, password_state: "reset_pending" };
+    expect(eligibleForPasswordCompletion("test-uid", "owner", pending)).toBe(true);
+    expect(eligibleForPasswordRecovery("test-uid", "owner", pending)).toBe(false);
+    expect(eligibleForPasswordCompletion("test-uid", "owner", record)).toBe(false);
+    expect(eligibleForPasswordCompletion("test-uid", "owner", { ...pending, status: "revoked" })).toBe(false);
+    expect(eligibleForPasswordCompletion("other-uid", "owner", pending)).toBe(false);
   });
 
   test("failed transactional update surfaces explicit recovery", async () => {
