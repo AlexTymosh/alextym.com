@@ -176,3 +176,12 @@ them to the **development Firebase project** in Firebase Console before
 creating identity documents. This file is not deployed automatically. Admin
 SDK server credentials bypass Firestore client rules and must be protected with
 least-privilege IAM.
+## Owner-only initial-password provisioning increment
+
+Development-only command: [Owner provisioning runbook](portfolio-lab-provisioning.md).
+Creates a **new** disabled Firebase UID, commits an `invited` identity and an audit
+record, enables Firebase Auth, then atomically activates the identity with a
+second audit event. Initial credential expiry is 1–90 days and admission remains
+separate from project grants. There is no public provisioning endpoint, setup
+link, password-reset reconciliation, or automatic notification in this increment.
+Keep Portfolio Lab disabled on production until the remaining security gates pass.

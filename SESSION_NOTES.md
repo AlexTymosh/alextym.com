@@ -273,3 +273,11 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
   records are denied. Production Lab remains disabled by default.
 - Still needed before PR 2 merge: trusted provisioning and password setup/reset
   transitions, reauthentication/linking edge cases and live provider smoke.
+## PR #244 — Owner-only initial-password provisioning increment
+
+- Third commit `231217dd` introduced durable admission and expiry policies.
+- This increment adds a development-only `scripts.provision_lab_identity` CLI for **new** email/password UIDs.
+- Provisioning begins with a disabled Firebase account; invited/active transitions are paired atomically with Firestore audit records. No public endpoint, email send or project grant.
+- See [Owner-only provisioning runbook](docs/architecture/portfolio-lab-provisioning.md).
+- **GitHub CI frontend failure at `231217dd`:** clean `npm ci` cannot resolve `@google-cloud/firestore`. Install it as an explicit frontend dependency and commit the updated package lockfile. Do not assume a local `task ci` catches clean-install failures.
+- Still outstanding: setup links, secure password reset/reconciliation, linked-provider recovery, live Firebase integration and OAuth tests. Keep production Lab disabled and PR #244 open.
