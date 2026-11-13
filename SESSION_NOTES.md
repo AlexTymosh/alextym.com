@@ -262,3 +262,14 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
   new transport; Firebase emulator/live-provider integration remains outstanding.
 - This remains Owner-only; invited-user admission and initial-password 1–90-day
   lifecycle **must** be implemented/tested before PR #244 can merge.
+
+### PR 2 admission checkpoint — after cross-host transport
+
+- Implemented versioned Firestore UID admission contract and strict initial
+  credential expiry policy in both Next.js and FastAPI; policies share test cases.
+- Existing Owner UID is still the only admission bypass. No project grant is
+  provided by identity admission; Fleet stays on its legacy password until PR 5.
+- A Firestore read error rejects non-Owner identity; disabled/invited/missing
+  records are denied. Production Lab remains disabled by default.
+- Still needed before PR 2 merge: trusted provisioning and password setup/reset
+  transitions, reauthentication/linking edge cases and live provider smoke.

@@ -45,6 +45,7 @@ def test_verified_other_user_cannot_assume_owner(monkeypatch) -> None:
     monkeypatch.setenv("PORTFOLIO_LAB_ENABLED", "true")
     monkeypatch.setenv("PORTFOLIO_LAB_OWNER_UID", "owner-uid")
     monkeypatch.setattr(firebase_identity, "verify_id_token", lambda token: {"uid": "other-uid"})
+    monkeypatch.setattr(firebase_identity, "load_lab_identity", lambda uid: None)
     with client() as browser:
         assert (
             browser.get(

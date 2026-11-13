@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { DecodedIdToken } from "firebase-admin/auth";
+import { getLabAdmissionDecision } from "../../../../lib/portfolio-lab/lab-admission-server";
 import {
   getLabAdminAuth,
   getOwnerUid,
@@ -41,13 +43,20 @@ export async function GET(request: NextRequest) {
   const cookie = request.cookies.get(LAB_SESSION_COOKIE)?.value;
   if (!cookie) return json(401, "Authentication required");
 
-  let uid: string;
+  let claims: DecodedIdToken;
   try {
-    uid = (await getLabAdminAuth().verifySessionCookie(cookie, true)).uid;
+    claims = await getLabAdminAuth().verifySessionCookie(cookie, true);
   } catch {
     return json(401, "Invalid session");
   }
-  if (uid !== ownerUid) return json(403, "Access denied");
+  let admission;
+  try {
+    admission = await getLabAdmissionDecision(claims);
+  } catch {
+    return json(503, "Admission service unavailable");
+  }
+  if (admission !== "allowed") return json(403, "Access denied");
+  const uid = claims.uid;
 
   let url: URL;
   try {

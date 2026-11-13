@@ -41,6 +41,7 @@ def test_session_cookie_is_independently_verified(monkeypatch) -> None:
 def test_session_cookie_does_not_grant_another_user_owner_access(monkeypatch) -> None:
     _owner_env(monkeypatch)
     monkeypatch.setattr(firebase_identity, "verify_session_cookie", lambda _: {"uid": "other-uid"})
+    monkeypatch.setattr(firebase_identity, "load_lab_identity", lambda uid: None)
     with make_client() as browser:
         response = browser.get(
             "/api/lab/identity", headers={"Authorization": "FirebaseSession signed-cookie"}

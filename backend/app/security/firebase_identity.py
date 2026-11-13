@@ -5,17 +5,21 @@ not forwarded to Render as a credential. Protected backend calls must present
 an independently verified Firebase ID token (Bearer) or session cookie
 (FirebaseSession scheme, forwarded only by the Next.js BFF).
 
-PR 2 permits only the pinned Owner UID. PR 3 will add durable project grants;
-this module must never become a general "authenticated means authorized" bypass.
+PR 2 permits the pinned Owner UID or a durable admitted UID with a valid
+initial-credential policy. PR 3 will add project grants and capabilities;
+identity admission must never become project authorization.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import time
 from functools import lru_cache
 
 from fastapi import HTTPException, Request
+
+from app.security.lab_admission import admission_decision, sign_in_provider
 
 
 @lru_cache(maxsize=1)
@@ -56,8 +60,21 @@ def verify_session_cookie(session_cookie: str) -> dict:
     return auth.verify_session_cookie(session_cookie, app=_firebase_app(), check_revoked=True)
 
 
-def require_owner_identity(request: Request) -> dict:
-    """Temporary narrow identity probe; never protects real project operations."""
+def load_lab_identity(uid: str) -> dict | None:
+    """Fetch durable UID admission; never infer grants from email or token alone."""
+    from firebase_admin import firestore
+
+    snapshot = (
+        firestore.client(app=_firebase_app())
+        .collection("portfolio_lab_identities")
+        .document(uid)
+        .get(timeout=5.0)
+    )
+    return snapshot.to_dict() if snapshot.exists else None
+
+
+def require_lab_identity(request: Request) -> dict:
+    """Verify identity, current admission and initial-password policy."""
     if os.getenv("PORTFOLIO_LAB_ENABLED", "false").lower() != "true":
         raise HTTPException(404, "Not found")
     expected_uid = os.getenv("PORTFOLIO_LAB_OWNER_UID", "").strip()
@@ -81,6 +98,29 @@ def require_owner_identity(request: Request) -> dict:
     except Exception as exc:
         # No exception or token data is logged/returned; fail closed on SDK errors.
         raise HTTPException(401, "Invalid identity") from exc
-    if claims.get("uid") != expected_uid:
+    uid = claims.get("uid")
+    if not isinstance(uid, str) or not uid:
         raise HTTPException(403, "Access denied")
-    return {"uid": expected_uid}
+    if uid != expected_uid:
+        if "/" in uid:
+            raise HTTPException(403, "Access denied")
+        try:
+            identity_record = load_lab_identity(uid)
+        except Exception as exc:
+            # Firestore outages must not turn into an implicit grant.
+            raise HTTPException(503, "Admission unavailable") from exc
+        decision = admission_decision(
+            uid,
+            expected_uid,
+            sign_in_provider(claims),
+            identity_record,
+            int(time.time() * 1000),
+        )
+        if decision != "allowed":
+            raise HTTPException(403, "Access denied")
+    return {"uid": uid}
+
+
+# Backward-compatible name for existing security unit imports; new code uses
+# the explicit admission-aware dependency.
+require_owner_identity = require_lab_identity

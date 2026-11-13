@@ -7,6 +7,7 @@ import {
   LAB_SESSION_MAX_AGE_MS,
 } from "../../../lib/portfolio-lab/firebase-server";
 import { hasSameOrigin } from "../../../lib/portfolio-lab/session-origin";
+import { getLabAdmissionDecision } from "../../../lib/portfolio-lab/lab-admission-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,10 +37,17 @@ export async function POST(request: NextRequest) {
     const admin = getLabAdminAuth();
     const decoded = await admin.verifyIdToken(idToken, true);
     const now = Date.now() / 1000;
-    if (decoded.uid !== ownerUid || typeof decoded.auth_time !== "number" || now - decoded.auth_time > 300 || decoded.auth_time > now + 60) {
-      return json({ error: "Identity not permitted or recent login required" }, 403);
+    if (typeof decoded.auth_time !== "number" || now - decoded.auth_time > 300 || decoded.auth_time > now + 60) {
+      return json({ error: "Recent login required" }, 403);
     }
-    // PR 3 replaces the temporary Owner-only admission with durable grant checks.
+    let admission;
+    try {
+      admission = await getLabAdmissionDecision(decoded);
+    } catch {
+      return json({ error: "Admission service unavailable" }, 503);
+    }
+    if (admission !== "allowed") return json({ error: "Access denied" }, 403);
+    // PR 3 adds project capabilities; admitted identity does not grant project access.
     const cookie = await admin.createSessionCookie(idToken, { expiresIn: LAB_SESSION_MAX_AGE_MS });
     const response = json({ ok: true }, 200);
     response.cookies.set(LAB_SESSION_COOKIE, cookie, cookieOptions);
@@ -54,13 +62,19 @@ export async function GET(request: NextRequest) {
   const ownerUid = getOwnerUid();
   const cookie = request.cookies.get(LAB_SESSION_COOKIE)?.value;
   if (!ownerUid || !cookie) return json({ authenticated: false }, 401);
+  let decoded;
   try {
-    const decoded = await getLabAdminAuth().verifySessionCookie(cookie, true);
-    if (decoded.uid !== ownerUid) return json({ authenticated: false }, 403);
-    return json({ authenticated: true }, 200);
+    decoded = await getLabAdminAuth().verifySessionCookie(cookie, true);
   } catch {
     return json({ authenticated: false }, 401);
   }
+  try {
+    const decision = await getLabAdmissionDecision(decoded);
+    if (decision !== "allowed") return json({ authenticated: false }, 403);
+  } catch {
+    return json({ authenticated: false }, 503);
+  }
+  return json({ authenticated: true }, 200);
 }
 
 export async function DELETE(request: NextRequest) {

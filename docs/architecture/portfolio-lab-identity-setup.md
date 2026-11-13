@@ -124,3 +124,55 @@ This is **not** an admission/RBAC release. Before PR 2 is ready for merge, imple
 - A policy for browser Firebase Auth persistence vs. server cookie: this increment uses browser-session persistence; new tabs may require re-sign-in for direct FastAPI bearer calls until a finished BFF/token-transport design is implemented.
 
 **Do not turn on the new Fleet authorization or send real project emails under this temporary Owner-only identity probe.** PR 3 owns Firestore-backed grants, and PR 5/6 own Fleet migration and live mail controls.
+
+## Durable identity admission and initial-password gate (third PR 2 increment)
+
+Both Next.js and FastAPI now reject all non-Owner Firebase UIDs unless a
+**server-side Firestore** document exists at `portfolio_lab_identities/{uid}`.
+The pinned Owner UID is the only special case. The Firestore SDK uses the named
+`portfolio-lab` Firebase Admin app; the browser must never read or write this
+collection. Firestore rules must deny all client access to the control plane.
+
+Schema version `1` (exact fields used by both runtimes):
+
+```json
+{
+  "schema_version": 1,
+  "uid": "trusted-firebase-uid",
+  "status": "active",
+  "password_state": "initial",
+  "initial_password_expires_at_ms": 1800000000000
+}
+```
+
+- `status` must be exactly `active`; `invited`, `disabled`, absent and malformed
+  documents are denied. Never treat Firebase email or display name as an invite.
+- `password_state` must be `initial`, `user_set`, or `none`. An initial password
+  is denied at/after `initial_password_expires_at_ms` for password sign-in, even
+  if a five-day session was issued earlier. A legitimately linked OAuth provider
+  can still authenticate the same UID; initial password expiry is not account
+  revocation. `none` forbids password admission.
+- `user_set` is a **trusted server-side transition**, not a client field. Never
+  flip it based solely on a user's assertion or a password-reset email request.
+  Account provisioning, password-reset confirmation, partial-failure recovery,
+  and invite delivery are still pending and must precede enabling non-Owner users.
+- Document UID must equal the verified Firebase UID. Invalid metadata, unknown
+  providers and Firestore errors fail closed; no grants or project permissions
+  are created by this increment. In PR 3, each project must check its own grant
+  independently on every protected request.
+- Only the pinned Owner can enter the identity preview without a Firestore
+  identity document. Do not infer Owner from an email address.
+- `docs/contracts/portfolio-lab-admission-cases.json` is the shared set of
+  deterministic allow/deny cases tested by Next.js and FastAPI. These tests do
+  not exercise real Firebase or Firestore connectivity.
+
+**Deployment:** Keep `PORTFOLIO_LAB_ENABLED=false` in production. A real
+non-Owner onboarding flow is not available until an auditable Owner-only
+provisioning path and password replacement/recovery are implemented. Configure
+one restricted development Firestore project before running live smoke tests.
+
+Recommended rules are checked in at `infra/firebase/firestore.rules`; publish
+them to the **development Firebase project** in Firebase Console before
+creating identity documents. This file is not deployed automatically. Admin
+SDK server credentials bypass Firestore client rules and must be protected with
+least-privilege IAM.
