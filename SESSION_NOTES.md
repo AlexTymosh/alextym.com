@@ -281,3 +281,11 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 - See [Owner-only provisioning runbook](docs/architecture/portfolio-lab-provisioning.md).
 - **GitHub CI frontend failure at `231217dd`:** clean `npm ci` cannot resolve `@google-cloud/firestore`. Install it as an explicit frontend dependency and commit the updated package lockfile. Do not assume a local `task ci` catches clean-install failures.
 - Still outstanding: setup links, secure password reset/reconciliation, linked-provider recovery, live Firebase integration and OAuth tests. Keep production Lab disabled and PR #244 open.
+
+## PR #244 — Fifth identity increment: private setup/recovery links
+
+- Fourth commit `fbb212df` added Owner-only initial-password provisioning and explicit `@google-cloud/firestore` to the frontend lockfile. GitHub CI passed all five jobs.
+- New increment: Owner-only password setup link generator, Firebase action-code verification and server-side redemption; persistent UID admission is updated *only after* confirmed provider password change and token revocation.
+- New accounts stay `invited`/`password_state=none` until the action code is redeemed. No automatic mail and no project grants.
+- See `docs/architecture/portfolio-lab-identity-setup.md` for setup, caveats and recovery. Keep production Lab disabled.
+- Still required: live Firebase emulator/provider tests, OAuth collision/re-auth UX, account recovery/repair operations, abuse/rate-limit safeguards, and full security/production smoke before merging PR #244.

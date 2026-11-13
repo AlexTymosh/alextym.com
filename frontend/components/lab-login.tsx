@@ -7,7 +7,6 @@ import {
   GithubAuthProvider,
   GoogleAuthProvider,
   OAuthProvider,
-  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -54,14 +53,9 @@ export function LabLogin() {
     event.preventDefault();
     void run(async () => (await signInWithEmailAndPassword(getLabAuth(), email, password)).user);
   };
-  const resetPassword = async () => {
-    setBusy(true); setError("");
-    try {
-      if (!email.trim()) throw new Error("Missing email");
-      await sendPasswordResetEmail(getLabAuth(), email.trim());
-      setNotice("If an account exists, a password reset email will be sent.");
-    } catch { setError("Unable to process the request. Check the email format and try again."); }
-    finally { setBusy(false); }
+  const showRecoveryNotice = () => {
+    setError("");
+    setNotice("Request a private password setup or reset link from the Owner.");
   };
 
   return (
@@ -75,7 +69,7 @@ export function LabLogin() {
         <input id="lab-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ display: "block", width: "100%", marginBottom: 12 }} />
         <button disabled={busy} type="submit">Sign in with email</button>
       </form>
-      <button type="button" disabled={busy} onClick={() => void resetPassword()}>Reset password</button>
+      <button type="button" disabled={busy} onClick={showRecoveryNotice}>Password help</button>
       <hr />
       {(["google", "microsoft", "github"] as const).map((kind) => (
         <p key={kind}><button type="button" disabled={busy} onClick={() => void run(async () => (await signInWithPopup(getLabAuth(), provider(kind))).user)}>Continue with {kind}</button></p>

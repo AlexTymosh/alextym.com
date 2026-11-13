@@ -15,5 +15,11 @@ test.describe("Portfolio Lab feature gate", () => {
     expect(session.status()).toBe(404);
     const backendBridge = await request.get("/lab/api/identity");
     expect(backendBridge.status()).toBe(404);
+    const passwordReset = await page.goto("/lab/password/reset");
+    expect(passwordReset?.status()).toBe(404);
+    const passwordAction = await request.post("/lab/password/reset/action", {
+      data: { oobCode: "invalid", newPassword: "invalid" },
+    });
+    expect(passwordAction.status()).toBe(404);
   });
 });

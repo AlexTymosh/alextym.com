@@ -185,3 +185,86 @@ second audit event. Initial credential expiry is 1–90 days and admission remai
 separate from project grants. There is no public provisioning endpoint, setup
 link, password-reset reconciliation, or automatic notification in this increment.
 Keep Portfolio Lab disabled on production until the remaining security gates pass.
+
+## Owner-generated password setup and recovery (fifth PR 2 increment)
+
+This feature requires an explicitly configured **development** Firebase project.
+No password reset link is delivered automatically, and no project grant is created.
+
+### Identity and reset-code protocol
+
+- `scripts.generate_lab_setup_link` is an Owner-only local CLI, gated by
+  `PORTFOLIO_LAB_PROVISIONING_ENABLED=true`, a pinned Owner UID, and an exact
+  `--project-id` match. `--create-user` creates a new Auth user initially
+  disabled, with an unguessable undisclosed bootstrap password, writes an
+  `invited`/`password_state=none` Firestore identity and audit, and then enables
+  the Auth user. It **does not** activate application admission.
+- Existing users must already have a `portfolio_lab_identities/{uid}` record
+  with `status=invited|active`, supported password state, and a non-disabled
+  Firebase Auth user. Never adopt an arbitrary Auth account by matching email.
+- The Admin SDK generates a provider password-reset action code. The CLI moves
+  that code from Firebase's generated URL query into a private
+  `/lab/password/reset#oobCode=...` link at an explicitly approved HTTPS origin.
+  Fragments are not sent in the initial page HTTP request, but the link still
+  contains a **bearer secret** and must be delivered confidentially. Do not
+  paste it into source control, tickets or shared logs.
+- The browser removes the URL fragment from history before accepting the new
+  password and POSTs the code and password to a same-origin route. The route
+  validates Origin, media type and request size; it does not expose UID/email.
+- The Next.js server first inspects the code using the documented Firebase
+  Identity Toolkit `accounts:resetPassword` REST API *without consuming it*;
+  it checks the resolved Firebase UID against the Firestore identity record.
+  It then confirms the code with `newPassword` at the **fixed** provider URL,
+  compares the returned email/UID, revokes Firebase refresh tokens, and
+  transactionally sets `password_state=user_set`, activates an `invited`
+  account and creates an audit event. The transaction rechecks the current UID
+  and status to prevent entitlement resurrection. The project remains without
+  grants until the RBAC phase.
+- `PORTFOLIO_LAB_ENABLED=false` keeps both the page and the endpoint absent.
+  The public login screen no longer triggers an untracked provider reset email;
+  it directs users to request a private link from the Owner.
+
+### Development operator command
+
+Run `uv run python -m scripts.generate_lab_setup_link` from `backend`:
+
+```powershell
+# Dry run, no Firebase reads/writes:
+uv run python -m scripts.generate_lab_setup_link `
+  --email invitee@example.test --project-id dev-project `
+  --origin https://dev.example.test --create-user
+
+# Only after secrets, Firebase rules and UID have been verified:
+$env:PORTFOLIO_LAB_PROVISIONING_ENABLED = "true"
+uv run python -m scripts.generate_lab_setup_link `
+  --email invitee@example.test --project-id dev-project `
+  --origin https://dev.example.test --create-user --apply
+Remove-Item Env:\PORTFOLIO_LAB_PROVISIONING_ENABLED
+```
+
+For **existing** accounts, omit `--create-user`. This is a privileged command,
+not an HTTP endpoint. It prints the one-time link once; no email is sent.
+Change/reset code lifetime is controlled by Firebase, **not** by the 90-day
+initial-password rule. To recover an expired/consumed link, issue a new one.
+
+### Partial-failure and security limitations
+
+- Firebase Auth and Firestore are separate services and cannot share one atomic
+  transaction. If code redemption succeeds but refresh-token revocation or
+  Firestore commit fails, the route returns an error; do not infer successful
+  admission. Issue a new link and reconcile the UID with an Owner action.
+- Invalid/expired codes, revoked user records and missing Firestore identities
+  are never treated as proof of account admission. Audit events contain no
+  passwords, reset codes or URLs.
+- Client-side code cannot directly change `password_state`. The Admin SDK
+  bypasses client Firestore rules; service credentials and IAM must be protected.
+- Rate limiting is still dependent on Firebase code throttling for this
+  unauthenticated route. Before public rollout, add an external shared
+  rate-limit budget and abuse monitoring. Do not rely on an in-memory
+  serverless limiter.
+- Existing Firebase links handled outside this controlled route do **not**
+  move `password_state` to `user_set`; the Owner must generate a new controlled
+  link or perform a verified recovery action.
+- Complete live Firebase/Firestore emulator tests, OAuth provider smoke,
+  account-link collision handling and multi-host integration before merging
+  PR #244. Keep production feature flags off.
