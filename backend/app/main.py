@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fleet_hub.bootstrap import prepare_demo_database
 from fleet_hub.router import router as fleet_router
+from workforce_intelligence.router import router as workforce_router
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.cors import CORSMiddleware
 
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     app.include_router(fleet_router, prefix="/api")
+    app.include_router(workforce_router, prefix="/api")
     app.include_router(analytics_router, prefix="/api")
     app.include_router(redis_probe_router)
     configure_metrics(app, settings)

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "workforce_intelligence",
+  "slug": "workforce-intelligence",
+  "title": "Workforce & Recruitment Intelligence",
+  "summary": "Protected synthetic workforce and recruitment analytics interview demonstration.",
+  "category": "Data & Analytics",
+  "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "SQLite", "Firebase Authentication"],
+  "mode": "embedded",
+  "demo": {
+    "path": "/portfolio/workforce-intelligence",
+    "apiPrefix": "/api/workforce"
+  },
+  "catalog": {
+    "visible": false,
+    "featured": false
+  }
+}

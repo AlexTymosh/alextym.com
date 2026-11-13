@@ -89,6 +89,7 @@ tasks:
       - node scripts/check-fleet-frontend-boundaries.mjs
       - node scripts/check-website-portfolio-boundaries.mjs
       - node scripts/check-fleet-backend-boundaries.mjs
+      - node scripts/check-workforce-scaffold.mjs
 
   repo:check:
     desc: Run repository hygiene checks.

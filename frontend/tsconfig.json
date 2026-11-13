@@ -25,6 +25,9 @@
     "paths": {
       "@fleet-hub": [
         "../portfolio/fleet_hub/frontend/src/index.ts"
+      ],
+      "@workforce-intelligence": [
+        "../portfolio/workforce_intelligence/frontend/src/index.ts"
       ]
     }
   },
