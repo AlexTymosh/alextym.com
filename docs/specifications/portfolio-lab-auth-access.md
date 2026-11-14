@@ -251,7 +251,7 @@ A change or revocation must affect server-side protected operations promptly, in
 - GitHub OAuth via Firebase.
 - Firebase email/password.
 
-Enable **one account per email address** if supported/configured as intended. Handle account-collision errors explicitly and safely. Provider configuration must include approved callback URLs, production and development domains, allowed OAuth redirect origins, and correct provider secrets. No client-visible secret may be placed in public environment variables.
+Configure Firebase to create separate accounts for different identity providers when the email matches. Firebase's one-account-per-email mode can attach or replace a provider by email under its trusted-provider policy. Portfolio Lab requires explicit provider linking and checks the confirmed provider subject under the same UID. Handle account-collision errors explicitly and safely. Provider configuration requires exact callback URLs and authorized development domains. Store OAuth provider secrets in Firebase Authentication.
 
 ### 8.2 Admission versus Firebase account creation
 
@@ -269,6 +269,7 @@ Required cases:
 
 - Existing email/password user links Google/Microsoft/GitHub and keeps the same UID and grants.
 - An OAuth identity with a different email can be linked after reauthentication.
+- Record a Firebase-verified provider subject only from a recently authenticated session that still passes admission. Enforce that binding on both application servers.
 - `auth/account-exists-with-different-credential` is explained; guide the user to the established sign-in method and subsequent linking.
 - If the target credential belongs to a different Firebase UID, **fail safely** and provide an Owner-assisted recovery path; never silently merge, delete or transfer grants.
 - Unlinking the last functioning sign-in method must be prohibited.
@@ -286,7 +287,7 @@ This design respects the requested no-extra-verification UX without treating arb
 
 ### 8.5 Logout and session policy
 
-**Proposed:** a five-day Firebase server session cookie, configurable within Firebase's documented range, using `HttpOnly`, `Secure`, appropriate `SameSite`, restrictive `Path`, and host-only cookie scope. Session exchange must require recent login and CSRF protection. Clear browser-side transient credentials after exchange when using the server-cookie model. Logout clears the cookie and can revoke server sessions where warranted. Administrative disable/revoke operations must not rely on the browser voluntarily logging out.
+**Proposed:** a five-day Firebase server session cookie, configurable within Firebase's documented range, using `HttpOnly`, `Secure`, appropriate `SameSite`, restrictive `Path`, and host-only cookie scope. Session exchange must require recent login and CSRF protection. Do not persist client Firebase credentials in browser storage. Keep them in page memory only during the five-minute linking window, then sign the client SDK out. Logout clears the cookie and can revoke server sessions where warranted. Administrative disable/revoke operations must not rely on the browser voluntarily logging out.
 
 Auth failures should show clear, non-enumerating responses; never leak whether an email was invited on public endpoints.
 

@@ -147,6 +147,22 @@ BACKEND_ORIGIN=https://alextym-backend.onrender.com/api
 BACKEND_ORIGIN=https://alextym-backend.onrender.com/api/health/live
 ```
 
+### Portfolio Lab development preview
+
+Keep `PORTFOLIO_LAB_ENABLED` off in Production. For PR #244, scope the
+Vercel variables to Preview and the `feat/portfolio-firebase-identity` branch.
+Point `BACKEND_ORIGIN` to the separate Render Free service and set
+`PORTFOLIO_LAB_ORIGIN` to the exact HTTPS preview alias. Keep Vercel
+Authentication enabled. Both hosts must use the same Firebase dev project
+and pinned test Owner UID. Put the Vercel credential in a branch-scoped Secret
+and the Render credential in a Render secret file. Do not share the two keys.
+For the locked Firebase Admin SDK, set `NODE_OPTIONS=--experimental-require-module`
+on this Preview branch and redeploy. See
+[Vercel Node.js configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration).
+
+See the [identity verification record](architecture/portfolio-lab-identity-verification.md)
+for free-tier limits, service account roles, and remaining test gates.
+
 Before deploying a reused template, update public project settings locally:
 
 ```bash

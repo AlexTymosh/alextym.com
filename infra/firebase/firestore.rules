@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Control-plane collections are Admin SDK only; clients have no access.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

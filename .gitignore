@@ -1,6 +1,7 @@
 _local/
 private/
 .tmp/
+infra/firebase/*-debug.log
 .idea/
 
 .env

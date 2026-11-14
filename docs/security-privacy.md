@@ -60,6 +60,14 @@ Frontend must not receive backend secrets.
 
 Only use `NEXT_PUBLIC_*` for values that are genuinely public.
 
+Portfolio Lab uses separate runtime IAM identities for Vercel and Render and
+an independently controlled provisioning identity. Store runtime credentials in
+host-protected settings. Firestore client access to the control plane is denied.
+Never include Firebase tokens, provider subjects, reset links, passwords or
+service-account files in request logs or release evidence. The
+[identity setup runbook](architecture/portfolio-lab-identity-setup.md) documents
+the admission bindings and password-reset transaction.
+
 The internal Redis probe uses a dedicated `REDIS_PROBE_TOKEN`, stored only in
 backend environment variables and the cron-job.org Authorization header. Keep it
 out of URLs, source control, and logs. Authorization is checked before any Redis
