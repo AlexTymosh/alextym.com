@@ -76,10 +76,11 @@ task ci
 
 ## Cross-host identity transport (second PR 2 increment)
 
-A five-day website cookie does **not** automatically reach the Render domain. A
-Firebase `browserSessionPersistence` ID token can also disappear when the browser
-tab closes. The architecture therefore uses an explicit **same-origin BFF** for
-server-side protected requests, instead of relying on browser persistence:
+A five-day website cookie does **not** automatically reach the Render domain.
+The Firebase client keeps credentials in memory for at most five minutes
+to support explicit provider linking. Reloading the page clears client
+credentials while the website cookie remains valid. An explicit **same-origin
+BFF** carries the website session for server-side protected requests:
 
 1. `GET /lab/api/identity` runs in Next.js (it is not covered by `/api/*` rewrites).
 2. Next.js verifies its own HttpOnly Firebase session cookie with revocation

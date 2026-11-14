@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   GithubAuthProvider,
@@ -90,7 +91,7 @@ export function LabAccountActions() {
   return (
     <div>
       <h2>Linked identities</h2>
-      <p>Link a provider within five minutes of signing in.</p>
+      <p>Link a provider within five minutes of signing in. <Link href="/lab/login">Sign in again</Link> if you reload this page.</p>
       {kinds.map((kind) => (
         <p key={kind}>
           {pending?.kind === kind

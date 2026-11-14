@@ -4,17 +4,15 @@ import { useState, type FormEvent } from "react";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
 import {
-  browserSessionPersistence,
   GithubAuthProvider,
   GoogleAuthProvider,
   OAuthProvider,
-  setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   type User,
 } from "firebase/auth";
-import { getLabAuth } from "../lib/portfolio-lab/firebase-client";
+import { getLabAuth, retainLabLinkCredential } from "../lib/portfolio-lab/firebase-client";
 
 const provider = (kind: "google" | "microsoft" | "github") => {
   if (kind === "google") return new GoogleAuthProvider();
@@ -31,22 +29,23 @@ export function LabLogin() {
   const [notice, setNotice] = useState("");
 
   const finish = async (user: User) => {
+    const token = await user.getIdTokenResult();
     const response = await fetch("/lab/session", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken: await user.getIdToken() }),
+      body: JSON.stringify({ idToken: token.token }),
     });
     if (!response.ok) throw new Error("Access has not been granted or session could not be created");
+    retainLabLinkCredential(getLabAuth(), user, Date.parse(token.authTime) / 1000);
     router.replace("/lab");
     router.refresh();
   };
-  const run = async (action: () => Promise<User>) => {
+  const run = async (action: (auth: ReturnType<typeof getLabAuth>) => Promise<User>) => {
     setBusy(true); setError(""); setNotice("");
     try {
       const auth = getLabAuth();
-      await setPersistence(auth, browserSessionPersistence);
-      const user = await action();
+      const user = await action(auth);
       try {
         await finish(user);
       } catch (error) {
@@ -61,7 +60,7 @@ export function LabLogin() {
   };
   const emailSignIn = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void run(async () => (await signInWithEmailAndPassword(getLabAuth(), email, password)).user);
+    void run(async (auth) => (await signInWithEmailAndPassword(auth, email, password)).user);
   };
   const showRecoveryNotice = () => {
     setError("");
@@ -82,7 +81,7 @@ export function LabLogin() {
       <button type="button" disabled={busy} onClick={showRecoveryNotice}>Password help</button>
       <hr />
       {(["google", "microsoft", "github"] as const).map((kind) => (
-        <p key={kind}><button type="button" disabled={busy} onClick={() => void run(async () => (await signInWithPopup(getLabAuth(), provider(kind))).user)}>Continue with {kind}</button></p>
+        <p key={kind}><button type="button" disabled={busy} onClick={() => void run(async (auth) => (await signInWithPopup(auth, provider(kind))).user)}>Continue with {kind}</button></p>
       ))}
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
