@@ -251,7 +251,7 @@ A change or revocation must affect server-side protected operations promptly, in
 - GitHub OAuth via Firebase.
 - Firebase email/password.
 
-Enable **one account per email address** if supported/configured as intended. Handle account-collision errors explicitly and safely. Provider configuration must include approved callback URLs, production and development domains, allowed OAuth redirect origins, and correct provider secrets. No client-visible secret may be placed in public environment variables.
+Configure Firebase to create separate accounts for different identity providers when the email matches. Firebase's one-account-per-email mode can attach or replace a provider by email under its trusted-provider policy. Portfolio Lab requires explicit provider linking and checks the confirmed provider subject under the same UID. Handle account-collision errors explicitly and safely. Provider configuration requires exact callback URLs and authorized development domains. Store OAuth provider secrets in Firebase Authentication.
 
 ### 8.2 Admission versus Firebase account creation
 
@@ -269,6 +269,7 @@ Required cases:
 
 - Existing email/password user links Google/Microsoft/GitHub and keeps the same UID and grants.
 - An OAuth identity with a different email can be linked after reauthentication.
+- Record a Firebase-verified provider subject only from a recently authenticated session that still passes admission. Enforce that binding on both application servers.
 - `auth/account-exists-with-different-credential` is explained; guide the user to the established sign-in method and subsequent linking.
 - If the target credential belongs to a different Firebase UID, **fail safely** and provide an Owner-assisted recovery path; never silently merge, delete or transfer grants.
 - Unlinking the last functioning sign-in method must be prohibited.

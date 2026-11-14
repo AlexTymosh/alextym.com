@@ -1,8 +1,17 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-12  
-**Status:** Foundation PR #243 is in progress. No Firebase or new access system is deployed; six-PR plan remains in force.
-**Current PR:** [#243](https://github.com/AlexTymosh/alextym.com/pull/243), branch `feat/portfolio-lab-foundation` (draft until all acceptance checks pass).
+**Updated:** 2026-11-14
+
+**Status:** Foundation PR #243 merged; PR #244 is in Firebase Identity verification. Production Portfolio Lab stays disabled; the six-PR plan remains in force.
+**Current PR:** [#244](https://github.com/AlexTymosh/alextym.com/pull/244), branch `feat/portfolio-firebase-identity` (do not merge until identity release gates pass).
+
+Dev provisioning, signed HTTPS sessions, password reset, replay and interruption
+repair were exercised across Vercel Preview, Render Free and live Firebase.
+The test Owner signed in in a browser, and Vercel returned `429` above the
+test branch's auth rate limit.
+See the [identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
+for the remaining live OAuth and direct-provider abuse checks. Stay on PR #244
+until the identity release gates pass.
 
 ## Authoritative documents
 
@@ -233,3 +242,76 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 5. Verify ADR, generic import/ownership guards, Fleet legacy access tests; run `task ci`, confirm all five GitHub CI jobs and update PR #243 before marking it ready for review. Do not merge before verification.
 
 **Next implementation branch after PR 1 is merged:** `feat/portfolio-firebase-identity`.
+## PR 2 active checkpoint — Firebase identity
+
+
+- Foundation PR #243 merged into `main` as `0389bf0e` on 2026-11-12.
+- Current working branch: `feat/portfolio-firebase-identity` (PR 2; do not reuse Foundation branch).
+- First PR 2 increment: feature-disabled-by-default Owner-only Firebase Auth client,
+  Next.js five-day server session cookie, separate direct FastAPI ID-token probe,
+  account-linking UI, negative tests and setup instructions.
+- This is **not** the full PR 2 acceptance gate. Missing: non-Owner invitation
+  admission, initial-password expiry and password setup, real OAuth provider tests,
+  and complete session/revocation/CSRF verification. Do not enable production Lab.
+- Config, examples and security gates: `docs/architecture/portfolio-lab-identity-setup.md`.
+- Run `npm install firebase firebase-admin` in frontend and `uv add 'firebase-admin>=7,<8'`
+  in backend; commit the two generated lockfiles. Run `task ci` before any PR.
+- Fleet legacy password remains unchanged until PR 5/6; never introduce a parallel
+  bypass or alter public Chat/RAG/Contact/Telegram routes in PR 2.
+
+## PR 2 incremental cross-host session transport
+
+- Firebase admin apps use the dedicated `portfolio-lab` name on both runtimes.
+- A Next.js BFF route `/lab/api/identity` now accepts the verified, revocable
+  website HttpOnly cookie, forwards it to a **fixed HTTPS** Render origin, and
+  verifies backend identity continuity. It never exposes the cookie to clients.
+- FastAPI accepts explicit `FirebaseSession` (BFF cookie) or `Bearer` (Firebase ID
+  token) schemes with separate, non-fallback verification, then checks Owner UID.
+- Negative backend tests and the disabled-feature Playwright test cover the
+  new transport; Firebase emulator/live-provider integration remains outstanding.
+- This remains Owner-only; invited-user admission and initial-password 1–90-day
+  lifecycle **must** be implemented/tested before PR #244 can merge.
+
+### PR 2 admission checkpoint — after cross-host transport
+
+- Implemented versioned Firestore UID admission contract and strict initial
+  credential expiry policy in both Next.js and FastAPI; policies share test cases.
+- Existing Owner UID is still the only admission bypass. No project grant is
+  provided by identity admission; Fleet stays on its legacy password until PR 5.
+- A Firestore read error rejects non-Owner identity; disabled/invited/missing
+  records are denied. Production Lab remains disabled by default.
+- Still needed before PR 2 merge: trusted provisioning and password setup/reset
+  transitions, reauthentication/linking edge cases and live provider smoke.
+## PR #244 — Owner-only initial-password provisioning increment
+
+- Third commit `231217dd` introduced durable admission and expiry policies.
+- This increment adds a development-only `scripts.provision_lab_identity` CLI for **new** email/password UIDs.
+- Provisioning begins with a disabled Firebase account; invited/active transitions are paired atomically with Firestore audit records. No public endpoint, email send or project grant.
+- See [Owner-only provisioning runbook](docs/architecture/portfolio-lab-provisioning.md).
+- **GitHub CI frontend failure at `231217dd`:** clean `npm ci` cannot resolve `@google-cloud/firestore`. Install it as an explicit frontend dependency and commit the updated package lockfile. Do not assume a local `task ci` catches clean-install failures.
+- Still outstanding: setup links, secure password reset/reconciliation, linked-provider recovery, live Firebase integration and OAuth tests. Keep production Lab disabled and PR #244 open.
+
+## PR #244 — Fifth identity increment: private setup/recovery links
+
+- Fourth commit `fbb212df` added Owner-only initial-password provisioning and explicit `@google-cloud/firestore` to the frontend lockfile. GitHub CI passed all five jobs.
+- New increment: Owner-only password setup link generator, Firebase action-code verification and server-side redemption; persistent UID admission is updated *only after* confirmed provider password change and token revocation.
+- New accounts stay `invited`/`password_state=none` until the action code is redeemed. No automatic mail and no project grants.
+- See `docs/architecture/portfolio-lab-identity-setup.md` for setup, caveats and recovery. Keep production Lab disabled.
+- Still required: live Firebase emulator/provider tests, OAuth collision/re-auth UX, account recovery/repair operations, abuse/rate-limit safeguards, and full security/production smoke before merging PR #244.
+
+## PR #244 — Sixth identity increment: password reset fail-closed isolation
+
+- Fifth commit `e2edc0de` added Owner-managed setup links, server-verified
+  Firebase reset-code redemption and password recovery UI. Its GitHub CI passed
+  all five jobs.
+- The sixth increment moves password-based admission to
+  `reset_pending` in an audited Firestore transaction **before** Firebase
+  accepts the new password. Completion requires token revocation and a second
+  audited transaction. Any crash or partial failure leaves password admission
+  closed, never incorrectly promoted to `user_set`.
+- Adds an explicit Owner-only repair CLI that revokes Firebase tokens and
+  conservatively moves `reset_pending` to `none`, requiring a new setup link.
+- The CLI's environment gate is not IAM. Dev Firebase integration tests,
+  actual OAuth/provider linking and collision scenarios, abuse controls and
+  end-to-end smoke remain mandatory. Keep production Lab disabled and PR #244
+  unmerged until verified.

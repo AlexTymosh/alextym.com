@@ -50,6 +50,25 @@ POST /api/telegram/webhook
 
 ---
 
+## Portfolio Lab identity preview
+
+`GET /api/lab/identity` accepts a Firebase ID token via `Authorization: Bearer`
+or a Firebase session cookie via `Authorization: FirebaseSession`. FastAPI
+validates the credential and current UID admission. A successful response includes
+the verified UID and `Cache-Control: no-store`.
+
+| Status | Meaning |
+| --- | --- |
+| 200 | Current identity admitted |
+| 401 | Credential missing, invalid, expired, disabled or revoked |
+| 403 | UID or sign-in credential not admitted |
+| 404 | Feature disabled |
+| 503 | Admission or configuration unavailable |
+
+Next.js `/lab/session`, `/lab/session/link`, `/lab/api/identity` and
+`/lab/password/reset/action` use the contracts in the
+[identity setup runbook](architecture/portfolio-lab-identity-setup.md).
+
 ## Internal Redis probe
 
 `POST /internal/probes/redis` is outside the public `/api` prefix and hidden from
