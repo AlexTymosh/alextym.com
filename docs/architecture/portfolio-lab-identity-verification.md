@@ -10,7 +10,7 @@ This record covers Identity, UID admission and session transport.
 | --- | --- |
 | Firebase | [Portfolio Lab Dev](https://console.firebase.google.com/project/portfolio-lab-dev/overview), Spark, one Web App, Email/Password enabled |
 | Firestore | Standard, `(default)`, `europe-west2`, deny-all client rules equivalent to the committed rules |
-| Firebase Auth settings | Email enumeration protection enabled. Create separate accounts for different providers using the same email. The exact Vercel branch alias is an authorized domain. |
+| Firebase Auth settings | Email enumeration protection enabled. Create separate accounts for different providers using the same email. The exact Vercel branch alias is an authorized domain. The console confirms a dev project quota of 120 Identity Toolkit queries per minute. |
 | Render | [Portfolio Lab dev](https://dashboard.render.com/web/srv-dbrp90rrjlhs73c3p340), Docker Free in Frankfurt, branch `feat/portfolio-firebase-identity`, manual deploys, `/api/health/live` |
 | Vercel | [PR branch preview](https://alextym-com-git-feat-portfolio-firebase-identity-alextym.vercel.app), standard Vercel Authentication. Branch-scoped Firebase values, the exact HTTPS application origin, the dev Render origin, and `NODE_OPTIONS=--experimental-require-module`. |
 | IAM | Separate custom roles for the two dev runtimes. Render reads Auth user records and Firestore documents. Vercel additionally issues sessions, revokes tokens, and creates or updates Firestore documents in transactions. |
@@ -45,9 +45,14 @@ Register GitHub and Microsoft OAuth applications for the dev project only.
 Use Firebase's exact provider callback
 `https://portfolio-lab-dev.firebaseapp.com/__/auth/handler`.
 Enter the client secrets in Firebase Authentication. Google requires an
-approved support email visible on its consent screen. The Google Cloud and
-Firebase selectors did not offer the approved address. Test Microsoft with a
-permitted test account because tenant policy can block consent. See the
+approved support email visible on its consent screen. The project administrator
+has granted the designated support account only the project's OAuth Config
+Editor role; switch to that account in a separate browser profile before
+configuring Branding. Keep the OAuth audience in Testing. GitHub registration
+requires access to the account's developer settings. The Microsoft account
+available during verification could not access an Entra tenant with app
+registration rights. Use an existing eligible tenant within the free tier.
+See the [GitHub app registration guide](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app),
 [Google branding requirements](https://support.google.com/cloud/answer/15544987?hl=en)
 and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
 
@@ -61,7 +66,7 @@ and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identi
 | High | A change between Auth enablement and Firestore activation could overwrite a disabled or changed invitation. | Activation runs in a Firestore transaction and rechecks the original UID, inviter, state and provisioning time. |
 | Medium | Firebase revocation timestamps use second precision. | Admission after reset or repair requires authentication in a later second. Both hosts also check the Firebase revocation and disabled-user state. [Firebase session management](https://firebase.google.com/docs/auth/admin/manage-sessions) |
 | Medium | An exact Origin check can fail behind an adapter that reconstructs the request URL. | Hosted Next.js uses a configured HTTPS origin. The route rejects an absent or mismatched Origin, even when client-provided forwarding headers match it. |
-| Medium | Direct Firebase sign-in and Next.js reset endpoints have different abuse surfaces. | Firebase reports the same error for wrong passwords and unknown emails. Next.js bounds JSON bodies, checks the digest before Firebase, and returns generic errors. Configure and verify shared short-window rate limits for hosted session exchange and password reset before enabling public access. Confirm Identity Toolkit quotas separately. [Firebase security checklist](https://firebase.google.com/support/guides/security-checklist) |
+| Medium | Direct Firebase sign-in and Next.js reset endpoints have different abuse surfaces. | Firebase reports the same error for wrong passwords and unknown emails. Next.js bounds JSON bodies, checks the code tag before Firebase, and returns generic errors. Vercel limits the three auth POST routes on the dev alias to 20 per IP per minute. The separate Firebase dev quota is 120 queries per minute across the project. This project-wide ceiling cannot isolate one abusive client. [Firebase API keys and quotas](https://firebase.google.com/docs/projects/api-keys) |
 | Medium | The default Vercel runtime could not load Firebase Admin Auth. | Enabled `require(esm)` for this Preview branch. The Auth module loads only after the Lab feature gate. Verified the hosted session exchange and password reset after redeploy. |
 | Medium | Requests sent to an alternate Vercel deployment hostname could evade a preview-alias rate limit. | Lab POST and DELETE require the configured Origin and its actual `Host` on Vercel. The WAF rule can match the exact preview alias and `preview` environment. |
 
@@ -71,14 +76,29 @@ and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identi
 | --- | --- |
 | Baseline `c13e972` | GitHub Actions passed all five jobs and CodeQL. Vercel Preview reached READY. Local `task ci` passed. |
 | Render dev baseline | The `c13e972` deploy reached Live. Liveness returned HTTP 200, and the disabled Lab identity endpoint returned HTTP 404. |
+| Security candidate `1689cc2` | [GitHub Actions](https://github.com/AlexTymosh/alextym.com/actions/runs/43620062596) 5/5 and [CodeQL](https://github.com/AlexTymosh/alextym.com/runs/132523662280) passed. Vercel and Render deployed the same commit. Local `task frontend:check` passed (308 Playwright tests) with `require(esm)` disabled. The npm production dependency audit reported zero vulnerabilities. |
 | Live Firebase, local application hosts | PASS: signed ID tokens and five-day session cookie; unknown UID denied; initial password reusable before expiry and denied after expiry; valid session passed Next.js BFF to FastAPI. No credential, wrong scheme and forged signature denied on FastAPI. Hostile Origin denied even with spoofed forwarding headers. |
 | Live Firebase, provisioning and reset | PASS: Owner-initiated provisioning, no-email private setup link, stale link and wrong UID denied. Two concurrent reset requests returned HTTP 200 and 400; replay denied; Firestore reached `user_set`; the new password worked and the old session was rejected. With an injected `reset_pending` state, password access was denied on both hosts; the repair CLI and a fresh link restored the UID. A disabled Auth user was denied on both hosts. |
 | Live Firebase, IAM and rules | PASS: Render role read Auth and Firestore, and Firestore write was denied. Vercel role issued a session and could not generate setup links. Unauthenticated and authenticated client reads and client writes were denied by Firestore. Wrong password and unknown email returned the same `INVALID_LOGIN_CREDENTIALS`. |
 | Local hosts with Firebase Emulator Suite | PASS: pinned Owner password and session, independent FastAPI credentials, cookie transport, unknown UID, initial-password setup and expiry, emulated OAuth binding and conflict, private link and replay, concurrent resets, disabled account, repair and reissue, and deny-all rules. The simulated interruption was injected as a Firestore state. |
-| Live OAuth | Pending Google, GitHub and Microsoft consent, sign-in, different-email linking and conflicts with test accounts. Emulator identity proofs do not establish this gate. |
-| Hosted Firebase sessions (`c394e90`) | PASS for a fictional invitee: Vercel issued a five-day cookie with `Secure`, `HttpOnly`, `SameSite=Strict`, and host-only scope. Render accepted a valid bearer token and the signed cookie via the Next.js BFF. Missing credentials, a mismatched Origin and an expired initial password were denied. The interactive pinned Owner login is a separate check. |
-| Hosted recovery (`c394e90`) | PASS: two concurrent reset requests returned 200 and 400. Replay, stale link and wrong UID were denied. The new password worked; the old token and session were rejected. An injected `reset_pending` blocked password access on both hosts; repair and reissue restored access. A disabled Firebase user was denied on both hosts. No email was sent. |
-| Serverless interruption and abuse | Hosted recovery from an injected interruption passed; the test did not kill a real invocation. A preview-only WAF rule is prepared; its enforcement still needs verification. |
+| Live OAuth | Google Branding requires the designated support account. GitHub OAuth application registration was blocked by browser access approval; the Microsoft account had no suitable Entra tenant. Google, GitHub and Microsoft consent, different-email linking and conflicts with live test accounts remain release gates. Emulator proofs do not satisfy them. |
+| Hosted Firebase sessions (`c394e90`, `1689cc2`) | PASS: the pinned test Owner signed in to the protected preview. Vercel issued an invitee a five-day cookie with `Secure`, `HttpOnly`, `SameSite=Strict`, and host-only scope. Render accepted a valid bearer token and the forwarded cookie. Both hosts denied a valid but unknown UID and a forged credential. Vercel denied missing or hostile Origin and rejected a mutation on the alternate deployment hostname. Both hosts denied an expired five-minute test session. Vercel rejected an otherwise valid ID token when authentication was older than five minutes. |
+| Hosted recovery (`1689cc2`) | PASS after enabling the WAF and lowering the Firebase quota: two concurrent reset requests returned 200 and 400. Replay, stale link and wrong UID were denied. The new password worked; the old token and session were rejected. An injected `reset_pending` blocked password access on both hosts; repair and reissue restored access. A disabled Firebase user was denied on both hosts. No email was sent. |
+| Serverless interruption and abuse | Hosted recovery from an injected interruption passed; the test did not kill a real invocation. PASS: 27 empty POST requests produced 20 application responses and seven WAF `429` responses; a control GET retained its normal `401`. WAF analytics attributed all seven blocks to the dev rule. The fixed window is per Vercel region. |
+| Direct Firebase reset provider | PASS: issuing a new code invalidated the earlier provider code, and redeeming the new code invalidated replay. The direct Firebase endpoint can consume a valid code; it cannot set the Lab password state or grant access. |
+
+The two dev runtime certificates expire on 2026-11-21; renew both before
+continuing hosted verification after that date. The temporary operator
+certificate expires on 2026-11-15. Render also has an unused, older key without
+an expiry; the running service uses the new certificate. Confirm retirement
+of the old key separately. Store private keys in the hosts' secret stores.
+
+The production login route returned HTTP 404. The branch preview uses standard
+Vercel Authentication. The automated tests used its existing project OIDC
+policy. The project has no persistent automation bypass key.
+
+Keep PR #244 open until real provider sign-in, linking with different emails,
+and collisions are verified. Use only fictional identities for these tests.
 
 ## Local emulator reproduction
 

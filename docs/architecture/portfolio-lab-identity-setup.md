@@ -271,10 +271,10 @@ initial-password rule. To recover an expired/consumed link, issue a new one.
   passwords, reset codes or URLs.
 - Client-side code cannot directly change `password_state`. The Admin SDK
   bypasses client Firestore rules; service credentials and IAM must be protected.
-- Rate limiting is still dependent on Firebase code throttling for this
-  unauthenticated route. Before public rollout, add an external shared
-  rate-limit budget and abuse monitoring. Do not rely on an in-memory
-  serverless limiter.
+- The dev preview uses a Vercel WAF rule for a shared per-IP limit on auth
+  POST routes. Calls directly to Firebase use separate provider limits. Set
+  and verify limits for the deployment before public rollout. Do not rely
+  on an in-memory serverless limiter.
 - Existing Firebase links handled outside this controlled route do **not**
   move `password_state` to `user_set`; the Owner must generate a new controlled
   link or perform a verified recovery action.

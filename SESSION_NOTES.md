@@ -7,8 +7,10 @@
 
 Dev provisioning, signed HTTPS sessions, password reset, replay and interruption
 repair were exercised across Vercel Preview, Render Free and live Firebase.
+The test Owner signed in in a browser, and Vercel returned `429` above the
+test branch's auth rate limit.
 See the [identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
-for the remaining Owner, live OAuth and abuse-control checks. Stay on PR #244
+for the remaining live OAuth and direct-provider abuse checks. Stay on PR #244
 until the identity release gates pass.
 
 ## Authoritative documents
