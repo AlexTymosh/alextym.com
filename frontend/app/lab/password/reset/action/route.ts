@@ -1,7 +1,9 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getLabAdminAuth, getOwnerUid, isLabEnabled } from "../../../../../lib/portfolio-lab/firebase-server";
 import { hasSameOrigin } from "../../../../../lib/portfolio-lab/session-origin";
+import { hasLabJsonContent, readLabJson } from "../../../../../lib/portfolio-lab/request-json";
 import {
   completePasswordReset,
   eligibleForPasswordRecovery,
@@ -9,10 +11,12 @@ import {
   type ResetCodeCheck,
   validNewPassword,
   validResetCode,
+  validResetUid,
 } from "../../../../../lib/portfolio-lab/password-recovery-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function reply(status: number, message: string) {
   return NextResponse.json({ message }, {
@@ -21,10 +25,17 @@ function reply(status: number, message: string) {
   });
 }
 
-/** Only the pinned Firebase project API key is ever used; no caller-supplied URL. */
-async function resetCodeRequest(apiKey: string, data: object): Promise<ResetCodeCheck | null> {
+/** Use the configured project API key for the fixed Identity Toolkit endpoint. */
+async function resetCodeRequest(
+  apiKey: string, data: object, confirmation = false,
+): Promise<ResetCodeCheck | null> {
+  // getLabAdminAuth() validates the local emulator configuration before this call.
+  const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  const endpoint = emulatorHost
+    ? `http://${emulatorHost}/identitytoolkit.googleapis.com`
+    : "https://identitytoolkit.googleapis.com";
   const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=${encodeURIComponent(apiKey)}`,
+    `${endpoint}/v1/accounts:resetPassword?key=${encodeURIComponent(apiKey)}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -38,49 +49,26 @@ async function resetCodeRequest(apiKey: string, data: object): Promise<ResetCode
   if (response.status === 400) return null;
   if (!response.ok) throw new Error("Identity provider unavailable");
   const body: unknown = await response.json();
-  if (!body || typeof body !== "object" || !("email" in body) ||
-      !("requestType" in body) || typeof body.email !== "string" ||
-      typeof body.requestType !== "string") return null;
-  return { email: body.email, requestType: body.requestType };
+  if (!body || typeof body !== "object" || !("email" in body) || typeof body.email !== "string") {
+    return null;
+  }
+  const requestType = "requestType" in body
+    ? body.requestType
+    : confirmation ? "PASSWORD_RESET" : undefined;
+  return typeof requestType === "string" ? { email: body.email, requestType } : null;
 }
 
 export async function POST(request: NextRequest) {
   if (!isLabEnabled()) return reply(404, "Not found");
-  if (!hasSameOrigin(request) || !request.headers.get("content-type")?.startsWith("application/json")) {
+  if (!hasSameOrigin(request) || !hasLabJsonContent(request)) {
     return reply(403, "Invalid request origin");
   }
-  if (Number(request.headers.get("content-length") || 0) > 10_000) {
-    return reply(413, "Request too large");
-  }
-  let body: unknown;
-  try {
-    const reader = request.body?.getReader();
-    if (!reader) return reply(400, "Invalid request");
-    const decoder = new TextDecoder();
-    let raw = "";
-    let bytes = 0;
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      bytes += chunk.value.byteLength;
-      if (bytes > 10_000) {
-        await reader.cancel();
-        return reply(413, "Request too large");
-      }
-      raw += decoder.decode(chunk.value, { stream: true });
-    }
-    raw += decoder.decode();
-    body = JSON.parse(raw);
-  } catch {
-    return reply(400, "Invalid request");
-  }
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return reply(400, "Invalid request");
-  }
-  const payload = body as Record<string, unknown>;
-  const oobCode = payload.oobCode;
-  const newPassword = payload.newPassword;
-  if (!validResetCode(oobCode) || !validNewPassword(newPassword)) {
+  const body = await readLabJson(request, 10_000);
+  if (body === "too_large") return reply(413, "Request too large");
+  const uid = body?.uid;
+  const oobCode = body?.oobCode;
+  const newPassword = body?.newPassword;
+  if (!validResetUid(uid) || !validResetCode(oobCode) || !validNewPassword(newPassword)) {
     return reply(400, "Invalid code or password");
   }
 
@@ -95,30 +83,48 @@ export async function POST(request: NextRequest) {
   try {
     const auth = getLabAdminAuth();
     const db = getFirestore(auth.app);
+    const digest = createHash("sha256").update(oobCode).digest();
+    const codeMatches = (record: unknown) => {
+      const stored = (record as { password_setup_code_digest?: unknown } | null)
+        ?.password_setup_code_digest;
+      return typeof stored === "string" && /^[a-f0-9]{64}$/.test(stored) &&
+        timingSafeEqual(digest, Buffer.from(stored, "hex"));
+    };
     const result = await completePasswordReset({
       inspect: (code) => resetCodeRequest(apiKey, { oobCode: code }),
-      confirm: (code, password) => resetCodeRequest(apiKey, { oobCode: code, newPassword: password }),
-      lookupUser: async (email) => {
-        const user = await auth.getUserByEmail(email);
-        return { uid: user.uid, email: user.email || "", disabled: user.disabled };
+      confirm: (code, password) => resetCodeRequest(
+        apiKey, { oobCode: code, newPassword: password }, true,
+      ),
+      lookupUser: async (uid) => {
+        try {
+          const user = await auth.getUser(uid);
+          return { uid: user.uid, email: user.email || "", disabled: user.disabled };
+        } catch (error) {
+          if ((error as { code?: string }).code === "auth/user-not-found") return null;
+          throw error;
+        }
       },
       loadRecord: async (uid) => {
         const snapshot = await db.collection("portfolio_lab_identities").doc(uid).get();
         return snapshot.exists ? snapshot.data() : null;
       },
+      codeMatches,
       begin: async (uid) => {
         const identity = db.collection("portfolio_lab_identities").doc(uid);
         const event = db.collection("portfolio_lab_invitation_events").doc();
-        await db.runTransaction(async (transaction) => {
+        return db.runTransaction(async (transaction) => {
           const snapshot = await transaction.get(identity);
+          const record = snapshot.data();
           if (!eligibleForPasswordRecovery(
-            uid, ownerUid, snapshot.exists ? snapshot.data() : null,
-          )) throw new Error("Recovery admission changed or reset already pending");
+            uid, ownerUid, record,
+          ) || !codeMatches(record)) return null;
           const now = Date.now();
           // Lock password-based admission BEFORE the Firebase password changes.
           transaction.update(identity, {
             password_state: "reset_pending",
             password_reset_started_at_ms: now,
+            password_reset_operation_id: event.id,
+            password_setup_code_digest: FieldValue.delete(),
           });
           transaction.create(event, {
             schema_version: 1,
@@ -126,16 +132,17 @@ export async function POST(request: NextRequest) {
             action: "password_reset_started",
             created_at_ms: now,
           });
+          return event.id;
         });
       },
       revoke: (uid) => auth.revokeRefreshTokens(uid),
-      commit: async (uid) => {
+      commit: async (uid, operationId) => {
         const identity = db.collection("portfolio_lab_identities").doc(uid);
         const event = db.collection("portfolio_lab_invitation_events").doc();
         await db.runTransaction(async (transaction) => {
           const snapshot = await transaction.get(identity);
           if (!eligibleForPasswordCompletion(
-            uid, ownerUid, snapshot.exists ? snapshot.data() : null,
+            uid, ownerUid, snapshot.exists ? snapshot.data() : null, operationId,
           )) throw new Error("Password reset state changed during confirmation");
           const now = Date.now();
           transaction.update(identity, {
@@ -143,6 +150,7 @@ export async function POST(request: NextRequest) {
             password_state: "user_set",
             initial_password_expires_at_ms: FieldValue.delete(),
             password_reset_started_at_ms: FieldValue.delete(),
+            password_reset_operation_id: FieldValue.delete(),
             password_changed_at_ms: now,
           });
           transaction.create(event, {
@@ -153,7 +161,7 @@ export async function POST(request: NextRequest) {
           });
         });
       },
-    }, oobCode, newPassword, ownerUid);
+    }, uid, oobCode, newPassword, ownerUid);
     if (result === "invalid") return reply(400, "Link invalid or expired; request a new one");
     return reply(200, "Password updated. Sign in using your new password.");
   } catch {

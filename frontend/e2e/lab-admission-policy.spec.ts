@@ -12,6 +12,8 @@ test.describe("Portfolio Lab admission parity", () => {
           entry.provider,
           entry.record,
           entry.now_ms,
+          entry.auth_time,
+          entry.subject,
         ),
       ).toBe(entry.want);
     });

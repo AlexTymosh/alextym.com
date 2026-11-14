@@ -46,9 +46,10 @@ class FakeStore:
         self.calls.append("load")
         return self.record
 
-    def mark_password_unavailable(self, uid, owner, now):
+    def mark_password_unavailable(self, uid, owner, now, pending_record):
         self.calls.append("repair")
         assert (uid, owner, now) == (UID, OWNER, 1_800_000_000_000)
+        assert pending_record["password_state"] == "reset_pending"
         self.record["password_state"] = "none"
 
 
@@ -189,7 +190,9 @@ def test_firestore_repair_revalidates_state_and_audits_atomically(monkeypatch):
             return self.tx
 
     client = Client()
-    FirestoreResetRepairStore(client).mark_password_unavailable(UID, OWNER, 1_800_000_000_000)
+    FirestoreResetRepairStore(client).mark_password_unavailable(
+        UID, OWNER, 1_800_000_000_000, RECORD
+    )
     assert len(client.tx.actions) == 2
     update, audit = client.tx.actions
     assert update[0:2] == ("update", "portfolio_lab_identities")
@@ -243,4 +246,6 @@ def test_repair_transaction_rejects_changed_record(monkeypatch):
             return Transaction()
 
     with pytest.raises(ProvisioningError, match="changed"):
-        FirestoreResetRepairStore(Client()).mark_password_unavailable(UID, OWNER, 1_800_000_000_000)
+        FirestoreResetRepairStore(Client()).mark_password_unavailable(
+            UID, OWNER, 1_800_000_000_000, RECORD
+        )

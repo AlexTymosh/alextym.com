@@ -58,7 +58,11 @@ def test_verified_other_user_cannot_assume_owner(monkeypatch) -> None:
 def test_only_verified_pinned_owner_is_admitted(monkeypatch) -> None:
     monkeypatch.setenv("PORTFOLIO_LAB_ENABLED", "true")
     monkeypatch.setenv("PORTFOLIO_LAB_OWNER_UID", "owner-uid")
-    monkeypatch.setattr(firebase_identity, "verify_id_token", lambda token: {"uid": "owner-uid"})
+    monkeypatch.setattr(
+        firebase_identity,
+        "verify_id_token",
+        lambda token: {"uid": "owner-uid", "firebase": {"sign_in_provider": "password"}},
+    )
     with client() as browser:
         response = browser.get(
             "/api/lab/identity", headers={"Authorization": "Bearer valid-synthetic"}

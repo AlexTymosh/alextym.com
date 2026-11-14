@@ -1,8 +1,13 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-12  
-**Status:** Foundation PR #243 merged; PR #244 implementing Firebase Identity. No Portfolio Lab authorization is deployed; six-PR plan remains in force.
+**Updated:** 2026-11-14
+
+**Status:** Foundation PR #243 merged; PR #244 is in Firebase Identity verification. Production Portfolio Lab stays disabled; the six-PR plan remains in force.
 **Current PR:** [#244](https://github.com/AlexTymosh/alextym.com/pull/244), branch `feat/portfolio-firebase-identity` (do not merge until identity release gates pass).
+
+Dev provisioning, password reset, replay and interruption repair were exercised
+against live Firebase using local hosts. See the [identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
+for the hosted session, OAuth and abuse-control gates. Stay on PR #244 until those gates pass.
 
 ## Authoritative documents
 

@@ -21,7 +21,9 @@ class ResetRepairAuth(Protocol):
 class ResetRepairStore(Protocol):
     def load(self, uid: str) -> dict | None: ...
 
-    def mark_password_unavailable(self, uid: str, actor_uid: str, now_ms: int) -> None: ...
+    def mark_password_unavailable(
+        self, uid: str, actor_uid: str, now_ms: int, pending_record: dict
+    ) -> None: ...
 
 
 def is_repairable_pending_reset(uid: str, owner_uid: str, record: Any) -> bool:
@@ -57,13 +59,14 @@ def repair_interrupted_reset(
     if type(now_ms) is not int or not 0 < now_ms < 8_640_000_000_000_000:
         raise ValueError("Invalid trusted timestamp")
     try:
-        if not is_repairable_pending_reset(uid, owner_uid, identity_store.load(uid)):
+        pending_record = identity_store.load(uid)
+        if not is_repairable_pending_reset(uid, owner_uid, pending_record):
             raise ProvisioningError("Only a pending non-Owner identity can be repaired")
         user = auth_client.get_user(uid)
         if user.disabled or user.uid != uid:
             raise ProvisioningError("Firebase user must exist and be enabled")
         auth_client.revoke_refresh_tokens(uid)
-        identity_store.mark_password_unavailable(uid, owner_uid, now_ms)
+        identity_store.mark_password_unavailable(uid, owner_uid, now_ms, pending_record)
     except ProvisioningError:
         raise
     except Exception as exc:
@@ -83,7 +86,9 @@ class FirestoreResetRepairStore:
         snapshot = self._identity(uid).get(timeout=5.0)
         return snapshot.to_dict() if snapshot.exists else None
 
-    def mark_password_unavailable(self, uid: str, actor_uid: str, now_ms: int) -> None:
+    def mark_password_unavailable(
+        self, uid: str, actor_uid: str, now_ms: int, pending_record: dict
+    ) -> None:
         from google.cloud import firestore as google_firestore
 
         identity = self._identity(uid)
@@ -92,8 +97,10 @@ class FirestoreResetRepairStore:
         @google_firestore.transactional
         def write(transaction):
             snapshot = identity.get(transaction=transaction)
-            if not is_repairable_pending_reset(
-                uid, actor_uid, snapshot.to_dict() if snapshot.exists else None
+            record = snapshot.to_dict() if snapshot.exists else None
+            if not is_repairable_pending_reset(uid, actor_uid, record) or any(
+                record.get(field) != pending_record.get(field)
+                for field in ("password_reset_operation_id", "password_reset_started_at_ms")
             ):
                 raise ProvisioningError("Pending reset changed; no repair was applied")
             transaction.update(
@@ -101,6 +108,8 @@ class FirestoreResetRepairStore:
                 {
                     "password_state": "none",
                     "password_reset_started_at_ms": google_firestore.DELETE_FIELD,
+                    "password_reset_operation_id": google_firestore.DELETE_FIELD,
+                    "password_setup_code_digest": google_firestore.DELETE_FIELD,
                     "password_reset_repaired_at_ms": now_ms,
                 },
             )

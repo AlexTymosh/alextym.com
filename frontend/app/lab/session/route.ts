@@ -8,6 +8,8 @@ import {
 } from "../../../lib/portfolio-lab/firebase-server";
 import { hasSameOrigin } from "../../../lib/portfolio-lab/session-origin";
 import { getLabAdmissionDecision } from "../../../lib/portfolio-lab/lab-admission-server";
+import { hasLabJsonContent, readLabJson } from "../../../lib/portfolio-lab/request-json";
+import { isRecentLabLogin } from "../../../lib/portfolio-lab/session-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,19 +27,21 @@ const cookieOptions = {
 
 export async function POST(request: NextRequest) {
   if (!isLabEnabled()) return json({ error: "Not found" }, 404);
-  if (!hasSameOrigin(request) || !request.headers.get("content-type")?.startsWith("application/json")) {
+  if (!hasSameOrigin(request) || !hasLabJsonContent(request)) {
     return json({ error: "Invalid request origin or content type" }, 403);
   }
   const ownerUid = getOwnerUid();
   if (!ownerUid) return json({ error: "Lab unavailable" }, 503);
-  const body = await request.json().catch(() => null);
-  const idToken = body && typeof body.idToken === "string" ? body.idToken : "";
-  if (!idToken || idToken.length > 8192) return json({ error: "Invalid token" }, 400);
+  const body = await readLabJson(request, 10_000);
+  if (body === "too_large") return json({ error: "Request too large" }, 413);
+  const idToken = body?.idToken;
+  if (typeof idToken !== "string" || !idToken || idToken.length > 8192) {
+    return json({ error: "Invalid token" }, 400);
+  }
   try {
     const admin = getLabAdminAuth();
     const decoded = await admin.verifyIdToken(idToken, true);
-    const now = Date.now() / 1000;
-    if (typeof decoded.auth_time !== "number" || now - decoded.auth_time > 300 || decoded.auth_time > now + 60) {
+    if (!isRecentLabLogin(decoded.auth_time)) {
       return json({ error: "Recent login required" }, 403);
     }
     let admission;
@@ -74,7 +78,7 @@ export async function GET(request: NextRequest) {
   } catch {
     return json({ authenticated: false }, 503);
   }
-  return json({ authenticated: true }, 200);
+  return json({ authenticated: true, canLink: isRecentLabLogin(decoded.auth_time) }, 200);
 }
 
 export async function DELETE(request: NextRequest) {

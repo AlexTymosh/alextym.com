@@ -26,7 +26,7 @@ def test_session_cookie_is_independently_verified(monkeypatch) -> None:
 
     def verify_session(cookie):
         received.append(cookie)
-        return {"uid": "owner-uid"}
+        return {"uid": "owner-uid", "firebase": {"sign_in_provider": "password"}}
 
     monkeypatch.setattr(firebase_identity, "verify_session_cookie", verify_session)
     with make_client() as browser:

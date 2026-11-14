@@ -28,6 +28,8 @@ def test_shared_admission_contract(case) -> None:
             case["provider"],
             case["record"],
             case["now_ms"],
+            case.get("auth_time"),
+            case.get("subject"),
         )
         == case["want"]
     )

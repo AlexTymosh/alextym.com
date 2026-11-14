@@ -174,9 +174,24 @@ def test_one_day_expiration_is_exact() -> None:
 
 
 class FakeFirestoreDocument:
+    record = {
+        "uid": "new-uid",
+        "schema_version": 1,
+        "status": "invited",
+        "password_state": "initial",
+        "provisioned_at_ms": 456,
+        "provisioned_by_uid": "owner",
+    }
+
     def __init__(self, collection: str, uid: str) -> None:
         self.collection = collection
         self.uid = uid
+
+    def get(self, *, transaction):
+        return self
+
+    def to_dict(self):
+        return self.record.copy()
 
 
 class FakeFirestoreCollection:
@@ -214,10 +229,23 @@ class FakeFirestoreClient:
         self.batches.append(batch)
         return batch
 
+    def transaction(self):
+        return self.batch()
 
-def test_firestore_identity_state_and_audit_are_committed_in_same_batch() -> None:
+
+def test_firestore_identity_state_and_audit_are_committed_together(monkeypatch) -> None:
+    from google.cloud import firestore
+
     from app.security.lab_provisioning import FirestoreIdentityStore
 
+    def transactional(write):
+        def commit(transaction):
+            write(transaction)
+            transaction.commit()
+
+        return commit
+
+    monkeypatch.setattr(firestore, "transactional", transactional)
     client = FakeFirestoreClient()
     store = FirestoreIdentityStore(client)
     store.create_invited("new-uid", {"uid": "new-uid", "provisioned_at_ms": 123}, "owner")
@@ -232,3 +260,15 @@ def test_firestore_identity_state_and_audit_are_committed_in_same_batch() -> Non
     assert second.actions[0][3]["status"] == "active"
     assert second.actions[1][3]["actor_uid"] == "owner"
     assert not any("grant" in action[1] for batch in client.batches for action in batch.actions)
+
+    monkeypatch.setattr(
+        FakeFirestoreDocument,
+        "record",
+        {
+            **FakeFirestoreDocument.record,
+            "status": "disabled",
+        },
+    )
+    with pytest.raises(ProvisioningError, match="changed"):
+        store.activate("new-uid", 456, "owner")
+    assert not client.batches[-1].actions

@@ -167,18 +167,35 @@ class FirestoreIdentityStore:
         batch.commit()
 
     def activate(self, uid: str, activated_at_ms: int, actor_uid: str) -> None:
+        from google.cloud import firestore as google_firestore
+
         identity = self.client.collection("portfolio_lab_identities").document(uid)
         event = self.client.collection("portfolio_lab_invitation_events").document(str(uuid4()))
-        batch = self.client.batch()
-        batch.update(identity, {"status": "active", "activated_at_ms": activated_at_ms})
-        batch.create(
-            event,
-            {
-                "schema_version": 1,
-                "uid": uid,
-                "actor_uid": actor_uid,
-                "action": "initial_password_identity_activated",
-                "created_at_ms": activated_at_ms,
-            },
-        )
-        batch.commit()
+
+        @google_firestore.transactional
+        def write(transaction):
+            snapshot = identity.get(transaction=transaction)
+            record = snapshot.to_dict() or {}
+            if (
+                type(record.get("schema_version")) is not int
+                or record["schema_version"] != 1
+                or record.get("uid") != uid
+                or record.get("status") != "invited"
+                or record.get("password_state") != "initial"
+                or record.get("provisioned_by_uid") != actor_uid
+                or record.get("provisioned_at_ms") != activated_at_ms
+            ):
+                raise ProvisioningError("Invitation changed before activation")
+            transaction.update(identity, {"status": "active", "activated_at_ms": activated_at_ms})
+            transaction.create(
+                event,
+                {
+                    "schema_version": 1,
+                    "uid": uid,
+                    "actor_uid": actor_uid,
+                    "action": "initial_password_identity_activated",
+                    "created_at_ms": activated_at_ms,
+                },
+            )
+
+        write(self.client.transaction())

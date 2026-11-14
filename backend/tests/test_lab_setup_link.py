@@ -19,8 +19,12 @@ def test_reset_code_transferred_into_fragment_not_http_query() -> None:
     link = build_private_action_link(
         "https://project.firebaseapp.com/__/auth/action?mode=resetPassword&apiKey=public&oobCode=abcDEF123_-1",
         "https://preview.example.test",
+        "firebase-uid",
     )
-    assert link == "https://preview.example.test/lab/password/reset#oobCode=abcDEF123_-1"
+    assert (
+        link
+        == "https://preview.example.test/lab/password/reset#uid=firebase-uid&oobCode=abcDEF123_-1"
+    )
     assert "?" not in link
 
 
@@ -40,18 +44,19 @@ def test_untrusted_origin_rejected(origin: str) -> None:
         build_private_action_link(
             "https://project.firebaseapp.com/x?mode=resetPassword&oobCode=abcdefghijklmn",
             origin,
+            "firebase-uid",
         )
 
 
 def test_local_http_only_when_explicitly_allowed() -> None:
     src = "https://project.firebaseapp.com/x?mode=resetPassword&oobCode=abcdefghijklmn"
     with pytest.raises(ValueError):
-        build_private_action_link(src, "http://localhost:3000")
+        build_private_action_link(src, "http://localhost:3000", "firebase-uid")
     assert build_private_action_link(
-        src, "http://localhost:3000", allow_http_local=True
+        src, "http://localhost:3000", "firebase-uid", allow_http_local=True
     ).startswith("http://localhost:3000/lab/password/reset#")
     with pytest.raises(ValueError):
-        build_private_action_link(src, "http://evil.test", allow_http_local=True)
+        build_private_action_link(src, "http://evil.test", "firebase-uid", allow_http_local=True)
 
 
 @pytest.mark.parametrize(
@@ -66,7 +71,7 @@ def test_local_http_only_when_explicitly_allowed() -> None:
 )
 def test_unsafe_reset_codes_rejected(source: str) -> None:
     with pytest.raises(ProvisioningError):
-        build_private_action_link(source, "https://preview.example.test")
+        build_private_action_link(source, "https://preview.example.test", "firebase-uid")
 
 
 class FakeAuth:

@@ -52,4 +52,6 @@ The example address is a placeholder and must be replaced by an address controll
 
 If Firestore cannot be written after account creation, the script attempts to delete the newly created, disabled Firebase user. A failed delete can leave a disabled orphan requiring manual investigation. A failure after Auth enablement can leave the durable identity `invited`; an ambiguous last Firestore commit requires a manual UID and audit check **before** giving the password to the user. Never rerun the command to overwrite an existing Firebase email/UID.
 
-Before production release, implement self-service setup links, trusted password-change completion, idempotent reconciliation, Owner dashboard, invitation status and notification choices, comprehensive Firebase emulator tests, and real-provider smoke. This development CLI is not a substitute for those features.
+For private setup links and interrupted resets, use the companion commands in the
+[identity setup runbook](portfolio-lab-identity-setup.md). Check the
+[verification record](portfolio-lab-identity-verification.md) before enabling hosted admission.

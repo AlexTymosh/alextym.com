@@ -10,7 +10,6 @@ import argparse
 import os
 import sys
 import time
-from uuid import uuid4
 
 from app.security.lab_provisioning import (
     ProvisioningError,
@@ -43,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         build_private_action_link(
             "https://example.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=" + "a" * 20,
             args.origin,
+            "dry-run",
             allow_http_local=os.getenv("PORTFOLIO_LAB_ALLOW_LOCAL_HTTP") == "true",
         )
     except (ValueError, ProvisioningError) as exc:
@@ -68,42 +68,39 @@ def main(argv: list[str] | None = None) -> int:
         app = _firebase_app()
         client = _AuthClient(auth, app)
         store = firestore.client(app=app)
+        setup_store = FirestoreSetupIdentityStore(store)
         now = int(time.time() * 1000)
         if args.create_user:
             identity = create_setup_identity(
                 auth_client=client,
-                identity_store=FirestoreSetupIdentityStore(store),
+                identity_store=setup_store,
                 actor_uid=owner_uid,
                 email=email,
                 now_ms=now,
             )
-            uid = identity.uid
+            user = auth.get_user(identity.uid, app=app)
         else:
             user = auth.get_user_by_email(email, app=app)
             snapshot = (
                 store.collection("portfolio_lab_identities").document(user.uid).get(timeout=5.0)
             )
-            uid = verify_existing_setup_identity(
+            verify_existing_setup_identity(
                 auth_user=user,
                 record=snapshot.to_dict() if snapshot.exists else None,
                 owner_uid=owner_uid,
             )
+        uid = user.uid
+        if user.email is None or user.email.lower() != email:
+            raise ProvisioningError("Firebase account email changed")
         link = auth.generate_password_reset_link(email, app=app)
         private_link = build_private_action_link(
             link,
             args.origin,
+            uid,
             allow_http_local=os.getenv("PORTFOLIO_LAB_ALLOW_LOCAL_HTTP") == "true",
+            emulator_host=os.getenv("FIREBASE_AUTH_EMULATOR_HOST"),
         )
-        event = store.collection("portfolio_lab_invitation_events").document(str(uuid4()))
-        event.create(
-            {
-                "schema_version": 1,
-                "uid": uid,
-                "actor_uid": owner_uid,
-                "action": "password_setup_link_generated",
-                "created_at_ms": now,
-            }
-        )
+        setup_store.record_link(user, owner_uid, private_link, now)
     except Exception:
         print(
             "Setup link not confirmed; inspect Auth UID and audit state before retrying. No link released.",

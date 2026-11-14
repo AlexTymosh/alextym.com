@@ -14,12 +14,18 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from functools import lru_cache
 
 from fastapi import HTTPException, Request
 
-from app.security.lab_admission import admission_decision, sign_in_provider
+from app.security.lab_admission import (
+    OAUTH_PROVIDERS,
+    admission_decision,
+    oauth_subject,
+    sign_in_provider,
+)
 
 
 @lru_cache(maxsize=1)
@@ -30,16 +36,43 @@ def _firebase_app():
     project_id = os.getenv("FIREBASE_PROJECT_ID", "").strip()
     if not project_id:
         raise RuntimeError("Firebase project is not configured")
+    emulator_hosts = [
+        os.getenv(name) for name in ("FIREBASE_AUTH_EMULATOR_HOST", "FIRESTORE_EMULATOR_HOST")
+    ]
+    if any(emulator_hosts):
+        if (
+            os.getenv("RENDER")
+            or not project_id.startswith("demo-")
+            or not all(
+                host and re.fullmatch(r"127\.0\.0\.1:[0-9]{1,5}", host) for host in emulator_hosts
+            )
+        ):
+            raise RuntimeError("Both Firebase emulators must use a local demo project")
+
+        from google.auth.credentials import AnonymousCredentials
+
+        class EmulatorCredential(credentials.Base):
+            def get_credential(self):
+                return AnonymousCredentials()
+
     try:
-        return firebase_admin.get_app("portfolio-lab")
+        app = firebase_admin.get_app("portfolio-lab")
     except ValueError:
         raw = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", "")
-        credential = (
-            credentials.Certificate(json.loads(raw)) if raw else credentials.ApplicationDefault()
-        )
-        return firebase_admin.initialize_app(
+        if any(emulator_hosts):
+            credential = EmulatorCredential()
+        elif raw:
+            credential = credentials.Certificate(json.loads(raw))
+            if credential.project_id != project_id:
+                raise RuntimeError("Firebase credential project does not match configuration")
+        else:
+            credential = credentials.ApplicationDefault()
+        app = firebase_admin.initialize_app(
             credential, {"projectId": project_id}, name="portfolio-lab"
         )
+    if app.project_id != project_id:
+        raise RuntimeError("Firebase project does not match configuration")
+    return app
 
 
 def verify_id_token(token: str) -> dict:
@@ -73,6 +106,17 @@ def load_lab_identity(uid: str) -> dict | None:
     return snapshot.to_dict() if snapshot.exists else None
 
 
+def has_current_oauth_subject(uid: str, provider: str, subject: str | None) -> bool:
+    from firebase_admin import auth
+
+    if not subject:
+        return False
+    user = auth.get_user(uid, app=_firebase_app())
+    return not user.disabled and any(
+        item.provider_id == provider and item.uid == subject for item in user.provider_data
+    )
+
+
 def require_lab_identity(request: Request) -> dict:
     """Verify identity, current admission and initial-password policy."""
     if os.getenv("PORTFOLIO_LAB_ENABLED", "false").lower() != "true":
@@ -99,25 +143,35 @@ def require_lab_identity(request: Request) -> dict:
         # No exception or token data is logged/returned; fail closed on SDK errors.
         raise HTTPException(401, "Invalid identity") from exc
     uid = claims.get("uid")
-    if not isinstance(uid, str) or not uid:
+    if not isinstance(uid, str) or not uid or "/" in uid:
         raise HTTPException(403, "Access denied")
-    if uid != expected_uid:
-        if "/" in uid:
-            raise HTTPException(403, "Access denied")
-        try:
-            identity_record = load_lab_identity(uid)
-        except Exception as exc:
-            # Firestore outages must not turn into an implicit grant.
-            raise HTTPException(503, "Admission unavailable") from exc
+    provider = sign_in_provider(claims)
+    if uid == expected_uid and provider == "password":
+        return {"uid": uid}
+    if provider != "password" and provider not in OAUTH_PROVIDERS:
+        raise HTTPException(403, "Access denied")
+    subject = oauth_subject(claims, provider)
+    try:
+        identity_record = load_lab_identity(uid)
         decision = admission_decision(
             uid,
             expected_uid,
-            sign_in_provider(claims),
+            provider,
             identity_record,
             int(time.time() * 1000),
+            claims.get("auth_time"),
+            subject,
         )
-        if decision != "allowed":
-            raise HTTPException(403, "Access denied")
+        if (
+            decision == "allowed"
+            and provider != "password"
+            and not has_current_oauth_subject(uid, provider, subject)
+        ):
+            decision = "denied"
+    except Exception as exc:
+        raise HTTPException(503, "Admission unavailable") from exc
+    if decision != "allowed":
+        raise HTTPException(403, "Access denied")
     return {"uid": uid}
 
 

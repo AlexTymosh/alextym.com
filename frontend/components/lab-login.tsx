@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
 import {
   browserSessionPersistence,
@@ -10,6 +11,7 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signOut,
   type User,
 } from "firebase/auth";
 import { getLabAuth } from "../lib/portfolio-lab/firebase-client";
@@ -44,9 +46,17 @@ export function LabLogin() {
     try {
       const auth = getLabAuth();
       await setPersistence(auth, browserSessionPersistence);
-      await finish(await action());
-    } catch {
-      setError("Sign-in failed. Check your account or contact the Owner for access.");
+      const user = await action();
+      try {
+        await finish(user);
+      } catch (error) {
+        await signOut(auth).catch(() => undefined);
+        throw error;
+      }
+    } catch (error) {
+      setError(error instanceof FirebaseError && error.code === "auth/account-exists-with-different-credential"
+        ? "Sign in with your established method, then link the new provider from Portfolio Lab."
+        : "Sign-in failed. Check your account or contact the Owner for access.");
     } finally { setBusy(false); }
   };
   const emailSignIn = (event: FormEvent<HTMLFormElement>) => {

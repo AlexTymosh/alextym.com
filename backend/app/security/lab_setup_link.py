@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import secrets
 from dataclasses import dataclass
+from hashlib import sha256
 from uuid import uuid4
 from typing import Any, Protocol
 from urllib.parse import parse_qs, quote, urlsplit
@@ -33,13 +34,20 @@ class SetupIdentity:
 
 
 def build_private_action_link(
-    provider_link: str, origin: str, *, allow_http_local: bool = False
+    provider_link: str,
+    origin: str,
+    uid: str,
+    *,
+    allow_http_local: bool = False,
+    emulator_host: str | None = None,
 ) -> str:
     """Move the Firebase OOB code to a URL fragment, never a server URL query.
 
     A fragment is handled by browser JavaScript and is not sent in HTTP request
     targets, access logs or ordinary Referer headers. The code is never stored.
     """
+    if not uid or len(uid) > 128 or "/" in uid or uid in (".", ".."):
+        raise ValueError("A valid Firebase UID is required")
     parsed_origin = urlsplit(origin)
     if (
         not parsed_origin.hostname
@@ -59,7 +67,13 @@ def build_private_action_link(
     ):
         raise ValueError("Provide a trusted HTTPS site origin (localhost only in development)")
     parsed_link = urlsplit(provider_link)
-    if parsed_link.scheme != "https" or not parsed_link.hostname:
+    emulator_link = (
+        emulator_host
+        and re.fullmatch(r"127\.0\.0\.1:[0-9]{1,5}", emulator_host)
+        and parsed_link.scheme == "http"
+        and parsed_link.netloc == emulator_host
+    )
+    if not parsed_link.hostname or (parsed_link.scheme != "https" and not emulator_link):
         raise ProvisioningError("Firebase did not return a valid action link")
     query = parse_qs(parsed_link.query)
     code = query.get("oobCode", [""])
@@ -71,7 +85,10 @@ def build_private_action_link(
         or not CODE_RE.fullmatch(code[0])
     ):
         raise ProvisioningError("Firebase did not return a valid password reset action code")
-    return f"{origin.rstrip('/')}/lab/password/reset#oobCode={quote(code[0], safe='')}"
+    return (
+        f"{origin.rstrip('/')}/lab/password/reset"
+        f"#uid={quote(uid, safe='')}&oobCode={quote(code[0], safe='')}"
+    )
 
 
 def create_setup_identity(
@@ -169,3 +186,32 @@ class FirestoreSetupIdentityStore:
             },
         )
         batch.commit()
+
+    def record_link(self, user: Any, actor_uid: str, private_link: str, now_ms: int) -> None:
+        from google.cloud import firestore as google_firestore
+
+        uid = user.uid
+        code = parse_qs(urlsplit(private_link).fragment)["oobCode"][0]
+        digest = sha256(code.encode("ascii")).hexdigest()
+        identity = self.client.collection("portfolio_lab_identities").document(uid)
+        event = self.client.collection("portfolio_lab_invitation_events").document()
+
+        @google_firestore.transactional
+        def write(transaction):
+            snapshot = identity.get(transaction=transaction)
+            verify_existing_setup_identity(
+                auth_user=user, record=snapshot.to_dict(), owner_uid=actor_uid
+            )
+            transaction.update(identity, {"password_setup_code_digest": digest})
+            transaction.create(
+                event,
+                {
+                    "schema_version": 1,
+                    "uid": uid,
+                    "actor_uid": actor_uid,
+                    "action": "password_setup_link_generated",
+                    "created_at_ms": now_ms,
+                },
+            )
+
+        write(self.client.transaction())

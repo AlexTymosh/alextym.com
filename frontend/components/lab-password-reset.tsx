@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { validNewPassword, validResetCode } from "../lib/portfolio-lab/password-recovery-policy";
+import { validNewPassword, validResetCode, validResetUid } from "../lib/portfolio-lab/password-recovery-policy";
 
 export function LabPasswordReset() {
-  const [code, setCode] = useState("");
+  const [link, setLink] = useState<{ uid: string; code: string } | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [message, setMessage] = useState("");
@@ -12,21 +12,21 @@ export function LabPasswordReset() {
   const [done, setDone] = useState(false);
 
   // Preserve the URL code across React Strict Mode's extra effect cycle.
-  const capturedCode = useRef<string | null>(null);
+  const capturedLink = useRef<{ uid: string | null; code: string | null } | null>(null);
 
   useEffect(() => {
-    if (capturedCode.current === null) {
+    if (capturedLink.current === null) {
       const fragment = new URLSearchParams(window.location.hash.slice(1));
-      capturedCode.current = fragment.get("oobCode") || "";
+      capturedLink.current = { uid: fragment.get("uid"), code: fragment.get("oobCode") };
       // Remove the one-time code from the visible URL before using it.
       window.history.replaceState(null, "", "/lab/password/reset");
     }
 
     // Schedule the UI update after the effect; avoid synchronous setState.
     queueMicrotask(() => {
-      const supplied = capturedCode.current ?? "";
-      if (validResetCode(supplied)) {
-        setCode(supplied);
+      const supplied = capturedLink.current;
+      if (supplied && validResetUid(supplied.uid) && validResetCode(supplied.code)) {
+        setLink({ uid: supplied.uid, code: supplied.code });
       } else {
         setMessage("Invalid link. Request a new setup link from the Owner.");
       }
@@ -35,6 +35,7 @@ export function LabPasswordReset() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!link) return;
     if (password !== confirm || !validNewPassword(password)) {
       setMessage("Passwords must match and contain 12–128 valid characters.");
       return;
@@ -45,10 +46,11 @@ export function LabPasswordReset() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oobCode: code, newPassword: password }),
+        body: JSON.stringify({ uid: link.uid, oobCode: link.code, newPassword: password }),
       });
       if (!response.ok) throw new Error("Reset did not complete");
-      setCode(""); setPassword(""); setConfirm(""); setDone(true);
+      capturedLink.current = null;
+      setLink(null); setPassword(""); setConfirm(""); setDone(true);
       setMessage("Password updated. You can now sign in.");
     } catch {
       setMessage("Reset could not be completed. Request a fresh link from the Owner.");
@@ -59,7 +61,7 @@ export function LabPasswordReset() {
     <section style={{ maxWidth: 450, margin: "3rem auto", padding: "1rem" }}>
       <h1>Set your Portfolio Lab password</h1>
       <p>Use your private one-time link. Passwords must contain 12–128 characters.</p>
-      {!done && code && (
+      {!done && link && (
         <form onSubmit={(event) => void submit(event)}>
           <label htmlFor="lab-new-password">New password</label>
           <input id="lab-new-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ display: "block", width: "100%", marginBottom: 12 }} />

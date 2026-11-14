@@ -1,7 +1,7 @@
 "use client";
 
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 
 /** Public client configuration only. Never put service-account secrets here. */
 export function getLabAuth(): Auth {
@@ -17,5 +17,13 @@ export function getLabAuth(): Auth {
   const app = getApps().some((item) => item.name === "portfolio-lab")
     ? getApp("portfolio-lab")
     : initializeApp(config, "portfolio-lab");
-  return getAuth(app);
+  const auth = getAuth(app);
+  const emulator = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL;
+  if (emulator && !auth.emulatorConfig) {
+    if (!config.projectId?.startsWith("demo-") || !/^http:\/\/127\.0\.0\.1:\d{1,5}$/.test(emulator)) {
+      throw new Error("Auth emulator requires a local demo project");
+    }
+    connectAuthEmulator(auth, emulator);
+  }
+  return auth;
 }
