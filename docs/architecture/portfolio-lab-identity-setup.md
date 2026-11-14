@@ -279,9 +279,9 @@ initial-password rule. To recover an expired/consumed link, issue a new one.
 - Existing Firebase links handled outside this controlled route do **not**
   move `password_state` to `user_set`; the Owner must generate a new controlled
   link or perform a verified recovery action.
-- Complete live Firebase/Firestore emulator tests, OAuth provider smoke,
-  account-link collision handling and multi-host integration before merging
-  PR #244. Keep production feature flags off.
+- Keep the production feature flag off until a project is ready to use
+  the foundation. Test each OAuth provider, linking and account conflicts
+  before enabling that provider.
 
 ## Reset-pending isolation and audited repair (sixth PR #244 increment)
 
@@ -341,6 +341,5 @@ all project grants still require RBAC in PR 3.
    redeems that new code. Existing `none` users cannot enter using a password.
 
 Run the [Firebase emulator smoke](portfolio-lab-identity-verification.md#local-emulator-reproduction)
-and complete the live adoption and abuse-control gates before merging PR #244.
-Keep reset codes, service-account credentials and passwords outside CI logs,
-GitHub and issue trackers.
+when changing recovery behavior. Keep reset codes, service-account credentials
+and passwords outside CI logs, GitHub and issue trackers.

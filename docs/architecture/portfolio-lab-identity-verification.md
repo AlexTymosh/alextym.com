@@ -1,8 +1,9 @@
 # Portfolio Lab identity verification
 
-PR [#244](https://github.com/AlexTymosh/alextym.com/pull/244) remains open.
-Review the remaining identity release gates below before merging.
-This record covers Identity, UID admission and session transport.
+[PR #244](https://github.com/AlexTymosh/alextym.com/pull/244) ships the verified
+email/password identity foundation with Portfolio Lab disabled in production.
+The Owner provisions accounts and shares the initial credentials privately.
+Project-specific authorization remains a separate step.
 
 ## Development environment
 
@@ -83,7 +84,7 @@ and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identi
 | Live Firebase, IAM and rules | PASS: Render role read Auth and Firestore, and Firestore write was denied. Vercel role issued a session and could not generate setup links. Unauthenticated and authenticated client reads and client writes were denied by Firestore. Wrong password and unknown email returned the same `INVALID_LOGIN_CREDENTIALS`. |
 | Local hosts with Firebase Emulator Suite | PASS: pinned Owner password and session, independent FastAPI credentials, cookie transport, unknown UID, initial-password setup and expiry, emulated OAuth binding and conflict, private link and replay, concurrent resets, disabled account, repair and reissue, and deny-all rules. The simulated interruption was injected as a Firestore state. |
 | Browser credential storage, Firebase emulators | PASS: the Owner signed in via Chromium. Firebase credentials were absent from local storage, session storage and IndexedDB. The app cookie was HttpOnly. Client navigation retained the ability to start linking; reload retained only the app session and required a new sign-in to link; logout cleared the app session. |
-| Live OAuth | Google Branding requires the designated support account. GitHub OAuth application registration was blocked by browser access approval; the Microsoft account had no suitable Entra tenant. Google, GitHub and Microsoft consent, different-email linking and conflicts with live test accounts remain release gates. Emulator proofs do not satisfy them. |
+| Live OAuth | Deferred. Google Branding requires the designated support account. GitHub OAuth application registration was blocked by browser access approval; the Microsoft account had no suitable Entra tenant. Verify real sign-in, linking across different emails, and collisions before offering these providers. |
 | Hosted Firebase sessions (`c394e90`, `1689cc2`) | PASS: the pinned test Owner signed in to the protected preview. Vercel issued an invitee a five-day cookie with `Secure`, `HttpOnly`, `SameSite=Strict`, and host-only scope. Render accepted a valid bearer token and the forwarded cookie. Both hosts denied a valid but unknown UID and a forged credential. Vercel denied missing or hostile Origin and rejected a mutation on the alternate deployment hostname. Both hosts denied an expired five-minute test session. Vercel rejected an otherwise valid ID token when authentication was older than five minutes. |
 | Hosted recovery (`1689cc2`) | PASS after enabling the WAF and lowering the Firebase quota: two concurrent reset requests returned 200 and 400. Replay, stale link and wrong UID were denied. The new password worked; the old token and session were rejected. An injected `reset_pending` blocked password access on both hosts; repair and reissue restored access. A disabled Firebase user was denied on both hosts. No email was sent. |
 | Serverless interruption and abuse | Hosted recovery from an injected interruption passed; the test did not kill a real invocation. PASS: 27 empty POST requests produced 20 application responses and seven WAF `429` responses; a control GET retained its normal `401`. WAF analytics attributed all seven blocks to the dev rule. The fixed window is per Vercel region. |
@@ -99,8 +100,9 @@ The production login route returned HTTP 404. The branch preview uses standard
 Vercel Authentication. The automated tests used its existing project OIDC
 policy. The project has no persistent automation bypass key.
 
-Keep PR #244 open until real provider sign-in, linking with different emails,
-and collisions are verified. Use only fictional identities for these tests.
+The private setup/reset flow lets an account holder choose a password. It is
+separate from passwordless email-link sign-in, which is deferred. Use only
+fictional identities when verifying additional sign-in methods.
 
 ## Local emulator reproduction
 

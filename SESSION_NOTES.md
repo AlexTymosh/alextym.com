@@ -2,16 +2,18 @@
 
 **Updated:** 2026-11-14
 
-**Status:** Foundation PR #243 merged; PR #244 is in Firebase Identity verification. Production Portfolio Lab stays disabled; the six-PR plan remains in force.
-**Current PR:** [#244](https://github.com/AlexTymosh/alextym.com/pull/244), branch `feat/portfolio-firebase-identity` (do not merge until identity release gates pass).
+**Status:** Foundation PR #243 merged. [PR #244](https://github.com/AlexTymosh/alextym.com/pull/244) is approved for merge as the email/password identity foundation. Production Portfolio Lab stays disabled.
+**Next priority:** Build the interview portfolio project. Project-specific access can be added when that project needs testers.
 
 Dev provisioning, signed HTTPS sessions, password reset, replay and interruption
 repair were exercised across Vercel Preview, Render Free and live Firebase.
 The test Owner signed in in a browser, and Vercel returned `429` above the
 test branch's auth rate limit.
-See the [identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
-for the remaining live OAuth and direct-provider abuse checks. Stay on PR #244
-until the identity release gates pass.
+The Owner will provision the account, set the initial password, and send the
+credentials to the tester. The live Google, Microsoft, and GitHub checks and
+passwordless email-link sign-in are deferred. See the
+[identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
+for the evidence and what to verify before enabling those methods.
 
 ## Authoritative documents
 
@@ -102,7 +104,9 @@ The six-PR target balances reviewability and integration risk; commit counts are
 🔗 feat(auth): support secure provider linking and recovery
 ```
 
-**Gate:** Firebase emulator tests and real provider smoke; direct-origin and session threat checks. **Do not proceed to PR 3 until the cross-host session design is proven.**
+**Gate for the password foundation:** Firebase emulator tests, real email/password
+provisioning and sign-in, and session verification across both hosts. Live OAuth
+sign-in, linking, and collision tests are required before offering those providers.
 
 ### PR 3 — Authorization and Firestore control plane (3 commits)
 
@@ -311,7 +315,5 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
   closed, never incorrectly promoted to `user_set`.
 - Adds an explicit Owner-only repair CLI that revokes Firebase tokens and
   conservatively moves `reset_pending` to `none`, requiring a new setup link.
-- The CLI's environment gate is not IAM. Dev Firebase integration tests,
-  actual OAuth/provider linking and collision scenarios, abuse controls and
-  end-to-end smoke remain mandatory. Keep production Lab disabled and PR #244
-  unmerged until verified.
+- The CLI's environment gate is not IAM. See the current handoff above for
+  verified flows and deferred provider checks.
