@@ -1,7 +1,6 @@
 import "server-only";
 
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 
 export const LAB_SESSION_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000;
 export const LAB_SESSION_COOKIE =
@@ -18,7 +17,7 @@ export function getOwnerUid(): string {
 }
 
 /** Server only. Must never run or serialize credentials in a client component. */
-export function getLabAdminAuth() {
+export async function getLabAdminAuth() {
   const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
   if (!projectId) throw new Error("Missing Firebase server project ID");
   if (projectId !== process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
@@ -29,6 +28,9 @@ export function getLabAdminAuth() {
       !emulatorHosts.every((host) => host && /^127\.0\.0\.1:\d{1,5}$/.test(host)))) {
     throw new Error("Both Firebase emulators must use a local demo project");
   }
+  // Only enabled Lab requests reach this import. Vercel's CommonJS runtime
+  // needs require(esm) for the Admin SDK's jwks-rsa dependency.
+  const { getAuth } = await import("firebase-admin/auth");
   const existingApp = getApps().find((app) => app.name === "portfolio-lab");
   if (existingApp) {
     if (existingApp.options.projectId !== projectId) {

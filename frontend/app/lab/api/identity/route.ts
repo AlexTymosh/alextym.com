@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
 
   let claims: DecodedIdToken;
   try {
-    claims = await getLabAdminAuth().verifySessionCookie(cookie, true);
+    const admin = await getLabAdminAuth();
+    claims = await admin.verifySessionCookie(cookie, true);
   } catch {
     return json(401, "Invalid session");
   }

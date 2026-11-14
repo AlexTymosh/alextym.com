@@ -34,7 +34,7 @@ export async function confirmLabProviderLink(
   const subject = linkProofSubject(session, proof, provider);
   if (!subject) return false;
 
-  const auth = getLabAdminAuth();
+  const auth = await getLabAdminAuth();
   const user = await auth.getUser(session.uid);
   if (!hasCurrentLabOAuthSubject(proof, provider, user)) return false;
   const currentProvider = labSignInProvider(session);
@@ -43,7 +43,7 @@ export async function confirmLabProviderLink(
   }
 
   const db = getFirestore(auth.app);
-  const identity = getLabIdentityDocument(session.uid);
+  const identity = getLabIdentityDocument(session.uid, auth.app);
   const event = db.collection("portfolio_lab_invitation_events").doc();
   return db.runTransaction(async (transaction) => {
     const record = (await transaction.get(identity)).data();

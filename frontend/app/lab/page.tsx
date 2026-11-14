@@ -21,7 +21,8 @@ export default async function LabPage() {
   if (!getOwnerUid()) notFound();
   let verifiedClaims: DecodedIdToken;
   try {
-    verifiedClaims = await getLabAdminAuth().verifySessionCookie(cookie, true);
+    const admin = await getLabAdminAuth();
+    verifiedClaims = await admin.verifySessionCookie(cookie, true);
   } catch {
     redirect("/lab/login");
   }

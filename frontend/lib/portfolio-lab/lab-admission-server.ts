@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { App } from "firebase-admin/app";
 import type { DecodedIdToken, UserRecord } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getLabAdminAuth, getOwnerUid } from "./firebase-server";
@@ -10,8 +11,8 @@ import {
   labSignInProvider,
 } from "./admission-policy";
 
-export function getLabIdentityDocument(uid: string) {
-  return getFirestore(getLabAdminAuth().app).collection("portfolio_lab_identities").doc(uid);
+export function getLabIdentityDocument(uid: string, app: App) {
+  return getFirestore(app).collection("portfolio_lab_identities").doc(uid);
 }
 
 export function decideLabAdmission(claims: DecodedIdToken, ownerUid: string, record: unknown) {
@@ -47,11 +48,12 @@ export async function getLabAdmissionDecision(claims: DecodedIdToken) {
   const provider = labSignInProvider(claims);
   if (provider !== "password" && !isLabOAuthProvider(provider)) return "denied" as const;
   if (claims.uid === ownerUid && provider === "password") return "allowed" as const;
-  const document = await getLabIdentityDocument(claims.uid).get();
+  const auth = await getLabAdminAuth();
+  const document = await getLabIdentityDocument(claims.uid, auth.app).get();
   const decision = decideLabAdmission(claims, ownerUid, document.data());
   if (decision !== "allowed" || provider === "password") return decision;
   try {
-    const user = await getLabAdminAuth().getUser(claims.uid);
+    const user = await auth.getUser(claims.uid);
     return hasCurrentLabOAuthSubject(claims, provider, user) ? "allowed" : "denied";
   } catch (error) {
     if ((error as { code?: string }).code === "auth/user-not-found") return "denied";

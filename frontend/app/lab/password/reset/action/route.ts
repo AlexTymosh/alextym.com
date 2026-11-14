@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const auth = getLabAdminAuth();
+    const auth = await getLabAdminAuth();
     const db = getFirestore(auth.app);
     const digest = createHmac("sha256", oobCode).update(`portfolio-lab-setup-v1\0${uid}`).digest();
     const codeMatches = (record: unknown) => {

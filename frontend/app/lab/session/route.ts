@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return json({ error: "Invalid token" }, 400);
   }
   try {
-    const admin = getLabAdminAuth();
+    const admin = await getLabAdminAuth();
     const decoded = await admin.verifyIdToken(idToken, true);
     if (!isRecentLabLogin(decoded.auth_time)) {
       return json({ error: "Recent login required" }, 403);
@@ -68,7 +68,8 @@ export async function GET(request: NextRequest) {
   if (!ownerUid || !cookie) return json({ authenticated: false }, 401);
   let decoded;
   try {
-    decoded = await getLabAdminAuth().verifySessionCookie(cookie, true);
+    const admin = await getLabAdminAuth();
+    decoded = await admin.verifySessionCookie(cookie, true);
   } catch {
     return json({ authenticated: false }, 401);
   }

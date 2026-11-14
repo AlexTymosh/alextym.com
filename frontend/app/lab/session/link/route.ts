@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   let session;
   let proof;
   try {
-    const admin = getLabAdminAuth();
+    const admin = await getLabAdminAuth();
     [session, proof] = await Promise.all([
       admin.verifySessionCookie(cookie, true),
       admin.verifyIdToken(body.idToken, true),

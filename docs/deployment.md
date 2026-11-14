@@ -156,6 +156,9 @@ Point `BACKEND_ORIGIN` to the separate Render Free service and set
 Authentication enabled. Both hosts must use the same Firebase dev project
 and pinned test Owner UID. Put the Vercel credential in a branch-scoped Secret
 and the Render credential in a Render secret file. Do not share the two keys.
+For the locked Firebase Admin SDK, set `NODE_OPTIONS=--experimental-require-module`
+on this Preview branch and redeploy. See
+[Vercel Node.js configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration).
 
 See the [identity verification record](architecture/portfolio-lab-identity-verification.md)
 for free-tier limits, service account roles, and remaining test gates.
