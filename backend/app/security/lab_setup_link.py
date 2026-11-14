@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import secrets
 from dataclasses import dataclass
-from hashlib import sha256
+from hmac import digest as hmac_digest
 from uuid import uuid4
 from typing import Any, Protocol
 from urllib.parse import parse_qs, quote, urlsplit
@@ -191,8 +191,12 @@ class FirestoreSetupIdentityStore:
         from google.cloud import firestore as google_firestore
 
         uid = user.uid
-        code = parse_qs(urlsplit(private_link).fragment)["oobCode"][0]
-        digest = sha256(code.encode("ascii")).hexdigest()
+        action_code = parse_qs(urlsplit(private_link).fragment)["oobCode"][0]
+        # Firebase generates the one-time, opaque HMAC key. The message binds it
+        # to this UID and purpose. The submitted password never enters the tag.
+        digest = hmac_digest(
+            action_code.encode("ascii"), f"portfolio-lab-setup-v1\0{uid}".encode(), "sha256"
+        ).hex()
         identity = self.client.collection("portfolio_lab_identities").document(uid)
         event = self.client.collection("portfolio_lab_invitation_events").document()
 

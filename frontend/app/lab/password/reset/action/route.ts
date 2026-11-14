@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getLabAdminAuth, getOwnerUid, isLabEnabled } from "../../../../../lib/portfolio-lab/firebase-server";
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = getLabAdminAuth();
     const db = getFirestore(auth.app);
-    const digest = createHash("sha256").update(oobCode).digest();
+    const digest = createHmac("sha256", oobCode).update(`portfolio-lab-setup-v1\0${uid}`).digest();
     const codeMatches = (record: unknown) => {
       const stored = (record as { password_setup_code_digest?: unknown } | null)
         ?.password_setup_code_digest;
