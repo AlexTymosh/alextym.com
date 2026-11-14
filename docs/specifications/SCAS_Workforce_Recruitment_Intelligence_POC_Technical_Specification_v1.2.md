@@ -3,12 +3,12 @@
 
 **Document version:** 1.2  
 **Date:** 14 November 2026  
-**Status:** Approved requirements baseline; implementation not yet started for this project  
+**Status:** Approved requirements baseline; implementation in progress (project grants added in Commit 02)\
 **Prepared for:** Senior Data Analyst interview demonstration at South Central Ambulance Service NHS Foundation Trust (SCAS)  
 **Product:** Portfolio Lab — Workforce & Recruitment Intelligence  
-**Project ID:** `workforce_intelligence` (new; to be registered)  
+**Project ID:** `workforce_intelligence` (registered in the portfolio catalogue)\
 **Canonical browser route:** `/portfolio/workforce-intelligence`  
-**Portfolio catalogue route:** `/portfolio` (requires implementation; not assumed to exist in the current host)  
+**Portfolio catalogue route:** `/portfolio` (protected host route; enabled by deployment feature flag)\
 **Canonical backend namespace:** `/api/workforce`  
 **Primary language:** English  
 **Data classification:** Synthetic demonstration data only  
@@ -236,7 +236,7 @@ One role does **not** eliminate mandatory data validation, explicit publication 
 - The global Portfolio Lab **Owner** provisions Firebase email/password credentials and privately sends them to visitors. The project must not send automatic credential emails.
 - The platform's existing initial-password lifecycle and password-reset rules remain authoritative; this app must not implement its own password storage, hashing or expiration policy.
 - The shared authorization layer must verify an explicit grant for `project_id = workforce_intelligence` and map that grant to the single Workforce `Member` capability.
-- If the platform uses `No Access / View / Test / Admin` internally for other projects, Workforce must use **one selected grant/capability mapping for all Workforce participants** (recommended: a single fixed `Test`-equivalent project grant). It must not expose or interpret a new hierarchy in Workforce UI or domain code.
+- If the platform uses `No Access / View / Test / Admin` internally for other projects, Workforce must use **one selected grant/capability mapping for all Workforce participants** (a fixed project-scoped `Admin` grant, because the shared `Test` capability does not permit reset). It must not expose or interpret a new hierarchy in Workforce UI or domain code.
 - Firebase UID is the stable identity subject. User-provided email, a frontend role flag, a visible UI state, an unverified token or a `project_id` supplied by the browser is insufficient authorization.
 - The global Owner remains responsible for provisioning/revoking accounts and grants in the shared platform; this does **not** create a second role inside Workforce.
 - Every protected page/data request is rejected when project membership is missing, revoked, expired or temporarily unverifiable.

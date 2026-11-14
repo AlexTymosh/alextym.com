@@ -150,20 +150,20 @@ tasks:
     desc: Run Ruff lint checks.
     dir: backend
     cmds:
-      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
+      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests
 
   backend:format-check:
     desc: Check backend formatting.
     dir: backend
     cmds:
-      - uv run ruff format --check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
+      - uv run ruff format --check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests
 
   backend:format:
     desc: Apply safe Ruff fixes and format backend code.
     dir: backend
     cmds:
-      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests --fix
-      - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
+      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests --fix
+      - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests
 
   backend:imports:
     desc: Check Python import direction across site and Fleet modules.
@@ -175,7 +175,7 @@ tasks:
     desc: Compile backend Python modules to catch syntax errors early.
     dir: backend
     cmds:
-      - uv run python -m compileall app scripts tests ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests
+      - uv run python -m compileall app scripts tests ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests
 
   backend:test:
     desc: Run backend tests.

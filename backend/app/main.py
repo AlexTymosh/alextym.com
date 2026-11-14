@@ -2,7 +2,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fleet_hub.bootstrap import prepare_demo_database
 from fleet_hub.router import router as fleet_router
 from workforce_intelligence.router import router as workforce_router
@@ -22,6 +22,7 @@ from app.core.logging import configure_logging
 from app.core.loki import shutdown_loki_exporter
 from app.core.metrics import configure_metrics
 from app.middleware.request_context import RequestContextMiddleware
+from app.security.project_grants import require_workforce_member
 
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,10 @@ def create_app() -> FastAPI:
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     app.include_router(fleet_router, prefix="/api")
-    app.include_router(workforce_router, prefix="/api")
+    # All present and future Workforce routes inherit the same platform grant check.
+    app.include_router(
+        workforce_router, prefix="/api", dependencies=[Depends(require_workforce_member)]
+    )
     app.include_router(analytics_router, prefix="/api")
     app.include_router(redis_probe_router)
     configure_metrics(app, settings)

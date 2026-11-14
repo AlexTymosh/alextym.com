@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** Planning baseline; implementation not started  
+**Document status:** Implementation in progress; PR 1 foundation complete, grant verification under test\
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
 **Primary specification:** `docs/specifications/SCAS_Workforce_Recruitment_Intelligence_POC_Technical_Specification_v1.2.md`  
@@ -66,7 +66,7 @@ The v1.2 file was saved in `docs/specifications/`, whereas its own header/Append
 | Gate | Requirement | State | Evidence |
 |---|---|---|---|
 | G0 — Planning | Canonical v1.2 located; status and dependency map agreed | PLANNED | — |
-| G1 — Security | Firebase + explicit Workforce grant enforced on all protected interfaces, including direct Render; disabled by default until verified | BLOCKED: shared RBAC pending | — |
+| G1 — Security | Firebase + explicit Workforce grant enforced on all protected interfaces, including direct Render; disabled by default until verified | IN PROGRESS: code implemented; hosted verification pending | — |
 | G2 — Dataset | Independent SQLite lifecycle, consistent seeded history, tests and audited mutations | PLANNED | — |
 | G3 — Interview MVP | 90-second and 5-minute flows pass end-to-end without live AI | PLANNED | — |
 | G4 — Full function | Operational, analytical and People Voice/AI requirements verified | PLANNED | — |
@@ -334,7 +334,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 | PR | Commits | Scope | Status | PR URL | Merge SHA |
 |---|---:|---|---|---|---|
-| PR 1 | 01–03 | Integration, explicit grant, protected SPA | NOT STARTED | — | — |
+| PR 1 | 01–03 | Integration, explicit grant, protected SPA | IN PROGRESS | — | — |
 | PR 2 | 04–06 | SQLite, seed, source→Gold metrics | NOT STARTED | — | — |
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | NOT STARTED | — | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
@@ -344,8 +344,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 | # | State | Commit SHA | Verification notes |
 |---:|---|---|---|
-| 01 | NOT STARTED | — | — |
-| 02 | NOT STARTED | — | — |
+| 01 | DONE | b13da5719b8baa36a14842d7bab2c8da5d5726a5 | Local `task ci`: PASS (reported); hosted CI not independently verified |
+| 02 | IN PROGRESS | — | Project grant and BFF code prepared; local `task ci` and hosted integration pending |
 | 03 | NOT STARTED | — | — |
 | 04 | NOT STARTED | — | — |
 | 05 | NOT STARTED | — | — |
@@ -368,18 +368,18 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `not created`
+- **Current branch:** `feat/workforce-intelligence-foundation`
 - **Base `main` SHA:** `not verified for implementation`
-- **Active PR / commit:** `none`
-- **Last completed commit:** `none`
-- **Current working tree:** `not inspected`
-- **Last `task ci`:** `not run`
-- **Last focused tests:** `not run`
+- **Active PR / commit:** `PR 1 / Commit 02`
+- **Last completed commit:** `01` (`b13da5719b8baa36a14842d7bab2c8da5d5726a5`)
+- **Current working tree:** Commit 02 change set prepared; local CI pending
+- **Last `task ci`:** `PASS` for Commit 01 (user-reported); Commit 02 pending
+- **Last focused tests:** isolated dependency-light package harness: 29 passed; full repository tests pending
 - **Last GitHub CI:** `not run`
 - **Last hosted smoke:** `not run`
-- **Current feature flag(s):** `not verified`
-- **Known blockers:** shared project-grant RBAC is pending; availability of Owner provisioning tool must be rechecked
-- **Next exact task:** create PR 1 branch from latest `main`; inspect live registry, routes and platform grant implementation; implement Commit 01
+- **Current feature flag(s):** Workforce flag defaults off in both hosts; no hosted verification yet
+- **Known blockers:** live Firebase/Firestore grant and revoke flows are not yet verified on hosted preview
+- **Next exact task:** run Commit 02 tests, verify both Vercel and Render authorization, commit/push, then implement Commit 03
 
 ### Per-commit entry template
 

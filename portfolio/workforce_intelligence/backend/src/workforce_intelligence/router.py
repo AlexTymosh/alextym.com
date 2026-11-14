@@ -1,16 +1,15 @@
-"""Public API entry point. Intentionally fail-closed until project RBAC is added.
+"""Project-owned HTTP router. Host applies shared Firebase grant dependency.
 
-The project is registered and installed, but neither a Firebase identity nor a
-feature flag authorizes the application. Commit 02 will replace this closed
-stub with a shared Portfolio Lab authorization dependency.
+This package must not import website security implementations or other projects.
+Every project route is mounted with `require_workforce_member` by the host.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Response
 
 router = APIRouter(prefix="/workforce", tags=["Workforce Intelligence"])
 
 
 @router.get("/status", include_in_schema=False)
-def denied_until_project_grants() -> None:
-    """Allow no users or data until cross-host grant verification exists."""
-    raise HTTPException(status_code=404, detail="Not found")
+def workforce_status(response: Response) -> dict[str, bool | str]:
+    response.headers["Cache-Control"] = "no-store"
+    return {"service": "workforce", "available": True}
