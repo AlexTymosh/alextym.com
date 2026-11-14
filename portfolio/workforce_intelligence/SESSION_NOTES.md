@@ -345,8 +345,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | # | State | Commit SHA | Verification notes |
 |---:|---|---|---|
 | 01 | DONE | b13da5719b8baa36a14842d7bab2c8da5d5726a5 | Local `task ci`: PASS (reported); hosted CI not independently verified |
-| 02 | IN PROGRESS | — | Project grant and BFF code prepared; local `task ci` and hosted integration pending |
-| 03 | NOT STARTED | — | — |
+| 02 | DONE | 8d940ea06ed8285ee31bc5068278a8f69d8226bf | User-reported local `task ci`: PASS; hosted Firebase/Firestore grant verification remains outstanding |
+| 03 | IN PROGRESS | — | SPA shell changes prepared; local/hosted validation pending |
 | 04 | NOT STARTED | — | — |
 | 05 | NOT STARTED | — | — |
 | 06 | NOT STARTED | — | — |
@@ -370,16 +370,16 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 - **Current branch:** `feat/workforce-intelligence-foundation`
 - **Base `main` SHA:** `not verified for implementation`
-- **Active PR / commit:** `PR 1 / Commit 02`
-- **Last completed commit:** `01` (`b13da5719b8baa36a14842d7bab2c8da5d5726a5`)
-- **Current working tree:** Commit 02 change set prepared; local CI pending
-- **Last `task ci`:** `PASS` for Commit 01 (user-reported); Commit 02 pending
-- **Last focused tests:** isolated dependency-light package harness: 29 passed; full repository tests pending
+- **Active PR / commit:** `PR 1 / Commit 03`
+- **Last completed commit:** `02` (`8d940ea06ed8285ee31bc5068278a8f69d8226bf`)
+- **Current working tree:** Commit 03 ZIP ready to apply; worktree state must be verified locally
+- **Last `task ci`:** `PASS` for Commit 02 (user-reported); Commit 03 pending
+- **Last focused tests:** Commit 02: 30 focused Python tests passed (user-reported); Commit 03 isolated TypeScript policy checks passed
 - **Last GitHub CI:** `not run`
 - **Last hosted smoke:** `not run`
 - **Current feature flag(s):** Workforce flag defaults off in both hosts; no hosted verification yet
 - **Known blockers:** live Firebase/Firestore grant and revoke flows are not yet verified on hosted preview
-- **Next exact task:** run Commit 02 tests, verify both Vercel and Render authorization, commit/push, then implement Commit 03
+- **Next exact task:** apply Commit 03 ZIP, run frontend navigation tests and `task ci`, perform private hosted authorization smoke before public exposure, commit/push; then PR 1 review
 
 ### Per-commit entry template
 
