@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from app.security.project_grants import require_workforce_member
+from app.security.workforce_demo import require_workforce_member
 from workforce_intelligence.router import router
 
 
@@ -90,7 +90,11 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
         "/workforce/vacancies/{vacancy_id}/cancel",
         "/workforce/starters",
         "/workforce/analytics/executive",
+        "/workforce/analytics/workforce-trend",
+        "/workforce/analytics/vacancy-ageing",
+        "/workforce/analytics/inclusive-recruitment",
         "/workforce/analytics/candidate-funnel",
+        "/workforce/analytics/recruitment-sources",
         "/workforce/analytics/vacancy-lifecycle",
         "/workforce/metrics",
         "/workforce/data-quality",

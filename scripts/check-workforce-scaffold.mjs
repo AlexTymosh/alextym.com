@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Structural guard: runtime tests separately prove grant authorization behavior.
+// Structural checks for the deliberately scoped password-only demo gateway.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -16,38 +16,52 @@ assert.equal(manifest.demo.path, "/portfolio/workforce-intelligence");
 assert.equal(manifest.demo.apiPrefix, "/api/workforce");
 assert.deepEqual(manifest.catalog, { visible: false, featured: false });
 
-for (const path of ["frontend/app/portfolio/page.tsx", "frontend/app/portfolio/workforce-intelligence/page.tsx"]) {
-  const source = read(path);
-  assert.match(source, /getWorkforceAccess\(/, `${path}: missing server grant guard`);
-  assert.match(source, /notFound\(\)/, `${path}: missing fail-closed rendering`);
+for (const page of ["frontend/app/portfolio/page.tsx", "frontend/app/portfolio/workforce-intelligence/page.tsx"]) {
+  const source = read(page);
+  assert.match(source, /workforceEnabled\(/);
+  assert.match(source, /notFound\(\)/);
   assert.match(source, /robots:\s*\{\s*index:\s*false,\s*follow:\s*false/);
+  assert.doesNotMatch(source, /firebase|getWorkforceAccess|LAB_SESSION_COOKIE/);
 }
+const page = read("frontend/app/portfolio/workforce-intelligence/page.tsx");
+assert.match(page, /<WorkforcePasswordGate/);
+const gate = read("portfolio/workforce_intelligence/frontend/src/WorkforcePasswordGate.tsx");
+assert.match(gate, /workforce-simulation-logo\.png/);
+assert.match(gate, /Demo password/);
 const main = read("backend/app/main.py");
+assert.match(main, /include_router\(workforce_access_router, prefix="\/api"\)/);
 assert.match(main, /include_router\(\s*workforce_router,\s*prefix="\/api",\s*dependencies=\[Depends\(require_workforce_member\)\]\s*\)/);
-const policy = read("backend/app/security/project_grants.py");
-assert.match(policy, /grant_document\(/);
-assert.match(policy, /require_lab_identity\(request\)/);
-assert.match(policy, /load_project_grant\(WORKFORCE_PROJECT_ID, uid\)/);
+assert.match(main, /from app\.security\.workforce_demo import/);
+assert.doesNotMatch(main, /from app\.security\.project_grants import require_workforce_member/);
+const security = read("backend/app/security/workforce_demo.py");
+assert.match(security, /VOR_DEMO_PASSWORD/);
+assert.match(security, /hmac\.compare_digest/);
+assert.match(security, /request\.state\.workforce_uid/);
+assert.doesNotMatch(security, /firebase_admin|from app\.security\.firebase/);
 const bff = read("frontend/lib/portfolio-lab/workforce-bff-server.ts");
+assert.match(bff, /WorkforceDemo \$\{sessionCookie\}/);
+assert.match(bff, /workforceEnabled\(\)/);
+assert.match(bff, /hasSameOrigin\(request\)/);
+assert.match(bff, /workforceUpstreamPath\(/);
+assert.doesNotMatch(bff, /FirebaseSession|getWorkforceAccess|LAB_SESSION_COOKIE/);
 for (const path of ["status", "[...operation]"]) {
   const adapter = read(`frontend/app/portfolio/workforce-intelligence/api/${path}/route.ts`);
   assert.match(adapter, /return forwardWorkforceRequest\(request,/);
 }
-assert.match(bff, /getWorkforceAccess\(sessionCookie\)/);
-assert.match(bff, /FirebaseSession \$\{sessionCookie\}/);
-assert.match(bff, /hasSameOrigin\(request\)/);
-assert.match(bff, /workforceUpstreamPath\(/);
+const access = read("frontend/app/portfolio/workforce-intelligence/api/access/route.ts");
+assert.match(access, /WORKFORCE_COOKIE/);
+assert.match(access, /httpOnly: true/);
+assert.match(access, /hasSameOrigin\(request\)/);
 const dockerfile = read("backend/Dockerfile");
 assert.match(dockerfile, /COPY portfolio\/workforce_intelligence\/backend\/src/);
-const previewRoute = read("frontend/app/portfolio/workforce-intelligence/preview/page.tsx");
-assert.match(previewRoute, /NODE_ENV\s*!==\s*"development"/);
-assert.match(previewRoute, /WORKFORCE_LOCAL_PREVIEW\s*!==\s*"true"/);
-assert.match(previewRoute, /Boolean\(process\.env\.VERCEL\)/);
-assert.match(previewRoute, /<WorkforceScaffold previewMode/);
-assert.match(previewRoute, /notFound\(\)/);
-assert.doesNotMatch(previewRoute, /getWorkforceAccess|FirebaseSession/);
-const ui = read("portfolio/workforce_intelligence/frontend/src/WorkforceScaffold.tsx");
-assert.match(ui, /if \(previewMode\) return;/);
-assert.match(ui, /workforceModeHref\(destination, previewMode\)/);
-
-console.log("Workforce foundation: project grant wiring and default-off guard (structural PASS).");
+const preview = read("frontend/app/portfolio/workforce-intelligence/preview/page.tsx");
+assert.match(preview, /NODE_ENV\s*!==\s*"development"/);
+assert.match(preview, /WORKFORCE_LOCAL_PREVIEW\s*!==\s*"true"/);
+assert.match(preview, /Boolean\(process\.env\.VERCEL\)/);
+assert.match(preview, /<WorkforceScaffold previewMode/);
+assert.match(preview, /notFound\(\)/);
+assert.doesNotMatch(preview, /WorkforcePasswordGate|FirebaseSession/);
+const scaffold = read("portfolio/workforce_intelligence/frontend/src/WorkforceScaffold.tsx");
+assert.match(scaffold, /if \(previewMode\) return;/);
+assert.match(scaffold, /workforceModeHref\(destination, previewMode\)/);
+console.log("Workforce password-demo guard and project boundaries (structural PASS).");

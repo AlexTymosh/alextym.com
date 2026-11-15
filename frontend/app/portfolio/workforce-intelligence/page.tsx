@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import { notFound, redirect } from "next/navigation";
-import { WorkforceScaffold } from "@workforce-intelligence";
-import { LAB_SESSION_COOKIE } from "../../../lib/portfolio-lab/firebase-server";
-import { getWorkforceAccess } from "../../../lib/portfolio-lab/workforce-access-server";
+import { notFound } from "next/navigation";
+import { WorkforcePasswordGate } from "@workforce-intelligence";
+import { workforceEnabled } from "../../../lib/portfolio-lab/workforce-password-server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -11,10 +9,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function WorkforceIntelligencePage() {
-  const cookie = (await cookies()).get(LAB_SESSION_COOKIE)?.value;
-  const access = await getWorkforceAccess(cookie);
-  if (access.kind === "unauthenticated") redirect("/lab/login");
-  if (access.kind !== "allowed") notFound();
-  return <WorkforceScaffold />;
+export default function WorkforceIntelligencePage() {
+  if (!workforceEnabled()) notFound();
+  return <WorkforcePasswordGate />;
 }

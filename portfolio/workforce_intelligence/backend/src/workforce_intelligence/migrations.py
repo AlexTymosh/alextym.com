@@ -1,5 +1,6 @@
 """Forward-only, application-owned migrations in schema order."""
 
+from workforce_intelligence.conformed_migration import CONFORMED_MIGRATION
 from workforce_intelligence.operations_migration import (
     OPERATIONS_MIGRATION,
     OPERATIONS_TABLES,
@@ -213,6 +214,7 @@ MIGRATIONS = (
         """,
     ),
     WORKBOOK_MIGRATION,
+    CONFORMED_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.

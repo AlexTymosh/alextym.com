@@ -25,7 +25,7 @@ test("rejects path traversal, unapproved operations, and target overrides", () =
 
 test("the live browser route rejects an unsigned Workforce data request", async ({ request }) => {
   const response = await request.get("/portfolio/workforce-intelligence/api/analytics/executive", {
-    headers: { Authorization: "FirebaseSession forged" },
+    headers: { Authorization: "WorkforceDemo forged" },
   });
   expect([401, 404, 503]).toContain(response.status());
   expect(response.headers()["cache-control"]).toBe("no-store");

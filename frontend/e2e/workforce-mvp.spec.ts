@@ -3,20 +3,19 @@ import { readFile } from "node:fs/promises";
 
 const path = "/portfolio/workforce-intelligence";
 const localOrigin = "http://127.0.0.1:14300";
-const useEmulators = process.env.WORKFORCE_MVP_E2E === "true" && process.env.PLAYWRIGHT_BASE_URL === localOrigin;
+const useEmulators = process.env.WORKFORCE_PASSWORD_E2E === "true" && !!process.env.WORKFORCE_E2E_PASSWORD && process.env.PLAYWRIGHT_BASE_URL === localOrigin;
 
 async function signIn(page: Page) {
-  await page.goto("/lab/login");
-  await page.getByLabel("Email", { exact: true }).fill("workforce-member@example.test");
-  await page.getByLabel("Password", { exact: true }).fill("Workforce-emulator-only-091!");
-  await page.getByRole("button", { name: "Sign in with email" }).click();
-  await expect(page).toHaveURL(/\/lab$/, { timeout: 20_000 });
+  await page.goto(path);
+  await page.getByLabel("Demo password").fill(process.env.WORKFORCE_E2E_PASSWORD!);
+  await page.getByRole("button", { name: "Enter demo" }).click();
+  await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
 }
 
 test("a member previews a workbook before confirming source and dashboard changes", async ({ page }, info) => {
   const inputPath = process.env.WORKFORCE_OPS_XLSX_FILE;
   test.skip(!useEmulators || info.project.name !== "chromium" || !inputPath,
-    "Requires isolated local emulators and a synthetic workbook for employee browser-excel");
+    "Requires local password-demo app and a synthetic workbook");
   test.setTimeout(60_000);
   const workbook = await readFile(inputPath!);
   const contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -52,12 +51,39 @@ test("a member previews a workbook before confirming source and dashboard change
 });
 
 test("an admitted Workforce member can save effective FTE and see Gold refresh", async ({ page }, info) => {
-  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local password-demo and SQLite fixtures");
   test.setTimeout(90_000);
   await signIn(page);
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
   const workspaceNav = page.getByRole("navigation", { name: "Workforce sections" });
+  await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
+  const channels = page.getByRole("region", { name: "Recruitment channel table" });
+  await expect(channels).toBeVisible();
+  const ageing = page.getByRole("region", { name: "Vacancy ageing bands" });
+  await expect(ageing).toBeVisible();
+  await expect(ageing.getByRole("row")).toHaveCount(6); // Five bands plus header.
+  await page.getByRole("button", { name: "View funnel for vac-004" }).click();
+  await expect(page.getByLabel("Vacancy", { exact: true })).toHaveValue("vac-004");
+  await page.getByLabel("Vacancy", { exact: true }).selectOption("");
+  const trend = page.getByRole("region", { name: "Monthly Workforce trend table" });
+  await expect(trend).toBeVisible();
+  await expect(trend.getByRole("row")).toHaveCount(5); // 4 observed months plus header.
+  await expect(trend.getByRole("row", { name: /2026-10/ })).toBeVisible();
+  const inclusive = page.getByRole("region", { name: "Inclusive recruitment", exact: true });
+  await expect(inclusive).toBeVisible();
+  await expect(inclusive.getByRole("heading", { name: "Age band" })).toBeVisible();
+  await expect(inclusive.getByRole("heading", { name: "Ethnicity group" })).toBeVisible();
+  await expect(inclusive.getByRole("heading", { name: "Disability status" })).toBeVisible();
+  await expect(inclusive.getByText("This disclosure-controlled report is independent", { exact: false })).toBeVisible();
+  const withheld = await page.request.get(`${path}/api/analytics/inclusive-recruitment?as_of_date=2026-10-31`);
+  expect(withheld.status()).toBe(404); // BFF blocks attempts to filter sensitive dimensions.
+  const outcomes = page.getByRole("region", { name: "Workforce outcomes" });
+  await expect(outcomes).toBeVisible();
+  await expect(outcomes.locator("[data-metric=offer_to_start_conversion]")).toBeVisible();
+  await expect(outcomes.locator("[data-metric=retention_rate]")).toBeVisible();
+  await expect(outcomes.locator("[data-metric=early_attrition_12m]")).toHaveText("Not available");
+  await expect(channels.getByRole("row").filter({ hasText: "Careers" })).toBeVisible();
   const gap = page.locator("[data-metric=workforce_gap_wte]");
   const prior = Number((await gap.innerText()).split(" ")[0]);
   await page.evaluate(() => { document.documentElement.dataset.workforceApp = "running"; });
@@ -86,11 +112,15 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await page.getByLabel("As of date").fill("2026-07-30");
   await page.getByRole("button", { name: "Apply dates" }).click();
   await expect(page.getByText("There are no applications in this cohort.")).toBeVisible();
+  await expect(page.getByText("There are no applications in this reporting window.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Workforce outcomes" })).toBeVisible();
+  const partialMonth = page.getByRole("region", { name: "Monthly Workforce trend table" });
+  await expect(partialMonth.getByRole("row", { name: /2026-07 \(partial\)/ })).toBeVisible();
   await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
 });
 
 test("a member can inspect published evidence, a governed answer and the implemented lineage", async ({ page }, info) => {
-  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local password-demo and SQLite fixtures");
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 1080 });
   await signIn(page);
@@ -119,6 +149,12 @@ test("a member can inspect published evidence, a governed answer and the impleme
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
   await expect(page.getByText("Executive metrics · gold_reviewed_survey_findings")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Metric catalogue" })).toBeVisible();
+  const qualityDetails = page.getByRole("region", { name: "Data quality rule details" });
+  await expect(qualityDetails.getByRole("row", { name: /Excluded applications/ })).toBeVisible();
+  await expect(page.getByText("These are four source-to-Silver reconciliation checks", { exact: false })).toBeVisible();
+  const register = page.getByRole("region", { name: "Sources and assumptions" });
+  await expect(register.getByText("Synthetic recruitment events")).toBeVisible();
+  await expect(register.getByText("SCAS People Strategy 2023–2026")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   await expect(page.getByRole("region", { name: "Workforce Intelligence demo" })).toHaveAttribute("data-theme", "light");
@@ -126,7 +162,7 @@ test("a member can inspect published evidence, a governed answer and the impleme
 });
 
 test("reset is confirmed and the interview guides restore their real views", async ({ page }, info) => {
-  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local password-demo and SQLite fixtures");
   test.setTimeout(90_000);
   await signIn(page);
   await page.goto(path);
@@ -182,39 +218,16 @@ test("reset is confirmed and the interview guides restore their real views", asy
   await expect(guide).toHaveCount(0);
 });
 
-test("grant revocation denies the same session at both app hosts", async ({ page }, info) => {
-  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
-  test.setTimeout(60_000);
-  expect(process.env.FIRESTORE_EMULATOR_HOST).toBe("127.0.0.1:18080");
+test("sign-out clears the Workforce cookie and rejects BFF and direct Render data", async ({ page }, info) => {
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires local password-demo environment");
   await signIn(page);
-  await page.goto(path);
   const direct = "http://127.0.0.1:14800/api/workforce/demo/status";
   const bff = `${path}/api/demo/status`;
-  await expect(page.getByRole("button", { name: "Refresh data" })).toBeVisible();
-  const cookie = (await page.context().cookies()).find((item) => item.name === "portfolio_lab_session");
-  if (!cookie) throw new Error("Expected the local Portfolio Lab session cookie");
-  expect(cookie.httpOnly).toBe(true);
+  const cookie = (await page.context().cookies()).find((item) => item.name === "workforce_demo_session");
+  expect(cookie?.httpOnly).toBe(true);
   expect((await page.request.get(direct)).status()).toBe(401);
-  const headers = { Authorization: `FirebaseSession ${cookie.value}` };
-  expect((await page.request.get(direct, { headers })).status()).toBe(200);
   expect((await page.request.get(bff)).status()).toBe(200);
-
-  const { deleteApp, initializeApp } = await import("firebase-admin/app");
-  const { getFirestore } = await import("firebase-admin/firestore");
-  const admin = initializeApp({ projectId: "demo-portfolio-lab" }, "workforce-revocation-smoke");
-  const firestore = getFirestore(admin);
-  const grant = firestore.doc("portfolio_lab_projects/workforce_intelligence/grants/workforce-emulator-member");
-  try {
-    await grant.update({ status: "revoked" });
-    expect((await page.request.get(direct, { headers })).status()).toBe(403);
-    expect((await page.request.get(bff)).status()).toBe(403);
-    expect((await page.request.get("http://127.0.0.1:14800/api/workforce/import/template", { headers })).status()).toBe(403);
-    expect((await page.request.get(`${path}/api/import/template`)).status()).toBe(403);
-    await page.getByRole("button", { name: "Refresh data" }).click();
-    await expect(page.getByRole("heading", { name: "Workspace access unavailable" })).toBeVisible();
-    await expect(page.locator("[data-metric]")).toHaveCount(0);
-  } finally {
-    await grant.update({ status: "active" });
-    await deleteApp(admin);
-  }
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByLabel("Demo password")).toBeVisible();
+  expect((await page.request.get(bff)).status()).toBe(401);
 });

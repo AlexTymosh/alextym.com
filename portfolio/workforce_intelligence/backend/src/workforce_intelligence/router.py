@@ -12,7 +12,7 @@ from secrets import randbits
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from starlette.concurrency import run_in_threadpool
 
 from workforce_intelligence.analytics import (
@@ -35,6 +35,12 @@ from workforce_intelligence.operation_reads import (
     read_section,
 )
 from workforce_intelligence.operations import run_operation
+from workforce_intelligence.inclusive_recruitment import (
+    inclusive_recruitment,
+    suppress_inclusive_report,
+)
+from workforce_intelligence.recruitment_sources import recruitment_sources
+from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.recruitment import (
     cancel_vacancy,
     record_start,
@@ -50,8 +56,12 @@ from workforce_intelligence.schemas import (
     EntityId,
     ErrorDetail,
     ExecutiveResponse,
+    InclusiveRecruitmentResponse,
     FteChange,
     FunnelResponse,
+    RecruitmentSourceResponse,
+    VacancyAgeingResponse,
+    WorkforceTrendResponse,
     InsightQuery,
     InsightResponse,
     MutationResponse,
@@ -67,6 +77,7 @@ from workforce_intelligence.schemas import (
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
 from workforce_intelligence.workbook_http import (
     FILE_RESPONSE,
@@ -222,6 +233,17 @@ def edit_fte(
     return MutationResponse(dataset=state, record_version=version)
 
 
+@router.get("/analytics/vacancy-ageing")
+def vacancy_ageing_report(database: Db, as_of_date: date | None = None) -> VacancyAgeingResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        cutoff = reporting_window(state, as_of_date, None).end
+        quality = _quality(connection, state, cutoff.isoformat())
+        return VacancyAgeingResponse(
+            **quality.model_dump(), ageing=vacancy_ageing(connection, cutoff)
+        )
+
+
 @router.get("/analytics/vacancy-lifecycle")
 @router.get("/vacancies")
 def vacancies(
@@ -290,6 +312,75 @@ def executive(
         return ExecutiveResponse(
             **quality.model_dump(),
             executive=executive_metrics(connection, state, window),
+        )
+
+
+@router.get("/analytics/workforce-trend")
+def monthly_workforce_trend(
+    database: Db, as_of_date: date | None = None, period_start: date | None = None
+) -> WorkforceTrendResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        # Without an explicit date filter, chart the complete observed history.
+        # Other executive KPIs retain their existing current-month default.
+        start = period_start or date.fromisoformat(state.history_start)
+        window = reporting_window(state, as_of_date, start)
+        quality = _quality(connection, state, window.end.isoformat())
+        return WorkforceTrendResponse(
+            **quality.model_dump(), trend=workforce_trend(connection, window)
+        )
+
+
+@router.get("/analytics/inclusive-recruitment")
+def inclusive_recruitment_report(request: Request, database: Db) -> InclusiveRecruitmentResponse:
+    # No dates, organisation, role or other filters: avoid small-cell reconstruction.
+    if request.query_params:
+        raise HTTPException(
+            status_code=422, detail="Demographic aggregates do not permit query filters."
+        )
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        report = inclusive_recruitment(connection, as_of_date=state.as_of_date)
+        # A released baseline must be immutable and reproducible. Any edit or
+        # exploratory seed can reveal a small group by subtracting two reads.
+        baseline = (
+            state.revision == 0
+            and state.scenario_code == FULL_SEED.scenario_code
+            and state.generation_seed == FULL_SEED.generation_seed
+            and state.seed_version == FULL_SEED.seed_version
+        )
+        if not baseline:
+            report = suppress_inclusive_report(
+                report,
+                "Suppressed: demographic detail is available only for the "
+                "unmodified, reproducible controlled dataset.",
+            )
+        return InclusiveRecruitmentResponse(dataset=state, report=report)
+
+
+@router.get("/analytics/recruitment-sources")
+def recruitment_source_breakdown(
+    database: Db,
+    as_of_date: date | None = None,
+    period_start: date | None = None,
+    campaign_id: EntityId | None = None,
+    organisation_id: EntityId | None = None,
+    location_id: EntityId | None = None,
+    role_id: EntityId | None = None,
+) -> RecruitmentSourceResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        window = reporting_window(state, as_of_date, period_start)
+        return RecruitmentSourceResponse(
+            dataset=state,
+            report=recruitment_sources(
+                connection,
+                window,
+                campaign_id=campaign_id,
+                organisation_id=organisation_id,
+                location_id=location_id,
+                role_id=role_id,
+            ),
         )
 
 

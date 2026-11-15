@@ -54,8 +54,8 @@ const sections: Record<WorkforceMode, {
 }> = {
   "workforce-intelligence": {
     label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
-    outline: [["executive", "Recruitment overview"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["insight-pilot", "Insight Pilot"]],
-    planned: "Attraction, workforce outcomes, equality and forecasting.",
+    outline: [["executive", "Recruitment overview"], ["workforce-trend", "Workforce trend"], ["vacancy-ageing", "Vacancy ageing"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["attraction", "Recruitment channels"], ["equality", "Inclusive recruitment"], ["outcomes", "Workforce outcomes"], ["insight-pilot", "Insight Pilot"]],
+    planned: "Further cohort drill-through, equality metrics and forecasting.",
   },
   "workforce-management": {
     label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",
@@ -69,12 +69,12 @@ const sections: Record<WorkforceMode, {
   },
   "data-architecture": {
     label: "Data Architecture", description: "Data ownership, quality and lineage.",
-    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["catalogue", "Metric catalogue"]],
+    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["sources", "Sources and assumptions"], ["catalogue", "Metric catalogue"]],
     planned: "Interactive model diagrams, source registry and BPMN.",
   },
 };
 
-export function WorkforceScaffold({ previewMode = false }: { previewMode?: boolean }) {
+export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewMode?: boolean; onSignOut?: () => void }) {
   const search = useSyncExternalStore(subscribeToLocation, getLocationSearch, getServerSearch);
   const mode = modeFromSearch(search);
   const guide = previewMode ? null : readGuide(search);
@@ -194,9 +194,8 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
             {theme === "dark" ? "Light theme" : "Dark theme"}
           </button>
-          {!previewMode && !restricted ? <details className={styles.account}>
-            <summary>Account</summary><div><strong>Member</strong><a href="/lab">Manage sign-in</a></div>
-          </details> : null}
+          {!previewMode && onSignOut ? <button className={styles.secondaryButton} type="button"
+            onClick={onSignOut}>Sign out</button> : null}
         </div>
       </header>
       <nav aria-label="Workforce sections" className={styles.navigation}>
