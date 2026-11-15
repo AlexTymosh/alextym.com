@@ -91,7 +91,8 @@ def test_schema_rejects_missing_references_and_overlapping_effective_periods(tmp
     with database.transaction(write=True) as connection:
         with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
             connection.execute("""
-                INSERT INTO candidate_applications VALUES ('a', 'missing', '2026-08-01', 'test')
+                INSERT INTO candidate_applications (id, vacancy_id, received_on, source_code)
+                VALUES ('a', 'missing', '2026-08-01', 'test')
             """)
         with pytest.raises(sqlite3.IntegrityError, match="Effective periods overlap"):
             connection.execute("""

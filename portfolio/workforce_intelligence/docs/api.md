@@ -11,6 +11,10 @@ Protected responses use `Cache-Control: no-store`.
 | `GET /status` | Protected transport probe. |
 | `GET /demo/status` | Creates the controlled fixture on first authorised use and returns its current version and dates. |
 | `GET /employees` | Point-in-time employment directory ordered by explicit featured metadata. |
+| `GET /employees/{employee_id}` | Synthetic profile, current employment status on the requested date and the latest 200 contract and assignment intervals. |
+| `GET /operations/{section}` | Paginated management records: vacancies (including drafts), candidates, offers, starters, learning, leavers, references and audit. |
+| `GET /operations/establishment` | Available establishment line codes and approved capacity. |
+| `POST /operations` | Validated employment, reference and recruitment commands. OpenAPI describes each shape under the `command.action` discriminator. |
 | `GET /vacancies`, `GET /analytics/vacancy-lifecycle` | Point-in-time vacancy list and count by status. |
 | `GET /analytics/executive` | Executive metrics, comparator, calculation components and data-quality checks. |
 | `GET /analytics/candidate-funnel` | Sequential application cohort, stage counts, conversions and median step durations. Optional `vacancy_id`. |
@@ -35,6 +39,13 @@ Accepted FTE values are positive decimals up to 1.0 with three decimal places.
 Each record mutation returns the updated version and dataset state. Request
 identity and correlation come from the authenticated host context. The API
 does not take an actor UID in the payload.
+
+Source commands require the current dataset `revision` in addition to its
+generation and ID. An optional `record_version` also checks the affected
+employee, application or vacancy. Source changes advance the revision and
+return `insert`, `update` or `unchanged`; unchanged values leave it intact.
+Management lists accept the same `limit` and `offset` as the directory. Employee
+profiles contain no demographic categories or raw identity identifiers.
 
 Use `409` to trigger a fresh read after a stale version or writer conflict.
 Business or schema validation failures use `422`. Reset cooldown uses `429`

@@ -1,5 +1,9 @@
 """Forward-only, application-owned migrations in schema order."""
 
+from workforce_intelligence.operations_migration import (
+    OPERATIONS_MIGRATION,
+    OPERATIONS_TABLES,
+)
 from workforce_intelligence.projections import PROJECTION_MIGRATION
 from workforce_intelligence.survey_migration import SURVEY_MIGRATION, SURVEY_TABLES
 
@@ -31,7 +35,10 @@ def _no_overlaps(table: str, key: str) -> tuple[str, str]:
             SELECT RAISE(ABORT, 'Effective periods overlap');
         END
         """
-        for operation, exclude_old in (("INSERT", ""), ("UPDATE", "AND existing.id <> OLD.id"))
+        for operation, exclude_old in (
+            ("INSERT", ""),
+            ("UPDATE", "AND existing.id <> OLD.id"),
+        )
     )
 
 
@@ -194,6 +201,7 @@ MIGRATIONS = (
     ),
     PROJECTION_MIGRATION,
     SURVEY_MIGRATION,
+    OPERATIONS_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.
@@ -204,10 +212,13 @@ SOURCE_TABLES = (
     "employees",
     "employment_contracts",
     "organisation_assignments",
+    "recruitment_sources",
+    "recruitment_campaigns",
     "vacancies",
     "candidate_applications",
     "application_stage_events",
     "offers",
     "starter_events",
+    *OPERATIONS_TABLES,
     *SURVEY_TABLES,
 )

@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PR 1 and PR 2 merged. Interview MVP implemented locally. Hosted acceptance pending.
+**Document status:** PRs 1–3 merged. PR 4 operational work in progress. Hosted acceptance pending.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -354,7 +354,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 07 | DONE | `7201ebc438813ded5e9ef339f827966231b60989` | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
 | 08 | DONE | `fdc80cf50e05831d9bdbd0fa98d54adad94071c8` | Existing-data migration, evidence validation and exclusion of drafts tested. Real local browser verified the report, Insight Pilot and architecture. |
 | 09 | DONE | `cb702dfa9d0c71ab96e43c4d1fd5fd41751680f5` | Guided navigation, reset, screenshots and local acceptance. |
-| 10 | NOT STARTED | — | — |
+| 10 | DONE | See branch history | Workforce API and host checks: 24 passed. Frontend typecheck passed. |
 | 11 | NOT STARTED | — | — |
 | 12 | NOT STARTED | — | — |
 | 13 | NOT STARTED | — | — |
@@ -369,16 +369,15 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `feat/workforce-intelligence-interview-mvp`
-- **Base `main` SHA:** `d2c6be784aaa612b83af2ca0f1809f8d97967c34`, confirmed on `origin/main`
-- **Active scope:** PR 3 Interview MVP code review. Hosted acceptance remains open.
-- **Last completed commit:** 09, guided demo, confirmed reset and verification.
-- **Local `task ci`:** PASS. Repository hygiene, config, backend, frontend, RAG and Docker jobs passed.
-- **Local verification:** The emulator-backed desktop Playwright run passed five cases, with the production-only preview assertion skipped in that opt-in configuration. The full backend check passed with 950 tests and four opt-in Upstash skips.
-- **GitHub CI:** [Checks for PR #247](https://github.com/AlexTymosh/alextym.com/pull/247/checks).
+- **Current branch:** `feat/workforce-intelligence-operations`
+- **Base `main` SHA:** `2555f2f25b690479eb2aad2df58d6b77f8e87293`, confirmed PR #247 merge on `origin/main`
+- **Active scope:** PR 4 operational workflows and workbook I/O. Hosted acceptance remains open.
+- **Last completed commit:** 10, effective employment and recruitment workflows.
+- **Local verification:** Workforce API and host boundary tests: 24 passed. Frontend typecheck passed.
+- **Prior stage:** [PR #247 checks](https://github.com/AlexTymosh/alextym.com/pull/247/checks). Five authenticated browser cases passed locally against the emulators.
 - **Hosted smoke:** The isolated Render service returned health `200` and Workforce `404` at live identity-only commit `beac78ac9264c6ad16706e9352836a67038890ab`. Its linked branch is `main` with manual deploys. Vercel's Firebase settings were scoped to the previous identity preview. The temporary Firebase operator certificate expired at 11:31 UTC on 15 November 2026 and Google's token endpoint rejected the credential. Hosted Member and revocation checks require an authenticated dev operator and deployment of the candidate to both existing hosts.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** Review PR 3 with the feature flags defaulting off. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers. PR 4 starts from refreshed `main` after the Owner merges PR 3.
+- **Next exact task:** Commit 11, add and reconcile the 36-month synthetic dataset. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -416,6 +415,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - Added both shareable walkthroughs, a scoped reset confirmation, stale generation detection and a local emulator Member fixture. The 90-second flow edits the original SQLite record and displays the updated KPI. The longer flow reaches the application funnel, evidence report, Insight Pilot and lineage.
 - Chromium verified both guides, same-session denial through Next.js and direct FastAPI after revoking the emulator grant, and a stale tab reloading after reset. The authenticated desktop captures accompany the runbook. The mobile light-mode view fit a 390px viewport.
 - The hosted acceptance check remains pending on the existing dev hosts. The report labels the fixture review explicitly. A live analyst decision and on-demand analysis remain later stages.
+
+#### 2026-11-15 — Commit 10: operational workflows
+
+- Added typed, revision-checked source commands and Member UI for effective employment, recruitment, development, references, probation, leavers and audit.
+- Historical migration preserves older source facts. Tests cover closing effective periods, ordered recruitment, an over-establishment exception, no Gold gain from a conditional/accepted offer, and stale requests.
+- Focused Workforce and host tests passed (24). Frontend typecheck passed. Scale and Excel remain the next two commits.
 
 ### Per-commit entry template
 

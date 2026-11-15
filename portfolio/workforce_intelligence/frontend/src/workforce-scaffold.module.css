@@ -272,6 +272,12 @@
 .editForm > p { font-size: .85rem; margin: 13px 0; }
 .errorText { color: var(--wi-error); }
 .notice { margin: 0 0 15px; padding: 10px 12px; border-left: 2px solid var(--wi-accent); border-radius: 4px; background: var(--wi-accent-soft); font-size: .84rem; line-height: 1.5; }
+.operationHeading { font-size: 1.02rem; font-weight: 650; cursor: pointer; }
+.operationForm { margin-top: 14px; }
+.sourceCode { display: block; color: var(--wi-muted); font-size: .7rem; font-weight: normal; }
+.auditValues { min-width: 10rem; margin: 8px 0; }
+.auditValues dt { color: var(--wi-muted); font-size: .72rem; }
+.auditValues dd { margin: 0 0 6px; overflow-wrap: anywhere; }
 .planned { margin-top: 18px; padding: 11px 0; border-top: 1px solid var(--wi-border); color: var(--wi-muted); font-size: .78rem; }
 .stack > .planned { margin-top: 0; }
 .planned p { margin: 7px 0 0; }

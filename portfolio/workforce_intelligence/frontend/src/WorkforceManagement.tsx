@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { changeContractFte, WorkforceApiError, type Directory, type Employee } from "./data-api";
 import { displayNumber } from "./format";
+import { EmployeeOperations, OperationForm, SourceOperations } from "./SourceOperations";
 import styles from "./workforce-scaffold.module.css";
 
 export function WorkforceManagement({ directory, offset, onPage, onSaved, onConflict, initialEmployee, effectiveDate, onError }: {
@@ -15,6 +16,7 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployee ?? null);
   const selected = directory.items.find((employee) => employee.id === selectedId);
+  const operations = { dataset: directory.dataset, selectedId, onSaved, onConflict, onError };
   return (
     <div className={styles.stack}>
       <section id="directory" className={styles.panel} aria-labelledby="directory-heading">
@@ -28,7 +30,14 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
                 <th scope="col">Role</th><th scope="col">FTE</th><th scope="col">Contract</th></tr></thead>
               <tbody>{directory.items.map((employee) => (
                 <tr key={employee.id}>
-                  <th scope="row">{employee.display_name}</th><td>{employee.organisation ?? "Unassigned"}</td>
+                  <th scope="row"><button type="button" className={styles.linkButton}
+                    onClick={() => {
+                      setSelectedId(employee.id);
+                      const profile = document.getElementById("employee-profile");
+                      if (profile instanceof HTMLDetailsElement) profile.open = true;
+                      profile?.scrollIntoView({ block: "nearest" });
+                    }}>{employee.display_name}</button><small className={styles.sourceCode}>{employee.id}</small></th>
+                  <td>{employee.organisation ?? "Unassigned"}</td>
                   <td>{employee.role ?? "—"}</td><td>{displayNumber(employee.contracted_fte)}</td>
                   <td><button type="button" className={styles.linkButton}
                     aria-label={`Edit FTE for ${employee.display_name}`} aria-controls="contracts"
@@ -52,6 +61,7 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
           </div>
         ) : null}
       </section>
+      <EmployeeOperations {...operations} />
       <section id="contracts" className={styles.panel} aria-labelledby="contracts-heading">
         <div className={styles.sectionHeader}><h2 id="contracts-heading">Contracts & FTE</h2></div>
         {selected ? <FteForm key={selected.id} directory={directory} employee={selected}
@@ -59,10 +69,12 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
           onSaved={(message) => { setSelectedId(null); onSaved(message); }}
           onConflict={onConflict} onError={onError} /> :
           <p className={styles.message}>Choose Edit FTE next to an employee to record an effective-dated change.</p>}
+        <details className={styles.planned}><summary>Add or change a contract period</summary>
+          <OperationForm {...operations} actions={["set_contract"]}
+            defaults={selectedId ? { employee_id: selectedId } : {}} />
+        </details>
       </section>
-      <details className={styles.planned}><summary>Planned management workflows</summary>
-        <p>Employee and recruitment lifecycle editing, learning and PDR, Excel import and export, and audit history.</p>
-      </details>
+      <SourceOperations {...operations} />
     </div>
   );
 }

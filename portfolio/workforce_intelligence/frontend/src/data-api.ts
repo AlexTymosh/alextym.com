@@ -12,7 +12,7 @@ export type Dataset = DatasetVersion & {
   refreshed_at: string;
 };
 
-type Snapshot = { dataset: Dataset; synthetic: true };
+export type Snapshot = { dataset: Dataset; synthetic: true };
 export type Window = { start: string; end: string };
 export type Filters = { start: string; end: string; vacancyId: string };
 export const DEFAULT_FILTERS: Filters = { start: "", end: "", vacancyId: "" };

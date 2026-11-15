@@ -9,7 +9,6 @@ from workforce_intelligence.database import Database
 from workforce_intelligence.dataset import AuditActor, ensure_dataset, reset_dataset
 from workforce_intelligence.migrations import SOURCE_TABLES
 from workforce_intelligence.seed import INTERVIEW_SEED, populate_core
-from workforce_intelligence.survey_migration import SURVEY_TABLES
 from workforce_intelligence.surveys import link_evidence
 
 
@@ -36,16 +35,38 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
         expected=initial,
         actor=AuditActor("test-member", "req_upgrade"),
     )
-    core = tuple(table for table in SOURCE_TABLES if table not in SURVEY_TABLES)
-    source = source_snapshot(database, core)
+    with database.transaction() as connection:
+        core = {
+            table: ", ".join(col[1] for col in connection.execute(f"PRAGMA table_info({table})"))
+            for table in SOURCE_TABLES
+        }
+        core = {table: columns for table, columns in core.items() if columns}
+        source = {
+            table: list(
+                map(
+                    tuple,
+                    connection.execute(f"SELECT {columns} FROM {table} ORDER BY 1"),
+                )
+            )
+            for table, columns in core.items()
+        }
     monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations)
     upgraded = ensure_dataset(database, INTERVIEW_SEED)
     assert upgraded.seed_version == INTERVIEW_SEED.seed_version
     assert upgraded.dataset_id == initial.dataset_id
     assert upgraded.dataset_generation == 1
     assert upgraded.revision == change.revision + 1
-    assert source_snapshot(database, core) == source
     with database.transaction() as connection:
+        assert {
+            table: list(
+                map(
+                    tuple,
+                    connection.execute(f"SELECT {columns} FROM {table} ORDER BY 1"),
+                )
+            )
+            for table, columns in core.items()
+        } == source
+        assert connection.execute("SELECT COUNT(*) FROM interviews").fetchone()[0] == 6
         assert connection.execute("SELECT COUNT(*) FROM silver_applications").fetchone()[0] == 9
         assert (
             connection.execute("SELECT COUNT(*) FROM gold_reviewed_survey_findings").fetchone()[0]
