@@ -35,6 +35,7 @@ from workforce_intelligence.operation_reads import (
     read_section,
 )
 from workforce_intelligence.operations import run_operation
+from workforce_intelligence.recruitment_sources import recruitment_sources
 from workforce_intelligence.recruitment import (
     cancel_vacancy,
     record_start,
@@ -52,6 +53,7 @@ from workforce_intelligence.schemas import (
     ExecutiveResponse,
     FteChange,
     FunnelResponse,
+    RecruitmentSourceResponse,
     InsightQuery,
     InsightResponse,
     MutationResponse,
@@ -290,6 +292,32 @@ def executive(
         return ExecutiveResponse(
             **quality.model_dump(),
             executive=executive_metrics(connection, state, window),
+        )
+
+
+@router.get("/analytics/recruitment-sources")
+def recruitment_source_breakdown(
+    database: Db,
+    as_of_date: date | None = None,
+    period_start: date | None = None,
+    campaign_id: EntityId | None = None,
+    organisation_id: EntityId | None = None,
+    location_id: EntityId | None = None,
+    role_id: EntityId | None = None,
+) -> RecruitmentSourceResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        window = reporting_window(state, as_of_date, period_start)
+        return RecruitmentSourceResponse(
+            dataset=state,
+            report=recruitment_sources(
+                connection,
+                window,
+                campaign_id=campaign_id,
+                organisation_id=organisation_id,
+                location_id=location_id,
+                role_id=role_id,
+            ),
         )
 
 

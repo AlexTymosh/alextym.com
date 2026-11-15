@@ -15,6 +15,7 @@ from workforce_intelligence.analytics import (
 )
 from workforce_intelligence.dataset import DatasetState, DatasetVersion
 from workforce_intelligence.metric_catalogue import MetricDefinition
+from workforce_intelligence.recruitment_sources import RecruitmentSourceReport
 from workforce_intelligence.recruitment import VacancySnapshot, VacancyStatus
 from workforce_intelligence.surveys import SurveyReport
 
@@ -128,6 +129,10 @@ class QualityResponse(DatasetResponse):
 
 class ExecutiveResponse(QualityResponse):
     executive: ExecutiveMetrics
+
+
+class RecruitmentSourceResponse(DatasetResponse):
+    report: RecruitmentSourceReport
 
 
 class FunnelResponse(QualityResponse):
