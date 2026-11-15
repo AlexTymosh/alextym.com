@@ -1,7 +1,8 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** Implementation in progress; PR 1 foundation complete, grant verification under test\
+**Document status:** PR 1 merged; PR 2 data core in progress
+
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
 **Primary specification:** `docs/specifications/SCAS_Workforce_Recruitment_Intelligence_POC_Technical_Specification_v1.2.md`  
@@ -65,9 +66,9 @@ The v1.2 file was saved in `docs/specifications/`, whereas its own header/Append
 
 | Gate | Requirement | State | Evidence |
 |---|---|---|---|
-| G0 — Planning | Canonical v1.2 located; status and dependency map agreed | PLANNED | — |
-| G1 — Security | Firebase + explicit Workforce grant enforced on all protected interfaces, including direct Render; disabled by default until verified | IN PROGRESS: code implemented; hosted verification pending | — |
-| G2 — Dataset | Independent SQLite lifecycle, consistent seeded history, tests and audited mutations | PLANNED | — |
+| G0 — Planning | Canonical v1.2 located; status and dependency map agreed | DONE | Sections 0–2 |
+| G1 — Security | Firebase + explicit Workforce grant enforced on all protected interfaces, including direct Render; disabled by default until verified | IN PROGRESS: foundation merged; hosted verification pending | PR #245 |
+| G2 — Dataset | Independent SQLite lifecycle, consistent seeded history, tests and audited mutations | IN PROGRESS | Commit 04 |
 | G3 — Interview MVP | 90-second and 5-minute flows pass end-to-end without live AI | PLANNED | — |
 | G4 — Full function | Operational, analytical and People Voice/AI requirements verified | PLANNED | — |
 | G5 — Release | Security, accessibility, CI, hosted preview, production and cold-start smoke validated | PLANNED | — |
@@ -334,8 +335,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 | PR | Commits | Scope | Status | PR URL | Merge SHA |
 |---|---:|---|---|---|---|
-| PR 1 | 01–03 | Integration, explicit grant, protected SPA | IN PROGRESS | — | — |
-| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | NOT STARTED | — | — |
+| PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
+| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | IN PROGRESS | — | — |
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | NOT STARTED | — | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
 | PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
@@ -347,7 +348,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 01 | DONE | b13da5719b8baa36a14842d7bab2c8da5d5726a5 | Local `task ci`: PASS (reported); hosted CI not independently verified |
 | 02 | DONE | 8d940ea06ed8285ee31bc5068278a8f69d8226bf | User-reported local `task ci`: PASS; hosted Firebase/Firestore grant verification remains outstanding |
 | 03 | DONE | b100c0a18bf856586519e246ce7792d2d40e3d0e | User-reported `task ci`: PASS; local SPA opened; protected API connectivity and hosted grants pending |
-| 04 | NOT STARTED | — | — |
+| 04 | DONE | `feat/workforce-intelligence-data-core` | Eight SQLite, concurrency, reset and isolation tests passed; Ruff passed |
 | 05 | NOT STARTED | — | — |
 | 06 | NOT STARTED | — | — |
 | 07 | NOT STARTED | — | — |
@@ -368,18 +369,21 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `feat/workforce-intelligence-foundation`
-- **Base `main` SHA:** `not verified for implementation`
-- **Active PR / commit:** `PR 1 / supplemental local UI preview (after Commit 03)`
-- **Last completed commit:** `03` (`b100c0a18bf856586519e246ce7792d2d40e3d0e`)
-- **Current working tree:** Supplemental PR 1 local UI preview patch prepared; local CI pending
-- **Last `task ci`:** `PASS` for Commit 03 (user-reported); local UI preview patch pending
-- **Last focused tests:** Commit 02: 30 focused Python tests passed (user-reported); Commit 03 isolated TypeScript policy checks passed
-- **Last GitHub CI:** `not run`
-- **Last hosted smoke:** `not run`
-- **Current feature flag(s):** Workforce flag defaults off in both hosts; no hosted verification yet
-- **Known blockers:** live Firebase/Firestore grant and revoke flows are not yet verified on hosted preview
-- **Next exact task:** apply supplemental local UI preview patch, verify the opt-in preview and `task ci`; then perform hosted Firebase/Firestore and direct Render grant/revocation checks before PR 1 sign-off
+- **Current branch:** `feat/workforce-intelligence-data-core`
+- **Base `main` SHA:** `a49f01b828dba84193200e39f9a09a4e92e0e14b`, confirmed on `origin/main`
+- **Active scope:** PR 2, Commit 04
+- **Last completed commit:** 04, isolated SQLite and temporal history
+- **Last focused tests:** `python -m pytest -q ../portfolio/workforce_intelligence/tests/test_database.py` from `backend/`: 8 passed; Ruff lint and format passed
+- **PR 2 CI:** Pending
+- **Hosted smoke:** Pending for Firebase/Firestore grant and revocation on the Workforce app and direct Render
+- **Current feature flags:** Portfolio Lab and Workforce default to disabled. Commit 04 adds storage components without attaching them to hosted routes.
+- **Next exact task:** Commit 05 supplies the controlled synthetic seed and source register.
+
+#### 2026-11-15 — Commit 04: isolated SQLite and temporal history
+
+- Added project-owned SQLite migrations, ownership marker, half-open effective dates, transactional reset, and audited FTE changes.
+- The database tests cover concurrent bootstrap and writes, stale versions, rollback, foreign keys, and isolation from an unrelated SQLite file.
+- The runtime path is `.tmp/workforce/workforce.sqlite3` relative to the FastAPI working directory. Commands serialize through SQLite; the dataset UUID and numeric generation detect storage loss and reset.
 
 ### Per-commit entry template
 
@@ -564,4 +568,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state: NOT STARTED. No code, PR, hosted rollout or test is claimed by this file.**
+**Current overall state:** Foundation merged. Data core under development. Interview MVP and hosted Workforce acceptance pending.
