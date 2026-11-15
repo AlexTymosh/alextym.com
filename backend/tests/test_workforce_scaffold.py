@@ -77,4 +77,6 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
         "/workforce/analytics/vacancy-lifecycle",
         "/workforce/metrics",
         "/workforce/data-quality",
+        "/workforce/surveys/reports/rota-pressure",
+        "/workforce/insight-pilot/query",
     }

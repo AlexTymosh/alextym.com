@@ -6,13 +6,14 @@ from random import Random
 
 from workforce_intelligence.contracts import add_employment
 from workforce_intelligence.dataset import SeedDefinition
+from workforce_intelligence.survey_fixture import SEED_VERSION, populate_voice_report
 
 HISTORY_START = date(2026, 7, 1)
 AS_OF_DATE = date(2026, 10, 31)
 SOURCE_TIMESTAMP = "2026-10-31T00:00:00+00:00"
 
 
-def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
+def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
     connection.executemany(
         "INSERT INTO organisational_units VALUES (?, ?)",
         [
@@ -302,4 +303,11 @@ def _application(
     )
 
 
-INTERVIEW_SEED = SeedDefinition("interview-core", 1733, "1.0", HISTORY_START, AS_OF_DATE, _populate)
+def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
+    populate_core(connection, generation_seed)
+    populate_voice_report(connection)
+
+
+INTERVIEW_SEED = SeedDefinition(
+    "interview-core", 1733, SEED_VERSION, HISTORY_START, AS_OF_DATE, _populate
+)

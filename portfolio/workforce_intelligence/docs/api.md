@@ -15,6 +15,8 @@ Protected responses use `Cache-Control: no-store`.
 | `GET /analytics/executive` | Executive metrics, comparator, calculation components and data-quality checks. |
 | `GET /analytics/candidate-funnel` | Sequential application cohort, stage counts, conversions and median step durations. Optional `vacancy_id`. |
 | `GET /metrics`, `GET /data-quality` | Canonical metric definitions and diagnostics for the implemented projections. |
+| `GET /surveys/reports/rota-pressure` | The controlled People Voice report with published evidence, draft status and its linked management action. |
+| `POST /insight-pilot/query` | Uses the executive vacancy-rate calculation for `intent: "explain_vacancy_rate"` and optional `as_of_date` and `period_start`. |
 | `PATCH /employees/{employee_id}/contracts` | Apply `contracted_fte` at `effective_from`. The MVP supports one effective contract per employee on a given date. |
 | `POST /vacancies/{vacancy_id}/cancel` | Close the remaining request with `cancelled_on`. Prior starts remain in the lifecycle. |
 | `POST /starters` | Record `offer_id`, `started_on` and `contracted_fte` and create effective employment. Returns `201` and the new employee ID. |

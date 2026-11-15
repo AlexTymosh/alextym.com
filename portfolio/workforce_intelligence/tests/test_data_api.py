@@ -96,7 +96,9 @@ def test_effective_edit_refreshes_gold_and_keeps_dates_and_audit(demo):
     assert executive(client, as_of_date="2026-10-19")["workforce_gap_wte"]["value"] == historical
     assert client.patch("employees/emp-001/contracts", json=change).status_code == 409
     with database.transaction() as connection:
-        event = connection.execute("SELECT * FROM audit_events").fetchone()
+        event = connection.execute(
+            "SELECT * FROM audit_events WHERE action = 'change_fte'"
+        ).fetchone()
         assert (event["actor_uid"], event["correlation_id"], event["action"]) == (
             "test-member",
             "req_workforce_test",
@@ -189,3 +191,58 @@ def test_empty_denominators_reset_replay_and_stale_tab(demo):
     )
     assert stale.status_code == 409
     assert stale.headers["cache-control"] == "no-store"
+
+
+def test_reviewed_report_reproduces_after_reset_and_excludes_draft_from_gold(demo):
+    client, database = demo
+    response = client.get("surveys/reports/rota-pressure")
+    assert response.status_code == 200, response.text
+    report = response.json()["report"]
+    assert report["analysis_label"] == "Demonstration fallback result"
+    assert report["total_responses"] == 12
+    assert report["analysable_responses"] == 10
+    assert [finding["id"] for finding in report["findings"]] == ["signal-rota-001"]
+    assert [draft["id"] for draft in report["drafts"]] == ["signal-rota-002"]
+    finding = report["findings"][0]
+    assert finding["prevalence"] == 60
+    assert len({evidence["response_id"] for evidence in finding["evidence"]}) == 6
+    assert finding["review_kind"] == "Seeded demonstration review"
+    assert report["actions"][0]["signal_id"] == finding["id"]
+    assert (
+        client.post(
+            "demo/reset",
+            json={**version(client), "confirmed": True, "idempotency_key": str(uuid4())},
+        ).status_code
+        == 200
+    )
+    assert client.get("surveys/reports/rota-pressure").json()["report"] == report
+    with database.transaction() as connection:
+        audits = connection.execute("SELECT action FROM audit_events ORDER BY id").fetchall()
+        assert [row[0] for row in audits] == ["publish_seeded_fallback", "reset"]
+
+
+def test_insight_pilot_uses_governed_result_for_selected_dates(demo):
+    client, _ = demo
+    query = {
+        "intent": "explain_vacancy_rate",
+        "as_of_date": "2026-10-12",
+        "period_start": "2026-10-01",
+    }
+    insight = client.post("insight-pilot/query", json=query)
+    assert insight.status_code == 200, insight.text
+    answer = insight.json()
+    assert (
+        answer["metric"]["current"]
+        == executive(client, as_of_date=query["as_of_date"], period_start=query["period_start"])[
+            "vacancy_rate"
+        ]
+    )
+    assert answer["window"] == {"start": query["period_start"], "end": query["as_of_date"]}
+    assert answer["report_section"] == "executive"
+    assert (
+        client.post(
+            "insight-pilot/query", json={**query, "sql": "SELECT * FROM employees"}
+        ).status_code
+        == 422
+    )
+    assert client.post("insight-pilot/query", json={**query, "intent": "other"}).status_code == 422

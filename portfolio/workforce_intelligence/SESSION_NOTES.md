@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PR 1 merged. PR 2 data core implemented and locally verified.
+**Document status:** PR 1 and PR 2 merged. Interview MVP implemented locally. Hosted acceptance pending.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -67,9 +67,9 @@ The v1.2 file was saved in `docs/specifications/`, whereas its own header/Append
 | Gate | Requirement | State | Evidence |
 |---|---|---|---|
 | G0 — Planning | Canonical v1.2 located; status and dependency map agreed | DONE | Sections 0–2 |
-| G1 — Security | Firebase + explicit Workforce grant enforced on all protected interfaces, including direct Render; disabled by default until verified | IN PROGRESS: foundation merged; hosted verification pending | PR #245 |
+| G1 — Security | Firebase and explicit Workforce grant enforced on all protected interfaces, including direct Render | IN PROGRESS | Both local hosts enforce grants and revocation with Firebase emulators. Hosted verification pending. |
 | G2 — Dataset | Independent SQLite lifecycle, consistent seeded history, tests and audited mutations | DONE | Commits 04–06 and local `task ci` |
-| G3 — Interview MVP | 90-second and 5-minute flows pass end-to-end without live AI | PLANNED | — |
+| G3 — Interview MVP | 90-second and 5-minute flows pass end-to-end without live AI | IN PROGRESS | Local browser walkthroughs complete. Hosted acceptance pending. |
 | G4 — Full function | Operational, analytical and People Voice/AI requirements verified | PLANNED | — |
 | G5 — Release | Security, accessibility, CI, hosted preview, production and cold-start smoke validated | PLANNED | — |
 
@@ -336,8 +336,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR | Commits | Scope | Status | PR URL | Merge SHA |
 |---|---:|---|---|---|---|
 | PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
-| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | DONE, pending merge | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | — |
-| PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | NOT STARTED | — | — |
+| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | MERGED | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | `d2c6be784aaa612b83af2ca0f1809f8d97967c34` |
+| PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | DONE for code review | [#247](https://github.com/AlexTymosh/alextym.com/pull/247) | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
 | PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
 | PR 6 | 16–18 | Surveys, weighting, external AI and review | NOT STARTED | — | — |
@@ -351,9 +351,9 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed. Ruff passed. |
 | 05 | DONE | `b257cae1025ffcc020cae89db68adbdaac226594` | 11 project tests passed, including source comparison across two fresh files and reset. |
 | 06 | DONE | `1fdebfe8149ed7c85d3c86e7fe06abdce86def58` | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
-| 07 | NOT STARTED | — | — |
-| 08 | NOT STARTED | — | — |
-| 09 | NOT STARTED | — | — |
+| 07 | DONE | `7201ebc438813ded5e9ef339f827966231b60989` | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
+| 08 | DONE | `fdc80cf50e05831d9bdbd0fa98d54adad94071c8` | Existing-data migration, evidence validation and exclusion of drafts tested. Real local browser verified the report, Insight Pilot and architecture. |
+| 09 | DONE | `cb702dfa9d0c71ab96e43c4d1fd5fd41751680f5` | Guided navigation, reset, screenshots and local acceptance. |
 | 10 | NOT STARTED | — | — |
 | 11 | NOT STARTED | — | — |
 | 12 | NOT STARTED | — | — |
@@ -369,16 +369,16 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `feat/workforce-intelligence-data-core`
-- **Base `main` SHA:** `a49f01b828dba84193200e39f9a09a4e92e0e14b`, confirmed on `origin/main`
-- **Active scope:** PR 2 complete and open as [#246](https://github.com/AlexTymosh/alextym.com/pull/246), awaiting Owner merge after GitHub CI.
-- **Last completed commit:** 06, canonical metrics and protected data routes.
-- **Local `task ci`:** PASS. Backend 947 passed and four live Upstash checks skipped. Frontend 362 passed and two development-only preview tests skipped. RAG 27/27, repository checks, and Docker build passed.
-- **Final focused checks:** `task backend:check` passed again (947 passed, four skips) after aligning the OpenAPI 422 schema. `npm --prefix frontend run e2e -- workforce-transport.spec.ts` against the existing production build passed all six assertions after adding the unsigned browser request test.
-- **GitHub CI:** [Checks for PR #246](https://github.com/AlexTymosh/alextym.com/pull/246/checks).
-- **Hosted smoke:** Live Firebase/Firestore grant, revocation, and direct Render checks remain part of the PR 3 Interview MVP gate.
+- **Current branch:** `feat/workforce-intelligence-interview-mvp`
+- **Base `main` SHA:** `d2c6be784aaa612b83af2ca0f1809f8d97967c34`, confirmed on `origin/main`
+- **Active scope:** PR 3 Interview MVP code review. Hosted acceptance remains open.
+- **Last completed commit:** 09, guided demo, confirmed reset and verification.
+- **Local `task ci`:** PASS. Repository hygiene, config, backend, frontend, RAG and Docker jobs passed.
+- **Local verification:** The emulator-backed desktop Playwright run passed five cases, with the production-only preview assertion skipped in that opt-in configuration. The full backend check passed with 950 tests and four opt-in Upstash skips.
+- **GitHub CI:** [Checks for PR #247](https://github.com/AlexTymosh/alextym.com/pull/247/checks).
+- **Hosted smoke:** The isolated Render service returned health `200` and Workforce `404` at live identity-only commit `beac78ac9264c6ad16706e9352836a67038890ab`. Its linked branch is `main` with manual deploys. Vercel's Firebase settings were scoped to the previous identity preview. The temporary Firebase operator certificate expired at 11:31 UTC on 15 November 2026 and Google's token endpoint rejected the credential. Hosted Member and revocation checks require an authenticated dev operator and deployment of the candidate to both existing hosts.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** After PR 2 merges, branch from refreshed `main` for PR 3. Connect the UI to a real FTE change and executive metric refresh.
+- **Next exact task:** Review PR 3 with the feature flags defaulting off. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers. PR 4 starts from refreshed `main` after the Owner merges PR 3.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -397,6 +397,25 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - Exposed typed executive, vacancy, application and data quality queries and versioned FTE, cancellation, actual start and reset requests. Next.js forwards only documented Workforce paths after the access check and verifies the Origin for writes.
 - Tested an effective 0.2 FTE change, cancellation without a WTE gain, and a valid actual start that increases substantive WTE. Also tested reset replay, stale tabs, refused direct access and continued host liveness after a Workforce SQLite failure.
 - The MVP uses date filters, vacancy filtering for the funnel, one contract and one assignment per date, and a disposable fixed seed. The operational UI and hosted acceptance remain in PR 3.
+
+#### 2026-11-15 — Commit 07: executive UI and effective FTE
+
+- The two operational modes use the authenticated same-origin APIs. The dashboard combines snapshots only when the dataset ID, generation and revision match.
+- Chromium used the real Lab email/password UI against the local Firebase emulators and saved FTE through Next.js and FastAPI. SQLite recorded the audit event. The dashboard changed without a document reload and persisted after one.
+- The same test verified the metric definition and an empty reporting period. The development-only offline preview still makes zero protected requests.
+
+#### 2026-11-15 — Commit 08: evidence-linked People Voice and Insight Pilot
+
+- Added a reproducible fallback report with six linked findings excerpts, a separate published review record, an unpublished draft and a linked management action.
+- Tests verify evidence IDs, rejected cross-survey or missing evidence and draft exclusion from the Gold view. Migration into an existing database preserves FTE changes and their audit.
+- Insight Pilot returns the executive vacancy-rate observation for one controlled intent. Data Architecture shows implemented lineage, diagnostic results and the backend metric catalogue.
+- The browser test signed in to the emulator-backed hosts and confirmed the fallback report, evidence links, vacancy-rate answer and actual lineage.
+
+#### 2026-11-15 — Commit 09: guided walkthroughs and reset
+
+- Added both shareable walkthroughs, a scoped reset confirmation, stale generation detection and a local emulator Member fixture. The 90-second flow edits the original SQLite record and displays the updated KPI. The longer flow reaches the application funnel, evidence report, Insight Pilot and lineage.
+- Chromium verified both guides, same-session denial through Next.js and direct FastAPI after revoking the emulator grant, and a stale tab reloading after reset. The authenticated desktop captures accompany the runbook. The mobile light-mode view fit a 390px viewport.
+- The hosted acceptance check remains pending on the existing dev hosts. The report labels the fixture review explicitly. A live analyst decision and on-demand analysis remain later stages.
 
 ### Per-commit entry template
 
@@ -563,12 +582,12 @@ At the start of **every** new coding session:
 
 - [ ] `/portfolio` catalogue and protected `/portfolio/workforce-intelligence` route work through existing host.
 - [ ] Firebase email/password + explicit Workforce grant required, checked by Next.js **and** FastAPI direct origin.
-- [ ] One uniform Member experience; no project-owned credentials, account/role hierarchy or Fleet business import.
-- [ ] Independent Workforce SQLite, seed, migrations, local audit and safe reset; Firestore unchanged.
-- [ ] Real source change updates valid Gold KPI and tooltip; cancellation/filled semantics and application grain are correct.
-- [ ] Executive dashboard, reviewed survey evidence, controlled Insight Pilot intent and architecture overview work.
-- [ ] Reliable 90-second and 5-minute guided interview flows without live AI.
-- [ ] All planned-only features clearly marked; synthetic/unofficial notices visible.
+- [x] One uniform Member experience using the shared Portfolio Lab identity.
+- [x] Independent Workforce SQLite, seed, migrations, local audit and scoped reset.
+- [x] Real source change updates the Gold KPI and definition. Cancellation, actual starts and application grain have tests.
+- [x] Executive dashboard, seeded survey review evidence, controlled Insight Pilot and architecture overview.
+- [x] Guided 90-second and five-minute flows verified locally without a live AI provider.
+- [x] Planned capabilities and synthetic/unofficial notices appear in the UI.
 - [ ] `task ci` + GitHub CI + protected hosted smoke + Fleet/public-site regressions pass.
 
 ### Full PoC (PR 7 gate)
@@ -581,4 +600,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** Foundation merged. Data core ready for review. Interview MVP and hosted Workforce acceptance pending.
+**Current overall state:** Foundation and data core merged. Interview MVP code and local browser acceptance complete. Hosted verification and Owner merge pending.

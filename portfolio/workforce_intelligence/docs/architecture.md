@@ -57,3 +57,18 @@ Quality diagnostics compare Bronze and Silver at the cutoff and flag excluded
 applications, offers, starts and unassigned contracts. They describe the rules
 implemented in this stage. The API returns the data revision and quality status
 together so the dashboard can surface those findings at the point of use.
+
+## Controlled People Voice evidence
+
+Migration 3 adds a synthetic survey, dated responses, analysis, evidence links,
+review records and a management action. It installs the report into an existing
+`interview-core` dataset without replacing employee or recruitment records, adds
+a seed audit event and advances the revision. Reset installs the same report at
+the next generation.
+
+`gold_reviewed_survey_findings` requires an approved review that predates
+publication and evidence comments from the same campaign. The fixture contains
+one published finding and one draft. The audit and UI label the former as a
+seeded demonstration review. The report uses a demonstration fallback that is
+available independently of AI provider availability. The later live review
+workflow will collect Member decisions and publication events.

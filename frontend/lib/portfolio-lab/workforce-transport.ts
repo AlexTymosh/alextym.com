@@ -4,6 +4,7 @@ const reportingWindow = ["as_of_date", "period_start"];
 
 const operations: readonly [string, RegExp, readonly string[]][] = [
   ["GET", /^(status|demo\/status|metrics)$/, []],
+  ["GET", /^surveys\/reports\/rota-pressure$/, []],
   ["GET", /^(employees|vacancies|analytics\/vacancy-lifecycle)$/, pagination],
   ["GET", /^analytics\/executive$/, reportingWindow],
   ["GET", /^analytics\/candidate-funnel$/, [...reportingWindow, "vacancy_id"]],
@@ -11,6 +12,7 @@ const operations: readonly [string, RegExp, readonly string[]][] = [
   ["PATCH", new RegExp(`^employees/${entity}/contracts$`), []],
   ["POST", new RegExp(`^vacancies/${entity}/cancel$`), []],
   ["POST", /^(starters|demo\/reset)$/, []],
+  ["POST", /^insight-pilot\/query$/, []],
 ];
 
 export function workforceUpstreamPath(method: string, parts: string[], query: URLSearchParams) {

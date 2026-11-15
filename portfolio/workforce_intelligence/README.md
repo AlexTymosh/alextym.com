@@ -1,10 +1,10 @@
 # Workforce & Recruitment Intelligence — embedded portfolio module
 
-**Status:** PR 2 supplies the independent SQLite data core, deterministic
-interview seed, canonical executive and funnel metrics, and protected mutation
-and reset APIs. The browser shell will connect to these workflows in PR 3.
-`PORTFOLIO_LAB_ENABLED` and `WORKFORCE_INTELLIGENCE_ENABLED` default to disabled.
-Hosted grant, revocation and direct Render verification are still release gates.
+**Status:** The interview MVP implements recruitment metrics, effective FTE,
+the reviewed synthetic People Voice fixture, lineage, Insight Pilot, reset and
+two guided scenarios. Both feature flags default to disabled. Hosted grant,
+revocation and direct Render verification are release gates. See the
+[interview runbook](docs/interview-runbook.md).
 
 ## Application boundaries
 
@@ -39,12 +39,10 @@ includes credentials, HR records or response text. Internal project theme is
 persisted only when local storage is available. No Fleet CSS or components are
 imported.
 
-The UI calls only the existing, fixed-origin authenticated status BFF and
-reflects its verified result. It distinguishes loading, session expired,
-revoked access, disabled demo and backend unavailable; Retry repeats the real
-check. None of the feature cards, KPIs or data panels simulate successful
-business operations. They explicitly say **Not yet implemented** until the UI
-connects to the protected data APIs.
+The UI calls the fixed-origin authenticated Workforce BFF and reflects the
+committed dataset revision. It distinguishes loading, expired session, revoked
+access, disabled demo and unavailable data. **Retry** starts a new request.
+Changing a contract updates the executive metrics after a fresh read.
 
 ## Local-only UI preview (no Firebase or backend)
 
@@ -131,12 +129,12 @@ Manual hosted checks before granting any real visitor access:
    unauthenticated BFF requests return 401.
 3. An admitted UID **without** a Workforce grant cannot open the page or use
    its BFF; direct Render access is denied as well.
-4. An admitted UID with a valid Workforce grant can open the SPA and receives
-   `Protected API verified` after the real status BFF responds.
+4. An admitted UID with a valid Workforce grant can open the SPA and sees the
+   dataset generation and revision after the protected requests succeed.
 5. Navigate through all four sections. Verify URL changes without reloading,
    refresh on `?mode=people-voice`, Back/Forward and browser-new-tab navigation.
-6. Toggle the internal light/dark theme; test desktop, mobile and keyboard
-   focus. All feature cards must still identify missing functionality.
+6. Toggle the internal light/dark theme and test desktop, mobile and keyboard
+   focus. Planned capabilities are listed in each relevant mode.
 7. Revoke the UID grant; the next protected request must fail, including the
    direct Render origin. Verify safe error state and no leaked records.
 8. Simulate Firestore unavailability; the request fails closed. Confirm Fleet,

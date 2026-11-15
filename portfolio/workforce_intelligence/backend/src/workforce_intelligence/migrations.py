@@ -1,6 +1,7 @@
 """Forward-only, application-owned migrations in schema order."""
 
 from workforce_intelligence.projections import PROJECTION_MIGRATION
+from workforce_intelligence.survey_migration import SURVEY_MIGRATION, SURVEY_TABLES
 
 _TEMPORAL = """
     valid_from TEXT NOT NULL,
@@ -192,6 +193,7 @@ MIGRATIONS = (
         "CREATE INDEX starters_date ON starter_events (started_on)",
     ),
     PROJECTION_MIGRATION,
+    SURVEY_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.
@@ -207,4 +209,5 @@ SOURCE_TABLES = (
     "application_stage_events",
     "offers",
     "starter_events",
+    *SURVEY_TABLES,
 )
