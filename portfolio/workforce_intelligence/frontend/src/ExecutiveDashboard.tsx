@@ -1,6 +1,7 @@
 import type { FormEvent, ReactNode } from "react";
 import type { Comparison, Dashboard, Dataset, Filters, Window } from "./data-api";
 import { displayCode, displayNumber, displayObservation, displayWindow } from "./format";
+import { RecruitmentChannels } from "./RecruitmentChannels";
 import styles from "./workforce-scaffold.module.css";
 
 const METRIC_ORDER = [
@@ -120,6 +121,7 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
           </>
         ) : <p className={styles.message}>There are no applications in this cohort.</p>}
       </section>
+      <RecruitmentChannels sources={dashboard.sources} vacancyFiltered={Boolean(filters.vacancyId)} />
       {pilot}
     </div>
   );

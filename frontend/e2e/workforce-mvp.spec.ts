@@ -58,6 +58,10 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
   const workspaceNav = page.getByRole("navigation", { name: "Workforce sections" });
+  await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
+  const channels = page.getByRole("region", { name: "Recruitment channel table" });
+  await expect(channels).toBeVisible();
+  await expect(channels.getByRole("row").filter({ hasText: "Careers" })).toBeVisible();
   const gap = page.locator("[data-metric=workforce_gap_wte]");
   const prior = Number((await gap.innerText()).split(" ")[0]);
   await page.evaluate(() => { document.documentElement.dataset.workforceApp = "running"; });
@@ -86,6 +90,7 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await page.getByLabel("As of date").fill("2026-07-30");
   await page.getByRole("button", { name: "Apply dates" }).click();
   await expect(page.getByText("There are no applications in this cohort.")).toBeVisible();
+  await expect(page.getByText("There are no applications in this reporting window.")).toBeVisible();
   await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
 });
 

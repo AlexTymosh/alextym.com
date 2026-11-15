@@ -54,8 +54,8 @@ const sections: Record<WorkforceMode, {
 }> = {
   "workforce-intelligence": {
     label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
-    outline: [["executive", "Recruitment overview"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["insight-pilot", "Insight Pilot"]],
-    planned: "Attraction, workforce outcomes, equality and forecasting.",
+    outline: [["executive", "Recruitment overview"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["attraction", "Recruitment channels"], ["insight-pilot", "Insight Pilot"]],
+    planned: "Further workforce outcomes, equality and forecasting.",
   },
   "workforce-management": {
     label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",

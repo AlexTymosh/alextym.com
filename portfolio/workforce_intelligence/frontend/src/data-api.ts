@@ -89,7 +89,28 @@ export type Employee = {
   role: string | null;
 };
 export type Directory = Snapshot & { items: Employee[]; next_offset: number | null };
-export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel };
+export type RecruitmentSourceRow = {
+  source_code: string;
+  applications: number;
+  screened: number;
+  shortlisted: number;
+  interviewed: number;
+  accepted_offers: number;
+  starters: number;
+  application_to_start_percent: number | null;
+};
+export type RecruitmentSources = Snapshot & {
+  report: {
+    window: Window;
+    campaign_id: string | null;
+    organisation_id: string | null;
+    location_id: string | null;
+    role_id: string | null;
+    rows: RecruitmentSourceRow[];
+    total_applications: number;
+  };
+};
+export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources };
 export type SurveyReport = {
   survey_id: string;
   title: string;
@@ -239,15 +260,16 @@ export async function loadWorkspace(
   if (filters.vacancyId) cohort.set("vacancy_id", filters.vacancyId);
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const [executive, vacancies, funnel] = await Promise.all([
+    const [executive, vacancies, funnel, sources] = await Promise.all([
       workforceRequest<Executive>(`analytics/executive?${range}`, { signal }),
       workforceRequest<Vacancies>(`analytics/vacancy-lifecycle?${dates}`, { signal }),
       workforceRequest<Funnel>(`analytics/candidate-funnel?${cohort}`, { signal }),
+      workforceRequest<RecruitmentSources>(`analytics/recruitment-sources?${range}`, { signal }),
     ]);
     const dataset = executive.dataset;
-    if ([vacancies, funnel].every((value) =>
+    if ([vacancies, funnel, sources].every((value) =>
       sameGeneration(dataset, value.dataset) && dataset.revision === value.dataset.revision)) {
-      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel } };
+      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources } };
     }
   }
   throw new WorkforceApiError(409, "The dataset changed while these reports loaded. Refresh the view.");
