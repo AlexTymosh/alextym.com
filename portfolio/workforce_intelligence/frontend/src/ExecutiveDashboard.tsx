@@ -8,6 +8,24 @@ const METRIC_ORDER = [
   "workforce_gap_wte", "open_vacancies", "median_time_to_hire", "vacancy_rate", "vacancy_wte",
   "new_starters", "budgeted_wte", "substantive_wte", "offer_acceptance_rate",
 ];
+const OUTCOME_GROUPS = [
+  {
+    label: "Recruitment and onboarding",
+    description: "Accepted offers, internal appointments and completed probation decisions.",
+    codes: ["offer_to_start_conversion", "internal_appointment_rate", "probation_pass_rate"],
+  },
+  {
+    label: "Retention and leavers",
+    description: "Opening-cohort retention, completed 365-day starter follow-up and dated leavers.",
+    codes: ["retention_rate", "early_attrition_12m", "new_leavers"],
+  },
+  {
+    label: "Progression and development",
+    description: "Recorded progression, PDR and learning events; not population-wide compliance.",
+    codes: ["internal_progressions", "pdr_completion_rate", "learning_completion_rate"],
+  },
+] as const;
+
 const STAGE_LABELS: Record<string, string> = {
   received: "Application received", screened: "Eligibility screened", shortlisted: "Shortlisted",
   interviewed: "Interviewed", conditional_offer: "Conditional offer", offer_accepted: "Offer accepted",
@@ -122,6 +140,35 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
         ) : <p className={styles.message}>There are no applications in this cohort.</p>}
       </section>
       <RecruitmentChannels sources={dashboard.sources} vacancyFiltered={Boolean(filters.vacancyId)} />
+      <section id="outcomes" className={styles.panel} aria-labelledby="outcomes-heading">
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 id="outcomes-heading">Workforce outcomes</h2>
+            <p>Governed workforce measures for {displayWindow(currentWindow)}.</p>
+          </div>
+        </div>
+        <div className={styles.stack}>
+          {OUTCOME_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className={styles.caption}><strong>{group.label}</strong> · {group.description}</p>
+              <div className={styles.metricGrid}>
+                {group.codes.map((code) => {
+                  const metric = metrics.get(code);
+                  return metric ? (
+                    <MetricCard key={code} metric={metric} dataset={dataset}
+                      window={currentWindow} previousWindow={executive.previous_window}
+                      highlight={false} quality={quality} />
+                  ) : null;
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className={styles.caption}>
+          These are synthetic measures. Missing follow-up or a zero eligible denominator is
+          shown as Not available, never as a zero outcome. Definitions explain cohort scope.
+        </p>
+      </section>
       {pilot}
     </div>
   );

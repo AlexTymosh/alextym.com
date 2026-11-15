@@ -61,6 +61,11 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
   const channels = page.getByRole("region", { name: "Recruitment channel table" });
   await expect(channels).toBeVisible();
+  const outcomes = page.getByRole("region", { name: "Workforce outcomes" });
+  await expect(outcomes).toBeVisible();
+  await expect(outcomes.locator("[data-metric=offer_to_start_conversion]")).toBeVisible();
+  await expect(outcomes.locator("[data-metric=retention_rate]")).toBeVisible();
+  await expect(outcomes.locator("[data-metric=early_attrition_12m]")).toHaveText("Not available");
   await expect(channels.getByRole("row").filter({ hasText: "Careers" })).toBeVisible();
   const gap = page.locator("[data-metric=workforce_gap_wte]");
   const prior = Number((await gap.innerText()).split(" ")[0]);
@@ -91,6 +96,7 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await page.getByRole("button", { name: "Apply dates" }).click();
   await expect(page.getByText("There are no applications in this cohort.")).toBeVisible();
   await expect(page.getByText("There are no applications in this reporting window.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Workforce outcomes" })).toBeVisible();
   await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
 });
 

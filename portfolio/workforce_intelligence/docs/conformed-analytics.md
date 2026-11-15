@@ -67,3 +67,21 @@ suppression on the server before any protected-characteristic data leaves the AP
 
 No demographic breakdown should be exposed via API until suppression is proven.
 Public benchmark values must never be substituted for synthetic computed data.
+
+## PR5 / commit 14: initial Workforce Outcomes dashboard
+
+The existing Workforce Intelligence page now presents all nine outcome KPIs
+returned by the canonical executive endpoint, grouped into recruitment and
+onboarding, retention and leavers, and progression and development. It reuses
+the same server-produced observation, definition, previous comparable period,
+dataset revision and quality status as the executive KPI cards. No dashboard
+formula or additional endpoint was created.
+
+An October 2026 report cannot show a 365-day early-attrition percentage because
+none of its October starters have a full year of follow-up at the October cutoff;
+that metric correctly shows **Not available**, not `0%`. Recorded PDR and
+learning event completion rates are explicitly not workforce compliance rates.
+
+The sidebar exposes a Workforce outcomes anchor. The emulator browser test checks
+its three key representative metrics, including the unavailable cohort state.
+Full dimensional drill-through and governed suppression remain later PR5 work.
