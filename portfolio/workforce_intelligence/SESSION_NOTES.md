@@ -337,7 +337,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 |---|---:|---|---|---|---|
 | PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
 | PR 2 | 04–06 | SQLite, seed, source→Gold metrics | MERGED | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | `d2c6be784aaa612b83af2ca0f1809f8d97967c34` |
-| PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | DONE for code review | Branch pending publication | — |
+| PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | DONE for code review | [#247](https://github.com/AlexTymosh/alextym.com/pull/247) | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
 | PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
 | PR 6 | 16–18 | Surveys, weighting, external AI and review | NOT STARTED | — | — |
@@ -353,7 +353,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 06 | DONE | `1fdebfe8149ed7c85d3c86e7fe06abdce86def58` | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
 | 07 | DONE | `7201ebc438813ded5e9ef339f827966231b60989` | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
 | 08 | DONE | `fdc80cf50e05831d9bdbd0fa98d54adad94071c8` | Existing-data migration, evidence validation and exclusion of drafts tested. Real local browser verified the report, Insight Pilot and architecture. |
-| 09 | DONE | Interview MVP implementation tip | Guided navigation, reset, screenshots and local acceptance. |
+| 09 | DONE | `cb702dfa9d0c71ab96e43c4d1fd5fd41751680f5` | Guided navigation, reset, screenshots and local acceptance. |
 | 10 | NOT STARTED | — | — |
 | 11 | NOT STARTED | — | — |
 | 12 | NOT STARTED | — | — |
@@ -375,7 +375,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - **Last completed commit:** 09, guided demo, confirmed reset and verification.
 - **Local `task ci`:** PASS. Repository hygiene, config, backend, frontend, RAG and Docker jobs passed.
 - **Local verification:** The emulator-backed desktop Playwright run passed five cases, with the production-only preview assertion skipped in that opt-in configuration. The full backend check passed with 950 tests and four opt-in Upstash skips.
-- **GitHub CI:** Check the Interview MVP PR after publication.
+- **GitHub CI:** [Checks for PR #247](https://github.com/AlexTymosh/alextym.com/pull/247/checks).
 - **Hosted smoke:** The isolated Render service returned health `200` and Workforce `404` at live identity-only commit `beac78ac9264c6ad16706e9352836a67038890ab`. Its linked branch is `main` with manual deploys. Vercel's Firebase settings were scoped to the previous identity preview. The temporary Firebase operator certificate expired at 11:31 UTC on 15 November 2026 and Google's token endpoint rejected the credential. Hosted Member and revocation checks require an authenticated dev operator and deployment of the candidate to both existing hosts.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
 - **Next exact task:** Review PR 3 with the feature flags defaulting off. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers. PR 4 starts from refreshed `main` after the Owner merges PR 3.
