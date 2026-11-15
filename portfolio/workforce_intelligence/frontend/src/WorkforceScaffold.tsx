@@ -74,7 +74,7 @@ const sections: Record<WorkforceMode, {
   },
 };
 
-export function WorkforceScaffold({ previewMode = false }: { previewMode?: boolean }) {
+export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewMode?: boolean; onSignOut?: () => void }) {
   const search = useSyncExternalStore(subscribeToLocation, getLocationSearch, getServerSearch);
   const mode = modeFromSearch(search);
   const guide = previewMode ? null : readGuide(search);
@@ -194,9 +194,8 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
             {theme === "dark" ? "Light theme" : "Dark theme"}
           </button>
-          {!previewMode && !restricted ? <details className={styles.account}>
-            <summary>Account</summary><div><strong>Member</strong><a href="/lab">Manage sign-in</a></div>
-          </details> : null}
+          {!previewMode && onSignOut ? <button className={styles.secondaryButton} type="button"
+            onClick={onSignOut}>Sign out</button> : null}
         </div>
       </header>
       <nav aria-label="Workforce sections" className={styles.navigation}>

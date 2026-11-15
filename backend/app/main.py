@@ -22,7 +22,7 @@ from app.core.logging import configure_logging
 from app.core.loki import shutdown_loki_exporter
 from app.core.metrics import configure_metrics
 from app.middleware.request_context import RequestContextMiddleware
-from app.security.project_grants import require_workforce_member
+from app.security.workforce_demo import require_workforce_member, router as workforce_access_router
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,8 @@ def create_app() -> FastAPI:
     app.include_router(escalation_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     app.include_router(fleet_router, prefix="/api")
-    # All present and future Workforce routes inherit the same platform grant check.
+    app.include_router(workforce_access_router, prefix="/api")
+    # All Workforce data routes require a valid backend-signed demo session.
     app.include_router(
         workforce_router, prefix="/api", dependencies=[Depends(require_workforce_member)]
     )

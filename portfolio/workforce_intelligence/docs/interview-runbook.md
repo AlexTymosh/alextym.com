@@ -73,50 +73,69 @@ Desktop screenshots from the authenticated local emulator run show the
 [Recruitment overview](screenshots/workforce-recruitment.png) and the
 [People Voice fallback report](screenshots/workforce-people-voice.png).
 
-## Reproduce the browser checks locally
+## Reproduce the password-demo browser checks locally
 
-Start the Auth and Firestore emulators and set the values documented in the
-[Portfolio Lab emulator guide](../../../docs/architecture/portfolio-lab-identity-verification.md#local-emulator-reproduction).
-Use `http://127.0.0.1:14300` as `PORTFOLIO_LAB_ORIGIN` and set
-`WORKFORCE_INTELLIGENCE_ENABLED=true` in the test processes. Bind Next.js and
-FastAPI to localhost on ports `14300` and `14800`. For a disposable Workforce DB,
-start FastAPI using the project's `uv` environment from an empty working
-directory under `.tmp/`.
+Firebase and Firestore are **not required** for the temporary Workforce demo.
+Use a disposable SQLite database and the same synthetic password in the FastAPI
+process and the test runner. A working example with three PowerShell terminals:
 
-With the emulator variables in the current shell, create the fictional Member
-and run the desktop walkthrough and authorization tests from the repository root.
+1. **Backend**, from `backend` (set these variables in this terminal):
 
 ```powershell
-uv run --project backend python -m scripts.prepare_workforce_emulators
+$env:WORKFORCE_INTELLIGENCE_ENABLED = 'true'
+$env:VOR_DEMO_PASSWORD = '<local-test-password>'
+$env:ENVIRONMENT = 'test'
+$env:FRONTEND_ORIGIN = 'http://127.0.0.1:14300'
+uv run uvicorn app.main:app --host 127.0.0.1 --port 14800
+```
+
+Run FastAPI in an **isolated disposable working directory** if you want a fresh
+`.tmp/workforce/workforce.sqlite3`. This project owns its database path; do not
+reuse an existing shared demo database for mutation or reset browser tests.
+
+2. **Frontend**, from `frontend`:
+
+```powershell
+$env:WORKFORCE_INTELLIGENCE_ENABLED = 'true'
+$env:BACKEND_ORIGIN = 'http://127.0.0.1:14800'
+$env:PORTFOLIO_LAB_ORIGIN = 'http://127.0.0.1:14300'
+npm run dev -- --hostname 127.0.0.1 --port 14300
+```
+
+3. **E2E**, from the repository root:
+
+```powershell
 $env:PLAYWRIGHT_BASE_URL = 'http://127.0.0.1:14300'
-$env:WORKFORCE_MVP_E2E = 'true'
+$env:WORKFORCE_PASSWORD_E2E = 'true'
+$env:WORKFORCE_E2E_PASSWORD = '<local-test-password>'
 npm --prefix frontend run e2e -- --project=chromium --workers=1 workforce-mvp.spec.ts
 ```
 
-The browser uses the real Lab sign-in, Next.js BFF and FastAPI host. It verifies
-FTE persistence, KPI refresh, evidence links, guides, reset and stale-tab repair.
-It also revokes the fictional grant and checks that both hosts reject the same
-session. The emulator proves the application flow. Live issuer and HTTPS
-verification use the hosted staging check below.
+`WORKFORCE_E2E_PASSWORD` is a **local testing variable**, not a browser
+configuration or a checked-in credential. The workbook import test additionally
+requires a synthetic `WORKFORCE_OPS_XLSX_FILE`. Verify that test output does
+not report all authenticated scenarios as skipped.
 
-## Hosted acceptance before enabling testers
+## Hosted acceptance before sharing the demo
 
-Use the existing isolated Vercel Preview and Render dev service with the same
-Firebase dev project. Record both deployed commits. Scope the two feature flags,
-`BACKEND_ORIGIN`, `PORTFOLIO_LAB_ORIGIN` and Firebase configuration to the approved
-test environments. Keep Vercel Deployment Protection active. The operator uses
-an unexpired dev credential, a fictional test account and the existing grant CLI.
-Production flags default to disabled.
+Deploy the same commit on an isolated Vercel Preview and Render dev service.
+Render must retain `VOR_DEMO_PASSWORD`; Vercel must never receive it. Both
+services require `WORKFORCE_INTELLIGENCE_ENABLED=true`, while Vercel requires
+`BACKEND_ORIGIN` and the canonical `PORTFOLIO_LAB_ORIGIN` for CSRF protection.
+Keep Vercel deployment protection enabled for the preview.
 
-1. Verify direct Render health and Preview access. An anonymous browser must
-   reach the sign-in gate. Direct Workforce requests without credentials must
-   return `401` when enabled.
-2. Use an admitted identity with a missing or Fleet-only grant. Verify the
-   Workforce page withholds data and that both data origins reject the request.
-3. Grant Workforce membership, sign in and complete both walkthroughs, including
-   the mutation, reset and prebuilt report. Record the dataset revision and
-   generation from successful responses. Verify direct Render with the signed
-   test credential and check an untrusted mutation Origin is rejected by Next.js.
-4. Revoke the grant and verify the existing credential stops working on both
-   origins. Check Fleet and the public site. Record results by environment and
-   deployment, then disable the preview flags if the staging window is over.
+1. With the Workforce flag absent, the page and API return 404.
+2. With the flag enabled, an anonymous visitor sees the logo and password form.
+   API access and direct Render Workforce data calls must return 401.
+3. A wrong password returns 401; repeated invalid attempts receive 429.
+4. The correct **Fleet demo password** grants access to Workforce but a Fleet
+   cookie cannot authorize Workforce data. Verify an 8-hour HttpOnly cookie.
+5. Check executive KPIs, vacancy drill-through, Inclusive Recruitment masking,
+   People Voice and the four SPA modes using synthetic data only.
+6. Confirm API writes still reject an invalid Origin; refresh preserves a valid
+   session; logout removes browser access; a rotated password invalidates tokens.
+7. Check that Fleet and public website endpoints are unaffected. Record status
+   by deployment SHA; keep the preview disabled after testing if appropriate.
+
+See [password-demo access](password-demo-access.md) for the threat model. This
+mode is **not** suitable for personally identifiable or clinical workforce data.

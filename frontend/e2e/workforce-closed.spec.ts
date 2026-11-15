@@ -2,8 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Workforce project default-off gate", () => {
   test.skip(
-    process.env.WORKFORCE_INTELLIGENCE_ENABLED === "true" &&
-      process.env.PORTFOLIO_LAB_ENABLED === "true",
+    process.env.WORKFORCE_INTELLIGENCE_ENABLED === "true",
     "Disabled-mode regression is not applicable while Workforce is explicitly enabled",
   );
 

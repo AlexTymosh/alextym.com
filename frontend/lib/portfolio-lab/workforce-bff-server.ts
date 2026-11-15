@@ -1,10 +1,9 @@
 import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
-import { LAB_SESSION_COOKIE } from "./firebase-server";
+import { WORKFORCE_COOKIE, workforceBackendOrigin, workforceEnabled } from "./workforce-password-server";
 import { hasLabJsonContent, readLabJson } from "./request-json";
 import { hasSameOrigin } from "./session-origin";
-import { getWorkforceAccess } from "./workforce-access-server";
 import { workforceUpstreamPath } from "./workforce-transport";
 import { hasWorkbookContent, readWorkbookBytes, XLSX_CONTENT_TYPE } from "./workforce-workbooks";
 
@@ -13,34 +12,18 @@ function reply(status: number, body: object, headers = new Headers()) {
   return NextResponse.json(body, { status, headers });
 }
 
-function backendOrigin(): string {
-  const raw = process.env.BACKEND_ORIGIN?.trim();
-  if (!raw) throw new Error("Backend origin missing");
-  const url = new URL(raw);
-  if (!["https:", "http:"].includes(url.protocol) ||
-      (process.env.NODE_ENV === "production" && url.protocol !== "https:") ||
-      url.pathname !== "/" || url.username || url.password || url.search || url.hash) {
-    throw new Error("Invalid backend origin");
-  }
-  return url.origin;
-}
-
 export async function forwardWorkforceRequest(request: NextRequest, operation: string[]) {
   const path = workforceUpstreamPath(request.method, operation, request.nextUrl.searchParams);
   if (!path) return reply(404, { detail: "Not found" });
 
-  const sessionCookie = request.cookies.get(LAB_SESSION_COOKIE)?.value;
-  const access = await getWorkforceAccess(sessionCookie);
-  if (access.kind === "disabled") return reply(404, { detail: "Not found" });
-  if (access.kind === "unauthenticated") return reply(401, { detail: "Authentication required" });
-  if (access.kind === "denied") return reply(403, { detail: "Project access denied" });
-  if (access.kind === "unavailable") return reply(503, { detail: "Access unavailable" });
-  if (!sessionCookie) return reply(401, { detail: "Authentication required" });
+  if (!workforceEnabled()) return reply(404, { detail: "Not found" });
+  const sessionCookie = request.cookies.get(WORKFORCE_COOKIE)?.value;
+  if (!sessionCookie) return reply(401, { detail: "Password required" });
 
   const upload = path === "/api/workforce/import/validate";
   const download = path === "/api/workforce/export" || path === "/api/workforce/import/template" ||
     path.startsWith("/api/workforce/import/") && path.endsWith("/errors");
-  const headers = new Headers({ Authorization: `FirebaseSession ${sessionCookie}`,
+  const headers = new Headers({ Authorization: `WorkforceDemo ${sessionCookie}`,
     Accept: download ? XLSX_CONTENT_TYPE : "application/json" });
   let body: string | ArrayBuffer | undefined;
   if (request.method !== "GET") {
@@ -63,7 +46,7 @@ export async function forwardWorkforceRequest(request: NextRequest, operation: s
   }
 
   try {
-    const upstream = await fetch(new URL(path, backendOrigin()), {
+    const upstream = await fetch(new URL(path, workforceBackendOrigin()), {
       method: request.method,
       headers,
       body,
