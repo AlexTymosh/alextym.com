@@ -23,7 +23,11 @@ sheet. The template lists the accepted actions.
 | SurveyResponses | New survey ID and response IDs. Choose an allowlisted synthetic comment code: `none`, `rota_pressure`, `development`, `communication` or `positive`. Already analysed evidence cannot be edited. |
 
 Sheets apply in the order shown, and rows within a sheet apply top to bottom.
-For example, an application must precede its offer, checks and starter. Use the
+For example, an application must precede its offer, checks and starter.
+The date-only closure of a vacancy is effective at the end of its recorded
+closing day. Thus a closed vacancy may still receive historical recruitment
+rows dated on or before that closing day, even though the Vacancies sheet
+precedes Applications in the import order. Rows dated after closure are rejected. Use the
 employee ID displayed in **New starters** if you want to follow up with a
 separate employment import. Matching values are reported as unchanged; duplicate
 business keys within a workbook must be resolved before confirmation.

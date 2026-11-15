@@ -133,7 +133,13 @@ def move_vacancy(editor: SourceEditor, command: VacancyTransition) -> Change:
 
 def _accepts_activity(editor: SourceEditor, vacancy_id: str, day: str) -> None:
     row = editor.require("vacancies", "id", vacancy_id, "Vacancy")
-    if row["closed_on"] or not row["advertised_on"] or day < row["advertised_on"]:
+    # Date-only closure is effective after the recorded closing day. This also permits
+    # historical Excel backfills after the Vacancies sheet has applied a closure.
+    if (
+        not row["advertised_on"]
+        or day < row["advertised_on"]
+        or (row["closed_on"] and day > row["closed_on"])
+    ):
         raise InvalidOperation("Recruitment activity requires a published, open vacancy.")
 
 

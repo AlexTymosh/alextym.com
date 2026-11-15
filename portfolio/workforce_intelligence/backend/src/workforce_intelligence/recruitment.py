@@ -193,7 +193,7 @@ def write_start(
             vacancy["record_version"],
             existing["employee_id"],
         )
-    if vacancy["closed_on"]:
+    if vacancy["closed_on"] and day > vacancy["closed_on"]:
         raise InvalidOperation("The vacancy is already closed.")
     if offer["outcome"] != "accepted" or day < offer["resolved_on"]:
         raise InvalidOperation("A start requires an accepted offer dated on or before the start.")

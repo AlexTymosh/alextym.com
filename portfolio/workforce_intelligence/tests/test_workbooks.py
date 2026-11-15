@@ -20,9 +20,25 @@ from workforce_intelligence.dataset import (
 from workforce_intelligence.http import get_database
 from workforce_intelligence.router import router
 from workforce_intelligence.seed import INTERVIEW_SEED
-from workforce_intelligence.workbook_import import ImportConfirmation, commit_import, preview_import
-from workforce_intelligence.workbook_model import MAX_UPLOAD_BYTES, SHEETS, XLSX_TYPE, columns_for
-from workforce_intelligence.xlsx import INFO_SHEET, book_bytes, new_book, parse_xlsx, tab, template
+from workforce_intelligence.workbook_import import (
+    ImportConfirmation,
+    commit_import,
+    preview_import,
+)
+from workforce_intelligence.workbook_model import (
+    MAX_UPLOAD_BYTES,
+    SHEETS,
+    XLSX_TYPE,
+    columns_for,
+)
+from workforce_intelligence.xlsx import (
+    INFO_SHEET,
+    book_bytes,
+    new_book,
+    parse_xlsx,
+    tab,
+    template,
+)
 
 ACTOR = AuditActor("test-member", "req_workbook")
 
@@ -69,7 +85,9 @@ def running(tmp_path):
     app.include_router(router, prefix="/api", dependencies=[Depends(identify)])
     app.dependency_overrides[get_database] = lambda: database
     with TestClient(
-        app, base_url="https://localhost/api/workforce/", headers={"x-test-member": ACTOR.uid}
+        app,
+        base_url="https://localhost/api/workforce/",
+        headers={"x-test-member": ACTOR.uid},
     ) as client:
         yield client, database
 
@@ -143,7 +161,10 @@ def test_invalid_rows_abort_commit_and_report_precise_locations(running):
         client,
         workbook(
             PERSON,
-            ("Employees", {**PERSON[1], "employee_id": "invalid-line", "line_id": "missing"}),
+            (
+                "Employees",
+                {**PERSON[1], "employee_id": "invalid-line", "line_id": "missing"},
+            ),
             ("Contracts", {**CONTRACT[1], "contracted_fte": "=SUM(1,1)"}),
             ("Contracts", {**CONTRACT[1], "effective_from": "31/10/2026"}),
         ),
@@ -173,7 +194,9 @@ def test_invalid_rows_abort_commit_and_report_precise_locations(running):
     assert client.get(f"import/{batch}/errors", headers=outsider).status_code == 404
     assert (
         client.post(
-            "import/commit", json=payload(preview).model_dump(mode="json"), headers=outsider
+            "import/commit",
+            json=payload(preview).model_dump(mode="json"),
+            headers=outsider,
         ).status_code
         == 404
     )
@@ -322,7 +345,10 @@ def test_workbook_limits_authentication_and_invalid_archives(running):
     dense["Employees"].cell(503, 1, "add_employee")
     assert validate(client, book_bytes(dense)).status_code == 422
     dtd = BytesIO()
-    with ZipFile(BytesIO(template())) as source, ZipFile(dtd, "w", ZIP_DEFLATED) as destination:
+    with (
+        ZipFile(BytesIO(template())) as source,
+        ZipFile(dtd, "w", ZIP_DEFLATED) as destination,
+    ):
         for name in source.namelist():
             raw = source.read(name)
             if name == "xl/workbook.xml":
@@ -374,3 +400,167 @@ def test_excess_uncompressed_workbook_payload_is_rejected():
         archive.writestr("xl/workbook.xml", b"A" * (3 * 1024 * 1024))
     with pytest.raises(InvalidOperation, match="without embedded files"):
         parse_xlsx(target.getvalue())
+
+
+def test_closed_vacancy_workbook_backfill_preserves_historical_recruitment(running):
+    """Vacancies are imported before Applications; old events must remain importable."""
+    client, database = running
+    vacancy = "vac-workbook-closed"
+    application = "app-workbook-closed"
+    offer = "offer-workbook-closed"
+    payload_bytes = workbook(
+        (
+            "Vacancies",
+            {
+                "action": "add_vacancy",
+                "vacancy_id": vacancy,
+                "line_id": "line-2",
+                "title": "Demo historical intake",
+                "requested_on": "2026-10-05",
+                "approved_positions": 1,
+                "approved_wte": 0.8,
+            },
+        ),
+        (
+            "Vacancies",
+            {
+                "action": "move_vacancy",
+                "vacancy_id": vacancy,
+                "transition": "approve",
+                "occurred_on": "2026-10-06",
+            },
+        ),
+        (
+            "Vacancies",
+            {
+                "action": "move_vacancy",
+                "vacancy_id": vacancy,
+                "transition": "publish",
+                "occurred_on": "2026-10-07",
+            },
+        ),
+        (
+            "Vacancies",
+            {
+                "action": "move_vacancy",
+                "vacancy_id": vacancy,
+                "transition": "close",
+                "occurred_on": "2026-10-27",
+            },
+        ),
+        (
+            "Applications",
+            {
+                "action": "add_application",
+                "application_id": application,
+                "vacancy_id": vacancy,
+                "received_on": "2026-10-08",
+                "source_code": "careers",
+            },
+        ),
+        (
+            "Applications",
+            {
+                "action": "move_application",
+                "application_id": application,
+                "transition": "screened",
+                "occurred_on": "2026-10-09",
+            },
+        ),
+        (
+            "Applications",
+            {
+                "action": "move_application",
+                "application_id": application,
+                "transition": "shortlisted",
+                "occurred_on": "2026-10-10",
+            },
+        ),
+        (
+            "Applications",
+            {
+                "action": "record_interview",
+                "application_id": application,
+                "occurred_on": "2026-10-11",
+                "outcome": "passed",
+            },
+        ),
+        (
+            "Offers",
+            {
+                "action": "add_offer",
+                "id": offer,
+                "application_id": application,
+                "offered_on": "2026-10-12",
+            },
+        ),
+        (
+            "Offers",
+            {
+                "action": "decide_offer",
+                "offer_id": offer,
+                "resolved_on": "2026-10-13",
+                "outcome": "accepted",
+            },
+        ),
+        (
+            "PreEmploymentChecks",
+            {
+                "action": "record_check",
+                "offer_id": offer,
+                "checked_on": "2026-10-16",
+                "status": "passed",
+            },
+        ),
+        (
+            "NewStarters",
+            {
+                "action": "confirm_start",
+                "application_id": application,
+                "occurred_on": "2026-10-17",
+                "planned_start_on": "2026-10-21",
+            },
+        ),
+        (
+            "NewStarters",
+            {
+                "action": "record_starter",
+                "offer_id": offer,
+                "started_on": "2026-10-21",
+                "contracted_fte": 0.8,
+            },
+        ),
+    )
+
+    response = validate(client, payload_bytes)
+    assert response.status_code == 200, response.text
+    preview = workbook_import.ImportPreview.model_validate(response.json())
+    assert preview.counts.invalid == 0, [
+        (row.sheet, row.row, row.message) for row in preview.rows if row.result == "invalid"
+    ]
+    assert client.get(f"employees/starter-{offer}").status_code == 404
+    committed = client.post("import/commit", json=payload(preview).model_dump(mode="json"))
+    assert committed.status_code == 200, committed.text
+    assert client.get(f"employees/starter-{offer}").status_code == 200
+    with database.transaction() as conn:
+        row = conn.execute("SELECT closed_on FROM vacancies WHERE id = ?", (vacancy,)).fetchone()
+        assert row["closed_on"] == "2026-10-27"
+        assert conn.execute("SELECT 1 FROM starter_events WHERE offer_id = ?", (offer,)).fetchone()
+
+    late = validate(
+        client,
+        workbook(
+            (
+                "Applications",
+                {
+                    "action": "add_application",
+                    "application_id": "app-workbook-late",
+                    "vacancy_id": vacancy,
+                    "received_on": "2026-10-28",
+                    "source_code": "careers",
+                },
+            )
+        ),
+    )
+    assert late.status_code == 200, late.text
+    assert late.json()["counts"]["invalid"] == 1
