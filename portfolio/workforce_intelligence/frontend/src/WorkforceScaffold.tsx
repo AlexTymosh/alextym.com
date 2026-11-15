@@ -69,7 +69,7 @@ const sections: Record<WorkforceMode, {
   },
   "data-architecture": {
     label: "Data Architecture", description: "Data ownership, quality and lineage.",
-    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["catalogue", "Metric catalogue"]],
+    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["sources", "Sources and assumptions"], ["catalogue", "Metric catalogue"]],
     planned: "Interactive model diagrams, source registry and BPMN.",
   },
 };

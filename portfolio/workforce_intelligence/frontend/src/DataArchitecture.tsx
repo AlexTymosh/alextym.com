@@ -1,5 +1,7 @@
 import type { MetricDefinition, Quality } from "./data-api";
 import { displayCode } from "./format";
+import { QUALITY_RULE_GUIDANCE } from "./assurance-register";
+import { SourcesAndAssumptions } from "./SourcesAndAssumptions";
 import styles from "./workforce-scaffold.module.css";
 
 const lineage = [
@@ -27,10 +29,32 @@ export function DataArchitecture({ quality, metrics }: { quality: Quality; metri
             {quality.quality_status === "passed" ? "Passed" : "Review required"}
           </span>
         </div>
-        <dl className={styles.summaryFacts}>{Object.entries(quality.issues).map(([check, count]) => (
-          <div key={check}><dt>{displayCode(check)}</dt><dd>{count}</dd></div>
-        ))}</dl>
+        <p className={styles.caption}>
+          These are four source-to-Silver reconciliation checks, not a full validation
+          of completeness, protected-characteristic quality or all Workforce KPIs.
+          Counts describe affected records per rule and may overlap; do not sum them.
+        </p>
+        <div className={styles.tableScroll} tabIndex={0} role="region" aria-label="Data quality rule details">
+          <table className={styles.table}>
+            <thead><tr><th scope="col">Implemented check</th><th scope="col">Issues</th>
+              <th scope="col">Potential metric impact</th><th scope="col">Suggested investigation</th></tr></thead>
+            <tbody>{Object.entries(quality.issues).map(([code, count]) => {
+              const guidance = QUALITY_RULE_GUIDANCE[code];
+              return <tr key={code}>
+                <th scope="row">{guidance?.title ?? displayCode(code)}</th>
+                <td>{count}</td>
+                <td>{guidance?.impact ?? "Review source and affected Gold outputs."}</td>
+                <td>{guidance?.investigation ?? "Inspect source validity and lineage."}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+        <p className={styles.caption}>
+          Any nonzero check flags the current dataset for review. These impact descriptions
+          are guidance, not proof that a particular reported KPI is wrong.
+        </p>
       </section>
+      <SourcesAndAssumptions />
       <section id="catalogue" className={styles.panel} aria-labelledby="metric-catalogue-heading">
         <div className={styles.sectionHeader}><h2 id="metric-catalogue-heading">Metric catalogue</h2></div>
         {metrics.map((metric) => <details key={metric.code} className={styles.catalogueEntry}>

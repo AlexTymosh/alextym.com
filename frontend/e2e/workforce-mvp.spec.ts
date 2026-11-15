@@ -150,6 +150,12 @@ test("a member can inspect published evidence, a governed answer and the impleme
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
   await expect(page.getByText("Executive metrics · gold_reviewed_survey_findings")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Metric catalogue" })).toBeVisible();
+  const qualityDetails = page.getByRole("region", { name: "Data quality rule details" });
+  await expect(qualityDetails.getByRole("row", { name: /Excluded applications/ })).toBeVisible();
+  await expect(page.getByText("These are four source-to-Silver reconciliation checks", { exact: false })).toBeVisible();
+  const register = page.getByRole("region", { name: "Sources and assumptions" });
+  await expect(register.getByText("Synthetic recruitment events")).toBeVisible();
+  await expect(register.getByText("SCAS People Strategy 2023–2026")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   await expect(page.getByRole("region", { name: "Workforce Intelligence demo" })).toHaveAttribute("data-theme", "light");
