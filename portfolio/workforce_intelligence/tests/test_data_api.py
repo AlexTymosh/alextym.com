@@ -40,6 +40,231 @@ def version(client):
     return {key: state[key] for key in ("dataset_id", "dataset_generation")}
 
 
+def source_command(client, action, expected_status=200, **fields):
+    snapshot = client.get("demo/status").json()["dataset"]
+    response = client.post(
+        "operations",
+        json={
+            **{key: snapshot[key] for key in ("dataset_id", "dataset_generation", "revision")},
+            "command": {"action": action, **fields},
+        },
+    )
+    assert response.status_code == expected_status, response.text
+    return response.json()
+
+
+def test_employment_workflow_preserves_contract_and_assignment_history(demo):
+    client, _ = demo
+    fields = dict(employee_id="demo-ops", contracted_fte="0.7")
+    source_command(
+        client,
+        "add_employee",
+        display_name="Demo Ops.",
+        line_id="line-1",
+        start_on="2026-08-01",
+        **fields,
+    )
+    source_command(client, "edit_profile", employee_id="demo-ops", display_name="Demo Ops A.")
+    source_command(
+        client,
+        "set_assignment",
+        employee_id="demo-ops",
+        effective_from="2026-09-01",
+        line_id="line-2",
+        kind="promotion",
+    )
+    source_command(
+        client,
+        "set_contract",
+        employee_id="demo-ops",
+        effective_from="2026-09-20",
+        contracted_fte=0.9,
+    )
+    source_command(
+        client,
+        "record_learning",
+        id="demo-training",
+        employee_id="demo-ops",
+        occurred_on="2026-10-02",
+        activity_code="demo-safety",
+    )
+    source_command(
+        client,
+        "record_pdr",
+        id="demo-pdr",
+        employee_id="demo-ops",
+        occurred_on="2026-10-08",
+        status="completed",
+    )
+    source_command(
+        client,
+        "record_leaver",
+        employee_id="demo-ops",
+        leaving_date="2026-10-25",
+        reason="resignation",
+    )
+    source_command(
+        client,
+        "set_contract",
+        expected_status=422,
+        employee_id="demo-ops",
+        effective_from="2026-10-25",
+        contracted_fte=1,
+    )
+    earlier = client.get("employees/demo-ops?as_of_date=2026-09-10").json()["employee"]
+    current = client.get("employees/demo-ops").json()["employee"]
+    assert earlier["employment_status"] == "Active"
+    assert current["employment_status"] == "Leaver"
+    assert [r["valid_to"] for r in current["contracts"]] == ["2026-10-25", "2026-09-20"]
+    assert [r["line_id"] for r in current["assignments"]] == ["line-2", "line-1"]
+    actions = {row["action"] for row in client.get("operations/audit").json()["items"]}
+    assert {"promotion", "record_leaver", "record_pdr"}.issubset(actions)
+    assert current["display_name"] == "Demo Ops A."
+    assert client.delete("employees/demo-ops").status_code == 405
+
+
+def test_full_recruitment_workflow_updates_gold_only_after_actual_start(demo):
+    client, _ = demo
+    baseline = executive(client)
+    common = {"vacancy_id": "vac-ops"}
+    source_command(
+        client,
+        "add_vacancy",
+        title="Demo intake",
+        line_id="line-2",
+        requested_on="2026-10-05",
+        approved_positions=1,
+        approved_wte="0.8",
+        **common,
+    )
+    assert executive(client)["open_vacancies"] == baseline["open_vacancies"]
+    assert client.get("operations/vacancies").json()["next_offset"] is None
+    source_command(
+        client,
+        "move_vacancy",
+        expected_status=422,
+        transition="publish",
+        occurred_on="2026-10-06",
+        **common,
+    )
+    source_command(client, "move_vacancy", transition="approve", occurred_on="2026-10-06", **common)
+    source_command(client, "move_vacancy", transition="publish", occurred_on="2026-10-07", **common)
+    app = {"application_id": "app-ops"}
+    source_command(
+        client, "add_application", received_on="2026-10-08", source_code="careers", **common, **app
+    )
+    source_command(
+        client,
+        "move_application",
+        expected_status=422,
+        transition="shortlisted",
+        occurred_on="2026-10-09",
+        **app,
+    )
+    source_command(
+        client, "move_application", transition="screened", occurred_on="2026-10-09", **app
+    )
+    source_command(
+        client, "move_application", transition="shortlisted", occurred_on="2026-10-10", **app
+    )
+    source_command(client, "record_interview", outcome="passed", occurred_on="2026-10-11", **app)
+    source_command(client, "add_offer", id="offer-ops", offered_on="2026-10-12", **app)
+    offer = {"offer_id": "offer-ops"}
+    start = {"started_on": "2026-10-21", "contracted_fte": "0.8", **offer}
+    source_command(client, "record_starter", expected_status=422, **start)
+    source_command(client, "decide_offer", outcome="accepted", resolved_on="2026-10-13", **offer)
+    source_command(client, "record_check", checked_on="2026-10-16", status="passed", **offer)
+    source_command(
+        client, "confirm_start", occurred_on="2026-10-17", planned_start_on="2026-10-21", **app
+    )
+    assert executive(client)["substantive_wte"] == baseline["substantive_wte"]
+    source_command(client, "record_starter", **start)
+    assert source_command(client, "record_starter", **start)["change"] == "unchanged"
+    source_command(
+        client,
+        "record_probation",
+        employee_id="starter-offer-ops",
+        occurred_on="2026-10-30",
+        outcome="passed",
+    )
+    assert executive(client)["substantive_wte"]["value"] == pytest.approx(
+        baseline["substantive_wte"]["value"] + 0.8
+    )
+    state = client.get("operations/candidates").json()
+    row = next(row for row in state["items"] if row["id"] == "app-ops")
+    assert row["status"] == "probation_completed"
+
+
+def test_explicit_establishment_override_and_stale_source_revision(demo):
+    client, _ = demo
+    start = client.get("demo/status").json()["dataset"]
+    vacancy_id = "vac-exception"
+    source_command(
+        client,
+        "add_vacancy",
+        vacancy_id=vacancy_id,
+        title="Demo oversized intake",
+        line_id="line-1",
+        requested_on="2026-10-20",
+        approved_positions=10,
+        approved_wte=10,
+    )
+    fields = dict(vacancy_id=vacancy_id, occurred_on="2026-10-22", transition="approve")
+    source_command(client, "move_vacancy", expected_status=422, **fields)
+    result = source_command(
+        client, "move_vacancy", over_establishment_reason="Demo extra intake", **fields
+    )
+    assert result["dataset"]["revision"] == 2
+    stale = client.post(
+        "operations",
+        json={
+            "dataset_id": start["dataset_id"],
+            "dataset_generation": 1,
+            "revision": 0,
+            "command": {
+                "action": "add_campaign",
+                "id": "demo-2026",
+                "label": "Demo campaign",
+                "opened_on": "2026-10-20",
+            },
+        },
+    )
+    assert stale.status_code == 409
+    row = next(
+        row for row in client.get("operations/vacancies").json()["items"] if row["id"] == vacancy_id
+    )
+    assert row["exception_reason"] == "Demo extra intake"
+
+
+def test_generation_replacement_confirms_and_replays_only_the_same_intent(demo):
+    client, _ = demo
+    payload = {
+        **version(client),
+        "idempotency_key": str(uuid4()),
+        "mode": "exploratory",
+        "generation_seed": 99,
+    }
+    assert client.post("demo/seed", json={**payload, "confirmed": False}).status_code == 422
+    result = client.post("demo/seed", json={**payload, "confirmed": True})
+    assert result.status_code == 200, result.text
+    assert result.json()["dataset"]["generation_seed"] == 99
+    assert result.json()["dataset"]["scenario_code"] == "full-exploratory"
+    assert client.post("demo/seed", json={**payload, "confirmed": True}).json()["replayed"]
+    assert (
+        client.post(
+            "demo/seed", json={**payload, "confirmed": True, "generation_seed": 1}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            "demo/reset",
+            json={**version(client), "idempotency_key": str(uuid4()), "confirmed": True},
+        ).status_code
+        == 429
+    )
+
+
 def test_period_kpis_and_application_grain_reconcile(demo):
     client, _ = demo
     kpis = executive(client)

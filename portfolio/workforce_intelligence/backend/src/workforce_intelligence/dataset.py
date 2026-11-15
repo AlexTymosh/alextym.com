@@ -65,6 +65,7 @@ class SeedDefinition:
 class AuditActor:
     uid: str
     correlation_id: str
+    channel: str = "api"
 
 
 @dataclass(frozen=True)
@@ -107,7 +108,10 @@ def ensure_dataset(database: Database, seed: SeedDefinition) -> DatasetState:
 
 
 def _install_seed(
-    connection: sqlite3.Connection, seed: SeedDefinition, dataset_id: str, generation: int
+    connection: sqlite3.Connection,
+    seed: SeedDefinition,
+    dataset_id: str,
+    generation: int,
 ) -> DatasetState:
     now = datetime.now(UTC).isoformat()
     state = DatasetState(
@@ -143,19 +147,23 @@ def reset_dataset(
     expected: DatasetVersion,
     actor: AuditActor,
     idempotency_key: str,
+    request_kind: str = "reset",
 ) -> ResetResult:
     with database.transaction(write=True) as connection:
         state = current_dataset(connection)
         if expected.dataset_id != state.dataset_id:
             raise Conflict("The demo dataset changed. Refresh and retry.")
         receipt = connection.execute(
-            "SELECT prior_generation, reset_generation FROM reset_receipts "
+            "SELECT prior_generation, reset_generation, request_kind FROM reset_receipts "
             "WHERE actor_uid = ? AND idempotency_key = ?",
             (actor.uid, idempotency_key),
         ).fetchone()
         if receipt:
-            if expected.dataset_generation != receipt["prior_generation"]:
-                raise Conflict("The reset key was used with a different dataset version.")
+            if (
+                expected.dataset_generation != receipt["prior_generation"]
+                or request_kind != receipt["request_kind"]
+            ):
+                raise Conflict("The reset key was used with a different request.")
             return ResetResult(state, receipt["reset_generation"], replayed=True)
 
         current_dataset(connection, expected)
@@ -173,8 +181,17 @@ def reset_dataset(
             connection, seed, state.dataset_id, state.dataset_generation + 1
         )
         connection.execute(
-            "INSERT INTO reset_receipts VALUES (?, ?, ?, ?)",
-            (actor.uid, idempotency_key, state.dataset_generation, replacement.dataset_generation),
+            """
+            INSERT INTO reset_receipts (actor_uid, idempotency_key, prior_generation,
+                                        reset_generation, request_kind) VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                actor.uid,
+                idempotency_key,
+                state.dataset_generation,
+                replacement.dataset_generation,
+                request_kind,
+            ),
         )
         record_audit(
             connection,
@@ -182,9 +199,17 @@ def reset_dataset(
             actor,
             entity_type="dataset",
             entity_key=state.dataset_id,
-            action="reset",
-            old_values={"generation": state.dataset_generation, "revision": state.revision},
-            new_values={"generation": replacement.dataset_generation, "revision": 0},
+            action="reset" if request_kind == "reset" else "seed",
+            old_values={
+                "generation": state.dataset_generation,
+                "revision": state.revision,
+            },
+            new_values={
+                "generation": replacement.dataset_generation,
+                "revision": 0,
+                "scenario_code": replacement.scenario_code,
+                "generation_seed": replacement.generation_seed,
+            },
         )
         return ResetResult(replacement, replacement.dataset_generation, replayed=False)
 
@@ -222,7 +247,7 @@ def record_audit(
         """
         INSERT INTO audit_events (entity_type, entity_key, action, occurred_at, actor_uid,
             old_values, new_values, source_channel, correlation_id, demo_session_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'api', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             entity_type,
@@ -232,6 +257,7 @@ def record_audit(
             actor.uid,
             json.dumps(old_values) if old_values is not None else None,
             json.dumps(new_values),
+            actor.channel,
             actor.correlation_id,
             f"{state.dataset_id}:{state.dataset_generation}",
         ),

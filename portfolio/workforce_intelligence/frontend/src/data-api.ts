@@ -1,18 +1,21 @@
 import type { WorkforceMode } from "./mode-state";
 
 const API = "/portfolio/workforce-intelligence/api";
+export const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+export const MAX_WORKBOOK_BYTES = 1024 * 1024;
 
 export type DatasetVersion = { dataset_id: string; dataset_generation: number };
 export type Dataset = DatasetVersion & {
   revision: number;
   scenario_code: string;
+  generation_seed: number;
   seed_version: string;
   history_start: string;
   as_of_date: string;
   refreshed_at: string;
 };
 
-type Snapshot = { dataset: Dataset; synthetic: true };
+export type Snapshot = { dataset: Dataset; synthetic: true };
 export type Window = { start: string; end: string };
 export type Filters = { start: string; end: string; vacancyId: string };
 export const DEFAULT_FILTERS: Filters = { start: "", end: "", vacancyId: "" };
@@ -146,6 +149,34 @@ export async function workforceRequest<T>(path: string, init?: RequestInit): Pro
   }
 }
 
+export async function workforceDownload(path: string, fileName: string, payload?: object) {
+  try {
+    const headers = new Headers({ Accept: XLSX_CONTENT_TYPE });
+    if (payload) headers.set("Content-Type", "application/json");
+    const response = await fetch(`${API}/${path}`, { headers, cache: "no-store",
+      credentials: "same-origin", method: payload ? "POST" : "GET",
+      body: payload ? JSON.stringify(payload) : undefined });
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new WorkforceApiError(response.status, typeof data?.detail === "string" ? data.detail : "Download failed.");
+    }
+    if (response.headers.get("content-type") !== XLSX_CONTENT_TYPE) {
+      throw new WorkforceApiError(502, "The server did not return a workbook.");
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    if (error instanceof WorkforceApiError) throw error;
+    throw new WorkforceApiError(503, "The workbook could not be downloaded. Retry shortly.");
+  }
+}
+
 export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object) {
   return workforceRequest<T>(path, {
     method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -170,6 +201,14 @@ export function vacancyRateInsight(window: Window) {
 export function resetWorkforceDataset(dataset: Dataset, key: string) {
   return workforceWrite<Snapshot & { reset_generation: number; replayed: boolean }>(
     "demo/reset", "POST", { ...datasetVersion(dataset), confirmed: true, idempotency_key: key },
+  );
+}
+
+export function loadFullWorkforceDataset(dataset: Dataset, key: string, mode: "controlled" | "exploratory",
+  generationSeed?: number) {
+  return workforceWrite<Snapshot & { reset_generation: number; replayed: boolean }>(
+    "demo/seed", "POST", { ...datasetVersion(dataset), confirmed: true, idempotency_key: key,
+      mode, generation_seed: generationSeed },
   );
 }
 

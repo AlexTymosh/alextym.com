@@ -66,6 +66,17 @@ class ResetRequest(DatasetRequest):
         return self
 
 
+class SeedRequest(ResetRequest):
+    mode: Literal["controlled", "exploratory"]
+    generation_seed: Annotated[int, Field(strict=True, ge=0, le=2**32 - 1)] | None = None
+
+    @model_validator(mode="after")
+    def check_seed_mode(self):
+        if self.mode == "controlled" and self.generation_seed is not None:
+            raise ValueError("Controlled mode always uses the published seed.")
+        return self
+
+
 class DatasetResponse(BaseModel):
     dataset: DatasetState
     synthetic: Literal[True] = True

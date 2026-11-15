@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const path = "/portfolio/workforce-intelligence";
 const localOrigin = "http://127.0.0.1:14300";
@@ -11,6 +12,44 @@ async function signIn(page: Page) {
   await page.getByRole("button", { name: "Sign in with email" }).click();
   await expect(page).toHaveURL(/\/lab$/, { timeout: 20_000 });
 }
+
+test("a member previews a workbook before confirming source and dashboard changes", async ({ page }, info) => {
+  const inputPath = process.env.WORKFORCE_OPS_XLSX_FILE;
+  test.skip(!useEmulators || info.project.name !== "chromium" || !inputPath,
+    "Requires isolated local emulators and a synthetic workbook for employee browser-excel");
+  test.setTimeout(60_000);
+  const workbook = await readFile(inputPath!);
+  const contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  await signIn(page);
+  await page.goto(`${path}?mode=workforce-management`);
+  const outline = page.getByRole("navigation", { name: "Workforce Management outline" });
+  await outline.getByRole("link", { name: "Import / Export" }).click();
+  const importPanel = page.locator("#import-export");
+  const template = page.waitForEvent("download");
+  await importPanel.getByRole("button", { name: "Download template" }).click();
+  expect((await template).suggestedFilename()).toBe("workforce-template.xlsx");
+  await expect.poll(async () => (await page.request.post(`${path}/api/import/validate`, {
+    headers: { origin: "https://untrusted.example", "content-type": contentType }, data: workbook,
+  })).status()).toBe(403);
+  await importPanel.getByLabel("Excel workbook", { exact: true }).setInputFiles({
+    name: "synthetic-browser-import.xlsx", mimeType: contentType, buffer: workbook,
+  });
+  await importPanel.getByRole("button", { name: "Validate workbook" }).click();
+  await expect(importPanel.getByRole("heading", { name: "Import preview" })).toBeVisible();
+  await expect(importPanel.getByRole("status")).toContainText("1 to insert");
+  const employeePath = `${path}/api/employees/browser-excel`;
+  expect((await page.request.get(employeePath)).status()).toBe(404);
+  await expect(importPanel.getByRole("button", { name: "Confirm import" })).toBeDisabled();
+  const forecast = importPanel.getByRole("region", { name: "Dashboard impact" })
+    .getByRole("row").filter({ hasText: "Current substantive workforce" });
+  const projectedWte = await forecast.getByRole("cell").last().innerText();
+  await importPanel.getByLabel("Apply these changes to the shared demo").check();
+  await importPanel.getByRole("button", { name: "Confirm import" }).click();
+  await expect(importPanel.getByRole("heading", { name: "Import receipt" })).toBeVisible();
+  expect((await page.request.get(employeePath)).status()).toBe(200);
+  await page.getByRole("navigation", { name: "Workforce sections" }).getByRole("link", { name: "Workforce Intelligence" }).click();
+  await expect(page.locator("[data-metric=substantive_wte]")).toHaveText(`${projectedWte} WTE`);
+});
 
 test("an admitted Workforce member can save effective FTE and see Gold refresh", async ({ page }, info) => {
   test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
@@ -169,6 +208,8 @@ test("grant revocation denies the same session at both app hosts", async ({ page
     await grant.update({ status: "revoked" });
     expect((await page.request.get(direct, { headers })).status()).toBe(403);
     expect((await page.request.get(bff)).status()).toBe(403);
+    expect((await page.request.get("http://127.0.0.1:14800/api/workforce/import/template", { headers })).status()).toBe(403);
+    expect((await page.request.get(`${path}/api/import/template`)).status()).toBe(403);
     await page.getByRole("button", { name: "Refresh data" }).click();
     await expect(page.getByRole("heading", { name: "Workspace access unavailable" })).toBeVisible();
     await expect(page.locator("[data-metric]")).toHaveCount(0);

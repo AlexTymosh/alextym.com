@@ -6,10 +6,14 @@ Every project route is mounted with `require_workforce_member` by the host.
 
 import sqlite3
 from collections import Counter
+from dataclasses import replace
 from datetime import date
-from typing import Annotated
+from secrets import randbits
+from typing import Annotated, Literal
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from workforce_intelligence.analytics import (
     application_funnel,
@@ -22,7 +26,21 @@ from workforce_intelligence.database import DatabaseUnavailable
 from workforce_intelligence.dataset import DatasetState, current_dataset, reset_dataset
 from workforce_intelligence.http import Db, Member, WorkforceRoute, audit_actor
 from workforce_intelligence.metric_catalogue import CATALOGUE
-from workforce_intelligence.recruitment import cancel_vacancy, record_start, vacancy_snapshots
+from workforce_intelligence.operation_models import OperationRequest
+from workforce_intelligence.operation_reads import (
+    Section,
+    audit_values,
+    employee_details,
+    establishment_options,
+    read_section,
+)
+from workforce_intelligence.operations import run_operation
+from workforce_intelligence.recruitment import (
+    cancel_vacancy,
+    record_start,
+    vacancy_snapshots,
+)
+from workforce_intelligence.scale_seed import FULL_SEED
 from workforce_intelligence.schemas import (
     ActualStart,
     CatalogueResponse,
@@ -40,6 +58,7 @@ from workforce_intelligence.schemas import (
     QualityResponse,
     ResetRequest,
     ResetResponse,
+    SeedRequest,
     StarterResponse,
     SurveyReportResponse,
     VacancyCancellation,
@@ -48,6 +67,23 @@ from workforce_intelligence.schemas import (
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
+from workforce_intelligence.workbook_http import (
+    FILE_RESPONSE,
+    UPLOAD_REQUEST,
+    download,
+    read_upload,
+    throttle,
+)
+from workforce_intelligence.workbook_import import (
+    ImportConfirmation,
+    ImportPreview,
+    ImportReceipt,
+    commit_import,
+    preview_import,
+    read_preview,
+)
+from workforce_intelligence.xlsx import template
 
 router = APIRouter(
     prefix="/workforce",
@@ -59,6 +95,19 @@ router = APIRouter(
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=100_000)]
 PathId = Annotated[EntityId, Path()]
+
+
+class OperationResult(DatasetResponse):
+    change: Literal["insert", "update", "unchanged"]
+
+
+class OperationPage(DatasetResponse):
+    items: list[dict]
+    next_offset: int | None
+
+
+class EmployeeDetails(DatasetResponse):
+    employee: dict
 
 
 @router.get("/status", include_in_schema=False)
@@ -86,6 +135,75 @@ def employees(
             items=[EmployeeSummary(**dict(row)) for row in rows[:limit]],
             next_offset=offset + limit if len(rows) > limit else None,
         )
+
+
+@router.get("/employees/{employee_id}")
+def employee(employee_id: PathId, database: Db, as_of_date: date | None = None) -> EmployeeDetails:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        day = reporting_window(state, as_of_date, None).end.isoformat()
+        return EmployeeDetails(
+            dataset=state, employee=employee_details(connection, employee_id, day)
+        )
+
+
+@router.get("/operations/establishment")
+def establishment(database: Db, limit: Limit = 25, offset: Offset = 0) -> OperationPage:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        items, next_offset = establishment_options(connection, state.as_of_date, limit, offset)
+        return OperationPage(dataset=state, items=items, next_offset=next_offset)
+
+
+@router.get("/operations/{section}")
+def operation_section(
+    section: Section, database: Db, limit: Limit = 25, offset: Offset = 0
+) -> OperationPage:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        items, next_offset = read_section(connection, section, limit, offset)
+        return OperationPage(
+            dataset=state,
+            items=audit_values(items) if section == "audit" else items,
+            next_offset=next_offset,
+        )
+
+
+@router.post("/operations")
+def operation(command: OperationRequest, database: Db, actor: Member) -> OperationResult:
+    state, change = run_operation(database, command, actor)
+    return OperationResult(dataset=state, change=change)
+
+
+@router.get("/import/template", response_class=Response, responses=FILE_RESPONSE)
+def workbook_template(database: Db, actor: Member) -> Response:
+    throttle(database, actor, "download")
+    return download(template(), "template")
+
+
+@router.post("/import/validate", openapi_extra=UPLOAD_REQUEST)
+async def validate_workbook(request: Request, database: Db, actor: Member) -> ImportPreview:
+    await run_in_threadpool(throttle, database, actor, "preview")
+    content = await read_upload(request)
+    return await run_in_threadpool(preview_import, database, actor, content)
+
+
+@router.post("/import/commit")
+def confirm_workbook(command: ImportConfirmation, database: Db, actor: Member) -> ImportReceipt:
+    throttle(database, actor, "commit")
+    return commit_import(database, actor, command)
+
+
+@router.get("/import/{batch_id}/errors", response_class=Response, responses=FILE_RESPONSE)
+def workbook_issues(batch_id: UUID, database: Db, actor: Member) -> Response:
+    throttle(database, actor, "download")
+    return download(errors_workbook(read_preview(database, actor, batch_id)), "import-issues")
+
+
+@router.post("/export", response_class=Response, responses=FILE_RESPONSE)
+def export(command: ExportRequest, database: Db, actor: Member) -> Response:
+    throttle(database, actor, "download")
+    return download(export_workbook(database, command), command.kind)
 
 
 @router.patch("/employees/{employee_id}/contracts")
@@ -170,7 +288,8 @@ def executive(
         window = reporting_window(state, as_of_date, period_start)
         quality = _quality(connection, state, window.end.isoformat())
         return ExecutiveResponse(
-            **quality.model_dump(), executive=executive_metrics(connection, state, window)
+            **quality.model_dump(),
+            executive=executive_metrics(connection, state, window),
         )
 
 
@@ -186,7 +305,8 @@ def funnel(
         window = reporting_window(state, as_of_date, period_start)
         quality = _quality(connection, state, window.end.isoformat())
         return FunnelResponse(
-            **quality.model_dump(), funnel=application_funnel(connection, window, vacancy_id)
+            **quality.model_dump(),
+            funnel=application_funnel(connection, window, vacancy_id),
         )
 
 
@@ -211,6 +331,32 @@ def reset(command: ResetRequest, database: Db, actor: Member) -> ResetResponse:
         expected=command.expected_version(),
         actor=actor,
         idempotency_key=str(command.idempotency_key),
+    )
+    return ResetResponse(
+        dataset=result.dataset,
+        reset_generation=result.reset_generation,
+        replayed=result.replayed,
+    )
+
+
+@router.post("/demo/seed")
+def seed(command: SeedRequest, database: Db, actor: Member) -> ResetResponse:
+    baseline = FULL_SEED
+    if command.mode == "exploratory":
+        baseline = replace(
+            FULL_SEED,
+            scenario_code="full-exploratory",
+            generation_seed=command.generation_seed
+            if command.generation_seed is not None
+            else randbits(32),
+        )
+    result = reset_dataset(
+        database,
+        baseline,
+        expected=command.expected_version(),
+        actor=actor,
+        idempotency_key=str(command.idempotency_key),
+        request_kind=f"seed:{command.mode}:{command.generation_seed}",
     )
     return ResetResponse(
         dataset=result.dataset, reset_generation=result.reset_generation, replayed=result.replayed

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { DataArchitecture } from "./DataArchitecture";
 import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
   type DatasetVersion, type Filters, type Workspace } from "./data-api";
@@ -13,6 +13,7 @@ import { WORKFORCE_MODES, modeFromSearch, workforceModeHref,
   type WorkforceMode } from "./mode-state";
 import { PeopleVoice } from "./PeopleVoice";
 import { ResetDemo } from "./ResetDemo";
+import { operationalOutline } from "./SourceOperations";
 import { WorkforceManagement } from "./WorkforceManagement";
 import styles from "./workforce-scaffold.module.css";
 
@@ -57,9 +58,9 @@ const sections: Record<WorkforceMode, {
     planned: "Attraction, workforce outcomes, equality and forecasting.",
   },
   "workforce-management": {
-    label: "Workforce Management", description: "Review synthetic source records and record a contract change.",
-    outline: [["directory", "People directory"], ["contracts", "Contracts & FTE"]],
-    planned: "Full employment and recruitment lifecycle, Excel, learning and PDR.",
+    label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",
+    outline: operationalOutline,
+    planned: "",
   },
   "people-voice": {
     label: "People Voice", description: "Evidence from synthetic staff surveys.",
@@ -88,8 +89,10 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
   const priorGeneration = useRef<DatasetVersion | null>(null);
   const scrolledTo = useRef("");
   const { start, end, vacancyId } = filters;
-  const readKey = `${mode}:${start}:${end}:${vacancyId}:${offset}:${reload}`;
-  const active = read?.key === readKey ? read : null;
+  const viewKey = `${mode}:${start}:${end}:${vacancyId}:${offset}`;
+  const readKey = `${viewKey}:${reload}`;
+  const active = read?.key === readKey || (mode === "workforce-management" && read && "data" in read &&
+    read.key.startsWith(`${viewKey}:`)) ? read : null;
   const workspace = active && "data" in active ? active.data : null;
   const error = active && "error" in active ? active.error : null;
   const dataset = workspace?.dataset;
@@ -157,9 +160,9 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
   };
 
   const restricted = Boolean(error && [401, 403, 404].includes(error.status));
-  const reportAccessError = (failure: WorkforceApiError) => {
-    setRead((current) => current?.key === readKey ? { key: readKey, error: failure } : current);
-  };
+  const reportAccessError = useCallback((failure: WorkforceApiError) => {
+    setRead((current) => current?.key.startsWith(`${viewKey}:`) ? { key: readKey, error: failure } : current);
+  }, [readKey, viewKey]);
   const interviewControls = workspace ? <InterviewGuide guide={guide} onStart={startGuide}
     onStep={(name, index) => moveTo(guideHref(name, index))}
     onExit={() => moveTo(workforceModeHref(mode))} /> : null;
@@ -180,7 +183,10 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
               priorGeneration.current = replacement;
               setFilters(DEFAULT_FILTERS);
               setOffset(0);
-              setNotice(`Demo reset. Dataset ${replacement.dataset_generation} is ready.`);
+              setRead(null);
+              setNotice(replacement.scenario_code === "interview-core" ?
+                `Demo reset. Dataset ${replacement.dataset_generation} is ready.` :
+                `Full synthetic dataset is ready. Generation seed: ${replacement.generation_seed}.`);
               refresh();
             }} onConflict={() => { setNotice("The dataset changed. The workspace is refreshing."); refresh(); }}
             onAccessError={reportAccessError} /> : null}
@@ -204,7 +210,10 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
       <div className={styles.body}>
         <aside className={styles.sidebar}>
           {workspace && selected.outline.length ? <nav aria-label={`${selected.label} outline`}>
-            {selected.outline.map(([id, name]) => <a key={id} href={`#${id}`}>{name}</a>)}
+            {selected.outline.map(([id, name]) => <a key={id} href={`#${id}`} onClick={() => {
+              const target = document.getElementById(id);
+              if (target instanceof HTMLDetailsElement) target.open = true;
+            }}>{name}</a>)}
           </nav> : null}
           <div className={styles.sidebarFoot}>{previewMode ? <span>Local-only UI preview</span> :
             <a href="/portfolio">Back to Portfolio Lab</a>}</div>
@@ -214,6 +223,7 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
             <span className={`${styles.statusDot} ${dataset ? styles.statusDotReady : ""}`} aria-hidden="true" />
             {previewMode ? <span>Local UI preview — no Firebase or API calls</span> : dataset ? (
               <><span>Dataset {dataset.dataset_generation} · Revision {dataset.revision}</span>
+                <span>{dataset.scenario_code === "interview-core" ? "Interview fixture" : "Full synthetic dataset"}</span>
                 <span>Refreshed <time dateTime={dataset.refreshed_at}>{displayRefresh(dataset.refreshed_at)} UK</time></span>
                 <button type="button" className={styles.linkButton} onClick={refresh}>Refresh data</button></>
             ) : <span>{error ? "Data unavailable" : "Loading protected data…"}</span>}

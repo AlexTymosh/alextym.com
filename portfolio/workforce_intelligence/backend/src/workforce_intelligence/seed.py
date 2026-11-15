@@ -6,6 +6,10 @@ from random import Random
 
 from workforce_intelligence.contracts import add_employment
 from workforce_intelligence.dataset import SeedDefinition
+from workforce_intelligence.operations_migration import (
+    OPERATIONS_MIGRATION,
+    RECRUITMENT_SOURCES,
+)
 from workforce_intelligence.survey_fixture import SEED_VERSION, populate_voice_report
 
 HISTORY_START = date(2026, 7, 1)
@@ -15,7 +19,7 @@ SOURCE_TIMESTAMP = "2026-10-31T00:00:00+00:00"
 
 def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
     connection.executemany(
-        "INSERT INTO organisational_units VALUES (?, ?)",
+        "INSERT INTO organisational_units (id, label) VALUES (?, ?)",
         [
             ("response", "Demo Emergency Response"),
             ("control", "Demo Contact Centre"),
@@ -23,11 +27,15 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
         ],
     )
     connection.executemany(
-        "INSERT INTO locations VALUES (?, ?)",
-        [("west", "Demo West Base"), ("central", "Demo Central Hub"), ("east", "Demo East Base")],
+        "INSERT INTO locations (id, label) VALUES (?, ?)",
+        [
+            ("west", "Demo West Base"),
+            ("central", "Demo Central Hub"),
+            ("east", "Demo East Base"),
+        ],
     )
     connection.executemany(
-        "INSERT INTO roles VALUES (?, ?)",
+        "INSERT INTO roles (id, label) VALUES (?, ?)",
         [
             ("clinician", "Response clinician"),
             ("advisor", "Call advisor"),
@@ -40,7 +48,8 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
         ("line-3", "transport", "east", "crew", 6),
     ]
     connection.executemany(
-        "INSERT INTO establishment_lines VALUES (?, ?, ?, ?)", [line[:4] for line in lines]
+        "INSERT INTO establishment_lines VALUES (?, ?, ?, ?)",
+        [line[:4] for line in lines],
     )
     connection.executemany(
         """
@@ -49,7 +58,13 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
         VALUES (?, ?, ?, ?, ?, 'synthetic-seed', 'demo_baseline')
         """,
         [
-            (line_id, positions, positions * 1000, HISTORY_START.isoformat(), SOURCE_TIMESTAMP)
+            (
+                line_id,
+                positions,
+                positions * 1000,
+                HISTORY_START.isoformat(),
+                SOURCE_TIMESTAMP,
+            )
             for line_id, _, _, _, positions in lines
         ],
     )
@@ -169,7 +184,14 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
         checks_completed="2026-09-28",
         start_confirmed="2026-10-01",
     )
-    _application(connection, "app-002", "vac-001", "2026-09-07", "job-board", screened="2026-09-08")
+    _application(
+        connection,
+        "app-002",
+        "vac-001",
+        "2026-09-07",
+        "job-board",
+        screened="2026-09-08",
+    )
     _application(
         connection,
         "app-003",
@@ -257,7 +279,8 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
         employee = f"starter-{offer}"
         _employee(connection, employee, f"Demo Starter {offer[-3:]}.", line, fte, start)
         connection.execute(
-            "INSERT INTO starter_events VALUES (?, ?, ?, ?)", (offer, employee, start, fte)
+            "INSERT INTO starter_events VALUES (?, ?, ?, ?)",
+            (offer, employee, start, fte),
         )
 
 
@@ -294,7 +317,7 @@ def _application(
     **stages: str,
 ) -> None:
     connection.execute(
-        "INSERT INTO candidate_applications VALUES (?, ?, ?, ?)",
+        "INSERT INTO candidate_applications (id, vacancy_id, received_on, source_code) VALUES (?, ?, ?, ?)",
         (application_id, vacancy_id, received_on, source),
     )
     connection.executemany(
@@ -305,6 +328,12 @@ def _application(
 
 def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
     populate_core(connection, generation_seed)
+    connection.executemany(
+        "INSERT OR IGNORE INTO recruitment_sources (id, label) VALUES (?, ?)",
+        [(code, code.replace("-", " ").title()) for code in RECRUITMENT_SOURCES],
+    )
+    for statement in OPERATIONS_MIGRATION[-2:]:
+        connection.execute(statement)
     populate_voice_report(connection)
 
 
