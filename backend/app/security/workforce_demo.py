@@ -13,6 +13,7 @@ import os
 import secrets
 import time
 from collections import defaultdict
+from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -32,12 +33,24 @@ def enabled() -> bool:
     return os.getenv("WORKFORCE_INTELLIGENCE_ENABLED") == "true"
 
 
+@lru_cache(maxsize=2)
+def _derive_key(password: str) -> bytes:
+    """Derive a purpose-specific signing key using a slow password KDF."""
+    return hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        b"workforce-demo:session:v1",
+        600_000,
+        dklen=32,
+    )
+
+
 def _key() -> bytes | None:
     password = os.getenv("VOR_DEMO_PASSWORD", "")
     if not password:
         return None
-    # Domain separation: Fleet and Workforce sessions are not interchangeable.
-    return hashlib.sha256(b"workforce-demo:session:v1:" + password.encode()).digest()
+    # Cache the expensive KDF per configured password; rotation remains effective.
+    return _derive_key(password)
 
 
 def _signature(issued: str, key: bytes) -> str:
