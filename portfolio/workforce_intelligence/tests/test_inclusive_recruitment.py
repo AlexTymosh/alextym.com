@@ -156,6 +156,85 @@ def test_full_seed_has_fixed_categories_and_no_raw_identifiers(full_dataset):
                 _assert_masked(dimension)
 
 
+def test_mutable_revision_revokes_all_inclusive_counts(tmp_path):
+    """A small edit must not be recoverable by comparing two API revisions."""
+    from workforce_intelligence.dataset import advance_revision
+
+    db = Database(tmp_path / "mutable-disclosure.sqlite3")
+    ensure_dataset(db, FULL_SEED)
+
+    def member(request: Request) -> None:
+        request.state.workforce_uid = "test-member"
+        request.state.request_id = "req_privacy"
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api", dependencies=[Depends(member)])
+    app.dependency_overrides[get_database] = lambda: db
+    with TestClient(app, base_url="https://backend.test/api/workforce/") as client:
+        before = client.get("analytics/inclusive-recruitment")
+        assert before.status_code == 200
+        original = before.json()
+        assert len(original["report"]["dimensions"]) == len(CATEGORIES)
+
+        with db.transaction(write=True) as conn:
+            advance_revision(conn, current_dataset(conn))
+
+        after = client.get("analytics/inclusive-recruitment")
+        assert after.status_code == 200
+        revised = after.json()
+        assert revised["dataset"]["revision"] == original["dataset"]["revision"] + 1
+        for dimension in revised["report"]["dimensions"]:
+            assert dimension["status"] == "suppressed"
+            assert "Suppressed:" in dimension["message"]
+            for group in dimension["groups"]:
+                assert all(value is None for key, value in group.items() if key != "code")
+
+
+def test_exploratory_generation_never_publishes_inclusive_cells(tmp_path):
+    """Changing the generation seed cannot create a differencing oracle."""
+    from dataclasses import replace
+
+    db = Database(tmp_path / "exploratory-disclosure.sqlite3")
+    ensure_dataset(db, replace(FULL_SEED, scenario_code="full-exploratory", generation_seed=424401))
+
+    def member(request: Request) -> None:
+        request.state.workforce_uid = "test-member"
+        request.state.request_id = "req_exploratory"
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api", dependencies=[Depends(member)])
+    app.dependency_overrides[get_database] = lambda: db
+    with TestClient(app, base_url="https://backend.test/api/workforce/") as client:
+        result = client.get("analytics/inclusive-recruitment")
+        assert result.status_code == 200
+        for dimension in result.json()["report"]["dimensions"]:
+            assert dimension["status"] == "suppressed"
+            assert all(
+                value is None
+                for group in dimension["groups"]
+                for key, value in group.items()
+                if key != "code"
+            )
+
+
+def test_gate_clears_every_metric_and_retains_only_public_codes():
+    conn = _fixture()
+    report = inclusive_recruitment(conn, as_of_date="2026-10-31")
+    from workforce_intelligence.inclusive_recruitment import suppress_inclusive_report
+
+    masked = suppress_inclusive_report(report, "Suppressed: changed revision")
+    assert masked.scope == report.scope
+    assert masked.threshold == report.threshold
+    assert all(d.status == "suppressed" for d in masked.dimensions)
+    assert all(
+        value is None
+        for dimension in masked.dimensions
+        for group in dimension.groups
+        for key, value in vars(group).items()
+        if key != "code"
+    )
+
+
 def test_api_rejects_filter_inference_and_never_returns_raw_candidates(tmp_path):
     db = Database(tmp_path / "inclusive.sqlite3")
     ensure_dataset(db, INTERVIEW_SEED)

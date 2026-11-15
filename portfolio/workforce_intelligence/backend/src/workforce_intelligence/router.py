@@ -35,7 +35,10 @@ from workforce_intelligence.operation_reads import (
     read_section,
 )
 from workforce_intelligence.operations import run_operation
-from workforce_intelligence.inclusive_recruitment import inclusive_recruitment
+from workforce_intelligence.inclusive_recruitment import (
+    inclusive_recruitment,
+    suppress_inclusive_report,
+)
 from workforce_intelligence.recruitment_sources import recruitment_sources
 from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.recruitment import (
@@ -337,10 +340,22 @@ def inclusive_recruitment_report(request: Request, database: Db) -> InclusiveRec
         )
     with database.transaction() as connection:
         state = current_dataset(connection)
-        return InclusiveRecruitmentResponse(
-            dataset=state,
-            report=inclusive_recruitment(connection, as_of_date=state.as_of_date),
+        report = inclusive_recruitment(connection, as_of_date=state.as_of_date)
+        # A released baseline must be immutable and reproducible. Any edit or
+        # exploratory seed can reveal a small group by subtracting two reads.
+        baseline = (
+            state.revision == 0
+            and state.scenario_code == FULL_SEED.scenario_code
+            and state.generation_seed == FULL_SEED.generation_seed
+            and state.seed_version == FULL_SEED.seed_version
         )
+        if not baseline:
+            report = suppress_inclusive_report(
+                report,
+                "Suppressed: demographic detail is available only for the "
+                "unmodified, reproducible controlled dataset.",
+            )
+        return InclusiveRecruitmentResponse(dataset=state, report=report)
 
 
 @router.get("/analytics/recruitment-sources")

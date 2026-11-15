@@ -6,7 +6,7 @@ entire demographic dimension before serialisation, to prevent subtraction.
 """
 
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 MIN_GROUP_SIZE = 5
@@ -122,6 +122,40 @@ def _suppression_required(counters: dict[str, dict[str, int]]) -> bool:
         ):
             return True
     return False
+
+
+def suppress_inclusive_report(
+    report: InclusiveRecruitmentReport, reason: str
+) -> InclusiveRecruitmentReport:
+    """Revoke *all* demographic cells after a mutable or exploratory seed.
+
+    Prevent an observer comparing two revisions of a shared dataset and
+    subtracting one-person changes from otherwise releasable aggregates.
+    No user data, counts or percentages survive the response transformation.
+    """
+    return replace(
+        report,
+        dimensions=[
+            replace(
+                dimension,
+                status="suppressed",
+                message=reason,
+                groups=[
+                    replace(
+                        group,
+                        **{name: None for name in COUNTS},
+                        representation_percent=None,
+                        shortlisting_percent=None,
+                        interview_percent=None,
+                        offer_acceptance_percent=None,
+                        appointment_percent=None,
+                    )
+                    for group in dimension.groups
+                ],
+            )
+            for dimension in report.dimensions
+        ],
+    )
 
 
 def inclusive_recruitment(

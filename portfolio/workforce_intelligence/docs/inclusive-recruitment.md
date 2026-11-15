@@ -54,6 +54,25 @@ or the candidate-funnel vacancy does **not** filter inclusive recruitment.
 The frontend matches the inclusive dataset generation/revision with the other
 analytical responses. The BFF rejects attempts to add query parameters.
 
+
+## PR5: multi-revision disclosure fail-closed policy
+
+Only the **unmodified, reproducible full-controlled fixture** (`revision=0`,
+matching published scenario, seed, and seed version) can release eligible
+demographic aggregate cells. Any committed mutation (revision > 0), exploratory
+seed, interview fixture, or unknown seed version returns the fixed demographic
+categories but **all counts and rates are null**, with a suppression message.
+This is intentional: independently safe 5+ cells in consecutive versions can
+expose a one-person difference through subtraction. The changed dataset remains
+fully usable for non-demographic analytics. Regenerating the identical controlled
+fixture restores the exact same demographic aggregates, not new personal data.
+
+The API does not support date or organisational filters. These rules are
+conservative protections for a shared **synthetic** demonstration, not a formal
+privacy guarantee for real patient or staff data. A future production design
+would require an approved release process, immutable cohort extracts, an access
+policy and independent disclosure testing.
+
 ## Not yet implemented
 
 Further stage conversion and recruitment-likelihood ratios, population
