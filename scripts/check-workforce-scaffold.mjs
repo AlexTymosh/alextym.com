@@ -33,4 +33,15 @@ assert.match(bff, /getWorkforceAccess\(sessionCookie\)/);
 assert.match(bff, /FirebaseSession \$\{sessionCookie\}/);
 const dockerfile = read("backend/Dockerfile");
 assert.match(dockerfile, /COPY portfolio\/workforce_intelligence\/backend\/src/);
+const previewRoute = read("frontend/app/portfolio/workforce-intelligence/preview/page.tsx");
+assert.match(previewRoute, /NODE_ENV\s*!==\s*"development"/);
+assert.match(previewRoute, /WORKFORCE_LOCAL_PREVIEW\s*!==\s*"true"/);
+assert.match(previewRoute, /Boolean\(process\.env\.VERCEL\)/);
+assert.match(previewRoute, /<WorkforceScaffold previewMode/);
+assert.match(previewRoute, /notFound\(\)/);
+assert.doesNotMatch(previewRoute, /getWorkforceAccess|FirebaseSession/);
+const ui = read("portfolio/workforce_intelligence/frontend/src/WorkforceScaffold.tsx");
+assert.match(ui, /if \(previewMode\) return;/);
+assert.match(ui, /workforceModeHref\(destination, previewMode\)/);
+
 console.log("Workforce foundation: project grant wiring and default-off guard (structural PASS).");

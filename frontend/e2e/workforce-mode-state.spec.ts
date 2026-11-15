@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   WORKFORCE_DEFAULT_MODE,
+  WORKFORCE_LOCAL_PREVIEW_PATH,
   WORKFORCE_MODES,
   isWorkforceMode,
   modeFromSearch,
@@ -22,6 +23,14 @@ test.describe("Workforce SPA navigation state (no authentication bypass)", () =>
       expect(modeFromSearch(new URL(href, "https://example.invalid").search)).toBe(mode);
     });
   }
+
+  test("keeps preview-mode links on the isolated local route", () => {
+    for (const mode of WORKFORCE_MODES) {
+      const href = workforceModeHref(mode, true);
+      expect(href).toBe(`${WORKFORCE_LOCAL_PREVIEW_PATH}?mode=${mode}`);
+      expect(modeFromSearch(new URL(href, "https://example.invalid").search)).toBe(mode);
+    }
+  });
 
   test("defaults empty, unknown, duplicate and case-changed mode values", () => {
     for (const search of ["", "?mode=", "?mode=unknown", "?mode=PEOPLE-VOICE",

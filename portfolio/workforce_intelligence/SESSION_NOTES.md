@@ -346,7 +346,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 |---:|---|---|---|
 | 01 | DONE | b13da5719b8baa36a14842d7bab2c8da5d5726a5 | Local `task ci`: PASS (reported); hosted CI not independently verified |
 | 02 | DONE | 8d940ea06ed8285ee31bc5068278a8f69d8226bf | User-reported local `task ci`: PASS; hosted Firebase/Firestore grant verification remains outstanding |
-| 03 | IN PROGRESS | — | SPA shell changes prepared; local/hosted validation pending |
+| 03 | DONE | b100c0a18bf856586519e246ce7792d2d40e3d0e | User-reported `task ci`: PASS; local SPA opened; protected API connectivity and hosted grants pending |
 | 04 | NOT STARTED | — | — |
 | 05 | NOT STARTED | — | — |
 | 06 | NOT STARTED | — | — |
@@ -370,16 +370,16 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 - **Current branch:** `feat/workforce-intelligence-foundation`
 - **Base `main` SHA:** `not verified for implementation`
-- **Active PR / commit:** `PR 1 / Commit 03`
-- **Last completed commit:** `02` (`8d940ea06ed8285ee31bc5068278a8f69d8226bf`)
-- **Current working tree:** Commit 03 ZIP ready to apply; worktree state must be verified locally
-- **Last `task ci`:** `PASS` for Commit 02 (user-reported); Commit 03 pending
+- **Active PR / commit:** `PR 1 / supplemental local UI preview (after Commit 03)`
+- **Last completed commit:** `03` (`b100c0a18bf856586519e246ce7792d2d40e3d0e`)
+- **Current working tree:** Supplemental PR 1 local UI preview patch prepared; local CI pending
+- **Last `task ci`:** `PASS` for Commit 03 (user-reported); local UI preview patch pending
 - **Last focused tests:** Commit 02: 30 focused Python tests passed (user-reported); Commit 03 isolated TypeScript policy checks passed
 - **Last GitHub CI:** `not run`
 - **Last hosted smoke:** `not run`
 - **Current feature flag(s):** Workforce flag defaults off in both hosts; no hosted verification yet
 - **Known blockers:** live Firebase/Firestore grant and revoke flows are not yet verified on hosted preview
-- **Next exact task:** apply Commit 03 ZIP, run frontend navigation tests and `task ci`, perform private hosted authorization smoke before public exposure, commit/push; then PR 1 review
+- **Next exact task:** apply supplemental local UI preview patch, verify the opt-in preview and `task ci`; then perform hosted Firebase/Firestore and direct Render grant/revocation checks before PR 1 sign-off
 
 ### Per-commit entry template
 

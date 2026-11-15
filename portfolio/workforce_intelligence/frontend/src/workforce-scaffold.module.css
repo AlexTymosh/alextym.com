@@ -132,6 +132,7 @@
 .navCopy small { font-size: 11px; color: var(--wi-muted); }
 .sidebarFoot { margin-top: auto; padding: 24px 12px 0; }
 .sidebarFoot a { color: var(--wi-accent); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
+.localPreviewNote { color: var(--wi-accent); font-size: 12px; font-weight: 650; }
 .sidebarFoot p { margin: 12px 0 0; color: var(--wi-muted); font-size: 11px; line-height: 1.5; }
 .content { min-width: 0; }
 .statusBar {

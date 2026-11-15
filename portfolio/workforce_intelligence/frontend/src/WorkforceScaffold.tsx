@@ -79,7 +79,7 @@ const statusMessage: Record<Connection, string> = {
 };
 
 /** Browser navigation is local; the protected Next.js entry remains server-authorized. */
-export function WorkforceScaffold() {
+export function WorkforceScaffold({ previewMode = false }: { previewMode?: boolean }) {
   const mode = useSyncExternalStore(subscribeToLocation, getLocationMode, getServerMode);
   const theme = useSyncExternalStore(subscribeToTheme, getBrowserTheme, getServerTheme);
   const [connection, setConnection] = useState<Connection>("checking");
@@ -114,15 +114,17 @@ export function WorkforceScaffold() {
   }, []);
 
   useEffect(() => {
+    // Local UI preview is completely offline: no BFF, Firebase or FastAPI requests.
+    if (previewMode) return;
     void verifyBackend();
     return () => pending.current?.abort();
-  }, [verifyBackend]);
+  }, [previewMode, verifyBackend]);
 
   const navigate = (event: MouseEvent<HTMLAnchorElement>, destination: WorkforceMode) => {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey ||
         event.altKey || event.shiftKey) return;
     event.preventDefault();
-    const href = workforceModeHref(destination);
+    const href = workforceModeHref(destination, previewMode);
     if (window.location.pathname + window.location.search !== href) {
       window.history.pushState(null, "", href);
     }
@@ -137,7 +139,7 @@ export function WorkforceScaffold() {
     window.dispatchEvent(new Event("workforce-theme-change"));
   };
 
-  const locked = connection === "unauthenticated" || connection === "denied" || connection === "disabled";
+  const locked = !previewMode && (connection === "unauthenticated" || connection === "denied" || connection === "disabled");
   const selected = sections[mode];
 
   return (
@@ -164,7 +166,7 @@ export function WorkforceScaffold() {
           <p className={styles.sidebarHeading}>WORKSPACES</p>
           <nav aria-label="Workforce sections" className={styles.navigation}>
             {WORKFORCE_MODES.map((id, index) => (
-              <a key={id} href={workforceModeHref(id)}
+              <a key={id} href={workforceModeHref(id, previewMode)}
                 className={`${styles.navItem} ${mode === id ? styles.navItemActive : ""}`}
                 aria-current={mode === id ? "page" : undefined}
                 onClick={(event: MouseEvent<HTMLAnchorElement>) => navigate(event, id)}>
@@ -177,20 +179,31 @@ export function WorkforceScaffold() {
             ))}
           </nav>
           <div className={styles.sidebarFoot}>
-            <a href="/portfolio">Back to Portfolio Lab</a>
+            {previewMode ? (
+              <span className={styles.localPreviewNote}>Local-only UI preview</span>
+            ) : (
+              <a href="/portfolio">Back to Portfolio Lab</a>
+            )}
             <p>Demo v1.0 · Not an official SCAS system</p>
           </div>
         </aside>
 
         <div className={styles.content}>
-          <div className={styles.statusBar} role="status" aria-live="polite">
-            <span className={`${styles.statusDot} ${connection === "ready" ? styles.statusDotReady : ""}`} aria-hidden="true" />
-            <span>{statusMessage[connection]}</span>
-            {connection !== "checking" && connection !== "ready" &&
-              <button type="button" onClick={() => { setConnection("checking"); void verifyBackend(); }} className={styles.retryButton}>
-                Retry check
-              </button>}
-          </div>
+          {previewMode ? (
+            <div className={styles.statusBar} role="status">
+              <span className={`${styles.statusDot} ${styles.statusDotReady}`} aria-hidden="true" />
+              <span>Local UI preview — no Firebase or API calls</span>
+            </div>
+          ) : (
+            <div className={styles.statusBar} role="status" aria-live="polite">
+              <span className={`${styles.statusDot} ${connection === "ready" ? styles.statusDotReady : ""}`} aria-hidden="true" />
+              <span>{statusMessage[connection]}</span>
+              {connection !== "checking" && connection !== "ready" &&
+                <button type="button" onClick={() => { setConnection("checking"); void verifyBackend(); }} className={styles.retryButton}>
+                  Retry check
+                </button>}
+            </div>
+          )}
 
           {locked ? (
             <div className={styles.blocked}>
@@ -207,7 +220,9 @@ export function WorkforceScaffold() {
               <p className={styles.intro}>{selected.description}</p>
               <div className={styles.notice}>
                 <strong>Implementation preview</strong>
-                <span>Navigation and access infrastructure are implemented. Data workflows and live metrics are scheduled for later releases.</span>
+                <span>{previewMode
+                  ? "Visual inspection only: no credentials, backend connection or business operations. Data workflows are not yet implemented."
+                  : "Navigation and access infrastructure are implemented. Data workflows and live metrics are scheduled for later releases."}</span>
               </div>
               <h2 className={styles.sectionTitle}>Planned capabilities</h2>
               <div className={styles.cards}>

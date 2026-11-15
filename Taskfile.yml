@@ -39,8 +39,15 @@ tasks:
       - task: frontend:install
       - task: dev:servers
 
+  workforce:preview:
+    desc: Start the localhost-only offline Workforce UI preview (no backend or Firebase).
+    env:
+      WORKFORCE_LOCAL_PREVIEW: "true"
+    cmds:
+      - task: frontend:dev
+
   dev:telegram:
-    desc: Run local dev servers and local Telegram polling for handoff button testing.
+    desc: Run local dev servers and local Telegram polling for handoff button testing
     cmds:
       - task: telegram:preflight
       - task: backend:sync

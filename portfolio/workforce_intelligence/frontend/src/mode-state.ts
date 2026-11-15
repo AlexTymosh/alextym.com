@@ -24,6 +24,9 @@ export function modeFromSearch(search: string): WorkforceMode {
 }
 
 /** Navigation intentionally drops unrelated URL parameters (including secrets). */
-export function workforceModeHref(mode: WorkforceMode): string {
-  return `/portfolio/workforce-intelligence?mode=${mode}`;
+export const WORKFORCE_LOCAL_PREVIEW_PATH = "/portfolio/workforce-intelligence/preview" as const;
+
+export function workforceModeHref(mode: WorkforceMode, previewMode = false): string {
+  const path = previewMode ? WORKFORCE_LOCAL_PREVIEW_PATH : "/portfolio/workforce-intelligence";
+  return `${path}?mode=${mode}`;
 }

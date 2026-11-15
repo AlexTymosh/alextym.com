@@ -43,6 +43,43 @@ revoked access, disabled demo and backend unavailable; Retry repeats the real
 check. None of the feature cards, KPIs or data panels simulate successful
 business operations. They explicitly say **Not yet implemented** until PR 2–3.
 
+## Local-only UI preview (no Firebase or backend)
+
+The protected application and every BFF / FastAPI endpoint remain unchanged. To
+inspect the four-mode SPA without Firebase credentials, emulators or FastAPI:
+
+```powershell
+task stop  # Only if the normal dev servers are already running.
+task workforce:preview
+```
+
+Open **`http://127.0.0.1:3000/portfolio/workforce-intelligence/preview`**.
+This route requires Next.js `NODE_ENV=development`, an explicit server-side
+`WORKFORCE_LOCAL_PREVIEW=true` flag, and a non-Vercel environment. The task
+sets the flag for the localhost-bound frontend dev server only. The route
+returns 404 in production, even if someone sets the flag on Vercel.
+
+In UI preview mode, the SPA makes **no Firebase, BFF or business API requests**.
+Navigation, deep links, browser history, responsive layout and theme continue
+to work. The status bar explicitly says this is a local offline preview. It
+never claims authenticated API connectivity, and no simulated KPIs are shown.
+The real `/portfolio/workforce-intelligence` page still requires identity and
+a project grant; `/portfolio/workforce-intelligence/api/status` and direct
+`/api/workforce/*` retain independent authorization checks. Do not substitute
+UI preview tests for hosted grant, revocation or endpoint verification.
+
+Optional browser E2E for the dev-only path (reuses a running preview server at port 3000):
+
+```powershell
+$env:PLAYWRIGHT_USE_DEV_SERVER = "true"
+$env:WORKFORCE_LOCAL_PREVIEW = "true"
+try {
+  npm --prefix frontend run e2e -- workforce-preview.spec.ts
+} finally {
+  Remove-Item Env:PLAYWRIGHT_USE_DEV_SERVER, Env:WORKFORCE_LOCAL_PREVIEW -ErrorAction SilentlyContinue
+}
+```
+
 ## Access model — unchanged by Commit 03
 
 1. Firebase Authentication identifies the UID; Portfolio Lab separately admits
