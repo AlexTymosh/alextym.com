@@ -165,7 +165,7 @@ def _executive(connection: sqlite3.Connection, window: ReportingWindow) -> dict[
     ).fetchone()
     missing_budget = _unavailable("No effective budget for the selected date.")
     gap = (budget_milli - substantive_milli) / 1000 if budget_milli is not None else None
-    return {
+    metrics = {
         "open_vacancies": Observation(len(open_vacancies), len(open_vacancies)),
         "vacancy_wte": Observation(open_wte, open_wte),
         "vacancy_rate": _rate(open_wte, budget),
@@ -175,6 +175,113 @@ def _executive(connection: sqlite3.Connection, window: ReportingWindow) -> dict[
         "new_starters": Observation(starters, starters),
         "median_time_to_hire": _median(durations),
         "offer_acceptance_rate": _rate(accepted, offers),
+    }
+    metrics.update(_outcome_metrics(connection, window))
+    return metrics
+
+
+def _outcome_metrics(
+    connection: sqlite3.Connection, window: ReportingWindow
+) -> dict[str, Observation]:
+    """Reconcile period and cohort outcomes to conformed, event-grain facts.
+
+    Ratios use comparable populations. Recent starter cohorts without a full
+    follow-up year are never mistaken for a zero early-attrition rate.
+    """
+    start, cutoff = window.start.isoformat(), window.end.isoformat()
+    accepted, started = connection.execute(
+        """
+        SELECT COUNT(*), COUNT(starter.offer_id)
+        FROM fact_offer offer
+        LEFT JOIN fact_new_starter starter
+          ON starter.offer_id = offer.id AND starter.started_on <= :cutoff
+        WHERE offer.outcome = 'accepted'
+          AND offer.resolved_on BETWEEN :start AND :cutoff
+        """,
+        {"start": start, "cutoff": cutoff},
+    ).fetchone()
+    hires, internal = connection.execute(
+        """
+        SELECT COUNT(*), COUNT(CASE WHEN app.internal_employee_id IS NOT NULL THEN 1 END)
+        FROM fact_new_starter starter
+        JOIN fact_application app ON app.id = starter.application_id
+        WHERE starter.started_on BETWEEN :start AND :cutoff
+        """,
+        {"start": start, "cutoff": cutoff},
+    ).fetchone()
+    mature, left_early = connection.execute(
+        """
+        SELECT COUNT(*), COUNT(CASE WHEN leaver.leaving_date IS NOT NULL
+                      AND leaver.leaving_date > starter.started_on
+                      AND leaver.leaving_date <= date(starter.started_on, '+365 days')
+                      THEN 1 END)
+        FROM fact_new_starter starter
+        LEFT JOIN fact_leaver leaver ON leaver.employee_id = starter.employee_id
+        WHERE starter.started_on >= :start
+          AND starter.started_on <= :cutoff
+          AND date(starter.started_on, '+365 days') <= :cutoff
+        """,
+        {"start": start, "cutoff": cutoff},
+    ).fetchone()
+    opening, remaining = connection.execute(
+        """
+        WITH opening AS MATERIALIZED (
+            SELECT DISTINCT employee_id FROM fact_employment_interval
+            WHERE valid_from <= :start AND (valid_to IS NULL OR valid_to > :start)
+        ),
+        closing AS MATERIALIZED (
+            SELECT DISTINCT employee_id FROM fact_employment_interval
+            WHERE valid_from <= :cutoff AND (valid_to IS NULL OR valid_to > :cutoff)
+        )
+        SELECT (SELECT COUNT(*) FROM opening), COUNT(closing.employee_id)
+        FROM opening LEFT JOIN closing ON closing.employee_id = opening.employee_id
+        LEFT JOIN fact_leaver leaver
+          ON leaver.employee_id = opening.employee_id
+         AND leaver.leaving_date > :start AND leaver.leaving_date <= :cutoff
+        WHERE leaver.employee_id IS NULL
+        """,
+        {"start": start, "cutoff": cutoff},
+    ).fetchone()
+    leavers = connection.execute(
+        "SELECT COUNT(*) FROM fact_leaver WHERE leaving_date BETWEEN ? AND ?",
+        (start, cutoff),
+    ).fetchone()[0]
+    progression = connection.execute(
+        "SELECT COUNT(*) FROM fact_internal_progression WHERE occurred_on BETWEEN ? AND ?",
+        (start, cutoff),
+    ).fetchone()[0]
+    pdr_total, pdr_completed = connection.execute(
+        """
+        SELECT COUNT(*), COUNT(CASE WHEN status = 'completed' THEN 1 END)
+        FROM fact_pdr WHERE occurred_on BETWEEN ? AND ?
+        """,
+        (start, cutoff),
+    ).fetchone()
+    learning_total, learning_completed = connection.execute(
+        """
+        SELECT COUNT(*), COUNT(CASE WHEN completed = 1 THEN 1 END)
+        FROM fact_learning WHERE occurred_on BETWEEN ? AND ?
+        """,
+        (start, cutoff),
+    ).fetchone()
+    probation_total, probation_passed = connection.execute(
+        """
+        SELECT COUNT(*), COUNT(CASE WHEN outcome = 'passed' THEN 1 END)
+        FROM fact_probation
+        WHERE occurred_on BETWEEN ? AND ? AND outcome IN ('passed', 'unsuccessful')
+        """,
+        (start, cutoff),
+    ).fetchone()
+    return {
+        "offer_to_start_conversion": _rate(started, accepted),
+        "early_attrition_12m": _rate(left_early, mature),
+        "internal_appointment_rate": _rate(internal, hires),
+        "retention_rate": _rate(remaining, opening),
+        "new_leavers": Observation(leavers, leavers),
+        "internal_progressions": Observation(progression, progression),
+        "pdr_completion_rate": _rate(pdr_completed, pdr_total),
+        "learning_completion_rate": _rate(learning_completed, learning_total),
+        "probation_pass_rate": _rate(probation_passed, probation_total),
     }
 
 

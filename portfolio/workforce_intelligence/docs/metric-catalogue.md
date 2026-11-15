@@ -33,3 +33,26 @@ In the October fixture, three open requests account for 3.0 open WTE against
 accepted by the cutoff, which yields 33.33%. The single October starter entered
 the funnel in September. The October application cohort has five applications
 and zero actual starts before the guided `offer-002` start is recorded.
+
+## PR5 / commit 13: additional governed outcomes
+
+This catalogue remains the single source of KPI definitions for the API.
+All new observations use the shared report window and `status: unavailable`
+when their eligible denominator is zero.
+
+| Metric code | Grain and eligibility |
+| --- | --- |
+| `offer_to_start_conversion` | Accepted-offer cohort; starts observed by selected cutoff. |
+| `early_attrition_12m` | Actual starters with 365 days' full observation; dated leaver event within follow-up. |
+| `internal_appointment_rate` | Actual starters whose source application has a known internal employee ID. |
+| `retention_rate` | Substantive employee cohort present at both reporting boundaries, without a leaver event. |
+| `new_leavers` | Dated leaver event count, not inferred contract expiry. |
+| `internal_progressions` | Recorded promotion and internal appointment events, not new recruits. |
+| `pdr_completion_rate` | Completed recorded PDR events divided by recorded PDR events. Not population compliance. |
+| `learning_completion_rate` | Completed learning events divided by recorded learning events. Not workforce training access. |
+| `probation_pass_rate` | Final passed decisions divided by final passed or unsuccessful decisions; excludes extensions. |
+
+These are synthetic counts and **not** real NHS or employer performance.
+The scope is an initial analytical slice of commit 13; further metric coverage,
+segment filters and server-side suppression remain in PR5. See
+[conformed model and assumptions](conformed-analytics.md).
