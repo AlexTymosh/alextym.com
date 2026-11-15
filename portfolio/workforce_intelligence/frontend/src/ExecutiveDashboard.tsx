@@ -1,6 +1,7 @@
 import type { FormEvent, ReactNode } from "react";
 import type { Comparison, Dashboard, Dataset, Filters, Window } from "./data-api";
 import { displayCode, displayNumber, displayObservation, displayWindow } from "./format";
+import { InclusiveRecruitment } from "./InclusiveRecruitment";
 import { RecruitmentChannels } from "./RecruitmentChannels";
 import { WorkforceTrend } from "./WorkforceTrend";
 import { VacancyAgeing } from "./VacancyAgeing";
@@ -151,6 +152,7 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
         ) : <p className={styles.message}>There are no applications in this cohort.</p>}
       </section>
       <RecruitmentChannels sources={dashboard.sources} vacancyFiltered={Boolean(filters.vacancyId)} />
+      <InclusiveRecruitment inclusive={dashboard.inclusive} />
       <section id="outcomes" className={styles.panel} aria-labelledby="outcomes-heading">
         <div className={styles.sectionHeader}>
           <div>

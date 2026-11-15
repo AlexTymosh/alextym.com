@@ -42,9 +42,22 @@ gate, **not** proof against every possible multi-revision inference attack in a
 shared mutable demo. Before production use, complete independent privacy review,
 revision-differencing tests and access audit.
 
+## PR5 / commit 15: disclosure-controlled dashboard
+
+The Workforce Intelligence page now renders the three **server-released** demographic
+aggregations. Entirely suppressed dimensions show an explanation rather than a
+partial table; a zero-denominator rate is displayed as `Not available`.
+All published groups, counts and percentages come from the protected API, not
+from client-side filtering or recomputation. The visible page states explicitly
+that this is the **fixed full observed cohort**: changing the executive date range
+or the candidate-funnel vacancy does **not** filter inclusive recruitment.
+The frontend matches the inclusive dataset generation/revision with the other
+analytical responses. The BFF rejects attempts to add query parameters.
+
 ## Not yet implemented
 
-The equality dashboard UI, further stage conversion and recruitment-likelihood
-ratios, population eligibility/source register, quality impact badges and WRES
-contextual labels remain subsequent PR5 work. Survey breakdowns require the
-separate threshold **10** and must not reuse this threshold blindly.
+Further stage conversion and recruitment-likelihood ratios, population
+eligibility/source register, quality impact badges and WRES contextual labels
+remain subsequent PR5 work. Survey breakdowns require the separate threshold
+**10** and must not reuse this threshold blindly. Multi-revision disclosure
+risk is not solved by the UI and requires independent verification.

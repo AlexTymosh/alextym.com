@@ -71,6 +71,14 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(trend).toBeVisible();
   await expect(trend.getByRole("row")).toHaveCount(5); // 4 observed months plus header.
   await expect(trend.getByRole("row", { name: /2026-10/ })).toBeVisible();
+  const inclusive = page.getByRole("region", { name: "Inclusive recruitment", exact: true });
+  await expect(inclusive).toBeVisible();
+  await expect(inclusive.getByRole("heading", { name: "Age band" })).toBeVisible();
+  await expect(inclusive.getByRole("heading", { name: "Ethnicity group" })).toBeVisible();
+  await expect(inclusive.getByRole("heading", { name: "Disability status" })).toBeVisible();
+  await expect(inclusive.getByText("This disclosure-controlled report is independent", { exact: false })).toBeVisible();
+  const withheld = await page.request.get(`${path}/api/analytics/inclusive-recruitment?as_of_date=2026-10-31`);
+  expect(withheld.status()).toBe(404); // BFF blocks attempts to filter sensitive dimensions.
   const outcomes = page.getByRole("region", { name: "Workforce outcomes" });
   await expect(outcomes).toBeVisible();
   await expect(outcomes.locator("[data-metric=offer_to_start_conversion]")).toBeVisible();

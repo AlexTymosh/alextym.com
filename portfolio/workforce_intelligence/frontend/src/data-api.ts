@@ -135,7 +135,35 @@ export type VacancyAgeingReport = Quality & {
     }>;
   };
 };
-export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources; trend: WorkforceTrendReport; ageing: VacancyAgeingReport };
+export type InclusiveRecruitmentGroup = {
+  code: string;
+  applications: number | null;
+  screened: number | null;
+  shortlisted: number | null;
+  interviewed: number | null;
+  offers_made: number | null;
+  accepted_offers: number | null;
+  starters: number | null;
+  representation_percent: number | null;
+  shortlisting_percent: number | null;
+  interview_percent: number | null;
+  offer_acceptance_percent: number | null;
+  appointment_percent: number | null;
+};
+export type InclusiveRecruitmentReport = Snapshot & {
+  report: {
+    as_of_date: string;
+    threshold: number;
+    scope: "all_observed_applications";
+    dimensions: Array<{
+      code: string;
+      status: "available" | "suppressed" | "unavailable";
+      message: string | null;
+      groups: InclusiveRecruitmentGroup[];
+    }>;
+  };
+};
+export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources; trend: WorkforceTrendReport; ageing: VacancyAgeingReport; inclusive: InclusiveRecruitmentReport };
 export type SurveyReport = {
   survey_id: string;
   title: string;
@@ -285,18 +313,19 @@ export async function loadWorkspace(
   if (filters.vacancyId) cohort.set("vacancy_id", filters.vacancyId);
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const [executive, vacancies, funnel, sources, trend, ageing] = await Promise.all([
+    const [executive, vacancies, funnel, sources, trend, ageing, inclusive] = await Promise.all([
       workforceRequest<Executive>(`analytics/executive?${range}`, { signal }),
       workforceRequest<Vacancies>(`analytics/vacancy-lifecycle?${dates}`, { signal }),
       workforceRequest<Funnel>(`analytics/candidate-funnel?${cohort}`, { signal }),
       workforceRequest<RecruitmentSources>(`analytics/recruitment-sources?${range}`, { signal }),
       workforceRequest<WorkforceTrendReport>(`analytics/workforce-trend?${range}`, { signal }),
       workforceRequest<VacancyAgeingReport>(`analytics/vacancy-ageing?${dates}`, { signal }),
+      workforceRequest<InclusiveRecruitmentReport>("analytics/inclusive-recruitment", { signal }),
     ]);
     const dataset = executive.dataset;
-    if ([vacancies, funnel, sources, trend, ageing].every((value) =>
+    if ([vacancies, funnel, sources, trend, ageing, inclusive].every((value) =>
       sameGeneration(dataset, value.dataset) && dataset.revision === value.dataset.revision)) {
-      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources, trend, ageing } };
+      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources, trend, ageing, inclusive } };
     }
   }
   throw new WorkforceApiError(409, "The dataset changed while these reports loaded. Refresh the view.");
