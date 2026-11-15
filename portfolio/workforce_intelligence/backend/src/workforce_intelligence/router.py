@@ -36,6 +36,7 @@ from workforce_intelligence.operation_reads import (
 )
 from workforce_intelligence.operations import run_operation
 from workforce_intelligence.recruitment_sources import recruitment_sources
+from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.recruitment import (
     cancel_vacancy,
     record_start,
@@ -54,6 +55,7 @@ from workforce_intelligence.schemas import (
     FteChange,
     FunnelResponse,
     RecruitmentSourceResponse,
+    VacancyAgeingResponse,
     WorkforceTrendResponse,
     InsightQuery,
     InsightResponse,
@@ -224,6 +226,17 @@ def edit_fte(
         actor=actor,
     )
     return MutationResponse(dataset=state, record_version=version)
+
+
+@router.get("/analytics/vacancy-ageing")
+def vacancy_ageing_report(database: Db, as_of_date: date | None = None) -> VacancyAgeingResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        cutoff = reporting_window(state, as_of_date, None).end
+        quality = _quality(connection, state, cutoff.isoformat())
+        return VacancyAgeingResponse(
+            **quality.model_dump(), ageing=vacancy_ageing(connection, cutoff)
+        )
 
 
 @router.get("/analytics/vacancy-lifecycle")

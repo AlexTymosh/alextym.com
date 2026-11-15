@@ -111,3 +111,25 @@ existing dataset revision, feature-gated transport and data-quality status.
 It is read-only, requires no cloud infrastructure and uses no extra packages.
 A future drill-through may filter the trend by organisational dimensions;
 this first slice shows whole-workforce aggregates only.
+
+## PR5 / commit 14: vacancy ageing and candidate-funnel drill-through
+
+`GET /api/workforce/analytics/vacancy-ageing` counts every effective open
+approved requisition at `as_of_date`, not just the paginated vacancy table.
+The single authoritative status computation is `vacancy_snapshots`, so a
+partial fill remains open until its approved position and WTE requirements
+are both met. Administratively closed, cancelled and fully filled requests
+are excluded, but closing a requisition never changes substantive WTE.
+
+Age is whole calendar days from vacancy approval, grouped into exactly five
+inclusive bands: 0–30, 31–60, 61–90, 91–180 and >180 days. The API publishes
+band request counts, remaining approved WTE and a bounded oldest-12 list.
+The total request count and remaining WTE reconcile to the same-day canonical
+executive open-vacancies and vacancy-WTE metrics. Vacancy request grain is
+kept separate from candidate-application grain.
+
+The UI renders the five bands and oldest open requests. Selecting `View funnel`
+updates the existing Candidate Funnel filter for that vacancy, including
+older requests outside the standard 25-item vacancy page. Data revision
+consistency, Firebase/BFF auth boundaries and synthetic disclosure remain
+unchanged. No demographics or protected breakdowns are exposed.

@@ -61,6 +61,12 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
   const channels = page.getByRole("region", { name: "Recruitment channel table" });
   await expect(channels).toBeVisible();
+  const ageing = page.getByRole("region", { name: "Vacancy ageing bands" });
+  await expect(ageing).toBeVisible();
+  await expect(ageing.getByRole("row")).toHaveCount(6); // Five bands plus header.
+  await page.getByRole("button", { name: "View funnel for vac-004" }).click();
+  await expect(page.getByLabel("Vacancy", { exact: true })).toHaveValue("vac-004");
+  await page.getByLabel("Vacancy", { exact: true }).selectOption("");
   const trend = page.getByRole("region", { name: "Monthly Workforce trend table" });
   await expect(trend).toBeVisible();
   await expect(trend.getByRole("row")).toHaveCount(5); // 4 observed months plus header.

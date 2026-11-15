@@ -3,6 +3,7 @@ import type { Comparison, Dashboard, Dataset, Filters, Window } from "./data-api
 import { displayCode, displayNumber, displayObservation, displayWindow } from "./format";
 import { RecruitmentChannels } from "./RecruitmentChannels";
 import { WorkforceTrend } from "./WorkforceTrend";
+import { VacancyAgeing } from "./VacancyAgeing";
 import styles from "./workforce-scaffold.module.css";
 
 const METRIC_ORDER = [
@@ -85,6 +86,11 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
 
       <WorkforceTrend trend={dashboard.trend} />
 
+      <VacancyAgeing ageing={dashboard.ageing} onSelectVacancy={(id) => {
+        onFilters({ ...filters, vacancyId: id });
+        document.getElementById("funnel")?.scrollIntoView({ block: "start" });
+      }} />
+
       <section id="vacancies" className={styles.panel} aria-labelledby="vacancy-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="vacancy-heading">Vacancy lifecycle</h2><p>Requests and filled positions at the selected date.</p></div>
@@ -112,6 +118,8 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
           <label className={styles.control}>Vacancy
             <select value={filters.vacancyId} onChange={(event) => onFilters({ ...filters, vacancyId: event.target.value })}>
               <option value="">All vacancies</option>
+              {filters.vacancyId && !vacancies.items.some((item) => item.id === filters.vacancyId) &&
+                <option value={filters.vacancyId}>Selected: {filters.vacancyId}</option>}
               {vacancies.items.map((vacancy) => <option key={vacancy.id} value={vacancy.id}>{vacancy.title}</option>)}
             </select>
           </label>

@@ -123,7 +123,19 @@ export type WorkforceTrendPoint = {
 export type WorkforceTrendReport = Quality & {
   trend: { window: Window; points: WorkforceTrendPoint[] };
 };
-export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources; trend: WorkforceTrendReport };
+export type VacancyAgeingReport = Quality & {
+  ageing: {
+    as_of_date: string;
+    bands: Array<{ code: string; label: string; requisitions: number; open_wte: number }>;
+    total_open_requisitions: number;
+    total_open_wte: number;
+    oldest_open: Array<{
+      id: string; title: string; status: string; approved_on: string;
+      age_days: number; open_wte: number;
+    }>;
+  };
+};
+export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources; trend: WorkforceTrendReport; ageing: VacancyAgeingReport };
 export type SurveyReport = {
   survey_id: string;
   title: string;
@@ -273,17 +285,18 @@ export async function loadWorkspace(
   if (filters.vacancyId) cohort.set("vacancy_id", filters.vacancyId);
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const [executive, vacancies, funnel, sources, trend] = await Promise.all([
+    const [executive, vacancies, funnel, sources, trend, ageing] = await Promise.all([
       workforceRequest<Executive>(`analytics/executive?${range}`, { signal }),
       workforceRequest<Vacancies>(`analytics/vacancy-lifecycle?${dates}`, { signal }),
       workforceRequest<Funnel>(`analytics/candidate-funnel?${cohort}`, { signal }),
       workforceRequest<RecruitmentSources>(`analytics/recruitment-sources?${range}`, { signal }),
       workforceRequest<WorkforceTrendReport>(`analytics/workforce-trend?${range}`, { signal }),
+      workforceRequest<VacancyAgeingReport>(`analytics/vacancy-ageing?${dates}`, { signal }),
     ]);
     const dataset = executive.dataset;
-    if ([vacancies, funnel, sources, trend].every((value) =>
+    if ([vacancies, funnel, sources, trend, ageing].every((value) =>
       sameGeneration(dataset, value.dataset) && dataset.revision === value.dataset.revision)) {
-      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources, trend } };
+      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources, trend, ageing } };
     }
   }
   throw new WorkforceApiError(409, "The dataset changed while these reports loaded. Refresh the view.");

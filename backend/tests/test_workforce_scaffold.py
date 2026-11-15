@@ -91,6 +91,7 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
         "/workforce/starters",
         "/workforce/analytics/executive",
         "/workforce/analytics/workforce-trend",
+        "/workforce/analytics/vacancy-ageing",
         "/workforce/analytics/candidate-funnel",
         "/workforce/analytics/recruitment-sources",
         "/workforce/analytics/vacancy-lifecycle",
