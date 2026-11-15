@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PRs 1–3 merged. PR 4 operational work in progress. Hosted acceptance pending.
+**Document status:** PRs 1–3 merged. PR 4 operational work verified locally and ready for review. Hosted acceptance pending.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -355,8 +355,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 08 | DONE | `fdc80cf50e05831d9bdbd0fa98d54adad94071c8` | Existing-data migration, evidence validation and exclusion of drafts tested. Real local browser verified the report, Insight Pilot and architecture. |
 | 09 | DONE | `cb702dfa9d0c71ab96e43c4d1fd5fd41751680f5` | Guided navigation, reset, screenshots and local acceptance. |
 | 10 | DONE | `7e2338474cbb49b692bba66068e71e96b699a1b4` | Workforce API and host checks: 24 passed. Frontend typecheck passed. |
-| 11 | DONE | See branch history | 4,400-person fixture reconciled across 36 month ends; Workforce API and host checks: 27 passed. |
-| 12 | NOT STARTED | — | — |
+| 11 | DONE | `817ec589443e6fc79f1d0e6e07ef22df4909831f` | 4,400-person fixture reconciled across 36 month ends; Workforce API and host checks: 27 passed. |
+| 12 | DONE | See branch history | Scoped XLSX, 35 focused tests and six emulator-backed Chromium scenarios passed. |
 | 13 | NOT STARTED | — | — |
 | 14 | NOT STARTED | — | — |
 | 15 | NOT STARTED | — | — |
@@ -371,13 +371,13 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 - **Current branch:** `feat/workforce-intelligence-operations`
 - **Base `main` SHA:** `2555f2f25b690479eb2aad2df58d6b77f8e87293`, confirmed PR #247 merge on `origin/main`
-- **Active scope:** PR 4 operational workflows and workbook I/O. Hosted acceptance remains open.
-- **Last completed commit:** 11, full synthetic baseline with a deterministic or exploratory seed.
-- **Local verification:** Workforce API, host guard and monthly reconciliation tests: 27 passed. Frontend typecheck passed.
+- **Active scope:** PR 4 review. Hosted acceptance remains open.
+- **Last completed commit:** 12, protected workbook workflow.
+- **Local verification:** `task ci` passed (964 backend tests, 368 default Playwright tests, 27/27 RAG cases and Docker). Six additional emulator-backed Chromium scenarios passed, including Excel preview-to-Gold and download denial at both hosts after project grant revocation.
 - **Prior stage:** [PR #247 checks](https://github.com/AlexTymosh/alextym.com/pull/247/checks). Five authenticated browser cases passed locally against the emulators.
 - **Hosted smoke:** The isolated Render service returned health `200` and Workforce `404` at live identity-only commit `beac78ac9264c6ad16706e9352836a67038890ab`. Its linked branch is `main` with manual deploys. Vercel's Firebase settings were scoped to the previous identity preview. The temporary Firebase operator certificate expired at 11:31 UTC on 15 November 2026 and Google's token endpoint rejected the credential. Hosted Member and revocation checks require an authenticated dev operator and deployment of the candidate to both existing hosts.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** Commit 12, finish the confirmed Excel workflow and run all PR gates. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers.
+- **Next exact task:** Owner reviews and merges PR 4. After merge, refresh `main` and begin PR 5 with Silver/Gold and the metric catalogue (commit 13). Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -427,6 +427,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - Added a confirmed shared-fixture switch with controlled and exploratory seeds. Reset still recovers the compact interview fixture.
 - Added 4,400 fictional employee records, 15 people explicitly featured, 36 locations, 12 service areas, 27 role families and 36 months of synthetic operations and listening. The source register distinguishes public scale and reach from these proxies.
 - Focused Workforce tests reconcile month-end WTE and starters to source, check trial reproducibility and document bounded runtime.
+
+#### 2026-11-15 — Commit 12: protected Excel workbook workflow
+
+- Shipped a 13-sheet template, bounded XLSX parsing, row-level preview and scoped exports. Uploads are checked on a separate copy of the source snapshot. Confirmed batches apply once under the writer lock and return the same receipt on retry.
+- Tests cover the preview-to-Gold contract, row errors, duplicate submission, transaction rollback, injection, file limits, cross-Member batch isolation and racing reset. Chromium verified the real Next.js/FastAPI file path, explicit confirmation and origin/grant errors against local emulators.
+- Detailed workbook keys and boundaries are in the [Excel guide](docs/workbooks.md).
 
 ### Per-commit entry template
 
@@ -603,7 +609,7 @@ At the start of **every** new coding session:
 
 ### Full PoC (PR 7 gate)
 
-- [ ] Full operational lifecycle, complete synthetic cohort/history and Excel transaction/exports.
+- [x] Operational lifecycle, complete synthetic cohort/history and Excel transaction/exports (PR 4 code and local acceptance).
 - [ ] Full metric catalogue, analytics/drill-through and reconciliation, quality and confidentiality suppression.
 - [ ] Survey generation, representativeness, weighting, segmentation, priority and triangulation.
 - [ ] External AI structured evidence validation, explicit human approval, three demonstration reports and action tracking.
@@ -611,4 +617,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** Foundation and data core merged. Interview MVP code and local browser acceptance complete. Hosted verification and Owner merge pending.
+**Current overall state:** PRs 1–3 merged. PR 4 code and local acceptance complete, pending Owner merge. Hosted verification remains a release gate.

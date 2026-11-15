@@ -23,6 +23,11 @@ def test_closed_by_default(monkeypatch) -> None:
         assert client.get("/api/workforce/employees").status_code == 404
         assert client.get("/api/workforce/operations/audit").status_code == 404
         assert client.post("/api/workforce/operations", json={}).status_code == 404
+        assert client.get("/api/workforce/import/template").status_code == 404
+        assert (
+            client.post("/api/workforce/import/validate", content=b"not a workbook").status_code
+            == 404
+        )
         assert client.get("/api/vor/fleet").status_code == 404
 
 
@@ -76,6 +81,11 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
         "/workforce/operations",
         "/workforce/operations/establishment",
         "/workforce/operations/{section}",
+        "/workforce/import/template",
+        "/workforce/import/validate",
+        "/workforce/import/commit",
+        "/workforce/import/{batch_id}/errors",
+        "/workforce/export",
         "/workforce/vacancies",
         "/workforce/vacancies/{vacancy_id}/cancel",
         "/workforce/starters",

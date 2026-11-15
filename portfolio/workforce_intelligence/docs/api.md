@@ -15,6 +15,11 @@ Protected responses use `Cache-Control: no-store`.
 | `GET /operations/{section}` | Paginated management records: vacancies (including drafts), candidates, offers, starters, learning, leavers, references and audit. |
 | `GET /operations/establishment` | Available establishment line codes and approved capacity. |
 | `POST /operations` | Validated employment, reference and recruitment commands. OpenAPI describes each shape under the `command.action` discriminator. |
+| `GET /import/template` | Download the versioned synthetic XLSX template. |
+| `POST /import/validate` | Upload a binary XLSX as `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`. Returns a scoped batch ID, expiry, row diagnostics and projected impact. |
+| `POST /import/commit` | Confirm `batch_id` with `confirmed: true`, `dataset_id` and `dataset_generation`. Replays an already committed batch. |
+| `GET /import/{batch_id}/errors` | Download the originator's row diagnostics workbook. |
+| `POST /export` | Download `analytics`, `metrics`, `quality` or `survey` XLSX. Date and vacancy scopes are documented in the [workbook guide](workbooks.md). |
 | `GET /vacancies`, `GET /analytics/vacancy-lifecycle` | Point-in-time vacancy list and count by status. |
 | `GET /analytics/executive` | Executive metrics, comparator, calculation components and data-quality checks. |
 | `GET /analytics/candidate-funnel` | Sequential application cohort, stage counts, conversions and median step durations. Optional `vacancy_id`. |

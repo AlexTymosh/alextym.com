@@ -60,7 +60,7 @@ const sections: Record<WorkforceMode, {
   "workforce-management": {
     label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",
     outline: operationalOutline,
-    planned: "Excel import and export.",
+    planned: "",
   },
   "people-voice": {
     label: "People Voice", description: "Evidence from synthetic staff surveys.",

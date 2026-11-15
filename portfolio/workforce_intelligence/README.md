@@ -1,10 +1,10 @@
 # Workforce & Recruitment Intelligence — embedded portfolio module
 
-**Status:** The interview MVP implements recruitment metrics, effective FTE,
-the reviewed synthetic People Voice fixture, lineage, Insight Pilot, reset and
-two guided scenarios. Both feature flags default to disabled. Hosted grant,
-revocation and direct Render verification are release gates. See the
-[interview runbook](docs/interview-runbook.md).
+**Status:** Workforce Management supports synthetic employment and recruitment
+workflows, a reproducible 4,400-person fixture with 36 months of history, and
+previewed Excel imports and scoped exports. The interview MVP remains available
+on its short fixture. Both feature flags default to disabled. Hosted grant,
+revocation and direct Render verification are release gates.
 
 ## Application boundaries
 
@@ -20,6 +20,8 @@ Canonical requirements:
 Implementation ledger: [`SESSION_NOTES.md`](SESSION_NOTES.md).
 Data core contracts: [persistence](docs/architecture.md), [synthetic sources](docs/data-dictionary.md),
 [API](docs/api.md) and [metric catalogue](docs/metric-catalogue.md).
+See the [operational walkthrough](docs/operations.md), [Excel guide](docs/workbooks.md)
+and [interview runbook](docs/interview-runbook.md) for demo steps.
 
 ## Frontend ownership and navigation
 

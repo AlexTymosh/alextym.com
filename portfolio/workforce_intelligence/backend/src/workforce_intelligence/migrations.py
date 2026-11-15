@@ -6,6 +6,7 @@ from workforce_intelligence.operations_migration import (
 )
 from workforce_intelligence.projections import PROJECTION_MIGRATION
 from workforce_intelligence.survey_migration import SURVEY_MIGRATION, SURVEY_TABLES
+from workforce_intelligence.workbook_migration import WORKBOOK_MIGRATION
 
 _TEMPORAL = """
     valid_from TEXT NOT NULL,
@@ -211,6 +212,7 @@ MIGRATIONS = (
         ) STRICT
         """,
     ),
+    WORKBOOK_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.
@@ -231,4 +233,5 @@ SOURCE_TABLES = (
     "starter_events",
     *OPERATIONS_TABLES,
     *SURVEY_TABLES,
+    "import_batches",
 )

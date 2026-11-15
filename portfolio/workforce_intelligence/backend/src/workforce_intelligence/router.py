@@ -10,8 +10,10 @@ from dataclasses import replace
 from datetime import date
 from secrets import randbits
 from typing import Annotated, Literal
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from workforce_intelligence.analytics import (
     application_funnel,
@@ -65,6 +67,23 @@ from workforce_intelligence.schemas import (
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
+from workforce_intelligence.workbook_http import (
+    FILE_RESPONSE,
+    UPLOAD_REQUEST,
+    download,
+    read_upload,
+    throttle,
+)
+from workforce_intelligence.workbook_import import (
+    ImportConfirmation,
+    ImportPreview,
+    ImportReceipt,
+    commit_import,
+    preview_import,
+    read_preview,
+)
+from workforce_intelligence.xlsx import template
 
 router = APIRouter(
     prefix="/workforce",
@@ -154,6 +173,37 @@ def operation_section(
 def operation(command: OperationRequest, database: Db, actor: Member) -> OperationResult:
     state, change = run_operation(database, command, actor)
     return OperationResult(dataset=state, change=change)
+
+
+@router.get("/import/template", response_class=Response, responses=FILE_RESPONSE)
+def workbook_template(database: Db, actor: Member) -> Response:
+    throttle(database, actor, "download")
+    return download(template(), "template")
+
+
+@router.post("/import/validate", openapi_extra=UPLOAD_REQUEST)
+async def validate_workbook(request: Request, database: Db, actor: Member) -> ImportPreview:
+    await run_in_threadpool(throttle, database, actor, "preview")
+    content = await read_upload(request)
+    return await run_in_threadpool(preview_import, database, actor, content)
+
+
+@router.post("/import/commit")
+def confirm_workbook(command: ImportConfirmation, database: Db, actor: Member) -> ImportReceipt:
+    throttle(database, actor, "commit")
+    return commit_import(database, actor, command)
+
+
+@router.get("/import/{batch_id}/errors", response_class=Response, responses=FILE_RESPONSE)
+def workbook_issues(batch_id: UUID, database: Db, actor: Member) -> Response:
+    throttle(database, actor, "download")
+    return download(errors_workbook(read_preview(database, actor, batch_id)), "import-issues")
+
+
+@router.post("/export", response_class=Response, responses=FILE_RESPONSE)
+def export(command: ExportRequest, database: Db, actor: Member) -> Response:
+    throttle(database, actor, "download")
+    return download(export_workbook(database, command), command.kind)
 
 
 @router.patch("/employees/{employee_id}/contracts")

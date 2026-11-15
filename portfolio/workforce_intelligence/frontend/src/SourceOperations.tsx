@@ -56,6 +56,7 @@ const groups: Group[] = [
 export const operationalOutline: [string, string][] = [
   ["directory", "People Directory"], ["employee-profile", "Employee Profile"], ["contracts", "Contracts & FTE"],
   ...groups.map(({ id, title }): [string, string] => [id, title]),
+  ["import-export", "Import / Export"],
 ];
 
 const labelFor = (name: string) => name.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());

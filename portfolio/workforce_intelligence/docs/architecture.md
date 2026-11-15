@@ -38,7 +38,8 @@ the start of an existing interval keeps the previous value in the mutation audit
 Reset serializes with edits and replaces the synthetic source tables in one
 transaction. It keeps reset receipts and records a fresh audit event. Retrying a
 successful reset with the same Member and idempotency key returns the receipt.
-New resets have a 15-second project-wide cooldown. The audit's demo session ID
+Replacement with a full or exploratory fixture uses the same lock, confirmation
+and receipts. New replacements have a 15-second project-wide cooldown. The audit's demo session ID
 identifies the shared dataset generation. It contains neither a Firebase credential
 nor an individual browser session identifier.
 
@@ -72,3 +73,19 @@ one published finding and one draft. The audit and UI label the former as a
 seeded demonstration review. The report uses a demonstration fallback that is
 available independently of AI provider availability. The later live review
 workflow will collect Member decisions and publication events.
+
+## Operational history and workbook staging
+
+Migrations 4 and 5 add employment profile status, linked development and
+recruitment events, active reference data and recorded dataset replacement
+intents. They preserve existing employment and hiring keys. Draft vacancies
+are visible in the management view and excluded from the approved-vacancy
+projection. Role identifiers remain stable across historical assignments.
+
+Migration 6 adds project-owned workbook batches and rate receipts. An upload is
+parsed with bounded archive and sheet limits after both host membership checks.
+Preview runs source commands on an in-memory copy of the committed SQLite
+snapshot. Confirmation holds the writer lock, verifies the preview's generation
+and revision, and commits row changes, audit and the idempotent receipt together.
+The report projections read only committed source tables. Authenticated reports
+and workbook downloads are never cached by either host.

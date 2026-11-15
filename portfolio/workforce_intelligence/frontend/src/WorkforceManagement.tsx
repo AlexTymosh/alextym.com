@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { changeContractFte, WorkforceApiError, type Directory, type Employee } from "./data-api";
 import { displayNumber } from "./format";
+import { ImportExport } from "./ImportExport";
 import { EmployeeOperations, OperationForm, SourceOperations } from "./SourceOperations";
 import styles from "./workforce-scaffold.module.css";
 
@@ -75,6 +76,7 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
         </details>
       </section>
       <SourceOperations {...operations} />
+      <ImportExport dataset={directory.dataset} onSaved={onSaved} onError={onError} />
     </div>
   );
 }

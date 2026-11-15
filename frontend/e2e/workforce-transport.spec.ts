@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { workforceUpstreamPath } from "../lib/portfolio-lab/workforce-transport";
+import { MAX_WORKBOOK_BYTES, readWorkbookBytes } from "../lib/portfolio-lab/workforce-workbooks";
 
 test("maps only approved Workforce operation and filter combinations", () => {
   const query = new URLSearchParams({ vacancy_id: "vac-001", as_of_date: "2026-10-31" });
@@ -29,4 +30,23 @@ test("the live browser route rejects an unsigned Workforce data request", async 
   expect([401, 404, 503]).toContain(response.status());
   expect(response.headers()["cache-control"]).toBe("no-store");
   expect(await response.json()).toEqual({ detail: expect.any(String) });
+});
+test("workbook transport allows only named operations and bounds a streamed body", async () => {
+  const query = new URLSearchParams();
+  const batch = "53d71d60-7483-473c-83e0-89ab63b9672b";
+  expect(workforceUpstreamPath("POST", ["import", "validate"], query)).toBe("/api/workforce/import/validate");
+  expect(workforceUpstreamPath("GET", ["import", batch, "errors"], query)).toBe(`/api/workforce/import/${batch}/errors`);
+  expect(workforceUpstreamPath("GET", ["import", "data", "errors"], query)).toBeNull();
+  expect(workforceUpstreamPath("POST", ["import", "template"], query)).toBeNull();
+  expect(workforceUpstreamPath("POST", ["export"], new URLSearchParams("origin=somewhere"))).toBeNull();
+  const bytes = await readWorkbookBytes(new Response(new Uint8Array([0x50, 0x4b])));
+  expect(bytes instanceof ArrayBuffer && new Uint8Array(bytes)[0]).toBe(0x50);
+  const oversized = new Response(new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(MAX_WORKBOOK_BYTES));
+      controller.enqueue(new Uint8Array([0]));
+      controller.close();
+    },
+  }));
+  expect(await readWorkbookBytes(oversized)).toBe("too_large");
 });
