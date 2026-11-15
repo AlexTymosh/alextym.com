@@ -45,7 +45,29 @@ People Voice, metric definition, Insight Pilot and Data Architecture.
 
 The guided links retain the active step across a reload. Normal navigation and
 date controls are available throughout the demo. Candidate experience analysis,
-forecasting, Excel and live analyst publication are planned for later stages.
+forecasting and live analyst publication are planned for later stages.
+
+## Optional PR4 Excel demonstration
+
+Use only the separate synthetic Workforce environment and a permitted Member account.
+For a predictable baseline, choose **Reset demo** and confirm before starting.
+
+1. Open **Workforce Management → Import / Export** and select **Download template**.
+2. Populate the **Employees** sheet with a fictional employee code and a display
+   alias beginning with `Demo`. Keep the workbook metadata, exact sheet headers
+   and the required fields; use an existing establishment line ID. The current
+   accepted actions and keys are in [Excel import/export](workbooks.md).
+3. Upload the workbook and select **Validate workbook**. Confirm the row-level
+   preview and projected **Dashboard impact**. No employee should appear in the
+   operational records before the import is confirmed.
+4. Select **Apply these changes to the shared demo**, then **Confirm import**.
+   Confirm the receipt, audit trail, new dataset revision and updated Gold metric.
+5. Download a scoped **Filtered analytics** workbook and confirm the synthetic
+   disclosure and reporting period. Finally, reset the disposable dataset.
+
+The preview expires after 15 minutes; concurrent source edits or dataset reset
+require another validation. Do not reuse employee IDs or real workforce data.
+The local emulator checks are not a substitute for staged HTTPS/grant verification.
 
 Desktop screenshots from the authenticated local emulator run show the
 [Recruitment overview](screenshots/workforce-recruitment.png) and the
