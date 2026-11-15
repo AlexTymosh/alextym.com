@@ -14,6 +14,7 @@ from workforce_intelligence.analytics import (
     ReportingWindow,
 )
 from workforce_intelligence.dataset import DatasetState, DatasetVersion
+from workforce_intelligence.inclusive_recruitment import InclusiveRecruitmentReport
 from workforce_intelligence.metric_catalogue import MetricDefinition
 from workforce_intelligence.recruitment_sources import RecruitmentSourceReport
 from workforce_intelligence.recruitment import VacancySnapshot, VacancyStatus
@@ -139,6 +140,10 @@ class VacancyAgeingResponse(QualityResponse):
 
 class WorkforceTrendResponse(QualityResponse):
     trend: WorkforceTrend
+
+
+class InclusiveRecruitmentResponse(DatasetResponse):
+    report: InclusiveRecruitmentReport
 
 
 class RecruitmentSourceResponse(DatasetResponse):

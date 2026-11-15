@@ -16,6 +16,7 @@ const operations: readonly [string, RegExp, readonly string[]][] = [
   ["GET", /^analytics\/executive$/, reportingWindow],
   ["GET", /^analytics\/workforce-trend$/, reportingWindow],
   ["GET", /^analytics\/vacancy-ageing$/, ["as_of_date"]],
+  ["GET", /^analytics\/inclusive-recruitment$/, []],
   ["GET", /^analytics\/candidate-funnel$/, [...reportingWindow, "vacancy_id"]],
   ["GET", /^analytics\/recruitment-sources$/, [...reportingWindow, "campaign_id", "organisation_id", "location_id", "role_id"]],
   ["GET", /^data-quality$/, ["as_of_date"]],

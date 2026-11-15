@@ -12,7 +12,7 @@ from secrets import randbits
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from starlette.concurrency import run_in_threadpool
 
 from workforce_intelligence.analytics import (
@@ -35,6 +35,7 @@ from workforce_intelligence.operation_reads import (
     read_section,
 )
 from workforce_intelligence.operations import run_operation
+from workforce_intelligence.inclusive_recruitment import inclusive_recruitment
 from workforce_intelligence.recruitment_sources import recruitment_sources
 from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.recruitment import (
@@ -52,6 +53,7 @@ from workforce_intelligence.schemas import (
     EntityId,
     ErrorDetail,
     ExecutiveResponse,
+    InclusiveRecruitmentResponse,
     FteChange,
     FunnelResponse,
     RecruitmentSourceResponse,
@@ -323,6 +325,21 @@ def monthly_workforce_trend(
         quality = _quality(connection, state, window.end.isoformat())
         return WorkforceTrendResponse(
             **quality.model_dump(), trend=workforce_trend(connection, window)
+        )
+
+
+@router.get("/analytics/inclusive-recruitment")
+def inclusive_recruitment_report(request: Request, database: Db) -> InclusiveRecruitmentResponse:
+    # No dates, organisation, role or other filters: avoid small-cell reconstruction.
+    if request.query_params:
+        raise HTTPException(
+            status_code=422, detail="Demographic aggregates do not permit query filters."
+        )
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        return InclusiveRecruitmentResponse(
+            dataset=state,
+            report=inclusive_recruitment(connection, as_of_date=state.as_of_date),
         )
 
 
