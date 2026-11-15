@@ -110,7 +110,20 @@ export type RecruitmentSources = Snapshot & {
     total_applications: number;
   };
 };
-export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources };
+export type WorkforceTrendPoint = {
+  month_key: string;
+  as_of_date: string;
+  partial_period: boolean;
+  budgeted_wte: number | null;
+  substantive_wte: number;
+  workforce_gap_wte: number | null;
+  new_starters: number;
+  leavers: number;
+};
+export type WorkforceTrendReport = Quality & {
+  trend: { window: Window; points: WorkforceTrendPoint[] };
+};
+export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel; sources: RecruitmentSources; trend: WorkforceTrendReport };
 export type SurveyReport = {
   survey_id: string;
   title: string;
@@ -260,16 +273,17 @@ export async function loadWorkspace(
   if (filters.vacancyId) cohort.set("vacancy_id", filters.vacancyId);
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const [executive, vacancies, funnel, sources] = await Promise.all([
+    const [executive, vacancies, funnel, sources, trend] = await Promise.all([
       workforceRequest<Executive>(`analytics/executive?${range}`, { signal }),
       workforceRequest<Vacancies>(`analytics/vacancy-lifecycle?${dates}`, { signal }),
       workforceRequest<Funnel>(`analytics/candidate-funnel?${cohort}`, { signal }),
       workforceRequest<RecruitmentSources>(`analytics/recruitment-sources?${range}`, { signal }),
+      workforceRequest<WorkforceTrendReport>(`analytics/workforce-trend?${range}`, { signal }),
     ]);
     const dataset = executive.dataset;
-    if ([vacancies, funnel, sources].every((value) =>
+    if ([vacancies, funnel, sources, trend].every((value) =>
       sameGeneration(dataset, value.dataset) && dataset.revision === value.dataset.revision)) {
-      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources } };
+      return { kind: mode, synthetic: true, dataset, dashboard: { executive, vacancies, funnel, sources, trend } };
     }
   }
   throw new WorkforceApiError(409, "The dataset changed while these reports loaded. Refresh the view.");

@@ -61,6 +61,10 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
   const channels = page.getByRole("region", { name: "Recruitment channel table" });
   await expect(channels).toBeVisible();
+  const trend = page.getByRole("region", { name: "Monthly Workforce trend table" });
+  await expect(trend).toBeVisible();
+  await expect(trend.getByRole("row")).toHaveCount(5); // 4 observed months plus header.
+  await expect(trend.getByRole("row", { name: /2026-10/ })).toBeVisible();
   const outcomes = page.getByRole("region", { name: "Workforce outcomes" });
   await expect(outcomes).toBeVisible();
   await expect(outcomes.locator("[data-metric=offer_to_start_conversion]")).toBeVisible();
@@ -97,6 +101,8 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(page.getByText("There are no applications in this cohort.")).toBeVisible();
   await expect(page.getByText("There are no applications in this reporting window.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Workforce outcomes" })).toBeVisible();
+  const partialMonth = page.getByRole("region", { name: "Monthly Workforce trend table" });
+  await expect(partialMonth.getByRole("row", { name: /2026-07 \(partial\)/ })).toBeVisible();
   await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
 });
 

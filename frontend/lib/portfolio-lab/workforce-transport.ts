@@ -14,6 +14,7 @@ const operations: readonly [string, RegExp, readonly string[]][] = [
   ["GET", new RegExp(`^import/${batchId}/errors$`), []],
   ["POST", /^(import\/(validate|commit)|export)$/, []],
   ["GET", /^analytics\/executive$/, reportingWindow],
+  ["GET", /^analytics\/workforce-trend$/, reportingWindow],
   ["GET", /^analytics\/candidate-funnel$/, [...reportingWindow, "vacancy_id"]],
   ["GET", /^analytics\/recruitment-sources$/, [...reportingWindow, "campaign_id", "organisation_id", "location_id", "role_id"]],
   ["GET", /^data-quality$/, ["as_of_date"]],

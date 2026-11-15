@@ -85,3 +85,29 @@ learning event completion rates are explicitly not workforce compliance rates.
 The sidebar exposes a Workforce outcomes anchor. The emulator browser test checks
 its three key representative metrics, including the unavailable cohort state.
 Full dimensional drill-through and governed suppression remain later PR5 work.
+
+## PR5 / commit 14: effective-dated monthly trend
+
+`GET /api/workforce/analytics/workforce-trend` returns one observation per calendar
+month within the report window. WTE represents a point-in-time snapshot at each
+month's last observed date, not the sum of daily WTE. Budget comes from effective
+establishment history; substantive WTE comes from the overlap-conformed
+employment and assignment intervals. Gap is budget minus substantive WTE.
+
+New starters and leavers count dated events *within the selected month interval*,
+clipped to the requested period's first and last days. If the reporting window
+starts or ends mid-month, the corresponding point sets `partial_period=true`.
+The latest incomplete month uses the requested `as_of_date` (not the dataset's
+future month-end). A missing budget produces `null` budget/gap, not zero.
+
+Without an explicit `period_start`, this endpoint reports the complete observed
+history (36 months for the controlled full seed, four for the interview seed).
+Other executive KPIs retain their existing current-month default. Setting an
+explicit date range narrows all analytics, including this trend.
+
+The frontend renders the complete available trend with two WTE series and an
+accessible table of the most recent 12 observations. The response inherits the
+existing dataset revision, feature-gated transport and data-quality status.
+It is read-only, requires no cloud infrastructure and uses no extra packages.
+A future drill-through may filter the trend by organisational dimensions;
+this first slice shows whole-workforce aggregates only.

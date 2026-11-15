@@ -262,6 +262,12 @@
 .table td { font-variant-numeric: tabular-nums; }
 .table tr:last-child > :is(th, td) { border-bottom: 0; }
 .table thead tr:last-child > th { border-bottom: 1px solid var(--wi-border); }
+.trendChart { display: block; width: 100%; max-height: 250px; margin-top: 10px; }
+.trendLegend { display: flex; gap: 20px; flex-wrap: wrap; font-size: .78rem; color: var(--wi-muted); margin: 14px 0 6px; }
+.trendLegend > span { display: inline-flex; align-items: center; gap: 7px; }
+.trendBudgetKey, .trendStaffKey { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+.trendBudgetKey { background: var(--wi-warning); }
+.trendStaffKey { background: var(--wi-accent); }
 .funnelRate, .caption, .message { margin: 13px 0 0; color: var(--wi-muted); font-size: .8rem; line-height: 1.55; }
 .funnelRate strong { padding-left: 7px; color: var(--wi-ink); }
 .barCell { display: flex; align-items: center; gap: 8px; }

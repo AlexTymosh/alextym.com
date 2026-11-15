@@ -18,6 +18,7 @@ from workforce_intelligence.metric_catalogue import MetricDefinition
 from workforce_intelligence.recruitment_sources import RecruitmentSourceReport
 from workforce_intelligence.recruitment import VacancySnapshot, VacancyStatus
 from workforce_intelligence.surveys import SurveyReport
+from workforce_intelligence.workforce_trend import WorkforceTrend
 
 EntityId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")]
 PositiveVersion = Annotated[int, Field(strict=True, ge=1, le=2**53 - 1)]
@@ -129,6 +130,10 @@ class QualityResponse(DatasetResponse):
 
 class ExecutiveResponse(QualityResponse):
     executive: ExecutiveMetrics
+
+
+class WorkforceTrendResponse(QualityResponse):
+    trend: WorkforceTrend
 
 
 class RecruitmentSourceResponse(DatasetResponse):

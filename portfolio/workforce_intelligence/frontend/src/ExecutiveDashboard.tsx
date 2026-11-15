@@ -2,6 +2,7 @@ import type { FormEvent, ReactNode } from "react";
 import type { Comparison, Dashboard, Dataset, Filters, Window } from "./data-api";
 import { displayCode, displayNumber, displayObservation, displayWindow } from "./format";
 import { RecruitmentChannels } from "./RecruitmentChannels";
+import { WorkforceTrend } from "./WorkforceTrend";
 import styles from "./workforce-scaffold.module.css";
 
 const METRIC_ORDER = [
@@ -81,6 +82,8 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
           })}
         </div>
       </section>
+
+      <WorkforceTrend trend={dashboard.trend} />
 
       <section id="vacancies" className={styles.panel} aria-labelledby="vacancy-heading">
         <div className={styles.sectionHeader}>

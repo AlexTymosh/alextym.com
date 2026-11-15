@@ -54,6 +54,7 @@ from workforce_intelligence.schemas import (
     FteChange,
     FunnelResponse,
     RecruitmentSourceResponse,
+    WorkforceTrendResponse,
     InsightQuery,
     InsightResponse,
     MutationResponse,
@@ -69,6 +70,7 @@ from workforce_intelligence.schemas import (
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
 from workforce_intelligence.workbook_http import (
     FILE_RESPONSE,
@@ -292,6 +294,22 @@ def executive(
         return ExecutiveResponse(
             **quality.model_dump(),
             executive=executive_metrics(connection, state, window),
+        )
+
+
+@router.get("/analytics/workforce-trend")
+def monthly_workforce_trend(
+    database: Db, as_of_date: date | None = None, period_start: date | None = None
+) -> WorkforceTrendResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        # Without an explicit date filter, chart the complete observed history.
+        # Other executive KPIs retain their existing current-month default.
+        start = period_start or date.fromisoformat(state.history_start)
+        window = reporting_window(state, as_of_date, start)
+        quality = _quality(connection, state, window.end.isoformat())
+        return WorkforceTrendResponse(
+            **quality.model_dump(), trend=workforce_trend(connection, window)
         )
 
 
