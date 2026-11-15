@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import { PrivacySafeAnalytics } from "../components/privacy-safe-analytics";
 import { SiteNavigation } from "../components/site-navigation";
@@ -78,7 +79,11 @@ export default function RootLayout({
   return (
     <html lang={siteConfig.language} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script
+          id="site-theme-initializer"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: getPersonJsonLd() }}

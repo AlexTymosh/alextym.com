@@ -14,6 +14,16 @@ test("local Workforce preview is closed during production and ordinary runs", as
 test("local Workforce preview supports offline navigation without API requests", async ({ page }) => {
   test.skip(!runLocalPreview, "Requires a development server and explicit local preview flag");
 
+  // React/Next dev-mode regression: root theme script must not be rendered
+  // as an ordinary client-side <script> during preview navigation.
+  const scriptWarnings: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" &&
+        message.text().includes("Encountered a script tag while rendering React component")) {
+      scriptWarnings.push(message.text());
+    }
+  });
+
   const protectedRequests: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
@@ -37,4 +47,5 @@ test("local Workforce preview supports offline navigation without API requests",
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   await expect(page.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
   expect(protectedRequests).toEqual([]);
+  expect(scriptWarnings).toEqual([]);
 });

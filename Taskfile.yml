@@ -41,10 +41,15 @@ tasks:
 
   workforce:preview:
     desc: Start the localhost-only offline Workforce UI preview (no backend or Firebase).
+    dir: frontend
     env:
       WORKFORCE_LOCAL_PREVIEW: "true"
     cmds:
-      - task: frontend:dev
+      - >-
+        powershell -NoProfile -ExecutionPolicy Bypass
+        -File "{{.ROOT_DIR}}/scripts/frontend-dev.ps1"
+        -BackendPort {{.BACKEND_PORT}}
+        -FrontendPort {{.FRONTEND_PORT}}
 
   dev:telegram:
     desc: Run local dev servers and local Telegram polling for handoff button testing
