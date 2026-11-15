@@ -348,8 +348,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 01 | DONE | b13da5719b8baa36a14842d7bab2c8da5d5726a5 | Local `task ci`: PASS (reported); hosted CI not independently verified |
 | 02 | DONE | 8d940ea06ed8285ee31bc5068278a8f69d8226bf | User-reported local `task ci`: PASS; hosted Firebase/Firestore grant verification remains outstanding |
 | 03 | DONE | b100c0a18bf856586519e246ce7792d2d40e3d0e | User-reported `task ci`: PASS; local SPA opened; protected API connectivity and hosted grants pending |
-| 04 | DONE | `feat/workforce-intelligence-data-core` | Eight SQLite, concurrency, reset and isolation tests passed; Ruff passed |
-| 05 | NOT STARTED | — | — |
+| 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed; Ruff passed |
+| 05 | DONE | `feat/workforce-intelligence-data-core` | 11 project tests passed, including source comparison across two fresh files and reset |
 | 06 | NOT STARTED | — | — |
 | 07 | NOT STARTED | — | — |
 | 08 | NOT STARTED | — | — |
@@ -371,19 +371,25 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 - **Current branch:** `feat/workforce-intelligence-data-core`
 - **Base `main` SHA:** `a49f01b828dba84193200e39f9a09a4e92e0e14b`, confirmed on `origin/main`
-- **Active scope:** PR 2, Commit 04
-- **Last completed commit:** 04, isolated SQLite and temporal history
-- **Last focused tests:** `python -m pytest -q ../portfolio/workforce_intelligence/tests/test_database.py` from `backend/`: 8 passed; Ruff lint and format passed
+- **Active scope:** PR 2, Commit 05
+- **Last completed commit:** 05, controlled seed and source register
+- **Last focused tests:** `python -m pytest -q ../portfolio/workforce_intelligence/tests` from `backend/`: 11 passed; Ruff lint and format passed
 - **PR 2 CI:** Pending
 - **Hosted smoke:** Pending for Firebase/Firestore grant and revocation on the Workforce app and direct Render
-- **Current feature flags:** Portfolio Lab and Workforce default to disabled. Commit 04 adds storage components without attaching them to hosted routes.
-- **Next exact task:** Commit 05 supplies the controlled synthetic seed and source register.
+- **Current feature flags:** Portfolio Lab and Workforce default to disabled. The data core is still exercised only through the project tests.
+- **Next exact task:** Commit 06 connects the authorised API and computes the canonical MVP metrics from the seeded sources.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
 - Added project-owned SQLite migrations, ownership marker, half-open effective dates, transactional reset, and audited FTE changes.
 - The database tests cover concurrent bootstrap and writes, stale versions, rollback, foreign keys, and isolation from an unrelated SQLite file.
 - The runtime path is `.tmp/workforce/workforce.sqlite3` relative to the FastAPI working directory. Commands serialize through SQLite; the dataset UUID and numeric generation detect storage loss and reset.
+
+#### 2026-11-15 — Commit 05: controlled synthetic baseline
+
+- `interview-core` creates 15 ordered fictional Featured people and two actual starters. A separate accepted offer is ready for the actual-start action. The seed includes cancelled, administratively closed and partially filled vacancies, a repeated stage event and effective-dated contract history.
+- The source register distinguishes public context from the seed's synthetic people, locations and numerical results.
+- Repeatability and source reconciliation tests passed. The full-size historical population remains scheduled for PR 4.
 
 ### Per-commit entry template
 
