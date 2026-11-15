@@ -336,7 +336,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR | Commits | Scope | Status | PR URL | Merge SHA |
 |---|---:|---|---|---|---|
 | PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
-| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | DONE, pending merge | [Data core branch](https://github.com/AlexTymosh/alextym.com/compare/main...feat/workforce-intelligence-data-core) | — |
+| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | DONE, pending merge | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | — |
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | NOT STARTED | — | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
 | PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
@@ -350,7 +350,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 03 | DONE | b100c0a18bf856586519e246ce7792d2d40e3d0e | User-reported `task ci`: PASS; local SPA opened; protected API connectivity and hosted grants pending |
 | 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed. Ruff passed. |
 | 05 | DONE | `b257cae1025ffcc020cae89db68adbdaac226594` | 11 project tests passed, including source comparison across two fresh files and reset. |
-| 06 | DONE | Data core branch tip | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
+| 06 | DONE | `1fdebfe8149ed7c85d3c86e7fe06abdce86def58` | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
 | 07 | NOT STARTED | — | — |
 | 08 | NOT STARTED | — | — |
 | 09 | NOT STARTED | — | — |
@@ -371,11 +371,11 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 - **Current branch:** `feat/workforce-intelligence-data-core`
 - **Base `main` SHA:** `a49f01b828dba84193200e39f9a09a4e92e0e14b`, confirmed on `origin/main`
-- **Active scope:** PR 2 complete, awaiting Owner merge after GitHub CI.
+- **Active scope:** PR 2 complete and open as [#246](https://github.com/AlexTymosh/alextym.com/pull/246), awaiting Owner merge after GitHub CI.
 - **Last completed commit:** 06, canonical metrics and protected data routes.
 - **Local `task ci`:** PASS. Backend 947 passed and four live Upstash checks skipped. Frontend 362 passed and two development-only preview tests skipped. RAG 27/27, repository checks, and Docker build passed.
 - **Final focused checks:** `task backend:check` passed again (947 passed, four skips) after aligning the OpenAPI 422 schema. `npm --prefix frontend run e2e -- workforce-transport.spec.ts` against the existing production build passed all six assertions after adding the unsigned browser request test.
-- **GitHub CI:** See the PR checks for the branch tip.
+- **GitHub CI:** [Checks for PR #246](https://github.com/AlexTymosh/alextym.com/pull/246/checks).
 - **Hosted smoke:** Live Firebase/Firestore grant, revocation, and direct Render checks remain part of the PR 3 Interview MVP gate.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
 - **Next exact task:** After PR 2 merges, branch from refreshed `main` for PR 3. Connect the UI to a real FTE change and executive metric refresh.
