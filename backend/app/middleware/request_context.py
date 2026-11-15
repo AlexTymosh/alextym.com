@@ -34,6 +34,7 @@ class RequestContextMiddleware:
 
         start_time = perf_counter()
         request_id = _request_id_from_scope(scope, self._request_id_header)
+        scope.setdefault("state", {})["request_id"] = request_id
         method = str(scope.get("method", "UNKNOWN"))
         status_code: int | None = None
         response_logged = False

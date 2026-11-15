@@ -1,10 +1,10 @@
 # Workforce & Recruitment Intelligence — embedded portfolio module
 
-**Status:** PR 1, Commit 03 — protected SPA workspace shell implemented; domain
-features and the Workforce SQLite database are **not implemented yet**. Both
-`PORTFOLIO_LAB_ENABLED` and `WORKFORCE_INTELLIGENCE_ENABLED` remain disabled by
-default. Hosted Firebase, Firestore grant and revocation tests are still a release
-gate; a locally passing UI test is not authorization evidence.
+**Status:** PR 2 supplies the independent SQLite data core, deterministic
+interview seed, canonical executive and funnel metrics, and protected mutation
+and reset APIs. The browser shell will connect to these workflows in PR 3.
+`PORTFOLIO_LAB_ENABLED` and `WORKFORCE_INTELLIGENCE_ENABLED` default to disabled.
+Hosted grant, revocation and direct Render verification are still release gates.
 
 ## Application boundaries
 
@@ -18,6 +18,8 @@ gate; a locally passing UI test is not authorization evidence.
 Canonical requirements:
 [`docs/specifications/SCAS_Workforce_Recruitment_Intelligence_POC_Technical_Specification_v1.2.md`](../../docs/specifications/SCAS_Workforce_Recruitment_Intelligence_POC_Technical_Specification_v1.2.md).
 Implementation ledger: [`SESSION_NOTES.md`](SESSION_NOTES.md).
+Data core contracts: [persistence](docs/architecture.md), [synthetic sources](docs/data-dictionary.md),
+[API](docs/api.md) and [metric catalogue](docs/metric-catalogue.md).
 
 ## Frontend ownership and navigation
 
@@ -41,7 +43,8 @@ The UI calls only the existing, fixed-origin authenticated status BFF and
 reflects its verified result. It distinguishes loading, session expired,
 revoked access, disabled demo and backend unavailable; Retry repeats the real
 check. None of the feature cards, KPIs or data panels simulate successful
-business operations. They explicitly say **Not yet implemented** until PR 2–3.
+business operations. They explicitly say **Not yet implemented** until the UI
+connects to the protected data APIs.
 
 ## Local-only UI preview (no Firebase or backend)
 
@@ -80,7 +83,7 @@ try {
 }
 ```
 
-## Access model — unchanged by Commit 03
+## Access model
 
 1. Firebase Authentication identifies the UID; Portfolio Lab separately admits
    it. A Firebase login alone **never** grants project access.
@@ -139,9 +142,8 @@ Manual hosted checks before granting any real visitor access:
 8. Simulate Firestore unavailability; the request fails closed. Confirm Fleet,
    public Chat/RAG routes and the website are unaffected.
 
-Live Firebase security, hosted provider behavior and production deployment
-have **not** been verified by the local unit tests. Do not claim a released
-analytics portal until PR 2–3 supply real data, workflows and acceptance tests.
+The Interview MVP release requires these hosted checks and the PR 3 workflow
+acceptance tests.
 
 ## Development checks
 

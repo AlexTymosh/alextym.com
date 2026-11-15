@@ -28,9 +28,15 @@ const policy = read("backend/app/security/project_grants.py");
 assert.match(policy, /grant_document\(/);
 assert.match(policy, /require_lab_identity\(request\)/);
 assert.match(policy, /load_project_grant\(WORKFORCE_PROJECT_ID, uid\)/);
-const bff = read("frontend/app/portfolio/workforce-intelligence/api/status/route.ts");
+const bff = read("frontend/lib/portfolio-lab/workforce-bff-server.ts");
+for (const path of ["status", "[...operation]"]) {
+  const adapter = read(`frontend/app/portfolio/workforce-intelligence/api/${path}/route.ts`);
+  assert.match(adapter, /return forwardWorkforceRequest\(request,/);
+}
 assert.match(bff, /getWorkforceAccess\(sessionCookie\)/);
 assert.match(bff, /FirebaseSession \$\{sessionCookie\}/);
+assert.match(bff, /hasSameOrigin\(request\)/);
+assert.match(bff, /workforceUpstreamPath\(/);
 const dockerfile = read("backend/Dockerfile");
 assert.match(dockerfile, /COPY portfolio\/workforce_intelligence\/backend\/src/);
 const previewRoute = read("frontend/app/portfolio/workforce-intelligence/preview/page.tsx");
