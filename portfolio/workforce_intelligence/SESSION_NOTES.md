@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PR 1 merged. PR 2 data core implemented and locally verified.
+**Document status:** PR 1 and PR 2 merged. Interview MVP under development.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -336,8 +336,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR | Commits | Scope | Status | PR URL | Merge SHA |
 |---|---:|---|---|---|---|
 | PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
-| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | DONE, pending merge | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | — |
-| PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | NOT STARTED | — | — |
+| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | MERGED | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | `d2c6be784aaa612b83af2ca0f1809f8d97967c34` |
+| PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | IN PROGRESS | — | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
 | PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
 | PR 6 | 16–18 | Surveys, weighting, external AI and review | NOT STARTED | — | — |
@@ -351,7 +351,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed. Ruff passed. |
 | 05 | DONE | `b257cae1025ffcc020cae89db68adbdaac226594` | 11 project tests passed, including source comparison across two fresh files and reset. |
 | 06 | DONE | `1fdebfe8149ed7c85d3c86e7fe06abdce86def58` | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
-| 07 | NOT STARTED | — | — |
+| 07 | DONE | Interview MVP branch | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
 | 08 | NOT STARTED | — | — |
 | 09 | NOT STARTED | — | — |
 | 10 | NOT STARTED | — | — |
@@ -369,16 +369,15 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `feat/workforce-intelligence-data-core`
-- **Base `main` SHA:** `a49f01b828dba84193200e39f9a09a4e92e0e14b`, confirmed on `origin/main`
-- **Active scope:** PR 2 complete and open as [#246](https://github.com/AlexTymosh/alextym.com/pull/246), awaiting Owner merge after GitHub CI.
-- **Last completed commit:** 06, canonical metrics and protected data routes.
-- **Local `task ci`:** PASS. Backend 947 passed and four live Upstash checks skipped. Frontend 362 passed and two development-only preview tests skipped. RAG 27/27, repository checks, and Docker build passed.
-- **Final focused checks:** `task backend:check` passed again (947 passed, four skips) after aligning the OpenAPI 422 schema. `npm --prefix frontend run e2e -- workforce-transport.spec.ts` against the existing production build passed all six assertions after adding the unsigned browser request test.
-- **GitHub CI:** [Checks for PR #246](https://github.com/AlexTymosh/alextym.com/pull/246/checks).
-- **Hosted smoke:** Live Firebase/Firestore grant, revocation, and direct Render checks remain part of the PR 3 Interview MVP gate.
+- **Current branch:** `feat/workforce-intelligence-interview-mvp`
+- **Base `main` SHA:** `d2c6be784aaa612b83af2ca0f1809f8d97967c34`, confirmed on `origin/main`
+- **Active scope:** PR 3 Interview MVP.
+- **Last completed commit:** 07, executive dashboard and editable FTE.
+- **Local checks:** `task repo:check`, frontend typecheck, frontend lint and direct Workforce ESLint passed. The emulator-backed Playwright run passed the authenticated mutation and the offline preview, with the production-only assertion skipped by the local configuration.
+- **Previous GitHub CI:** [PR #246 passed all five jobs](https://github.com/AlexTymosh/alextym.com/actions/runs/43723237671).
+- **Hosted smoke:** Live Firebase/Firestore grant and revocation and direct Render checks remain part of the PR 3 Interview MVP gate.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** After PR 2 merges, branch from refreshed `main` for PR 3. Connect the UI to a real FTE change and executive metric refresh.
+- **Next exact task:** Commit 08 adds the evidence-linked People Voice report, controlled Insight Pilot and architecture overview.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -397,6 +396,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - Exposed typed executive, vacancy, application and data quality queries and versioned FTE, cancellation, actual start and reset requests. Next.js forwards only documented Workforce paths after the access check and verifies the Origin for writes.
 - Tested an effective 0.2 FTE change, cancellation without a WTE gain, and a valid actual start that increases substantive WTE. Also tested reset replay, stale tabs, refused direct access and continued host liveness after a Workforce SQLite failure.
 - The MVP uses date filters, vacancy filtering for the funnel, one contract and one assignment per date, and a disposable fixed seed. The operational UI and hosted acceptance remain in PR 3.
+
+#### 2026-11-15 — Commit 07: executive UI and effective FTE
+
+- The two operational modes use the authenticated same-origin APIs. The dashboard combines snapshots only when the dataset ID, generation and revision match.
+- Chromium used the real Lab email/password UI against the local Firebase emulators and saved FTE through Next.js and FastAPI. SQLite recorded the audit event. The dashboard changed without a document reload and persisted after one.
+- The same test verified the metric definition and an empty reporting period. The development-only offline preview still makes zero protected requests.
 
 ### Per-commit entry template
 
@@ -581,4 +586,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** Foundation merged. Data core ready for review. Interview MVP and hosted Workforce acceptance pending.
+**Current overall state:** Foundation and data core merged. Interview MVP and hosted Workforce acceptance in progress.

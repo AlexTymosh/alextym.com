@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
-import {
-  WORKFORCE_DEFAULT_MODE,
-  WORKFORCE_MODES,
-  modeFromSearch,
-  workforceModeHref,
-  type WorkforceMode,
-} from "./mode-state";
+import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
+import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
+  type DatasetVersion, type Filters, type Workspace } from "./data-api";
+import { ExecutiveDashboard } from "./ExecutiveDashboard";
+import { displayRefresh } from "./format";
+import { WORKFORCE_DEFAULT_MODE, WORKFORCE_MODES, modeFromSearch, workforceModeHref,
+  type WorkforceMode } from "./mode-state";
+import { WorkforceManagement } from "./WorkforceManagement";
 import styles from "./workforce-scaffold.module.css";
 
-type Connection = "checking" | "ready" | "unauthenticated" | "denied" | "disabled" | "unavailable";
 type AppTheme = "dark" | "light";
+type ReadResult = { key: string; data: Workspace } | { key: string; error: WorkforceApiError };
 
 const subscribeToLocation = (notify: () => void) => {
   window.addEventListener("popstate", notify);
@@ -35,97 +35,80 @@ const getBrowserTheme = (): AppTheme => {
 };
 const getServerTheme = (): AppTheme => "dark";
 
-type Section = {
-  label: string;
-  short: string;
-  description: string;
-  planned: readonly string[];
-};
-
-const sections: Record<WorkforceMode, Section> = {
+const sections: Record<WorkforceMode, {
+  label: string; description: string; outline: [id: string, name: string][]; planned: string;
+}> = {
   "workforce-intelligence": {
-    label: "Workforce Intelligence",
-    short: "Analysis & KPIs",
-    description: "An evidence-led view of establishment, recruitment, retention and workforce trends.",
-    planned: ["Executive KPI dashboard", "Vacancy and establishment gap", "Recruitment conversion funnel"],
+    label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
+    outline: [["executive", "Recruitment overview"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"]],
+    planned: "Attraction, workforce outcomes, equality and forecasting.",
   },
   "workforce-management": {
-    label: "Workforce Management",
-    short: "Source records",
-    description: "Controlled changes to synthetic employment, contracts, assignments and recruitment events.",
-    planned: ["Employees and assignments", "Vacancy and applicant lifecycle", "Audited source changes"],
+    label: "Workforce Management", description: "Review synthetic source records and record a contract change.",
+    outline: [["directory", "People directory"], ["contracts", "Contracts & FTE"]],
+    planned: "Full employment and recruitment lifecycle, Excel, learning and PDR.",
   },
   "people-voice": {
-    label: "People Voice",
-    short: "Survey evidence",
-    description: "Synthetic employee feedback, evidence-linked findings and mandatory human review.",
-    planned: ["Synthetic surveys", "Evidence-linked findings", "Review and publication"],
+    label: "People Voice", description: "Evidence from synthetic staff surveys.", outline: [],
+    planned: "Survey builder, generated responses and evidence review.",
   },
   "data-architecture": {
-    label: "Data Architecture",
-    short: "Governance & lineage",
-    description: "A transparent explanation of data ownership, transformations and metric definitions.",
-    planned: ["Bronze / Silver / Gold", "Data contracts and lineage", "Quality and metric catalogue"],
+    label: "Data Architecture", description: "Data ownership, quality and lineage.", outline: [],
+    planned: "Lineage explorer, source registry and quality dashboards.",
   },
 };
 
-const statusMessage: Record<Connection, string> = {
-  checking: "Verifying protected API...",
-  ready: "Protected API verified",
-  unauthenticated: "Session expired",
-  denied: "Project access revoked",
-  disabled: "Workspace unavailable",
-  unavailable: "Backend connection unavailable",
-};
-
-/** Browser navigation is local; the protected Next.js entry remains server-authorized. */
 export function WorkforceScaffold({ previewMode = false }: { previewMode?: boolean }) {
   const mode = useSyncExternalStore(subscribeToLocation, getLocationMode, getServerMode);
   const theme = useSyncExternalStore(subscribeToTheme, getBrowserTheme, getServerTheme);
-  const [connection, setConnection] = useState<Connection>("checking");
-  const pending = useRef<AbortController | null>(null);
-
-  const verifyBackend = useCallback(async () => {
-    pending.current?.abort();
-    const controller = new AbortController();
-    pending.current = controller;
-    try {
-      const response = await fetch("/portfolio/workforce-intelligence/api/status", {
-        credentials: "same-origin",
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      if (response.status === 401) { setConnection("unauthenticated"); return; }
-      if (response.status === 403) { setConnection("denied"); return; }
-      if (response.status === 404) { setConnection("disabled"); return; }
-      if (!response.ok) { setConnection("unavailable"); return; }
-      const payload: unknown = await response.json();
-      if (controller.signal.aborted) return;
-      const valid = payload !== null && typeof payload === "object" &&
-        "service" in payload && payload.service === "workforce" &&
-        "available" in payload && payload.available === true;
-      setConnection(valid ? "ready" : "unavailable");
-    } catch {
-      if (!controller.signal.aborted) setConnection("unavailable");
-    } finally {
-      if (pending.current === controller) pending.current = null;
-    }
-  }, []);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [offset, setOffset] = useState(0);
+  const [reload, setReload] = useState(0);
+  const [read, setRead] = useState<ReadResult | null>(null);
+  const [notice, setNotice] = useState("");
+  const priorGeneration = useRef<DatasetVersion | null>(null);
+  const { start, end, vacancyId } = filters;
+  const readKey = `${mode}:${start}:${end}:${vacancyId}:${offset}:${reload}`;
+  const active = read?.key === readKey ? read : null;
+  const workspace = active && "data" in active ? active.data : null;
+  const error = active && "error" in active ? active.error : null;
+  const dataset = workspace?.dataset;
+  const selected = sections[mode];
+  const refresh = () => setReload((version) => version + 1);
 
   useEffect(() => {
-    // Local UI preview is completely offline: no BFF, Firebase or FastAPI requests.
     if (previewMode) return;
-    void verifyBackend();
-    return () => pending.current?.abort();
-  }, [previewMode, verifyBackend]);
+    const controller = new AbortController();
+    void loadWorkspace(mode, { start, end, vacancyId }, offset, controller.signal).then((data) => {
+      if (controller.signal.aborted) return;
+      if (priorGeneration.current && !sameGeneration(priorGeneration.current, data.dataset)) {
+        setNotice("The demo dataset was reset or regenerated. This view has been refreshed.");
+      }
+      priorGeneration.current = data.dataset;
+      setRead({ key: readKey, data });
+    }).catch((failure: unknown) => {
+      if (controller.signal.aborted) return;
+      setRead({ key: readKey, error: failure instanceof WorkforceApiError ? failure :
+        new WorkforceApiError(503, "The data service is unavailable. Retry shortly.") });
+    });
+    return () => controller.abort();
+  }, [previewMode, mode, start, end, vacancyId, offset, readKey]);
+
+  useEffect(() => {
+    if (previewMode) return;
+    const checkOnReturn = () => {
+      if (document.visibilityState === "visible") setReload((version) => version + 1);
+    };
+    document.addEventListener("visibilitychange", checkOnReturn);
+    return () => document.removeEventListener("visibilitychange", checkOnReturn);
+  }, [previewMode]);
 
   const navigate = (event: MouseEvent<HTMLAnchorElement>, destination: WorkforceMode) => {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey ||
         event.altKey || event.shiftKey) return;
     event.preventDefault();
     const href = workforceModeHref(destination, previewMode);
-    if (window.location.pathname + window.location.search !== href) {
+    if (window.location.pathname + window.location.search + window.location.hash !== href) {
       window.history.pushState(null, "", href);
     }
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -139,115 +122,81 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
     window.dispatchEvent(new Event("workforce-theme-change"));
   };
 
-  const locked = !previewMode && (connection === "unauthenticated" || connection === "denied" || connection === "disabled");
-  const selected = sections[mode];
+  const restricted = Boolean(error && [401, 403, 404].includes(error.status));
 
   return (
     <section className={styles.root} data-theme={theme} aria-label="Workforce Intelligence demo">
+      <p className={styles.disclosure}>Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system</p>
       <header className={styles.header}>
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">WI</span>
-          <div>
-            <p className={styles.overline}>PORTFOLIO LAB / SYNTHETIC DATA</p>
-            <p className={styles.brandName}>Workforce Intelligence</p>
-          </div>
+          <div><p className={styles.brandName}>Workforce & Recruitment Intelligence</p>
+            <p className={styles.brandContext}>Portfolio Lab</p></div>
         </div>
         <div className={styles.headerActions}>
-          <span className={styles.previewLabel}>PREVIEW</span>
-          <button type="button" className={styles.themeButton} onClick={switchTheme}
+          <button type="button" className={styles.secondaryButton} onClick={switchTheme}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
             {theme === "dark" ? "Light theme" : "Dark theme"}
           </button>
+          {!previewMode && !restricted ? <details className={styles.account}>
+            <summary>Account</summary><div><strong>Member</strong><a href="/lab">Manage sign-in</a></div>
+          </details> : null}
         </div>
       </header>
+      <nav aria-label="Workforce sections" className={styles.navigation}>
+        {WORKFORCE_MODES.map((id) => (
+          <a key={id} href={workforceModeHref(id, previewMode)} aria-current={mode === id ? "page" : undefined}
+            className={`${styles.navItem} ${mode === id ? styles.navItemActive : ""}`}
+            onClick={(event) => navigate(event, id)}>{sections[id].label}</a>
+        ))}
+      </nav>
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          <p className={styles.sidebarHeading}>WORKSPACES</p>
-          <nav aria-label="Workforce sections" className={styles.navigation}>
-            {WORKFORCE_MODES.map((id, index) => (
-              <a key={id} href={workforceModeHref(id, previewMode)}
-                className={`${styles.navItem} ${mode === id ? styles.navItemActive : ""}`}
-                aria-current={mode === id ? "page" : undefined}
-                onClick={(event: MouseEvent<HTMLAnchorElement>) => navigate(event, id)}>
-                <span className={styles.navNumber} aria-hidden="true">0{index + 1}</span>
-                <span className={styles.navCopy}>
-                  <strong>{sections[id].label}</strong>
-                  <small>{sections[id].short}</small>
-                </span>
-              </a>
-            ))}
-          </nav>
-          <div className={styles.sidebarFoot}>
-            {previewMode ? (
-              <span className={styles.localPreviewNote}>Local-only UI preview</span>
-            ) : (
-              <a href="/portfolio">Back to Portfolio Lab</a>
-            )}
-            <p>Demo v1.0 · Not an official SCAS system</p>
-          </div>
+          {workspace && selected.outline.length ? <nav aria-label={`${selected.label} outline`}>
+            {selected.outline.map(([id, name]) => <a key={id} href={`#${id}`}>{name}</a>)}
+          </nav> : null}
+          <div className={styles.sidebarFoot}>{previewMode ? <span>Local-only UI preview</span> :
+            <a href="/portfolio">Back to Portfolio Lab</a>}</div>
         </aside>
-
         <div className={styles.content}>
-          {previewMode ? (
-            <div className={styles.statusBar} role="status">
-              <span className={`${styles.statusDot} ${styles.statusDotReady}`} aria-hidden="true" />
-              <span>Local UI preview — no Firebase or API calls</span>
-            </div>
-          ) : (
-            <div className={styles.statusBar} role="status" aria-live="polite">
-              <span className={`${styles.statusDot} ${connection === "ready" ? styles.statusDotReady : ""}`} aria-hidden="true" />
-              <span>{statusMessage[connection]}</span>
-              {connection !== "checking" && connection !== "ready" &&
-                <button type="button" onClick={() => { setConnection("checking"); void verifyBackend(); }} className={styles.retryButton}>
-                  Retry check
-                </button>}
-            </div>
-          )}
+          <div className={styles.statusBar} role="status">
+            <span className={`${styles.statusDot} ${dataset ? styles.statusDotReady : ""}`} aria-hidden="true" />
+            {previewMode ? <span>Local UI preview — no Firebase or API calls</span> : dataset ? (
+              <><span>Dataset {dataset.dataset_generation} · Revision {dataset.revision}</span>
+                <span>Refreshed <time dateTime={dataset.refreshed_at}>{displayRefresh(dataset.refreshed_at)} UK</time></span>
+                <button type="button" className={styles.linkButton} onClick={refresh}>Refresh data</button></>
+            ) : <span>{error ? "Data unavailable" : "Loading protected data…"}</span>}
+          </div>
 
-          {locked ? (
-            <div className={styles.blocked}>
-              <h1>Workspace access unavailable</h1>
-              <p>{connection === "unauthenticated" ? "Your sign-in session has expired." :
-                connection === "denied" ? "Your Workforce project membership is no longer active." :
-                  "This preview is currently disabled."}</p>
-              <a href="/lab/login">Return to sign in</a>
-            </div>
-          ) : (
-            <section className={styles.mainContent} id="workforce-panel" aria-labelledby="workforce-heading">
-              <p className={styles.overline}>WORKFORCE / {mode.replaceAll("-", " ").toUpperCase()}</p>
-              <h1 id="workforce-heading">{selected.label}</h1>
-              <p className={styles.intro}>{selected.description}</p>
-              <div className={styles.notice}>
-                <strong>Implementation preview</strong>
-                <span>{previewMode
-                  ? "Visual inspection only: no credentials, backend connection or business operations. Data workflows are not yet implemented."
-                  : "Navigation and access infrastructure are implemented. Data workflows and live metrics are scheduled for later releases."}</span>
-              </div>
-              <h2 className={styles.sectionTitle}>Planned capabilities</h2>
-              <div className={styles.cards}>
-                {selected.planned.map((feature, index) => (
-                  <article className={styles.card} key={feature}>
-                    <span className={styles.cardNumber}>0{index + 1}</span>
-                    <h3>{feature}</h3>
-                    <p>Not yet implemented</p>
-                  </article>
-                ))}
-              </div>
-              <div className={styles.emptyState}>
-                <span className={styles.emptyGlyph} aria-hidden="true">◇</span>
-                <div>
-                  <h2>No analytical data available yet</h2>
-                  <p>The separate Workforce SQLite data model and governed KPIs will be introduced in the next development phase. No placeholder figures are presented as real results.</p>
-                </div>
-              </div>
-            </section>
-          )}
+          <section className={styles.mainContent} id="workforce-panel" aria-labelledby="workforce-heading">
+            <div className={styles.pageHeading}><h1 id="workforce-heading">{selected.label}</h1>
+              <p>{selected.description}</p></div>
+            {!restricted && notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+            {previewMode ? <p className={styles.message}>Sign in to the protected app to view and change the synthetic dataset.</p> : null}
+            {error ? <div className={styles.panel} role="alert">
+              <h2>{restricted ? "Workspace access unavailable" : "Unable to load this view"}</h2>
+              <p>{error.status === 401 ? "Your sign-in session has expired." : error.status === 403 ?
+                "Your Workforce project membership is no longer active." : error.status === 404 ?
+                  "This workspace is currently disabled." : error.message}</p>
+              {error.status === 401 ? <a href="/lab/login">Return to sign in</a> :
+                <button type="button" className={styles.secondaryButton}
+                  onClick={() => { if (error.status === 422) setFilters(DEFAULT_FILTERS); refresh(); }}>
+                  {error.status === 422 ? "Restore default dates" : "Retry"}
+                </button>}
+            </div> : null}
+            {workspace?.kind === "workforce-intelligence" ? <ExecutiveDashboard
+              dashboard={workspace.dashboard} filters={filters} onFilters={setFilters} /> : null}
+            {workspace?.kind === "workforce-management" ? <WorkforceManagement directory={workspace.directory}
+              offset={offset} onPage={setOffset} onSaved={(message) => { setNotice(message); refresh(); }}
+              onConflict={() => { setNotice("The dataset or contract changed. Choose the employee again after refresh."); refresh(); }}
+              onError={(failure) => setRead({ key: readKey, error: failure })} /> : null}
+            {workspace && workspace.kind !== "workforce-management" ? <details className={styles.planned}>
+              <summary>Planned capabilities</summary><p>{selected.planned}</p>
+            </details> : null}
+          </section>
         </div>
       </div>
-      <footer className={styles.footer}>
-        Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system
-      </footer>
     </section>
   );
 }
