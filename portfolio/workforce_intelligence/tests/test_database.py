@@ -41,9 +41,8 @@ def test_concurrent_lazy_bootstrap_preserves_single_generation(tmp_path):
     assert all(state == states[0] for state in states)
     assert states[0].dataset_generation == 1
     with Database(path).transaction() as connection:
-        assert [row[0] for row in connection.execute("SELECT version FROM schema_migrations")] == [
-            1
-        ]
+        versions = [row[0] for row in connection.execute("SELECT version FROM schema_migrations")]
+        assert versions == list(range(1, len(sqlite_store.MIGRATIONS) + 1))
         assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         assert connection.execute("SELECT COUNT(*) FROM employees").fetchone()[0] == 1

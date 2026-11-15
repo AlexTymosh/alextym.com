@@ -10,6 +10,8 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from app.security import firebase_identity, project_grants
+from workforce_intelligence.database import Database
+from workforce_intelligence.http import get_database
 from workforce_intelligence.router import router
 
 CASES = json.loads(
@@ -158,6 +160,50 @@ def test_missing_application_route_stays_missing(monkeypatch) -> None:
     monkeypatch.setattr(project_grants, "load_project_grant", lambda *_: granted())
     with app_client() as client:
         response = client.get(
-            "/api/workforce/employees", headers={"Authorization": "Bearer synthetic"}
+            "/api/workforce/forecast", headers={"Authorization": "Bearer synthetic"}
         )
         assert response.status_code == 404
+
+
+def test_protected_data_never_opens_sqlite_before_membership(monkeypatch, tmp_path):
+    setup_verified_user(monkeypatch)
+    grant = granted()
+    monkeypatch.setattr(project_grants, "load_project_grant", lambda *_: grant)
+    client = app_client()
+    path = tmp_path / "workforce.sqlite3"
+    client.app.dependency_overrides[get_database] = lambda: Database(path)
+    headers = {"Authorization": "Bearer synthetic", "X-User-UID": "forged-owner"}
+    with client:
+        assert client.get("/api/workforce/analytics/executive").status_code == 401
+        grant["project_id"] = "fleet_hub"
+        assert client.get("/api/workforce/analytics/executive", headers=headers).status_code == 403
+        assert client.post("/api/workforce/demo/reset", json={}, headers=headers).status_code == 403
+        assert not path.exists()
+        grant["project_id"] = "workforce_intelligence"
+        good = client.get("/api/workforce/analytics/executive", headers=headers)
+        assert good.status_code == 200
+        assert good.headers["cache-control"] == "no-store"
+        assert path.exists()
+        grant["status"] = "revoked"
+        assert client.get("/api/workforce/analytics/executive", headers=headers).status_code == 403
+
+
+def test_database_failure_only_affects_workforce_data_routes(monkeypatch, tmp_path):
+    from app.main import create_app
+
+    setup_verified_user(monkeypatch)
+    monkeypatch.setattr(project_grants, "load_project_grant", lambda *_: granted())
+    monkeypatch.setenv("VOR_DEMO_ENABLED", "false")
+    client = TestClient(create_app())
+    path = tmp_path / "not-a-db-dir"
+    path.write_text("internal path", encoding="utf-8")
+    client.app.dependency_overrides[get_database] = lambda: Database(path / "workforce.sqlite3")
+    headers = {"Authorization": "Bearer synthetic"}
+    with client:
+        assert client.get("/api/health/live").json() == {"status": "alive"}
+        response = client.get("/api/workforce/analytics/executive", headers=headers)
+        assert response.status_code == 503
+        assert "not-a-db-dir" not in response.text
+        assert response.headers["cache-control"] == "no-store"
+        assert client.get("/api/workforce/status", headers=headers).status_code == 200
+        assert client.get("/api/health/live").status_code == 200

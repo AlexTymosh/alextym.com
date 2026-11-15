@@ -63,4 +63,18 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
     assert node.func.id == "Depends"
     assert len(node.args) == 1 and isinstance(node.args[0], ast.Name)
     assert node.args[0].id == "require_workforce_member"
-    assert {route.path for route in router.routes} == {"/workforce/status"}
+    assert {route.path for route in router.routes} == {
+        "/workforce/status",
+        "/workforce/demo/status",
+        "/workforce/demo/reset",
+        "/workforce/employees",
+        "/workforce/employees/{employee_id}/contracts",
+        "/workforce/vacancies",
+        "/workforce/vacancies/{vacancy_id}/cancel",
+        "/workforce/starters",
+        "/workforce/analytics/executive",
+        "/workforce/analytics/candidate-funnel",
+        "/workforce/analytics/vacancy-lifecycle",
+        "/workforce/metrics",
+        "/workforce/data-quality",
+    }

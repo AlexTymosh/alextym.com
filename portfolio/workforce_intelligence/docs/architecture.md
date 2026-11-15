@@ -1,8 +1,8 @@
 # Workforce persistence
 
 The shared FastAPI host mounts the Workforce public router. Workforce owns its
-SQLite storage and only opens it on a protected data request once routes are
-connected. A database or seed failure stays on the Workforce request path.
+SQLite storage and opens it on the first protected data request. A database or
+seed failure stays on the Workforce request path.
 
 | Environment | Default runtime path |
 | --- | --- |
@@ -41,3 +41,19 @@ successful reset with the same Member and idempotency key returns the receipt.
 New resets have a 15-second project-wide cooldown. The audit's demo session ID
 identifies the shared dataset generation. It contains neither a Firebase credential
 nor an individual browser session identifier.
+
+## Analytical projections
+
+Migration 2 adds SQLite views. Bronze views project each operational source at
+its original grain with the dataset UUID, generation and source revision. They
+reflect the committed snapshot read by the report. Dated source rows and audit
+diffs retain the underlying history. Silver intersects employment contracts and
+assignments, validates joins between applications, offers, and actual starts, and
+combines their dated stage events. Gold computes the executive and funnel
+products over these views in one read transaction. A successful mutation is
+visible on the next query without a scheduled refresh job.
+
+Quality diagnostics compare Bronze and Silver at the cutoff and flag excluded
+applications, offers, starts and unassigned contracts. They describe the rules
+implemented in this stage. The API returns the data revision and quality status
+together so the dashboard can surface those findings at the point of use.

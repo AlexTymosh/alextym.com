@@ -1,3 +1,8 @@
 # Workforce tests
 
-Early tests prove independent module registration, denied routes and no collision with Fleet. Domain tests, synthetic fixtures and integration tests will be added in later commits. This directory is included in the shared backend pytest configuration.
+The shared backend pytest configuration runs the project manifest, SQLite
+migrations and reset, controlled seed repeatability, and the mutation-to-metric
+API tests. Tests use disposable databases and synthetic actors. The host tests
+in `backend/tests/test_workforce_grants.py` exercise admission and project grants
+at the authorisation boundary. Hosted verification remains part of the
+Interview MVP release.

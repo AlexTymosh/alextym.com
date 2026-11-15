@@ -1,5 +1,7 @@
 """Forward-only, application-owned migrations in schema order."""
 
+from workforce_intelligence.projections import PROJECTION_MIGRATION
+
 _TEMPORAL = """
     valid_from TEXT NOT NULL,
     valid_to TEXT CHECK (valid_to > valid_from),
@@ -189,6 +191,7 @@ MIGRATIONS = (
         "CREATE INDEX stage_events_application ON application_stage_events (application_id, stage_code, occurred_on)",
         "CREATE INDEX starters_date ON starter_events (started_on)",
     ),
+    PROJECTION_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.

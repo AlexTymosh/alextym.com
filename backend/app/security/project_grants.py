@@ -76,13 +76,12 @@ def require_workforce_member(request: Request) -> dict:
     identity = firebase_identity.require_lab_identity(request)
     uid = identity["uid"]
     owner_uid = os.getenv("PORTFOLIO_LAB_OWNER_UID", "").strip()
-    if uid == owner_uid:
-        # This UID has already been independently verified by require_lab_identity.
-        return identity
-    try:
-        grant = load_project_grant(WORKFORCE_PROJECT_ID, uid)
-    except Exception as exc:
-        raise HTTPException(503, "Project access unavailable") from exc
-    if not admin_grant_allows(uid, WORKFORCE_PROJECT_ID, grant, int(time.time() * 1000)):
-        raise HTTPException(403, "Project access denied")
+    if uid != owner_uid:
+        try:
+            grant = load_project_grant(WORKFORCE_PROJECT_ID, uid)
+        except Exception as exc:
+            raise HTTPException(503, "Project access unavailable") from exc
+        if not admin_grant_allows(uid, WORKFORCE_PROJECT_ID, grant, int(time.time() * 1000)):
+            raise HTTPException(403, "Project access denied")
+    request.state.workforce_uid = uid
     return identity

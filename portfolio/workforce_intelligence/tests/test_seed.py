@@ -1,5 +1,6 @@
 from datetime import date
 
+from workforce_intelligence import database as sqlite_store
 from workforce_intelligence.contracts import change_fte
 from workforce_intelligence.database import Database
 from workforce_intelligence.dataset import AuditActor, ensure_dataset, reset_dataset
@@ -13,6 +14,19 @@ def source_snapshot(database):
             table: [tuple(row) for row in connection.execute(f"SELECT * FROM {table} ORDER BY 1")]
             for table in SOURCE_TABLES
         }
+
+
+def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
+    database = Database(tmp_path / "workforce.sqlite3")
+    migrations = sqlite_store.MIGRATIONS
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:1])
+    initial = ensure_dataset(database, INTERVIEW_SEED)
+    source = source_snapshot(database)
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations)
+    assert ensure_dataset(database, INTERVIEW_SEED) == initial
+    assert source_snapshot(database) == source
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM silver_applications").fetchone()[0] == 9
 
 
 def test_controlled_seed_is_repeatable_across_fresh_files_and_reset(tmp_path):

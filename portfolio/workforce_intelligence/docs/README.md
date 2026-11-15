@@ -6,3 +6,5 @@ The authoritative specification is maintained at
 - [Workforce persistence](architecture.md)
 - [MVP data dictionary and controlled scenarios](data-dictionary.md)
 - [Sources and assumptions](sources.md)
+- [Data core API](api.md)
+- [MVP metric catalogue](metric-catalogue.md)

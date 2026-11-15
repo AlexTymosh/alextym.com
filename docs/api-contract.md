@@ -69,6 +69,11 @@ Next.js `/lab/session`, `/lab/session/link`, `/lab/api/identity` and
 `/lab/password/reset/action` use the contracts in the
 [identity setup runbook](architecture/portfolio-lab-identity-setup.md).
 
+The protected Workforce data core is mounted under `/api/workforce` and uses
+the same-origin Workforce BFF for browser requests. See the
+[project-owned API contract](../portfolio/workforce_intelligence/docs/api.md)
+for versioned mutations, reports and error semantics.
+
 ## Internal Redis probe
 
 `POST /internal/probes/redis` is outside the public `/api` prefix and hidden from

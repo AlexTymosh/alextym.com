@@ -1,5 +1,6 @@
-"""Effective-dated Workforce contract commands."""
+"""Effective-dated Workforce employment commands."""
 
+import sqlite3
 from datetime import date
 
 from workforce_intelligence.database import Database
@@ -15,6 +16,67 @@ from workforce_intelligence.dataset import (
     operation_date,
     record_audit,
 )
+
+
+def employees_at(
+    connection: sqlite3.Connection, day: str, limit: int, offset: int
+) -> list[sqlite3.Row]:
+    return connection.execute(
+        """
+        SELECT employee.id, employee.display_name, employee.is_featured_demo_employee,
+               employee.display_order, employee.record_version,
+               contract.contracted_fte_milli / 1000.0 AS contracted_fte,
+               unit.label AS organisation, location.label AS location, role.label AS role
+        FROM employees AS employee
+        JOIN employment_contracts AS contract ON contract.employee_id = employee.id
+          AND contract.valid_from <= :day AND (contract.valid_to IS NULL OR contract.valid_to > :day)
+        LEFT JOIN organisation_assignments AS assignment ON assignment.employee_id = employee.id
+          AND assignment.valid_from <= :day AND (assignment.valid_to IS NULL OR assignment.valid_to > :day)
+        LEFT JOIN establishment_lines AS line ON line.id = assignment.line_id
+        LEFT JOIN organisational_units AS unit ON unit.id = line.organisation_id
+        LEFT JOIN locations AS location ON location.id = line.location_id
+        LEFT JOIN roles AS role ON role.id = line.role_id
+        ORDER BY employee.is_featured_demo_employee DESC, employee.display_order, employee.id
+        LIMIT :limit OFFSET :offset
+        """,
+        {"day": day, "limit": limit, "offset": offset},
+    ).fetchall()
+
+
+def add_employment(
+    connection: sqlite3.Connection,
+    *,
+    employee_id: str,
+    display_name: str,
+    line_id: str,
+    fte_milli: int,
+    start: str,
+    created_at: str,
+    created_by: str,
+    change_reason: str,
+    featured_order: int | None = None,
+) -> None:
+    """Create an employee's initial substantive contract and budget-line assignment."""
+    connection.execute(
+        "INSERT INTO employees (id, display_name, is_featured_demo_employee, display_order) VALUES (?, ?, ?, ?)",
+        (employee_id, display_name, int(featured_order is not None), featured_order),
+    )
+    connection.execute(
+        """
+        INSERT INTO employment_contracts (employee_id, contracted_fte_milli, is_substantive,
+            valid_from, created_at, created_by, change_reason)
+        VALUES (?, ?, 1, ?, ?, ?, ?)
+        """,
+        (employee_id, fte_milli, start, created_at, created_by, change_reason),
+    )
+    connection.execute(
+        """
+        INSERT INTO organisation_assignments (employee_id, line_id, valid_from, created_at,
+            created_by, change_reason)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (employee_id, line_id, start, created_at, created_by, change_reason),
+    )
 
 
 def change_fte(

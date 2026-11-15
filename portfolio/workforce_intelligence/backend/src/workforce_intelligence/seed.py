@@ -4,6 +4,7 @@ import sqlite3
 from datetime import date
 from random import Random
 
+from workforce_intelligence.contracts import add_employment
 from workforce_intelligence.dataset import SeedDefinition
 
 HISTORY_START = date(2026, 7, 1)
@@ -269,25 +270,17 @@ def _employee(
     *,
     featured_order: int | None = None,
 ) -> None:
-    connection.execute(
-        "INSERT INTO employees (id, display_name, is_featured_demo_employee, display_order) VALUES (?, ?, ?, ?)",
-        (employee_id, name, int(featured_order is not None), featured_order),
-    )
-    connection.execute(
-        """
-        INSERT INTO employment_contracts (employee_id, contracted_fte_milli, is_substantive,
-            valid_from, created_at, created_by, change_reason)
-        VALUES (?, ?, 1, ?, ?, 'synthetic-seed', 'demo_baseline')
-        """,
-        (employee_id, fte, start, SOURCE_TIMESTAMP),
-    )
-    connection.execute(
-        """
-        INSERT INTO organisation_assignments (employee_id, line_id, valid_from, created_at,
-            created_by, change_reason)
-        VALUES (?, ?, ?, ?, 'synthetic-seed', 'demo_baseline')
-        """,
-        (employee_id, line_id, start, SOURCE_TIMESTAMP),
+    add_employment(
+        connection,
+        employee_id=employee_id,
+        display_name=name,
+        line_id=line_id,
+        fte_milli=fte,
+        start=start,
+        created_at=SOURCE_TIMESTAMP,
+        created_by="synthetic-seed",
+        change_reason="demo_baseline",
+        featured_order=featured_order,
     )
 
 

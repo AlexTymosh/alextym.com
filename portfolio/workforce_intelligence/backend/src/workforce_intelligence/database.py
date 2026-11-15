@@ -39,10 +39,8 @@ class Database:
         except OSError as exc:
             raise DatabaseUnavailable from exc
         except sqlite3.Error as exc:
-            if getattr(exc, "sqlite_errorcode", 0) & 255 in (
-                sqlite3.SQLITE_BUSY,
-                sqlite3.SQLITE_LOCKED,
-            ):
+            primary_code = getattr(exc, "sqlite_errorcode", 0) & 255
+            if primary_code in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
                 raise DatabaseBusy from exc
             raise DatabaseUnavailable from exc
 

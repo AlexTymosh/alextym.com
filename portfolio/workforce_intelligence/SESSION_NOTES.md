@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PR 1 merged; PR 2 data core in progress
+**Document status:** PR 1 merged. PR 2 data core implemented and locally verified.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -68,7 +68,7 @@ The v1.2 file was saved in `docs/specifications/`, whereas its own header/Append
 |---|---|---|---|
 | G0 — Planning | Canonical v1.2 located; status and dependency map agreed | DONE | Sections 0–2 |
 | G1 — Security | Firebase + explicit Workforce grant enforced on all protected interfaces, including direct Render; disabled by default until verified | IN PROGRESS: foundation merged; hosted verification pending | PR #245 |
-| G2 — Dataset | Independent SQLite lifecycle, consistent seeded history, tests and audited mutations | IN PROGRESS | Commit 04 |
+| G2 — Dataset | Independent SQLite lifecycle, consistent seeded history, tests and audited mutations | DONE | Commits 04–06 and local `task ci` |
 | G3 — Interview MVP | 90-second and 5-minute flows pass end-to-end without live AI | PLANNED | — |
 | G4 — Full function | Operational, analytical and People Voice/AI requirements verified | PLANNED | — |
 | G5 — Release | Security, accessibility, CI, hosted preview, production and cold-start smoke validated | PLANNED | — |
@@ -336,7 +336,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR | Commits | Scope | Status | PR URL | Merge SHA |
 |---|---:|---|---|---|---|
 | PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
-| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | IN PROGRESS | — | — |
+| PR 2 | 04–06 | SQLite, seed, source→Gold metrics | DONE, pending merge | [Data core branch](https://github.com/AlexTymosh/alextym.com/compare/main...feat/workforce-intelligence-data-core) | — |
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | NOT STARTED | — | — |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | NOT STARTED | — | — |
 | PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
@@ -348,9 +348,9 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 01 | DONE | b13da5719b8baa36a14842d7bab2c8da5d5726a5 | Local `task ci`: PASS (reported); hosted CI not independently verified |
 | 02 | DONE | 8d940ea06ed8285ee31bc5068278a8f69d8226bf | User-reported local `task ci`: PASS; hosted Firebase/Firestore grant verification remains outstanding |
 | 03 | DONE | b100c0a18bf856586519e246ce7792d2d40e3d0e | User-reported `task ci`: PASS; local SPA opened; protected API connectivity and hosted grants pending |
-| 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed; Ruff passed |
-| 05 | DONE | `feat/workforce-intelligence-data-core` | 11 project tests passed, including source comparison across two fresh files and reset |
-| 06 | NOT STARTED | — | — |
+| 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed. Ruff passed. |
+| 05 | DONE | `b257cae1025ffcc020cae89db68adbdaac226594` | 11 project tests passed, including source comparison across two fresh files and reset. |
+| 06 | DONE | Data core branch tip | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
 | 07 | NOT STARTED | — | — |
 | 08 | NOT STARTED | — | — |
 | 09 | NOT STARTED | — | — |
@@ -371,13 +371,14 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 - **Current branch:** `feat/workforce-intelligence-data-core`
 - **Base `main` SHA:** `a49f01b828dba84193200e39f9a09a4e92e0e14b`, confirmed on `origin/main`
-- **Active scope:** PR 2, Commit 05
-- **Last completed commit:** 05, controlled seed and source register
-- **Last focused tests:** `python -m pytest -q ../portfolio/workforce_intelligence/tests` from `backend/`: 11 passed; Ruff lint and format passed
-- **PR 2 CI:** Pending
-- **Hosted smoke:** Pending for Firebase/Firestore grant and revocation on the Workforce app and direct Render
-- **Current feature flags:** Portfolio Lab and Workforce default to disabled. The data core is still exercised only through the project tests.
-- **Next exact task:** Commit 06 connects the authorised API and computes the canonical MVP metrics from the seeded sources.
+- **Active scope:** PR 2 complete, awaiting Owner merge after GitHub CI.
+- **Last completed commit:** 06, canonical metrics and protected data routes.
+- **Local `task ci`:** PASS. Backend 947 passed and four live Upstash checks skipped. Frontend 362 passed and two development-only preview tests skipped. RAG 27/27, repository checks, and Docker build passed.
+- **Final focused checks:** `task backend:check` passed again (947 passed, four skips) after aligning the OpenAPI 422 schema. `npm --prefix frontend run e2e -- workforce-transport.spec.ts` against the existing production build passed all six assertions after adding the unsigned browser request test.
+- **GitHub CI:** See the PR checks for the branch tip.
+- **Hosted smoke:** Live Firebase/Firestore grant, revocation, and direct Render checks remain part of the PR 3 Interview MVP gate.
+- **Current feature flags:** Portfolio Lab and Workforce default to disabled.
+- **Next exact task:** After PR 2 merges, branch from refreshed `main` for PR 3. Connect the UI to a real FTE change and executive metric refresh.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -390,6 +391,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - `interview-core` creates 15 ordered fictional Featured people and two actual starters. A separate accepted offer is ready for the actual-start action. The seed includes cancelled, administratively closed and partially filled vacancies, a repeated stage event and effective-dated contract history.
 - The source register distinguishes public context from the seed's synthetic people, locations and numerical results.
 - Repeatability and source reconciliation tests passed. The full-size historical population remains scheduled for PR 4.
+
+#### 2026-11-15 — Commit 06: canonical metrics and protected API
+
+- Exposed typed executive, vacancy, application and data quality queries and versioned FTE, cancellation, actual start and reset requests. Next.js forwards only documented Workforce paths after the access check and verifies the Origin for writes.
+- Tested an effective 0.2 FTE change, cancellation without a WTE gain, and a valid actual start that increases substantive WTE. Also tested reset replay, stale tabs, refused direct access and continued host liveness after a Workforce SQLite failure.
+- The MVP uses date filters, vacancy filtering for the funnel, one contract and one assignment per date, and a disposable fixed seed. The operational UI and hosted acceptance remain in PR 3.
 
 ### Per-commit entry template
 
@@ -574,4 +581,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** Foundation merged. Data core under development. Interview MVP and hosted Workforce acceptance pending.
+**Current overall state:** Foundation merged. Data core ready for review. Interview MVP and hosted Workforce acceptance pending.
