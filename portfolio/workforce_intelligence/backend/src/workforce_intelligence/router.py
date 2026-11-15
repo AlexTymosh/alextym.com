@@ -18,6 +18,7 @@ from workforce_intelligence.analytics import (
     reporting_window,
 )
 from workforce_intelligence.contracts import change_fte, employees_at
+from workforce_intelligence.database import DatabaseUnavailable
 from workforce_intelligence.dataset import DatasetState, current_dataset, reset_dataset
 from workforce_intelligence.http import Db, Member, WorkforceRoute, audit_actor
 from workforce_intelligence.metric_catalogue import CATALOGUE
@@ -33,15 +34,20 @@ from workforce_intelligence.schemas import (
     ExecutiveResponse,
     FteChange,
     FunnelResponse,
+    InsightQuery,
+    InsightResponse,
     MutationResponse,
     QualityResponse,
     ResetRequest,
     ResetResponse,
     StarterResponse,
+    SurveyReportResponse,
     VacancyCancellation,
     VacancyLifecycle,
 )
 from workforce_intelligence.seed import INTERVIEW_SEED
+from workforce_intelligence.survey_fixture import ANALYSIS_ID
+from workforce_intelligence.surveys import read_survey_report
 
 router = APIRouter(
     prefix="/workforce",
@@ -209,3 +215,30 @@ def reset(command: ResetRequest, database: Db, actor: Member) -> ResetResponse:
     return ResetResponse(
         dataset=result.dataset, reset_generation=result.reset_generation, replayed=result.replayed
     )
+
+
+@router.get("/surveys/reports/rota-pressure")
+def reviewed_report(database: Db) -> SurveyReportResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        report = read_survey_report(connection, ANALYSIS_ID)
+        if report is None:
+            raise DatabaseUnavailable("Controlled People Voice report is missing")
+        return SurveyReportResponse(dataset=state, report=report)
+
+
+@router.post("/insight-pilot/query")
+def insight_pilot(query: InsightQuery, database: Db) -> InsightResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        window = reporting_window(state, query.as_of_date, query.period_start)
+        quality = _quality(connection, state, window.end.isoformat())
+        report = executive_metrics(connection, state, window)
+        metric = next(item for item in report.metrics if item.definition.code == "vacancy_rate")
+        return InsightResponse(
+            **quality.model_dump(),
+            intent=query.intent,
+            window=window,
+            metric=metric,
+            limitation="Illustrative synthetic result. Rate changes alone do not establish a cause.",
+        )

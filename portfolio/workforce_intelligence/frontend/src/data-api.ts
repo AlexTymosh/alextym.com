@@ -44,7 +44,7 @@ export type Comparison = {
   previous: Observation;
   direction: "up" | "down" | "flat" | "unavailable";
 };
-type Quality = Snapshot & {
+export type Quality = Snapshot & {
   quality_status: "passed" | "review_required";
   issues: Record<string, number>;
 };
@@ -87,10 +87,33 @@ export type Employee = {
 };
 export type Directory = Snapshot & { items: Employee[]; next_offset: number | null };
 export type Dashboard = { executive: Executive; vacancies: Vacancies; funnel: Funnel };
+export type SurveyReport = {
+  survey_id: string;
+  title: string;
+  question: string;
+  period_start: string;
+  period_end: string;
+  invited: number;
+  total_responses: number;
+  analysable_responses: number;
+  response_rate: number;
+  analysis_id: string;
+  analysis_label: string;
+  analysed_on: string;
+  findings: Array<{
+    id: string; theme: string; classification: string; severity: string; summary: string;
+    evidence: Array<{ response_id: string; comment: string }>;
+    prevalence: number | null; review_kind: string; review_rationale: string; reviewed_on: string; published_on: string;
+  }>;
+  drafts: Array<{ id: string; theme: string; review_status: string }>;
+  actions: Array<{ id: string; signal_id: string; title: string; assigned_team: string; status: string; due_on: string }>;
+};
+export type Insight = Quality & { window: Window; metric: Comparison; report_section: "executive"; limitation: string };
 export type Workspace = Snapshot & (
   | { kind: "workforce-intelligence"; dashboard: Dashboard }
   | { kind: "workforce-management"; directory: Directory }
-  | { kind: "people-voice" | "data-architecture" }
+  | { kind: "people-voice"; report: SurveyReport }
+  | { kind: "data-architecture"; quality: Quality; metrics: MetricDefinition[] }
 );
 
 export class WorkforceApiError extends Error {
@@ -138,6 +161,12 @@ export function changeContractFte(dataset: Dataset, employee: Employee, day: str
   );
 }
 
+export function vacancyRateInsight(window: Window) {
+  return workforceWrite<Insight>("insight-pilot/query", "POST", {
+    intent: "explain_vacancy_rate", as_of_date: window.end, period_start: window.start,
+  });
+}
+
 export async function loadWorkspace(
   mode: WorkforceMode, filters: Filters, offset: number, signal: AbortSignal,
 ): Promise<Workspace> {
@@ -145,9 +174,16 @@ export async function loadWorkspace(
     const directory = await workforceRequest<Directory>(`employees?limit=15&offset=${offset}`, { signal });
     return { ...directory, kind: mode, directory };
   }
-  if (mode !== "workforce-intelligence") {
-    const data = await workforceRequest<Snapshot>("demo/status", { signal });
+  if (mode === "people-voice") {
+    const data = await workforceRequest<Snapshot & { report: SurveyReport }>("surveys/reports/rota-pressure", { signal });
     return { ...data, kind: mode };
+  }
+  if (mode === "data-architecture") {
+    const [quality, { metrics }] = await Promise.all([
+      workforceRequest<Quality>("data-quality", { signal }),
+      workforceRequest<{ metrics: MetricDefinition[] }>("metrics", { signal }),
+    ]);
+    return { ...quality, kind: mode, quality, metrics };
   }
 
   const dates = new URLSearchParams();

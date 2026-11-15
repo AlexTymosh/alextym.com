@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
+import { DataArchitecture } from "./DataArchitecture";
 import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
   type DatasetVersion, type Filters, type Workspace } from "./data-api";
 import { ExecutiveDashboard } from "./ExecutiveDashboard";
 import { displayRefresh } from "./format";
+import { InsightPilot } from "./InsightPilot";
 import { WORKFORCE_DEFAULT_MODE, WORKFORCE_MODES, modeFromSearch, workforceModeHref,
   type WorkforceMode } from "./mode-state";
+import { PeopleVoice } from "./PeopleVoice";
 import { WorkforceManagement } from "./WorkforceManagement";
 import styles from "./workforce-scaffold.module.css";
 
@@ -40,7 +43,7 @@ const sections: Record<WorkforceMode, {
 }> = {
   "workforce-intelligence": {
     label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
-    outline: [["executive", "Recruitment overview"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"]],
+    outline: [["executive", "Recruitment overview"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["insight-pilot", "Insight Pilot"]],
     planned: "Attraction, workforce outcomes, equality and forecasting.",
   },
   "workforce-management": {
@@ -49,12 +52,14 @@ const sections: Record<WorkforceMode, {
     planned: "Full employment and recruitment lifecycle, Excel, learning and PDR.",
   },
   "people-voice": {
-    label: "People Voice", description: "Evidence from synthetic staff surveys.", outline: [],
-    planned: "Survey builder, generated responses and evidence review.",
+    label: "People Voice", description: "Evidence from synthetic staff surveys.",
+    outline: [["voice-report", "Reviewed report"], ["signals", "Published findings"], ["voice-actions", "Management action"]],
+    planned: "Survey builder, on-demand reports and analyst review actions.",
   },
   "data-architecture": {
-    label: "Data Architecture", description: "Data ownership, quality and lineage.", outline: [],
-    planned: "Lineage explorer, source registry and quality dashboards.",
+    label: "Data Architecture", description: "Data ownership, quality and lineage.",
+    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["catalogue", "Metric catalogue"]],
+    planned: "Interactive model diagrams, source registry and BPMN.",
   },
 };
 
@@ -123,6 +128,9 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
   };
 
   const restricted = Boolean(error && [401, 403, 404].includes(error.status));
+  const reportAccessError = (failure: WorkforceApiError) => {
+    setRead((current) => current?.key === readKey ? { key: readKey, error: failure } : current);
+  };
 
   return (
     <section className={styles.root} data-theme={theme} aria-label="Workforce Intelligence demo">
@@ -186,11 +194,15 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
                 </button>}
             </div> : null}
             {workspace?.kind === "workforce-intelligence" ? <ExecutiveDashboard
-              dashboard={workspace.dashboard} filters={filters} onFilters={setFilters} /> : null}
+              dashboard={workspace.dashboard} filters={filters} onFilters={setFilters}
+              pilot={<InsightPilot key={readKey} dataset={workspace.dataset}
+                window={workspace.dashboard.executive.executive.current_window} onAccessError={reportAccessError} />} /> : null}
             {workspace?.kind === "workforce-management" ? <WorkforceManagement directory={workspace.directory}
               offset={offset} onPage={setOffset} onSaved={(message) => { setNotice(message); refresh(); }}
               onConflict={() => { setNotice("The dataset or contract changed. Choose the employee again after refresh."); refresh(); }}
-              onError={(failure) => setRead({ key: readKey, error: failure })} /> : null}
+              onError={reportAccessError} /> : null}
+            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} /> : null}
+            {workspace?.kind === "data-architecture" ? <DataArchitecture quality={workspace.quality} metrics={workspace.metrics} /> : null}
             {workspace && workspace.kind !== "workforce-management" ? <details className={styles.planned}>
               <summary>Planned capabilities</summary><p>{selected.planned}</p>
             </details> : null}

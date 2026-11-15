@@ -82,7 +82,10 @@ def _migrate(connection: sqlite3.Connection) -> None:
             """)
         for next_version, statements in enumerate(MIGRATIONS[version:], start=version + 1):
             for statement in statements:
-                connection.execute(statement)
+                if callable(statement):
+                    statement(connection)
+                else:
+                    connection.execute(statement)
             connection.execute(
                 "INSERT INTO schema_migrations VALUES (?, ?)",
                 (next_version, datetime.now(UTC).isoformat()),

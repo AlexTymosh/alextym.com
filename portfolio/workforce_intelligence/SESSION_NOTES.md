@@ -351,8 +351,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 04 | DONE | `ac4d9730b99cc849b487d12b341c409997bad705` | Eight SQLite, concurrency, reset and isolation tests passed. Ruff passed. |
 | 05 | DONE | `b257cae1025ffcc020cae89db68adbdaac226594` | 11 project tests passed, including source comparison across two fresh files and reset. |
 | 06 | DONE | `1fdebfe8149ed7c85d3c86e7fe06abdce86def58` | Mutation-to-KPI, HTTP authorization, OpenAPI, and BFF checks passed. |
-| 07 | DONE | Interview MVP branch | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
-| 08 | NOT STARTED | — | — |
+| 07 | DONE | `7201ebc438813ded5e9ef339f827966231b60989` | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
+| 08 | DONE | Interview MVP branch | Existing-data migration, evidence validation and exclusion of drafts tested. Real local browser verified the report, Insight Pilot and architecture. |
 | 09 | NOT STARTED | — | — |
 | 10 | NOT STARTED | — | — |
 | 11 | NOT STARTED | — | — |
@@ -372,12 +372,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - **Current branch:** `feat/workforce-intelligence-interview-mvp`
 - **Base `main` SHA:** `d2c6be784aaa612b83af2ca0f1809f8d97967c34`, confirmed on `origin/main`
 - **Active scope:** PR 3 Interview MVP.
-- **Last completed commit:** 07, executive dashboard and editable FTE.
-- **Local checks:** `task repo:check`, frontend typecheck, frontend lint and direct Workforce ESLint passed. The emulator-backed Playwright run passed the authenticated mutation and the offline preview, with the production-only assertion skipped by the local configuration.
+- **Last completed commit:** 08, controlled People Voice report and queried Insight Pilot.
+- **Local checks:** `task backend:check` passed with 950 tests and four opt-in Upstash skips. Frontend typecheck and direct Workforce ESLint passed. Chromium with Firebase emulators passed the mutation, the report/Insight Pilot/lineage path and the offline preview.
 - **Previous GitHub CI:** [PR #246 passed all five jobs](https://github.com/AlexTymosh/alextym.com/actions/runs/43723237671).
 - **Hosted smoke:** Live Firebase/Firestore grant and revocation and direct Render checks remain part of the PR 3 Interview MVP gate.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** Commit 08 adds the evidence-linked People Voice report, controlled Insight Pilot and architecture overview.
+- **Next exact task:** Commit 09 adds reset confirmation, both guided walkthroughs and release evidence.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -402,6 +402,13 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - The two operational modes use the authenticated same-origin APIs. The dashboard combines snapshots only when the dataset ID, generation and revision match.
 - Chromium used the real Lab email/password UI against the local Firebase emulators and saved FTE through Next.js and FastAPI. SQLite recorded the audit event. The dashboard changed without a document reload and persisted after one.
 - The same test verified the metric definition and an empty reporting period. The development-only offline preview still makes zero protected requests.
+
+#### 2026-11-15 — Commit 08: evidence-linked People Voice and Insight Pilot
+
+- Added a reproducible fallback report with six linked findings excerpts, a separate published review record, an unpublished draft and a linked management action.
+- Tests verify evidence IDs, rejected cross-survey or missing evidence and draft exclusion from the Gold view. Migration into an existing database preserves FTE changes and their audit.
+- Insight Pilot returns the executive vacancy-rate observation for one controlled intent. Data Architecture shows implemented lineage, diagnostic results and the backend metric catalogue.
+- The browser test signed in to the emulator-backed hosts and confirmed the fallback report, evidence links, vacancy-rate answer and actual lineage.
 
 ### Per-commit entry template
 

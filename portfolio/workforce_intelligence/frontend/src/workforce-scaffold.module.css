@@ -275,6 +275,40 @@
 .stack > .planned { margin-top: 0; }
 .planned p { margin: 7px 0 0; }
 
+.summaryFacts { display: flex; flex-wrap: wrap; gap: 13px 26px; margin: 18px 0 0; }
+.summaryFacts dt { color: var(--wi-muted); font-size: .75rem; }
+.summaryFacts dd { margin: 2px 0 0; font-size: 1.2rem; font-weight: 680; }
+.finding { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--wi-border); }
+.finding h3 { font-size: .98rem; }
+.finding p { line-height: 1.5; font-size: .82rem; }
+.frequency { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; font-size: .8rem; }
+.frequency .barTrack { flex-basis: 76px; }
+.evidenceLinks, .evidenceList { margin: 12px 0 0; padding: 0; list-style: none; }
+.evidenceLinks { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .83rem; }
+.evidenceList { display: grid; gap: 5px; }
+.evidenceList li {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--wi-bg);
+  scroll-margin-top: 22px;
+  font-size: .79rem;
+}
+.evidenceList li:target { outline: 1px solid var(--wi-accent); }
+.evidenceList li span { color: var(--wi-muted); }
+.pilotButton { margin-top: 14px; }
+.pilotAnswer { margin-top: 12px; border-top: 1px solid var(--wi-border); padding-top: 9px; font-size: .82rem; }
+.pilotAnswer p { margin: 5px 0; line-height: 1.5; }
+.lineage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 16px 0 0; padding: 0; list-style: none; }
+.lineage li { padding: 12px; border: 1px solid var(--wi-border); border-radius: 8px; background: var(--wi-bg); }
+.lineage h3 { color: var(--wi-accent); font-size: .95rem; }
+.lineage code { display: block; margin-top: 7px; font-size: .72rem; overflow-wrap: anywhere; }
+.lineage p, .catalogueEntry p { margin: 5px 0 0; color: var(--wi-muted); font-size: .79rem; line-height: 1.55; }
+.catalogueEntry { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--wi-border); font-size: .84rem; }
+.catalogueEntry summary { cursor: pointer; }
+
 @media (max-width: 1000px) {
   .body { grid-template-columns: 155px minmax(0, 1fr); }
 }
@@ -289,4 +323,5 @@
 }
 @media (max-width: 380px) {
   .metricGrid { grid-template-columns: 1fr; }
+  .lineage { grid-template-columns: 1fr; }
 }

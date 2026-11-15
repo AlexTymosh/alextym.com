@@ -7,10 +7,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StringConstraints, model_validator
 
-from workforce_intelligence.analytics import ApplicationFunnel, ExecutiveMetrics
+from workforce_intelligence.analytics import (
+    ApplicationFunnel,
+    ExecutiveMetrics,
+    MetricComparison,
+    ReportingWindow,
+)
 from workforce_intelligence.dataset import DatasetState, DatasetVersion
 from workforce_intelligence.metric_catalogue import MetricDefinition
 from workforce_intelligence.recruitment import VacancySnapshot, VacancyStatus
+from workforce_intelligence.surveys import SurveyReport
 
 EntityId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")]
 PositiveVersion = Annotated[int, Field(strict=True, ge=1, le=2**53 - 1)]
@@ -119,3 +125,22 @@ class FunnelResponse(QualityResponse):
 
 class CatalogueResponse(BaseModel):
     metrics: list[MetricDefinition]
+
+
+class SurveyReportResponse(DatasetResponse):
+    report: SurveyReport
+
+
+class InsightQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    intent: Literal["explain_vacancy_rate"]
+    as_of_date: date | None = None
+    period_start: date | None = None
+
+
+class InsightResponse(QualityResponse):
+    intent: Literal["explain_vacancy_rate"]
+    window: ReportingWindow
+    metric: MetricComparison
+    report_section: Literal["executive"] = "executive"
+    limitation: str

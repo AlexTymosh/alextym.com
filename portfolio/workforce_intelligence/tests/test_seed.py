@@ -1,18 +1,23 @@
+from dataclasses import replace
 from datetime import date
+
+import pytest
 
 from workforce_intelligence import database as sqlite_store
 from workforce_intelligence.contracts import change_fte
 from workforce_intelligence.database import Database
 from workforce_intelligence.dataset import AuditActor, ensure_dataset, reset_dataset
 from workforce_intelligence.migrations import SOURCE_TABLES
-from workforce_intelligence.seed import INTERVIEW_SEED
+from workforce_intelligence.seed import INTERVIEW_SEED, populate_core
+from workforce_intelligence.survey_migration import SURVEY_TABLES
+from workforce_intelligence.surveys import link_evidence
 
 
-def source_snapshot(database):
+def source_snapshot(database, tables=SOURCE_TABLES):
     with database.transaction() as connection:
         return {
             table: [tuple(row) for row in connection.execute(f"SELECT * FROM {table} ORDER BY 1")]
-            for table in SOURCE_TABLES
+            for table in tables
         }
 
 
@@ -20,13 +25,67 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
     database = Database(tmp_path / "workforce.sqlite3")
     migrations = sqlite_store.MIGRATIONS
     monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:1])
-    initial = ensure_dataset(database, INTERVIEW_SEED)
-    source = source_snapshot(database)
+    legacy = replace(INTERVIEW_SEED, seed_version="1.0", populate=populate_core)
+    initial = ensure_dataset(database, legacy)
+    change, _ = change_fte(
+        database,
+        employee_id="emp-001",
+        record_version=1,
+        effective_from=date(2026, 10, 20),
+        fte_milli=800,
+        expected=initial,
+        actor=AuditActor("test-member", "req_upgrade"),
+    )
+    core = tuple(table for table in SOURCE_TABLES if table not in SURVEY_TABLES)
+    source = source_snapshot(database, core)
     monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations)
-    assert ensure_dataset(database, INTERVIEW_SEED) == initial
-    assert source_snapshot(database) == source
+    upgraded = ensure_dataset(database, INTERVIEW_SEED)
+    assert upgraded.seed_version == INTERVIEW_SEED.seed_version
+    assert upgraded.dataset_id == initial.dataset_id
+    assert upgraded.dataset_generation == 1
+    assert upgraded.revision == change.revision + 1
+    assert source_snapshot(database, core) == source
     with database.transaction() as connection:
         assert connection.execute("SELECT COUNT(*) FROM silver_applications").fetchone()[0] == 9
+        assert (
+            connection.execute("SELECT COUNT(*) FROM gold_reviewed_survey_findings").fetchone()[0]
+            == 1
+        )
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) FROM audit_events WHERE action = 'change_fte'"
+            ).fetchone()[0]
+            == 1
+        )
+
+
+def test_evidence_guard_and_gold_projection_reject_invalid_links(tmp_path):
+    database = Database(tmp_path / "workforce.sqlite3")
+    ensure_dataset(database, INTERVIEW_SEED)
+    with database.transaction(write=True) as connection:
+        signal = "signal-rota-002"
+        for invalid in [("imaginary",), ("rota-011",), ("rota-003", "rota-003")]:
+            with pytest.raises(ValueError):
+                link_evidence(connection, signal, invalid)
+        connection.execute(
+            "INSERT INTO survey_campaigns VALUES ('other','Other','Question','2026-10-01','2026-10-30',1)"
+        )
+        connection.execute(
+            "INSERT INTO survey_responses VALUES ('other-001','other','2026-10-01','Synthetic evidence')"
+        )
+        with pytest.raises(ValueError, match="ineligible"):
+            link_evidence(connection, signal, ("other-001",))
+        connection.execute("UPDATE ai_signals SET published_on='2026-10-30' WHERE id=?", (signal,))
+        assert [
+            row[0] for row in connection.execute("SELECT id FROM gold_reviewed_survey_findings")
+        ] == ["signal-rota-001"]
+        connection.execute(
+            "INSERT INTO survey_signal_evidence VALUES ('signal-rota-001', 'other-001')"
+        )
+        assert (
+            connection.execute("SELECT COUNT(*) FROM gold_reviewed_survey_findings").fetchone()[0]
+            == 0
+        )
 
 
 def test_controlled_seed_is_repeatable_across_fresh_files_and_reset(tmp_path):

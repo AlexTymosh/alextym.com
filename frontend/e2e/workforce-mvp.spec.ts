@@ -49,3 +49,32 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(page.getByText("There are no applications in this cohort.")).toBeVisible();
   await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
 });
+
+test("a member can inspect published evidence, a governed answer and the implemented lineage", async ({ page }, info) => {
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
+  test.setTimeout(60_000);
+  await signIn(page);
+  await page.goto(path);
+  const nav = page.getByRole("navigation", { name: "Workforce sections" });
+  const rate = await page.locator("[data-metric=vacancy_rate]").innerText();
+  await page.getByRole("button", { name: "Explain the vacancy rate" }).click();
+  const answer = page.locator("#insight-pilot").getByRole("status");
+  await expect(answer).toContainText(rate);
+  await expect(answer).toContainText("Open vacancy WTE ÷ budgeted establishment WTE × 100");
+
+  await nav.getByRole("link", { name: "People Voice" }).click();
+  await expect(page.getByRole("heading", { name: "Rota Changes and Workforce Pressure" })).toBeVisible();
+  await expect(page.getByText("Demonstration fallback result")).toBeVisible();
+  const findings = page.getByRole("region", { name: "Published findings" });
+  await expect(findings.getByText("6 of 10 comments")).toBeVisible();
+  await expect(findings.getByText("Seeded demonstration review")).toBeVisible();
+  await findings.getByRole("link", { name: "rota-001" }).click();
+  await expect(page).toHaveURL(/#response-rota-001$/);
+  await expect(findings.locator("#response-rota-001")).toContainText("Give the team a little more notice");
+  await expect(page.getByRole("heading", { name: "Linked management action" })).toBeVisible();
+
+  await nav.getByRole("link", { name: "Data Architecture" }).click();
+  await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
+  await expect(page.getByText("Executive metrics · gold_reviewed_survey_findings")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Metric catalogue" })).toBeVisible();
+});

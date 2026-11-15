@@ -109,7 +109,6 @@ def ensure_dataset(database: Database, seed: SeedDefinition) -> DatasetState:
 def _install_seed(
     connection: sqlite3.Connection, seed: SeedDefinition, dataset_id: str, generation: int
 ) -> DatasetState:
-    seed.populate(connection, seed.generation_seed)
     now = datetime.now(UTC).isoformat()
     state = DatasetState(
         dataset_id=dataset_id,
@@ -133,6 +132,7 @@ def _install_seed(
         """,
         asdict(state),
     )
+    seed.populate(connection, seed.generation_seed)
     return state
 
 
