@@ -1,0 +1,17 @@
+[
+  {"name":"active member", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin"}, "now_ms":1800000000000,"want":true},
+  {"name":"missing grant", "uid":"user", "project_id":"workforce_intelligence", "record":null,"now_ms":1800000000000,"want":false},
+  {"name":"read-only grant", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"View"},"now_ms":1800000000000,"want":false},
+  {"name":"test cannot reset", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Test"},"now_ms":1800000000000,"want":false},
+  {"name":"other project's grant", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"fleet_hub","status":"active","role":"Admin"},"now_ms":1800000000000,"want":false},
+  {"name":"grant belongs to other UID", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"other","project_id":"workforce_intelligence","status":"active","role":"Admin"},"now_ms":1800000000000,"want":false},
+  {"name":"revoked grant", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"revoked","role":"Admin"},"now_ms":1800000000000,"want":false},
+  {"name":"expired grant", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin","expires_at_ms":1799999999999},"now_ms":1800000000000,"want":false},
+  {"name":"expiry boundary", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin","expires_at_ms":1800000000000},"now_ms":1800000000000,"want":false},
+  {"name":"not yet expired", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin","expires_at_ms":1800000000001},"now_ms":1800000000000,"want":true},
+  {"name":"malformed expiry", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin","expires_at_ms":"1800000000001"},"now_ms":1800000000000,"want":false},
+  {"name":"null expiry field", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":1,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin","expires_at_ms":null},"now_ms":1800000000000,"want":false},
+  {"name":"missing schema", "uid":"user", "project_id":"workforce_intelligence", "record":{"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin"},"now_ms":1800000000000,"want":false},
+  {"name":"bool schema", "uid":"user", "project_id":"workforce_intelligence", "record":{"schema_version":true,"uid":"user","project_id":"workforce_intelligence","status":"active","role":"Admin"},"now_ms":1800000000000,"want":false},
+  {"name":"blank uid", "uid":"", "project_id":"workforce_intelligence", "record":{},"now_ms":1800000000000,"want":false}
+]

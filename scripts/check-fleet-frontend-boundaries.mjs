@@ -59,7 +59,14 @@ for (const hook of ["predev", "prebuild", "prelint", "pretypecheck", "pree2e", "
   assert.ok(pkg.scripts[hook]?.includes("link-portfolio-deps.mjs"), `${hook} must connect project dependencies`);
 }
 const linkScript = readFileSync(join(root, "frontend/scripts/link-portfolio-deps.mjs"), "utf8");
-assert.match(linkScript, /const link = join\(moduleRoot, "node_modules"\)/);
+// Each registered embedded frontend must use the host install through its own link.
+// Keep the Fleet boundary invariant, but do not require a Fleet-only implementation.
+assert.match(linkScript, /const target = join\(frontendRoot, "node_modules"\)/);
+assert.match(linkScript, /readFileSync\(join\(repoRoot, "portfolio\/catalog\/registry\.json"\), "utf8"\)/);
+assert.match(linkScript, /for \(const id of registry\.projectIds\)/);
+assert.match(linkScript, /const link = join\(repoRoot, "portfolio", id, "frontend", "node_modules"\)/);
+assert.match(linkScript, /if \(!existing\.isSymbolicLink\(\)\)/);
+assert.match(linkScript, /realpathSync\(link\) !== realpathSync\(target\)/);
 assert.doesNotMatch(linkScript, /const link = join\(repoRoot, "node_modules"\)/);
 const manifest = JSON.parse(readFileSync(join(root, "portfolio/fleet_hub/project.json"), "utf8"));
 assert.equal(manifest.catalog.visible, false);

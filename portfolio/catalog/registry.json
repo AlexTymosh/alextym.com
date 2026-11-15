@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "projectIds": [
-    "fleet_hub"
+    "fleet_hub",
+    "workforce_intelligence"
   ]
 }
