@@ -6,7 +6,9 @@ Every project route is mounted with `require_workforce_member` by the host.
 
 import sqlite3
 from collections import Counter
+from dataclasses import replace
 from datetime import date
+from secrets import randbits
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -36,6 +38,7 @@ from workforce_intelligence.recruitment import (
     record_start,
     vacancy_snapshots,
 )
+from workforce_intelligence.scale_seed import FULL_SEED
 from workforce_intelligence.schemas import (
     ActualStart,
     CatalogueResponse,
@@ -53,6 +56,7 @@ from workforce_intelligence.schemas import (
     QualityResponse,
     ResetRequest,
     ResetResponse,
+    SeedRequest,
     StarterResponse,
     SurveyReportResponse,
     VacancyCancellation,
@@ -282,6 +286,30 @@ def reset(command: ResetRequest, database: Db, actor: Member) -> ResetResponse:
         dataset=result.dataset,
         reset_generation=result.reset_generation,
         replayed=result.replayed,
+    )
+
+
+@router.post("/demo/seed")
+def seed(command: SeedRequest, database: Db, actor: Member) -> ResetResponse:
+    baseline = FULL_SEED
+    if command.mode == "exploratory":
+        baseline = replace(
+            FULL_SEED,
+            scenario_code="full-exploratory",
+            generation_seed=command.generation_seed
+            if command.generation_seed is not None
+            else randbits(32),
+        )
+    result = reset_dataset(
+        database,
+        baseline,
+        expected=command.expected_version(),
+        actor=actor,
+        idempotency_key=str(command.idempotency_key),
+        request_kind=f"seed:{command.mode}:{command.generation_seed}",
+    )
+    return ResetResponse(
+        dataset=result.dataset, reset_generation=result.reset_generation, replayed=result.replayed
     )
 
 

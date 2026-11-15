@@ -25,6 +25,7 @@ Protected responses use `Cache-Control: no-store`.
 | `POST /vacancies/{vacancy_id}/cancel` | Close the remaining request with `cancelled_on`. Prior starts remain in the lifecycle. |
 | `POST /starters` | Record `offer_id`, `started_on` and `contracted_fte` and create effective employment. Returns `201` and the new employee ID. |
 | `POST /demo/reset` | Restore the baseline for all Members. Requires `confirmed: true` and a client-generated UUID `idempotency_key`. |
+| `POST /demo/seed` | Replace the shared dataset with the full 36-month fixture. Same confirmation and idempotency contract as reset, with `mode: "controlled"` or `"exploratory"` and optional exploratory `generation_seed`. |
 
 Pass `as_of_date` as an ISO date for historical reports. Executive and funnel
 reports also take `period_start`. The default is the first observed day of the

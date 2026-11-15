@@ -202,6 +202,15 @@ MIGRATIONS = (
     PROJECTION_MIGRATION,
     SURVEY_MIGRATION,
     OPERATIONS_MIGRATION,
+    (
+        "ALTER TABLE reset_receipts ADD COLUMN request_kind TEXT NOT NULL DEFAULT 'reset'",
+        """
+        CREATE TABLE candidate_demographics (
+            application_id TEXT PRIMARY KEY REFERENCES candidate_applications(id),
+            age_band TEXT NOT NULL, ethnicity_group TEXT NOT NULL, disability_status TEXT NOT NULL
+        ) STRICT
+        """,
+    ),
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.
@@ -216,6 +225,7 @@ SOURCE_TABLES = (
     "recruitment_campaigns",
     "vacancies",
     "candidate_applications",
+    "candidate_demographics",
     "application_stage_events",
     "offers",
     "starter_events",

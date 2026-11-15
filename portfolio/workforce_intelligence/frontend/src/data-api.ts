@@ -6,6 +6,7 @@ export type DatasetVersion = { dataset_id: string; dataset_generation: number };
 export type Dataset = DatasetVersion & {
   revision: number;
   scenario_code: string;
+  generation_seed: number;
   seed_version: string;
   history_start: string;
   as_of_date: string;
@@ -170,6 +171,14 @@ export function vacancyRateInsight(window: Window) {
 export function resetWorkforceDataset(dataset: Dataset, key: string) {
   return workforceWrite<Snapshot & { reset_generation: number; replayed: boolean }>(
     "demo/reset", "POST", { ...datasetVersion(dataset), confirmed: true, idempotency_key: key },
+  );
+}
+
+export function loadFullWorkforceDataset(dataset: Dataset, key: string, mode: "controlled" | "exploratory",
+  generationSeed?: number) {
+  return workforceWrite<Snapshot & { reset_generation: number; replayed: boolean }>(
+    "demo/seed", "POST", { ...datasetVersion(dataset), confirmed: true, idempotency_key: key,
+      mode, generation_seed: generationSeed },
   );
 }
 

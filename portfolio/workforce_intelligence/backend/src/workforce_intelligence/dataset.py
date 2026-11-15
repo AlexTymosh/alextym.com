@@ -147,19 +147,23 @@ def reset_dataset(
     expected: DatasetVersion,
     actor: AuditActor,
     idempotency_key: str,
+    request_kind: str = "reset",
 ) -> ResetResult:
     with database.transaction(write=True) as connection:
         state = current_dataset(connection)
         if expected.dataset_id != state.dataset_id:
             raise Conflict("The demo dataset changed. Refresh and retry.")
         receipt = connection.execute(
-            "SELECT prior_generation, reset_generation FROM reset_receipts "
+            "SELECT prior_generation, reset_generation, request_kind FROM reset_receipts "
             "WHERE actor_uid = ? AND idempotency_key = ?",
             (actor.uid, idempotency_key),
         ).fetchone()
         if receipt:
-            if expected.dataset_generation != receipt["prior_generation"]:
-                raise Conflict("The reset key was used with a different dataset version.")
+            if (
+                expected.dataset_generation != receipt["prior_generation"]
+                or request_kind != receipt["request_kind"]
+            ):
+                raise Conflict("The reset key was used with a different request.")
             return ResetResult(state, receipt["reset_generation"], replayed=True)
 
         current_dataset(connection, expected)
@@ -177,12 +181,16 @@ def reset_dataset(
             connection, seed, state.dataset_id, state.dataset_generation + 1
         )
         connection.execute(
-            "INSERT INTO reset_receipts VALUES (?, ?, ?, ?)",
+            """
+            INSERT INTO reset_receipts (actor_uid, idempotency_key, prior_generation,
+                                        reset_generation, request_kind) VALUES (?, ?, ?, ?, ?)
+            """,
             (
                 actor.uid,
                 idempotency_key,
                 state.dataset_generation,
                 replacement.dataset_generation,
+                request_kind,
             ),
         )
         record_audit(
@@ -191,12 +199,17 @@ def reset_dataset(
             actor,
             entity_type="dataset",
             entity_key=state.dataset_id,
-            action="reset",
+            action="reset" if request_kind == "reset" else "seed",
             old_values={
                 "generation": state.dataset_generation,
                 "revision": state.revision,
             },
-            new_values={"generation": replacement.dataset_generation, "revision": 0},
+            new_values={
+                "generation": replacement.dataset_generation,
+                "revision": 0,
+                "scenario_code": replacement.scenario_code,
+                "generation_seed": replacement.generation_seed,
+            },
         )
         return ResetResult(replacement, replacement.dataset_generation, replayed=False)
 

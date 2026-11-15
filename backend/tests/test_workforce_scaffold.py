@@ -69,6 +69,7 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
         "/workforce/status",
         "/workforce/demo/status",
         "/workforce/demo/reset",
+        "/workforce/demo/seed",
         "/workforce/employees",
         "/workforce/employees/{employee_id}",
         "/workforce/employees/{employee_id}/contracts",

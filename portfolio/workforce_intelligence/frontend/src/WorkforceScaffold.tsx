@@ -184,7 +184,9 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
               setFilters(DEFAULT_FILTERS);
               setOffset(0);
               setRead(null);
-              setNotice(`Demo reset. Dataset ${replacement.dataset_generation} is ready.`);
+              setNotice(replacement.scenario_code === "interview-core" ?
+                `Demo reset. Dataset ${replacement.dataset_generation} is ready.` :
+                `Full synthetic dataset is ready. Generation seed: ${replacement.generation_seed}.`);
               refresh();
             }} onConflict={() => { setNotice("The dataset changed. The workspace is refreshing."); refresh(); }}
             onAccessError={reportAccessError} /> : null}
@@ -221,6 +223,7 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
             <span className={`${styles.statusDot} ${dataset ? styles.statusDotReady : ""}`} aria-hidden="true" />
             {previewMode ? <span>Local UI preview — no Firebase or API calls</span> : dataset ? (
               <><span>Dataset {dataset.dataset_generation} · Revision {dataset.revision}</span>
+                <span>{dataset.scenario_code === "interview-core" ? "Interview fixture" : "Full synthetic dataset"}</span>
                 <span>Refreshed <time dateTime={dataset.refreshed_at}>{displayRefresh(dataset.refreshed_at)} UK</time></span>
                 <button type="button" className={styles.linkButton} onClick={refresh}>Refresh data</button></>
             ) : <span>{error ? "Data unavailable" : "Loading protected data…"}</span>}

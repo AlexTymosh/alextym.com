@@ -14,7 +14,7 @@ const operations: readonly [string, RegExp, readonly string[]][] = [
   ["GET", /^data-quality$/, ["as_of_date"]],
   ["PATCH", new RegExp(`^employees/${entity}/contracts$`), []],
   ["POST", new RegExp(`^vacancies/${entity}/cancel$`), []],
-  ["POST", /^(starters|demo\/reset)$/, []],
+  ["POST", /^(starters|demo\/(reset|seed))$/, []],
   ["POST", /^insight-pilot\/query$/, []],
 ];
 

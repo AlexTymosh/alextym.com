@@ -33,3 +33,15 @@ each code. Audit History shows the recorded changes and request correlation.
 The established interview fixture is migrated in place: existing interview and
 successful-check stages linked to offers are carried over into source records.
 People Voice and the read-only Gold reports keep their existing cutoffs.
+
+## Synthetic baselines
+
+The app opens on the interview fixture to keep the walkthrough predictable.
+Choose **Load full dataset** for 4,400 synthetic employees and the observed
+period from November 2023 through October 2026. **Controlled baseline** always
+uses seed 424400. **Exploratory** generates a new seed; enter a previously
+displayed seed to reproduce that source population. Generation metadata is
+exposed through `/demo/status`. **Reset demo** returns to the original fixture.
+Both actions replace the shared Workforce dataset and require explicit
+confirmation. See the [reference inventory](sources.md) for the modelling
+assumptions and verified public context.

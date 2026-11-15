@@ -236,6 +236,35 @@ def test_explicit_establishment_override_and_stale_source_revision(demo):
     assert row["exception_reason"] == "Demo extra intake"
 
 
+def test_generation_replacement_confirms_and_replays_only_the_same_intent(demo):
+    client, _ = demo
+    payload = {
+        **version(client),
+        "idempotency_key": str(uuid4()),
+        "mode": "exploratory",
+        "generation_seed": 99,
+    }
+    assert client.post("demo/seed", json={**payload, "confirmed": False}).status_code == 422
+    result = client.post("demo/seed", json={**payload, "confirmed": True})
+    assert result.status_code == 200, result.text
+    assert result.json()["dataset"]["generation_seed"] == 99
+    assert result.json()["dataset"]["scenario_code"] == "full-exploratory"
+    assert client.post("demo/seed", json={**payload, "confirmed": True}).json()["replayed"]
+    assert (
+        client.post(
+            "demo/seed", json={**payload, "confirmed": True, "generation_seed": 1}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            "demo/reset",
+            json={**version(client), "idempotency_key": str(uuid4()), "confirmed": True},
+        ).status_code
+        == 429
+    )
+
+
 def test_period_kpis_and_application_grain_reconcile(demo):
     client, _ = demo
     kpis = executive(client)

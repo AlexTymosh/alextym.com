@@ -354,8 +354,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 07 | DONE | `7201ebc438813ded5e9ef339f827966231b60989` | Browser sign-in, FTE edit, KPI refresh and reload passed against local Firebase emulators and SQLite. |
 | 08 | DONE | `fdc80cf50e05831d9bdbd0fa98d54adad94071c8` | Existing-data migration, evidence validation and exclusion of drafts tested. Real local browser verified the report, Insight Pilot and architecture. |
 | 09 | DONE | `cb702dfa9d0c71ab96e43c4d1fd5fd41751680f5` | Guided navigation, reset, screenshots and local acceptance. |
-| 10 | DONE | See branch history | Workforce API and host checks: 24 passed. Frontend typecheck passed. |
-| 11 | NOT STARTED | — | — |
+| 10 | DONE | `7e2338474cbb49b692bba66068e71e96b699a1b4` | Workforce API and host checks: 24 passed. Frontend typecheck passed. |
+| 11 | DONE | See branch history | 4,400-person fixture reconciled across 36 month ends; Workforce API and host checks: 27 passed. |
 | 12 | NOT STARTED | — | — |
 | 13 | NOT STARTED | — | — |
 | 14 | NOT STARTED | — | — |
@@ -372,12 +372,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - **Current branch:** `feat/workforce-intelligence-operations`
 - **Base `main` SHA:** `2555f2f25b690479eb2aad2df58d6b77f8e87293`, confirmed PR #247 merge on `origin/main`
 - **Active scope:** PR 4 operational workflows and workbook I/O. Hosted acceptance remains open.
-- **Last completed commit:** 10, effective employment and recruitment workflows.
-- **Local verification:** Workforce API and host boundary tests: 24 passed. Frontend typecheck passed.
+- **Last completed commit:** 11, full synthetic baseline with a deterministic or exploratory seed.
+- **Local verification:** Workforce API, host guard and monthly reconciliation tests: 27 passed. Frontend typecheck passed.
 - **Prior stage:** [PR #247 checks](https://github.com/AlexTymosh/alextym.com/pull/247/checks). Five authenticated browser cases passed locally against the emulators.
 - **Hosted smoke:** The isolated Render service returned health `200` and Workforce `404` at live identity-only commit `beac78ac9264c6ad16706e9352836a67038890ab`. Its linked branch is `main` with manual deploys. Vercel's Firebase settings were scoped to the previous identity preview. The temporary Firebase operator certificate expired at 11:31 UTC on 15 November 2026 and Google's token endpoint rejected the credential. Hosted Member and revocation checks require an authenticated dev operator and deployment of the candidate to both existing hosts.
 - **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** Commit 11, add and reconcile the 36-month synthetic dataset. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers.
+- **Next exact task:** Commit 12, finish the confirmed Excel workflow and run all PR gates. Follow the hosted sequence in the [interview runbook](docs/interview-runbook.md) before admitting testers.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -421,6 +421,12 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - Added typed, revision-checked source commands and Member UI for effective employment, recruitment, development, references, probation, leavers and audit.
 - Historical migration preserves older source facts. Tests cover closing effective periods, ordered recruitment, an over-establishment exception, no Gold gain from a conditional/accepted offer, and stale requests.
 - Focused Workforce and host tests passed (24). Frontend typecheck passed. Scale and Excel remain the next two commits.
+
+#### 2026-11-15 — Commit 11: full synthetic dataset
+
+- Added a confirmed shared-fixture switch with controlled and exploratory seeds. Reset still recovers the compact interview fixture.
+- Added 4,400 fictional employee records, 15 people explicitly featured, 36 locations, 12 service areas, 27 role families and 36 months of synthetic operations and listening. The source register distinguishes public scale and reach from these proxies.
+- Focused Workforce tests reconcile month-end WTE and starters to source, check trial reproducibility and document bounded runtime.
 
 ### Per-commit entry template
 
