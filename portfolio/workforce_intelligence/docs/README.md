@@ -8,3 +8,4 @@ The authoritative specification is maintained at
 - [Sources and assumptions](sources.md)
 - [Data core API](api.md)
 - [MVP metric catalogue](metric-catalogue.md)
+- [Interview walkthroughs and verification](interview-runbook.md)

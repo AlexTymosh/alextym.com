@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { guideHref, INTERVIEW_GUIDES, readGuide } from "../../portfolio/workforce_intelligence/frontend/src/interview";
 import {
   WORKFORCE_DEFAULT_MODE,
   WORKFORCE_LOCAL_PREVIEW_PATH,
@@ -45,4 +46,15 @@ test.describe("Workforce SPA navigation state (no authentication bypass)", () =>
     expect(modeFromSearch("?mode=people-voice&untrusted=sensitive")).toBe("people-voice");
     expect(workforceModeHref("people-voice")).toBe("/portfolio/workforce-intelligence?mode=people-voice");
   });
+});
+
+test("guided URLs restore the exact step and reject an ambiguous or mismatched mode", () => {
+  for (const name of ["quick", "extended"] as const) {
+    INTERVIEW_GUIDES[name].steps.forEach((step, index) => {
+      const url = new URL(guideHref(name, index), "https://example.invalid");
+      expect(readGuide(url.search)).toEqual({ name, index, step });
+    });
+  }
+  expect(readGuide("?mode=people-voice&scenario=quick&step=edit-fte")).toBeNull();
+  expect(readGuide("?mode=workforce-management&scenario=quick&step=edit-fte&step=funnel")).toBeNull();
 });

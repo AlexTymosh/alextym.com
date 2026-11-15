@@ -3,16 +3,17 @@ import { changeContractFte, WorkforceApiError, type Directory, type Employee } f
 import { displayNumber } from "./format";
 import styles from "./workforce-scaffold.module.css";
 
-export function WorkforceManagement({ directory, offset, onPage, onSaved, onConflict, effectiveDate, onError }: {
+export function WorkforceManagement({ directory, offset, onPage, onSaved, onConflict, initialEmployee, effectiveDate, onError }: {
   directory: Directory;
   offset: number;
   onPage: (offset: number) => void;
   onSaved: (message: string) => void;
   onConflict: () => void;
+  initialEmployee?: string;
   effectiveDate?: string;
   onError: (error: WorkforceApiError) => void;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialEmployee ?? null);
   const selected = directory.items.find((employee) => employee.id === selectedId);
   return (
     <div className={styles.stack}>

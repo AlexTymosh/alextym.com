@@ -167,6 +167,12 @@ export function vacancyRateInsight(window: Window) {
   });
 }
 
+export function resetWorkforceDataset(dataset: Dataset, key: string) {
+  return workforceWrite<Snapshot & { reset_generation: number; replayed: boolean }>(
+    "demo/reset", "POST", { ...datasetVersion(dataset), confirmed: true, idempotency_key: key },
+  );
+}
+
 export async function loadWorkspace(
   mode: WorkforceMode, filters: Filters, offset: number, signal: AbortSignal,
 ): Promise<Workspace> {

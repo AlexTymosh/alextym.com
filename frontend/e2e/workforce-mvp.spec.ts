@@ -53,10 +53,12 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
 test("a member can inspect published evidence, a governed answer and the implemented lineage", async ({ page }, info) => {
   test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
   test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1440, height: 1080 });
   await signIn(page);
   await page.goto(path);
   const nav = page.getByRole("navigation", { name: "Workforce sections" });
   const rate = await page.locator("[data-metric=vacancy_rate]").innerText();
+  await page.screenshot({ path: info.outputPath("workforce-recruitment.png"), style: "nextjs-portal { display: none }" });
   await page.getByRole("button", { name: "Explain the vacancy rate" }).click();
   const answer = page.locator("#insight-pilot").getByRole("status");
   await expect(answer).toContainText(rate);
@@ -68,6 +70,7 @@ test("a member can inspect published evidence, a governed answer and the impleme
   const findings = page.getByRole("region", { name: "Published findings" });
   await expect(findings.getByText("6 of 10 comments")).toBeVisible();
   await expect(findings.getByText("Seeded demonstration review")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("workforce-people-voice.png"), style: "nextjs-portal { display: none }" });
   await findings.getByRole("link", { name: "rota-001" }).click();
   await expect(page).toHaveURL(/#response-rota-001$/);
   await expect(findings.locator("#response-rota-001")).toContainText("Give the team a little more notice");
@@ -77,4 +80,100 @@ test("a member can inspect published evidence, a governed answer and the impleme
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
   await expect(page.getByText("Executive metrics · gold_reviewed_survey_findings")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Metric catalogue" })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(page.getByRole("region", { name: "Workforce Intelligence demo" })).toHaveAttribute("data-theme", "light");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test("reset is confirmed and the interview guides restore their real views", async ({ page }, info) => {
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
+  test.setTimeout(90_000);
+  await signIn(page);
+  await page.goto(path);
+  const gap = page.locator("[data-metric=workforce_gap_wte]");
+  await expect(gap).toBeVisible({ timeout: 20_000 });
+  const stale = await page.context().newPage();
+  await stale.goto(path);
+  await expect(stale.locator("[data-metric=workforce_gap_wte]")).toBeVisible();
+  await page.bringToFront();
+
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  const confirm = page.getByRole("dialog", { name: "Reset the shared Workforce demo?" });
+  await expect(confirm).toContainText("for every Workforce member");
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  await expect(confirm).not.toBeVisible();
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await confirm.getByRole("button", { name: "Confirm reset" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Demo reset." })).toBeVisible();
+  const baselineGap = Number((await gap.innerText()).split(" ")[0]);
+  await stale.bringToFront();
+  await stale.getByRole("button", { name: "Refresh data" }).click();
+  await expect(stale.getByText("The demo dataset was reset or regenerated.", { exact: false })).toBeVisible();
+  await stale.close();
+  await page.bringToFront();
+
+  const guide = page.getByRole("complementary", { name: "Active interview guide" });
+  await page.getByRole("button", { name: "Run interview scenario" }).click();
+  await expect(guide).toContainText("90-second walkthrough");
+  await guide.getByRole("button", { name: "Next step" }).click();
+  await expect(page).toHaveURL(/scenario=quick&step=edit-fte$/);
+  await page.reload();
+  await expect(page.getByLabel("Effective date")).toHaveValue("2026-10-20");
+  await page.getByLabel("New contracted FTE").fill("0.8");
+  await page.getByRole("button", { name: "Save FTE" }).click();
+  await expect(page.getByText("Demo A. contract saved", { exact: false })).toBeVisible();
+  await guide.getByRole("button", { name: "Next step" }).click();
+  await expect(gap).toHaveText(`${Number((baselineGap + 0.2).toFixed(3))} WTE`);
+  await guide.getByRole("button", { name: "Next step" }).click();
+  await page.getByRole("button", { name: "Explain the vacancy rate" }).click();
+  await expect(page.locator("#insight-pilot").getByRole("status")).toContainText("14.29%");
+  await guide.getByRole("button", { name: "Finish walkthrough" }).click();
+
+  await page.getByLabel("Guided demo").selectOption("extended");
+  await page.getByRole("button", { name: "Run interview scenario" }).click();
+  for (const step of ["edit-fte", "updated-gap", "funnel", "voice-report", "evidence", "definition", "explain-rate", "lineage"]) {
+    await guide.getByRole("button", { name: "Next step" }).click();
+    await expect(page).toHaveURL(new RegExp(`scenario=extended&step=${step}$`));
+    if (step === "funnel") await expect(page.getByRole("heading", { name: "Candidate funnel" })).toBeVisible();
+    if (step === "evidence") await expect(page.getByRole("link", { name: "rota-001" })).toBeVisible();
+  }
+  await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
+  await guide.getByRole("button", { name: "Finish walkthrough" }).click();
+  await expect(guide).toHaveCount(0);
+});
+
+test("grant revocation denies the same session at both app hosts", async ({ page }, info) => {
+  test.skip(!useEmulators || info.project.name !== "chromium", "Requires the disposable local Firebase and SQLite fixtures");
+  test.setTimeout(60_000);
+  expect(process.env.FIRESTORE_EMULATOR_HOST).toBe("127.0.0.1:18080");
+  await signIn(page);
+  await page.goto(path);
+  const direct = "http://127.0.0.1:14800/api/workforce/demo/status";
+  const bff = `${path}/api/demo/status`;
+  await expect(page.getByRole("button", { name: "Refresh data" })).toBeVisible();
+  const cookie = (await page.context().cookies()).find((item) => item.name === "portfolio_lab_session");
+  if (!cookie) throw new Error("Expected the local Portfolio Lab session cookie");
+  expect(cookie.httpOnly).toBe(true);
+  expect((await page.request.get(direct)).status()).toBe(401);
+  const headers = { Authorization: `FirebaseSession ${cookie.value}` };
+  expect((await page.request.get(direct, { headers })).status()).toBe(200);
+  expect((await page.request.get(bff)).status()).toBe(200);
+
+  const { deleteApp, initializeApp } = await import("firebase-admin/app");
+  const { getFirestore } = await import("firebase-admin/firestore");
+  const admin = initializeApp({ projectId: "demo-portfolio-lab" }, "workforce-revocation-smoke");
+  const firestore = getFirestore(admin);
+  const grant = firestore.doc("portfolio_lab_projects/workforce_intelligence/grants/workforce-emulator-member");
+  try {
+    await grant.update({ status: "revoked" });
+    expect((await page.request.get(direct, { headers })).status()).toBe(403);
+    expect((await page.request.get(bff)).status()).toBe(403);
+    await page.getByRole("button", { name: "Refresh data" }).click();
+    await expect(page.getByRole("heading", { name: "Workspace access unavailable" })).toBeVisible();
+    await expect(page.locator("[data-metric]")).toHaveCount(0);
+  } finally {
+    await grant.update({ status: "active" });
+    await deleteApp(admin);
+  }
 });

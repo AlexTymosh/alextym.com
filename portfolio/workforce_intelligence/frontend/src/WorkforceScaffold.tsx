@@ -7,9 +7,12 @@ import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
 import { ExecutiveDashboard } from "./ExecutiveDashboard";
 import { displayRefresh } from "./format";
 import { InsightPilot } from "./InsightPilot";
-import { WORKFORCE_DEFAULT_MODE, WORKFORCE_MODES, modeFromSearch, workforceModeHref,
+import { InterviewGuide } from "./InterviewGuide";
+import { guideHref, readGuide, type GuideName } from "./interview";
+import { WORKFORCE_MODES, modeFromSearch, workforceModeHref,
   type WorkforceMode } from "./mode-state";
 import { PeopleVoice } from "./PeopleVoice";
+import { ResetDemo } from "./ResetDemo";
 import { WorkforceManagement } from "./WorkforceManagement";
 import styles from "./workforce-scaffold.module.css";
 
@@ -20,8 +23,15 @@ const subscribeToLocation = (notify: () => void) => {
   window.addEventListener("popstate", notify);
   return () => window.removeEventListener("popstate", notify);
 };
-const getLocationMode = () => modeFromSearch(window.location.search);
-const getServerMode = (): WorkforceMode => WORKFORCE_DEFAULT_MODE;
+const getLocationSearch = () => window.location.search;
+const getServerSearch = () => "";
+
+function moveTo(href: string) {
+  if (window.location.pathname + window.location.search + window.location.hash !== href) {
+    window.history.pushState(null, "", href);
+  }
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
 
 let storageFallbackTheme: AppTheme = "dark";
 const subscribeToTheme = (notify: () => void) => {
@@ -64,7 +74,11 @@ const sections: Record<WorkforceMode, {
 };
 
 export function WorkforceScaffold({ previewMode = false }: { previewMode?: boolean }) {
-  const mode = useSyncExternalStore(subscribeToLocation, getLocationMode, getServerMode);
+  const search = useSyncExternalStore(subscribeToLocation, getLocationSearch, getServerSearch);
+  const mode = modeFromSearch(search);
+  const guide = previewMode ? null : readGuide(search);
+  const guideTarget = guide?.step.target;
+  const guideKey = guide ? `${guide.name}:${guide.step.id}` : "";
   const theme = useSyncExternalStore(subscribeToTheme, getBrowserTheme, getServerTheme);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [offset, setOffset] = useState(0);
@@ -72,6 +86,7 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
   const [read, setRead] = useState<ReadResult | null>(null);
   const [notice, setNotice] = useState("");
   const priorGeneration = useRef<DatasetVersion | null>(null);
+  const scrolledTo = useRef("");
   const { start, end, vacancyId } = filters;
   const readKey = `${mode}:${start}:${end}:${vacancyId}:${offset}:${reload}`;
   const active = read?.key === readKey ? read : null;
@@ -108,16 +123,30 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
     return () => document.removeEventListener("visibilitychange", checkOnReturn);
   }, [previewMode]);
 
+  useEffect(() => {
+    if (!guideTarget) scrolledTo.current = "";
+    if (!workspace || !guideTarget || scrolledTo.current === guideKey) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(guideTarget)?.scrollIntoView({ block: "start" });
+      scrolledTo.current = guideKey;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [guideKey, guideTarget, workspace]);
+
   const navigate = (event: MouseEvent<HTMLAnchorElement>, destination: WorkforceMode) => {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey ||
         event.altKey || event.shiftKey) return;
     event.preventDefault();
     const href = workforceModeHref(destination, previewMode);
-    if (window.location.pathname + window.location.search + window.location.hash !== href) {
-      window.history.pushState(null, "", href);
-    }
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    moveTo(href);
     window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  const startGuide = (name: GuideName) => {
+    setFilters(DEFAULT_FILTERS);
+    setOffset(0);
+    setNotice("");
+    moveTo(guideHref(name, 0));
   };
 
   const switchTheme = () => {
@@ -131,9 +160,13 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
   const reportAccessError = (failure: WorkforceApiError) => {
     setRead((current) => current?.key === readKey ? { key: readKey, error: failure } : current);
   };
+  const interviewControls = workspace ? <InterviewGuide guide={guide} onStart={startGuide}
+    onStep={(name, index) => moveTo(guideHref(name, index))}
+    onExit={() => moveTo(workforceModeHref(mode))} /> : null;
 
   return (
-    <section className={styles.root} data-theme={theme} aria-label="Workforce Intelligence demo">
+    <section className={styles.root} data-theme={theme} data-guided={guide ? "true" : undefined}
+      aria-label="Workforce Intelligence demo">
       <p className={styles.disclosure}>Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system</p>
       <header className={styles.header}>
         <div className={styles.brand}>
@@ -142,6 +175,15 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
             <p className={styles.brandContext}>Portfolio Lab</p></div>
         </div>
         <div className={styles.headerActions}>
+          {dataset ? <ResetDemo key={dataset.dataset_id + ":" + dataset.dataset_generation} dataset={dataset}
+            onReset={(replacement) => {
+              priorGeneration.current = replacement;
+              setFilters(DEFAULT_FILTERS);
+              setOffset(0);
+              setNotice(`Demo reset. Dataset ${replacement.dataset_generation} is ready.`);
+              refresh();
+            }} onConflict={() => { setNotice("The dataset changed. The workspace is refreshing."); refresh(); }}
+            onAccessError={reportAccessError} /> : null}
           <button type="button" className={styles.secondaryButton} onClick={switchTheme}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
             {theme === "dark" ? "Light theme" : "Dark theme"}
@@ -178,9 +220,13 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
           </div>
 
           <section className={styles.mainContent} id="workforce-panel" aria-labelledby="workforce-heading">
-            <div className={styles.pageHeading}><h1 id="workforce-heading">{selected.label}</h1>
-              <p>{selected.description}</p></div>
+            <div className={styles.pageHeadingRow}>
+              <div className={styles.pageHeading}><h1 id="workforce-heading">{selected.label}</h1>
+                <p>{selected.description}</p></div>
+              {guide ? null : interviewControls}
+            </div>
             {!restricted && notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+            {guide ? interviewControls : null}
             {previewMode ? <p className={styles.message}>Sign in to the protected app to view and change the synthetic dataset.</p> : null}
             {error ? <div className={styles.panel} role="alert">
               <h2>{restricted ? "Workspace access unavailable" : "Unable to load this view"}</h2>
@@ -200,7 +246,8 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
             {workspace?.kind === "workforce-management" ? <WorkforceManagement directory={workspace.directory}
               offset={offset} onPage={setOffset} onSaved={(message) => { setNotice(message); refresh(); }}
               onConflict={() => { setNotice("The dataset or contract changed. Choose the employee again after refresh."); refresh(); }}
-              onError={reportAccessError} /> : null}
+              initialEmployee={guide?.step.edit ? "emp-001" : undefined}
+              effectiveDate={guide?.step.edit ? "2026-10-20" : undefined} onError={reportAccessError} /> : null}
             {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} /> : null}
             {workspace?.kind === "data-architecture" ? <DataArchitecture quality={workspace.quality} metrics={workspace.metrics} /> : null}
             {workspace && workspace.kind !== "workforce-management" ? <details className={styles.planned}>
@@ -209,6 +256,7 @@ export function WorkforceScaffold({ previewMode = false }: { previewMode?: boole
           </section>
         </div>
       </div>
+      <p className={styles.disclosure}>Demo environment. Changes may be reset periodically.</p>
     </section>
   );
 }
