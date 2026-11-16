@@ -35,12 +35,10 @@ const fields: Array<{ label: string; fields: Field[] }> = [
 const valueText = (number: number | null) => number === null ? "Unavailable" : displayNumber(number);
 
 export function ScenarioPanel(props: PlanningProps) {
-  const [open, setOpen] = useState(false);
-  return <details id="scenarios" className={styles.panel}
-    onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <summary className={styles.panelSummary}>What-if scenarios</summary>
-    {open ? <ScenarioControls {...props} /> : null}
-  </details>;
+  return <section id="scenarios" className={styles.panel} aria-labelledby="scenarios-heading">
+    <h2 id="scenarios-heading">What-if scenarios</h2>
+    <ScenarioControls {...props} />
+  </section>;
 }
 
 function ScenarioControls({ dataset, cutoff, onError }: PlanningProps) {

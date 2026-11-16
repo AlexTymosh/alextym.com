@@ -18,9 +18,10 @@ test("planning separates actuals and predictions and saves a revision-pinned com
   test.skip(!passwordDemo || info.project.name !== "chromium", "Requires a disposable local password demo");
   test.setTimeout(100_000);
   await enterDemo(page);
+  const planning = page.getByRole("navigation", { name: "Workforce Intelligence outline" }).getByRole("group", { name: "Planning & insight" });
 
   const forecast = page.locator("#forecast");
-  await forecast.locator("summary").first().click();
+  await planning.getByRole("link", { name: "Forecasting" }).click();
   await forecast.getByLabel("Enable forecast").check();
   await expect(forecast.getByRole("status")).toContainText("Insufficient history");
   await expect(forecast.getByRole("img")).toHaveAttribute("aria-label", /Monthly actuals/);
@@ -42,7 +43,6 @@ test("planning separates actuals and predictions and saves a revision-pinned com
   }
   expect(replacement.ok()).toBe(true);
   await expect(page.getByText("Full synthetic dataset is ready.")).toBeVisible({ timeout: 20_000 });
-  await forecast.locator("summary").first().click();
   await forecast.getByLabel("Enable forecast").check();
   await expect(forecast.getByRole("status")).toContainText("One-month-ahead mean absolute error");
   await expect(forecast.getByRole("img")).toHaveAttribute("aria-label", /Actuals through 2026-10. Forecast starts 2026-11/);
@@ -52,7 +52,8 @@ test("planning separates actuals and predictions and saves a revision-pinned com
   await expect(forecast.getByRole("img")).toHaveAttribute("aria-label", /Monthly actuals/);
 
   const scenario = page.locator("#scenarios");
-  await scenario.locator("summary").first().click();
+  await planning.getByRole("link", { name: "What-if scenarios" }).click();
+  await expect(forecast).toHaveCount(0);
   await scenario.getByLabel("Offer acceptance (%)").fill("0");
   const saved = page.waitForResponse((response) => response.url().endsWith("/api/scenarios") &&
     response.request().method() === "POST");
@@ -80,9 +81,9 @@ test("ten-minute guide and process remain navigable on a narrow screen", async (
   await enterDemo(page, "?mode=workforce-management&scenario=full&step=workbook");
   const guide = page.getByRole("complementary", { name: "Active interview guide" });
   await expect(guide).toContainText("Ten-minute walkthrough");
-  await expect(page.locator("#import-export")).toHaveAttribute("open", "");
+  await expect(page.locator("#import-export")).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
-  await expect(page.locator("#scenarios")).toHaveAttribute("open", "");
+  await expect(page.locator("#scenarios")).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
   await expect(page.locator("#voice-review")).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
@@ -100,12 +101,18 @@ test("ten-minute guide and process remain navigable on a narrow screen", async (
   await expect(process.locator("#process-activity")).toContainText("Invalid JSON");
 
   await guide.getByRole("button", { name: "Next step" }).click();
-  await expect(page.locator("#audit-history")).toHaveAttribute("open", "");
+  await expect(page.locator("#audit-history")).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
   await expect(page.getByRole("heading", { name: "Data quality checks" })).toBeVisible();
+  const section = page.getByRole("combobox", { name: "Section", exact: true });
+  await expect(section).toHaveValue("quality");
+  await section.selectOption("data-layers");
+  await expect(page.locator("#quality")).toHaveCount(0);
   const layers = page.locator("#data-layers");
   await layers.getByRole("button", { name: "Gold", exact: true }).click();
   await expect(layers.getByRole("region", { name: "Gold example row" })).toContainText("workforce_gap_wte");
+  await page.reload();
+  await expect(layers).toBeVisible();
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   const app = page.getByRole("region", { name: "Workforce Intelligence demo" });
   await expect(app).toHaveAttribute("data-theme", "light");

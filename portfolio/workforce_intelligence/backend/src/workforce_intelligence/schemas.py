@@ -109,6 +109,10 @@ class EmployeeSummary(BaseModel):
     organisation: str | None
     location: str | None
     role: str | None
+    directory_job_title: str | None
+    directory_department: str | None
+    directory_title_inferred: bool
+    directory_department_inferred: bool
 
 
 class EmployeePage(DatasetResponse):

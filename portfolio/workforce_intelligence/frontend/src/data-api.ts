@@ -88,7 +88,13 @@ export type Funnel = Quality & {
     application_to_start: Observation;
   };
 };
-export type Employee = {
+export type DirectoryProfile = {
+  directory_job_title?: string | null;
+  directory_department?: string | null;
+  directory_title_inferred?: boolean;
+  directory_department_inferred?: boolean;
+};
+export type Employee = DirectoryProfile & {
   id: string;
   display_name: string;
   record_version: number;

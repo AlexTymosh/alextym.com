@@ -105,6 +105,33 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
         )
 
 
+def test_directory_profile_upgrade_keeps_existing_workforce_records(tmp_path, monkeypatch):
+    database = Database(tmp_path / "workforce.sqlite3")
+    migrations = sqlite_store.MIGRATIONS
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:12])
+    original = ensure_dataset(database, INTERVIEW_SEED)
+    changed, _ = change_fte(
+        database,
+        employee_id="emp-001",
+        record_version=1,
+        effective_from=date(2026, 10, 20),
+        fte_milli=800,
+        expected=original,
+        actor=AuditActor("test-member", "req_directory_profile_upgrade"),
+    )
+    source = source_snapshot(database)
+
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations)
+    assert ensure_dataset(database, INTERVIEW_SEED) == changed
+    assert source_snapshot(database) == source
+    with database.transaction() as connection:
+        directory = employees_at(connection, changed.as_of_date, 20, 0)
+        assert [row["display_name"] for row in directory] == list(FEATURED_NAMES)
+        assert directory[0]["contracted_fte"] == 0.8
+        assert directory[0]["directory_job_title"] == "Senior Management Information Analyst"
+        assert directory[-1]["directory_job_title"] == "Recruitment Co-ordinator"
+
+
 def test_evidence_guard_and_gold_projection_reject_invalid_links(tmp_path):
     database = Database(tmp_path / "workforce.sqlite3")
     ensure_dataset(database, INTERVIEW_SEED)

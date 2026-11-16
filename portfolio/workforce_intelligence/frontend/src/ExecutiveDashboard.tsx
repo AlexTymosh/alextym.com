@@ -2,6 +2,7 @@ import type { FormEvent, ReactNode } from "react";
 import type { Comparison, Dashboard, Dataset, Filters, Window } from "./data-api";
 import { displayCode, displayNumber, displayObservation, displayWindow } from "./format";
 import { InclusiveRecruitment } from "./InclusiveRecruitment";
+import type { OpenWorkforceScreen, WorkforceScreen } from "./mode-state";
 import { RecruitmentChannels } from "./RecruitmentChannels";
 import { WorkforceTrend } from "./WorkforceTrend";
 import { VacancyAgeing } from "./VacancyAgeing";
@@ -41,11 +42,13 @@ type Props = {
   dashboard: Dashboard;
   filters: Filters;
   onFilters: (filters: Filters) => void;
+  screen: WorkforceScreen;
+  onOpenScreen: OpenWorkforceScreen;
   pilot?: ReactNode;
   planning?: ReactNode;
 };
 
-export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, planning }: Props) {
+export function ExecutiveDashboard({ dashboard, filters, onFilters, screen, onOpenScreen, pilot, planning }: Props) {
   const { executive, quality_status: quality, dataset } = dashboard.executive;
   const currentWindow = executive.current_window;
   const metrics = new Map(executive.metrics.map((metric) => [metric.definition.code, metric]));
@@ -59,21 +62,21 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, plann
 
   return (
     <div className={styles.stack}>
-      <section id="executive" aria-labelledby="executive-heading">
+      {screen !== "equality" ? <form aria-label="Reporting period" className={styles.filterBar} onSubmit={applyDates}
+        key={`${currentWindow.start}:${currentWindow.end}`}>
+        <label>Period start<input name="from" type="date" defaultValue={currentWindow.start}
+          min={dataset.history_start} max={dataset.as_of_date} required /></label>
+        <label>As of date<input name="through" type="date" defaultValue={currentWindow.end}
+          min={dataset.history_start} max={dataset.as_of_date} required /></label>
+        <button type="submit" className={styles.secondaryButton}>Apply dates</button>
+      </form> : null}
+      {screen === "executive" ? <section id="executive" aria-labelledby="executive-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="executive-heading">Recruitment overview</h2><p>{displayWindow(currentWindow)}</p></div>
           <span className={quality === "passed" ? styles.statusBadge : styles.warningBadge}>
             {quality === "passed" ? "Data checks passed" : "Review data quality"}
           </span>
         </div>
-        <form aria-label="Reporting period" className={styles.filterBar} onSubmit={applyDates}
-          key={`${currentWindow.start}:${currentWindow.end}`}>
-          <label>Period start<input name="from" type="date" defaultValue={currentWindow.start}
-            min={dataset.history_start} max={dataset.as_of_date} required /></label>
-          <label>As of date<input name="through" type="date" defaultValue={currentWindow.end}
-            min={dataset.history_start} max={dataset.as_of_date} required /></label>
-          <button type="submit" className={styles.secondaryButton}>Apply dates</button>
-        </form>
         <div className={styles.metricGrid}>
           {METRIC_ORDER.map((code, index) => {
             const metric = metrics.get(code);
@@ -84,18 +87,18 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, plann
               ] : undefined} /> : null;
           })}
         </div>
-      </section>
+      </section> : null}
 
-      <WorkforceTrend trend={dashboard.trend} />
+      {screen === "workforce-trend" ? <WorkforceTrend trend={dashboard.trend} /> : null}
 
       {planning}
 
-      <VacancyAgeing ageing={dashboard.ageing} onSelectVacancy={(id) => {
+      {screen === "vacancy-ageing" ? <VacancyAgeing ageing={dashboard.ageing} onSelectVacancy={(id) => {
         onFilters({ ...filters, vacancyId: id });
-        document.getElementById("funnel")?.scrollIntoView({ block: "start" });
-      }} />
+        onOpenScreen("funnel");
+      }} /> : null}
 
-      <section id="vacancies" className={styles.panel} aria-labelledby="vacancy-heading">
+      {screen === "vacancies" ? <section id="vacancies" className={styles.panel} aria-labelledby="vacancy-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="vacancy-heading">Vacancy lifecycle</h2><p>Requests and filled positions at the selected date.</p></div>
         </div>
@@ -114,9 +117,9 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, plann
             </table>
           </div>
         ) : <p className={styles.message}>There are no vacancy records for this reporting date.</p>}
-      </section>
+      </section> : null}
 
-      <section id="funnel" className={styles.panel} aria-labelledby="funnel-heading">
+      {screen === "funnel" ? <section id="funnel" className={styles.panel} aria-labelledby="funnel-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="funnel-heading">Candidate funnel</h2><p>Distinct applications received in the selected period.</p></div>
           <label className={styles.control}>Vacancy
@@ -153,10 +156,10 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, plann
             <p className={styles.caption}>Stage rates reflect progress by the cutoff. Recent applications have had less time to advance.</p>
           </>
         ) : <p className={styles.message}>There are no applications in this cohort.</p>}
-      </section>
-      <RecruitmentChannels sources={dashboard.sources} vacancyFiltered={Boolean(filters.vacancyId)} />
-      <InclusiveRecruitment inclusive={dashboard.inclusive} />
-      <section id="outcomes" className={styles.panel} aria-labelledby="outcomes-heading">
+      </section> : null}
+      {screen === "attraction" ? <RecruitmentChannels sources={dashboard.sources} vacancyFiltered={Boolean(filters.vacancyId)} /> : null}
+      {screen === "equality" ? <InclusiveRecruitment inclusive={dashboard.inclusive} /> : null}
+      {screen === "outcomes" ? <section id="outcomes" className={styles.panel} aria-labelledby="outcomes-heading">
         <div className={styles.sectionHeader}>
           <div>
             <h2 id="outcomes-heading">Workforce outcomes</h2>
@@ -184,7 +187,7 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, plann
           These are synthetic measures. Missing follow-up or a zero eligible denominator is
           shown as Not available, never as a zero outcome. Definitions explain cohort scope.
         </p>
-      </section>
+      </section> : null}
       {pilot}
     </div>
   );

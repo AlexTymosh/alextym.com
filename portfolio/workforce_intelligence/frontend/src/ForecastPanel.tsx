@@ -9,12 +9,10 @@ import styles from "./workforce-scaffold.module.css";
 export type PlanningProps = { dataset: Dataset; cutoff: string; onError: (failure: WorkforceApiError) => void };
 
 export function ForecastPanel(props: PlanningProps) {
-  const [open, setOpen] = useState(false);
-  return <details id="forecast" className={styles.panel}
-    onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <summary className={styles.panelSummary}>Forecasting</summary>
-    {open ? <ForecastControls {...props} /> : null}
-  </details>;
+  return <section id="forecast" className={styles.panel} aria-labelledby="forecast-heading">
+    <h2 id="forecast-heading">Forecasting</h2>
+    <ForecastControls {...props} />
+  </section>;
 }
 
 function ForecastControls({ dataset, cutoff, onError }: PlanningProps) {

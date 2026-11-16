@@ -6,6 +6,7 @@ import {
   WORKFORCE_MODES,
   isWorkforceMode,
   modeFromSearch,
+  screenFromLocation,
   workforceModeHref,
 } from "../../portfolio/workforce_intelligence/frontend/src/mode-state";
 
@@ -45,6 +46,16 @@ test.describe("Workforce SPA navigation state (no authentication bypass)", () =>
   test("ignores extra query parameters and builds a canonical clean destination", () => {
     expect(modeFromSearch("?mode=people-voice&untrusted=sensitive")).toBe("people-voice");
     expect(workforceModeHref("people-voice")).toBe("/portfolio/workforce-intelligence?mode=people-voice");
+  });
+
+  test("restores only screens in the current mode from new and legacy links", () => {
+    const url = new URL(workforceModeHref("people-voice", false, "voice-tracker"), "https://example.invalid");
+    expect(screenFromLocation(modeFromSearch(url.search), url.search)).toBe("voice-tracker");
+    expect(screenFromLocation("people-voice", "", "#voice-report")).toBe("voice-report");
+    expect(screenFromLocation("people-voice", "", "#response-rota-001")).toBe("signals");
+    expect(screenFromLocation("workforce-management", "?section=voice-tracker")).toBe("directory");
+    expect(screenFromLocation("data-architecture", "?section=data-model&section=quality")).toBe("data-lineage");
+    expect(workforceModeHref("people-voice", true, "signals")).toBe(`${WORKFORCE_LOCAL_PREVIEW_PATH}?mode=people-voice&section=signals`);
   });
 });
 
