@@ -21,6 +21,7 @@ from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.loki import shutdown_loki_exporter
 from app.core.metrics import configure_metrics
+from app.llm.workforce_voice import WorkforceVoiceOpenAI
 from app.middleware.request_context import RequestContextMiddleware
 from app.security.workforce_demo import require_workforce_member, router as workforce_access_router
 
@@ -51,6 +52,8 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
     app.state.settings = settings
+    if settings.openai_api_key.strip() and settings.openai_model.strip():
+        app.state.workforce_voice_provider = WorkforceVoiceOpenAI(settings)
     app.add_middleware(
         RequestContextMiddleware,
         request_id_header=settings.request_id_header,

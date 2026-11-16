@@ -64,8 +64,11 @@ const sections: Record<WorkforceMode, {
   },
   "people-voice": {
     label: "People Voice", description: "Evidence from synthetic staff surveys.",
-    outline: [["voice-report", "Reviewed report"], ["signals", "Published findings"], ["voice-actions", "Management action"]],
-    planned: "Survey builder, on-demand reports and analyst review actions.",
+    outline: [["survey-builder", "Survey builder"], ["voice-campaigns", "Campaigns & responses"],
+      ["voice-analytics", "Survey analytics"],
+      ["voice-review", "Analyst review"], ["voice-tracker", "Action tracker"],
+      ["voice-report", "Prepared report"], ["signals", "Published findings"], ["voice-actions", "Management action"]],
+    planned: "",
   },
   "data-architecture": {
     label: "Data Architecture", description: "Data ownership, quality and lineage.",
@@ -257,9 +260,9 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
               onConflict={() => { setNotice("The dataset or contract changed. Choose the employee again after refresh."); refresh(); }}
               initialEmployee={guide?.step.edit ? "emp-001" : undefined}
               effectiveDate={guide?.step.edit ? "2026-10-20" : undefined} onError={reportAccessError} /> : null}
-            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} /> : null}
+            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} onAccessError={reportAccessError} /> : null}
             {workspace?.kind === "data-architecture" ? <DataArchitecture quality={workspace.quality} metrics={workspace.metrics} /> : null}
-            {workspace && workspace.kind !== "workforce-management" ? <details className={styles.planned}>
+            {workspace && selected.planned ? <details className={styles.planned}>
               <summary>Planned capabilities</summary><p>{selected.planned}</p>
             </details> : null}
           </section>

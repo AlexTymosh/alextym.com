@@ -2,8 +2,9 @@
 
 FastAPI exposes these operations under `/api/workforce`. The browser uses the
 same operation paths under `/portfolio/workforce-intelligence/api`. The host
-checks membership on both paths. The browser adapter also checks the Origin for
-writes and forwards a server-read Firebase session only to `BACKEND_ORIGIN`.
+checks the signed Workforce password session on both paths. The browser adapter
+also checks the Origin for writes and forwards the server-read Workforce session
+only to `BACKEND_ORIGIN`. Firebase is deferred for this demo.
 Protected responses use `Cache-Control: no-store`.
 
 | Method and path suffix | Data or behaviour |
@@ -25,6 +26,12 @@ Protected responses use `Cache-Control: no-store`.
 | `GET /analytics/candidate-funnel` | Sequential application cohort, stage counts, conversions and median step durations. Optional `vacancy_id`. |
 | `GET /metrics`, `GET /data-quality` | Canonical metric definitions and diagnostics for the implemented projections. |
 | `GET /surveys/reports/rota-pressure` | The controlled People Voice report with published evidence, draft status and its linked management action. |
+| `GET /surveys`, `POST /surveys` | Campaigns, question bank, scoped audiences and campaign creation. |
+| `POST /surveys/{id}/generate` | Confirmed synthetic response generation for a campaign using a specified scenario and seed. |
+| `GET /surveys/{id}/analytics` | One approved dimension and theme, unweighted and weighted estimates, effective sample, suppressed groups, review priority and independent indicators. |
+| `POST /surveys/{id}/analyse`, `GET /surveys/{id}/review` | Idempotent external or demonstration classification; view runs, drafts and redacted validated evidence. |
+| `POST /surveys/signals/{id}/review` | Confirm, amend, split, merge, reject or separately publish a finding with rationale. |
+| `POST /surveys/signals/{id}/actions`, `PATCH /surveys/actions/{id}` | Create an action from a published finding and record progress or closure evidence. |
 | `POST /insight-pilot/query` | Uses the executive vacancy-rate calculation for `intent: "explain_vacancy_rate"` and optional `as_of_date` and `period_start`. |
 | `PATCH /employees/{employee_id}/contracts` | Apply `contracted_fte` at `effective_from`. The MVP supports one effective contract per employee on a given date. |
 | `POST /vacancies/{vacancy_id}/cancel` | Close the remaining request with `cancelled_on`. Prior starts remain in the lifecycle. |

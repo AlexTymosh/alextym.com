@@ -99,5 +99,13 @@ def test_host_wiring_applies_shared_auth_to_entire_workforce_router() -> None:
         "/workforce/metrics",
         "/workforce/data-quality",
         "/workforce/surveys/reports/rota-pressure",
+        "/workforce/surveys",
+        "/workforce/surveys/{survey_id}/generate",
+        "/workforce/surveys/{survey_id}/analytics",
+        "/workforce/surveys/{survey_id}/analyse",
+        "/workforce/surveys/{survey_id}/review",
+        "/workforce/surveys/signals/{signal_id}/review",
+        "/workforce/surveys/signals/{signal_id}/actions",
+        "/workforce/surveys/actions/{action_id}",
         "/workforce/insight-pilot/query",
     }

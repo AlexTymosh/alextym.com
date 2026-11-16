@@ -11,3 +11,4 @@ The authoritative specification is maintained at
 - [Data core API](api.md)
 - [MVP metric catalogue](metric-catalogue.md)
 - [Interview walkthroughs and verification](interview-runbook.md)
+- [People Voice walkthrough and methods](people-voice.md)

@@ -13,8 +13,6 @@ Intelligence UI opens. Sign out from the app header.
 - `WORKFORCE_INTELLIGENCE_ENABLED=true` must be set on Vercel and Render.
 - `VOR_DEMO_PASSWORD` stays **only on Render** (Fleet already uses it).
 - `BACKEND_ORIGIN=https://<your-render-origin>` must be set on Vercel.
-- `PORTFOLIO_LAB_ORIGIN=https://<canonical-site-origin>` must be set on Vercel
-  for same-origin password and mutation checks.
 - Keep `PORTFOLIO_LAB_ENABLED` and Firebase independent; Workforce no longer
   requires them. Both features default to disabled.
 - Do not use this password-only mode for real workforce/employee information.
@@ -24,14 +22,15 @@ constraints, setup, and release checks.
 
 ## Application
 
-- `/portfolio`: simple list of enabled demonstrations.
+- `/portfolio`: public catalogue cards for Fleet VOR Hub and Workforce.
 - `/portfolio/workforce-intelligence`: password gate and the four-mode UI.
 - `/portfolio/workforce-intelligence/api/*`: same-origin BFF to protected FastAPI.
 - `/portfolio/workforce-intelligence/preview`: development-only offline UI.
 
-The UI retains Workforce Intelligence, Workforce Management, People Voice,
-and Data Architecture. Its SQLite operational model and all KPI/reporting logic
-are unchanged. Password sessions are scoped to Workforce; they are **not** Fleet
+The UI contains Workforce Intelligence, Workforce Management, People Voice,
+and Data Architecture. The [People Voice walkthrough](docs/people-voice.md)
+covers survey generation, weighting, evidence review and tracked actions.
+Password sessions are scoped to Workforce; they are **not** Fleet
 cookies, Firebase sessions, or per-person identities.
 
 ## Reference documentation
