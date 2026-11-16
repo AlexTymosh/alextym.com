@@ -346,7 +346,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | MERGED | [#247](https://github.com/AlexTymosh/alextym.com/pull/247) | `2555f2f25b690479eb2aad2df58d6b77f8e87293` |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | MERGED | [#248](https://github.com/AlexTymosh/alextym.com/pull/248) | `c47c7d5aa216ce64387898bfe77af233f49fa6dc` |
 | PR 5 | 13–15 | Full workforce analytics and assurance | MERGED | [#249](https://github.com/AlexTymosh/alextym.com/pull/249) | `02bb1bea1e2a403813cb219f7e76379db58db4e2` |
-| PR 6 | 16–18 | Surveys, weighting, external AI and review | IN PROGRESS | — | — |
+| PR 6 | 16–18 | Surveys, weighting, external AI and review | IN PROGRESS — review | [#250](https://github.com/AlexTymosh/alextym.com/pull/250) | — |
 | PR 7 | 19–21 | Forecasts, diagrams, production hardening | NOT STARTED | — | — |
 
 | # | State | Commit SHA | Verification notes |
@@ -366,9 +366,9 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 13 | DONE | PR #249 squash merge | Conformed dimensions, facts and reconciled outcomes. |
 | 14 | DONE | PR #249 squash merge | Recruitment sources, workforce outcomes, history and vacancy dashboards. |
 | 15 | DONE | PR #249 squash merge | Assurance register and inclusive recruitment. |
-| 16 | DONE | See PR 6 history | Campaigns, question bank, audience snapshots and reproducible synthetic samples. |
-| 17 | DONE | See PR 6 history | Weighted/unweighted metrics, effective sample size, suppression, review priority and linked indicators. |
-| 18 | DONE | See PR 6 history | Validated evidence and manual decisions, publication and action tracking. |
+| 16 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Campaigns, question bank, audience snapshots and reproducible synthetic samples. |
+| 17 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Weighted/unweighted metrics, effective sample size, suppression, review priority and linked indicators. |
+| 18 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Validated evidence and manual decisions, publication and action tracking. |
 | 19 | NOT STARTED | — | — |
 | 20 | NOT STARTED | — | — |
 | 21 | NOT STARTED | — | — |
@@ -378,6 +378,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 - **Current branch:** `feat/workforce-intelligence-people-voice`
 - **Base `main` SHA:** `02bb1bea1e2a403813cb219f7e76379db58db4e2`, merged PR #249.
 - **Active scope:** PR 6 and interview launch fixes. Follow the [People Voice walkthrough](docs/people-voice.md).
+- **Review:** [PR #250](https://github.com/AlexTymosh/alextym.com/pull/250) · [GitHub checks](https://github.com/AlexTymosh/alextym.com/pull/250/checks).
 - **Launch fix:** `a0910a7073976755b1dec2fb6d292dacedcdbea3`. Locally verified the two catalogue links and a real password session with Firebase disabled.
 - **Hosted diagnosis:** A same-origin password probe to `alextym.com` returned `403 Origin not allowed` before checking the password. The direct Render session probe returned `200`. The branch separates Workforce origin checks from Portfolio Lab configuration.
 - **Local verification:** 19 targeted backend checks and 12 opt-in Chromium checks passed. Chromium used a disposable SQLite database and a local password, with Firebase and live AI disabled. TypeScript and Ruff passed.
