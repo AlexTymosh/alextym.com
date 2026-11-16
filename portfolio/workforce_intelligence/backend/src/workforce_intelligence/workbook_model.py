@@ -124,6 +124,8 @@ def add_survey_campaign(editor: SourceEditor, command: SurveyCampaign) -> Change
 def record_survey_response(editor: SourceEditor, command: SurveyResponse) -> Change:
     day = editor.day(command.submitted_on)
     campaign = editor.require("survey_campaigns", "id", command.survey_id, "Survey campaign")
+    if editor.get("voice_campaign_settings", "survey_id", command.survey_id):
+        raise InvalidOperation("Generate responses through People Voice for this campaign.")
     if not campaign["period_start"] <= day <= campaign["period_end"]:
         raise InvalidOperation("The response falls outside the survey period.")
     values = {

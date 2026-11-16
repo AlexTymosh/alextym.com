@@ -131,10 +131,15 @@ class OpenAIResponsesClient:
         self,
         prompt: PromptBundle,
         response_model: type[StructuredResponseT],
+        *,
+        store: bool | None = None,
     ) -> StructuredResponseT:
+        options = self._request_options(prompt)
+        if store is not None:
+            options["store"] = store
         try:
             response = self._client.responses.parse(
-                **self._request_options(prompt),
+                **options,
                 text_format=response_model,
             )
         except Exception as exc:

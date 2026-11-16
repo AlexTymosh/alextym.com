@@ -6,9 +6,11 @@ test.describe("Workforce project default-off gate", () => {
     "Disabled-mode regression is not applicable while Workforce is explicitly enabled",
   );
 
-  test("catalogue, app and BFF remain inaccessible by default", async ({ page, request }) => {
+  test("the catalogue stays public while the Workforce app and API are disabled", async ({ page, request }) => {
     const catalogue = await page.goto("/portfolio");
-    expect(catalogue?.status()).toBe(404);
+    expect(catalogue?.status()).toBe(200);
+    await expect(page.getByRole("link", { name: /Workforce & Recruitment Intelligence/ }))
+      .toHaveAttribute("href", "/portfolio/workforce-intelligence");
     const project = await page.goto("/portfolio/workforce-intelligence");
     expect(project?.status()).toBe(404);
     const proxy = await request.get("/portfolio/workforce-intelligence/api/status");

@@ -1,6 +1,31 @@
 import { expect, test } from "@playwright/test";
 import { workforceUpstreamPath } from "../lib/portfolio-lab/workforce-transport";
+import { hasWorkforceOrigin } from "../lib/portfolio-lab/workforce-origin";
 import { MAX_WORKBOOK_BYTES, readWorkbookBytes } from "../lib/portfolio-lab/workforce-workbooks";
+
+test("the Vercel password gate accepts its HTTPS site without Portfolio Lab configuration", () => {
+  function forwarded(origin: string, forwardedHost = "alextym.com") {
+    return new Request("http://localhost:3000/portfolio/workforce-intelligence/api/access", {
+      method: "POST", headers: { origin, host: "alextym.com", "x-forwarded-host": forwardedHost },
+    });
+  }
+  expect(hasWorkforceOrigin(forwarded("https://alextym.com"), true)).toBe(true);
+  expect(hasWorkforceOrigin(forwarded("https://outside.example", "outside.example"), true)).toBe(false);
+  expect(hasWorkforceOrigin(forwarded("http://alextym.com"), true)).toBe(false);
+  expect(hasWorkforceOrigin(forwarded("https://alextym.com/other"), true)).toBe(false);
+  expect(hasWorkforceOrigin(new Request("http://localhost:14300/api/access", {
+    headers: { host: "127.0.0.1:14300", origin: "http://127.0.0.1:14300" },
+  }), false)).toBe(true);
+});
+
+test("the public portfolio has working links to both demos", async ({ page }) => {
+  await page.goto("/portfolio/");
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Portfolio demonstrations" })).toBeVisible();
+  await expect(main.getByRole("link", { name: /Fleet VOR Hub/ })).toHaveAttribute("href", "/fleet-vor-hub");
+  await expect(main.getByRole("link", { name: /Workforce & Recruitment Intelligence/ }))
+    .toHaveAttribute("href", "/portfolio/workforce-intelligence");
+});
 
 test("maps only approved Workforce operation and filter combinations", () => {
   const query = new URLSearchParams({ vacancy_id: "vac-001", as_of_date: "2026-10-31" });

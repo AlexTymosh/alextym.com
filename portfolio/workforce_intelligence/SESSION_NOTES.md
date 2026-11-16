@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PRs 1–3 merged. PR 4 operational work verified locally and ready for review. Hosted acceptance pending.
+**Document status:** PRs 1–5 merged. PR 6 adds People Voice and fixes interview access. Hosted acceptance is still to be verified on the merged release.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -16,6 +16,12 @@
 ---
 
 ## 0. Decision summary and source of truth
+
+**Owner decision for the 16 November interview:** defer Firebase integration
+for this project. Use the current shared demo password with a distinct
+Workforce-signed session and no individual identity. This supersedes the earlier
+Workforce Firebase admission choices below for the interview deployment;
+Portfolio Lab's separate identity work is unchanged.
 
 The authoritative product scope is the English specification v1.2 named above. This plan groups its requirements for implementation; it does **not** redefine, delete or silently waive the full-PoC requirements. The original full specification includes four functional modes, synthetic workforce/recruitment data, temporal history, governed metrics, People Voice, evidence-linked AI, Excel ingestion, forecasting, architecture views and guided interview scenarios.
 
@@ -338,9 +344,9 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR 1 | 01–03 | Integration, explicit grant, protected SPA | MERGED | [#245](https://github.com/AlexTymosh/alextym.com/pull/245) | `a49f01b828dba84193200e39f9a09a4e92e0e14b` |
 | PR 2 | 04–06 | SQLite, seed, source→Gold metrics | MERGED | [#246](https://github.com/AlexTymosh/alextym.com/pull/246) | `d2c6be784aaa612b83af2ca0f1809f8d97967c34` |
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | MERGED | [#247](https://github.com/AlexTymosh/alextym.com/pull/247) | `2555f2f25b690479eb2aad2df58d6b77f8e87293` |
-| PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | IN PROGRESS — review | — | — |
-| PR 5 | 13–15 | Full workforce analytics and assurance | NOT STARTED | — | — |
-| PR 6 | 16–18 | Surveys, weighting, external AI and review | NOT STARTED | — | — |
+| PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | MERGED | [#248](https://github.com/AlexTymosh/alextym.com/pull/248) | `c47c7d5aa216ce64387898bfe77af233f49fa6dc` |
+| PR 5 | 13–15 | Full workforce analytics and assurance | MERGED | [#249](https://github.com/AlexTymosh/alextym.com/pull/249) | `02bb1bea1e2a403813cb219f7e76379db58db4e2` |
+| PR 6 | 16–18 | Surveys, weighting, external AI and review | IN PROGRESS — review | [#250](https://github.com/AlexTymosh/alextym.com/pull/250) | — |
 | PR 7 | 19–21 | Forecasts, diagrams, production hardening | NOT STARTED | — | — |
 
 | # | State | Commit SHA | Verification notes |
@@ -357,27 +363,26 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 10 | DONE | `7e2338474cbb49b692bba66068e71e96b699a1b4` | Workforce API and host checks: 24 passed. Frontend typecheck passed. |
 | 11 | DONE | `817ec589443e6fc79f1d0e6e07ef22df4909831f` | 4,400-person fixture reconciled across 36 month ends; Workforce API and host checks: 27 passed. |
 | 12 | DONE | `4866a1da0f86288e35327f896855d04d88d36057` | Scoped XLSX, 35 focused tests and six emulator-backed Chromium scenarios passed (project records). |
-| 13 | NOT STARTED | — | — |
-| 14 | NOT STARTED | — | — |
-| 15 | NOT STARTED | — | — |
-| 16 | NOT STARTED | — | — |
-| 17 | NOT STARTED | — | — |
-| 18 | NOT STARTED | — | — |
+| 13 | DONE | PR #249 squash merge | Conformed dimensions, facts and reconciled outcomes. |
+| 14 | DONE | PR #249 squash merge | Recruitment sources, workforce outcomes, history and vacancy dashboards. |
+| 15 | DONE | PR #249 squash merge | Assurance register and inclusive recruitment. |
+| 16 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Campaigns, question bank, audience snapshots and reproducible synthetic samples. |
+| 17 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Weighted/unweighted metrics, effective sample size, suppression, review priority and linked indicators. |
+| 18 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Validated evidence and manual decisions, publication and action tracking. |
 | 19 | NOT STARTED | — | — |
 | 20 | NOT STARTED | — | — |
 | 21 | NOT STARTED | — | — |
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `feat/workforce-intelligence-operations`
-- **Base `main` SHA:** `2555f2f25b690479eb2aad2df58d6b77f8e87293`, confirmed PR #247 merge on `origin/main`
-- **Active scope:** PR 4 draft review; commits 10–12 implemented. Hosted acceptance remains open.
-- **Last completed implementation commit:** 12 (`4866a1da0f86288e35327f896855d04d88d36057`), protected workbook workflow.
-- **Local verification:** `task ci` passed (964 backend tests, 368 default Playwright tests, 27/27 RAG cases and Docker). Six additional emulator-backed Chromium scenarios passed, including Excel preview-to-Gold and download denial at both hosts after project grant revocation.
-- **Prior stage:** [PR #247 checks](https://github.com/AlexTymosh/alextym.com/pull/247/checks). Five authenticated browser cases passed locally against the emulators.
-- **Hosted smoke:** The isolated Render service returned health `200` and Workforce `404` at live identity-only commit `beac78ac9264c6ad16706e9352836a67038890ab`. Its linked branch is `main` with manual deploys. Vercel's Firebase settings were scoped to the previous identity preview. The temporary Firebase operator certificate expired at 11:31 UTC on 15 November 2026 and Google's token endpoint rejected the credential. Hosted Member and revocation checks require an authenticated dev operator and deployment of the candidate to both existing hosts.
-- **Current feature flags:** Portfolio Lab and Workforce default to disabled.
-- **Next exact task:** Open PR 4 as a draft and verify all five GitHub CI jobs; run staged Firebase grant/revoke and direct Render/Next.js Excel acceptance before marking ready. Merge only after required gates. After merge, refresh `main` and begin PR 5 with Silver/Gold and the metric catalogue (commit 13).
+- **Current branch:** `feat/workforce-intelligence-people-voice`
+- **Base `main` SHA:** `02bb1bea1e2a403813cb219f7e76379db58db4e2`, merged PR #249.
+- **Active scope:** PR 6 and interview launch fixes. Follow the [People Voice walkthrough](docs/people-voice.md).
+- **Review:** [PR #250](https://github.com/AlexTymosh/alextym.com/pull/250) · [GitHub checks](https://github.com/AlexTymosh/alextym.com/pull/250/checks).
+- **Launch fix:** `a0910a7073976755b1dec2fb6d292dacedcdbea3`. Locally verified the two catalogue links and a real password session with Firebase disabled.
+- **Hosted diagnosis:** A same-origin password probe to `alextym.com` returned `403 Origin not allowed` before checking the password. The direct Render session probe returned `200`. The branch separates Workforce origin checks from Portfolio Lab configuration.
+- **Local verification:** 19 targeted backend checks and 12 opt-in Chromium checks passed. Chromium used a disposable SQLite database and a local password, with Firebase and live AI disabled. TypeScript and Ruff passed.
+- **Next exact task:** Merge PR 6 after review; verify sign-in and the demo walkthrough on the deployed revision. Follow with PR 7 for forecasting, architecture/BPMN and release checks. Firebase is not a prerequisite for this interview.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -617,4 +622,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** PRs 1–3 merged. PR 4 code and local acceptance complete, pending Owner merge. Hosted verification remains a release gate.
+**Current overall state:** PRs 1–5 merged. PR 6 uses password-only Workforce access for the interview. Hosted verification remains a release gate.

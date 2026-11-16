@@ -1,0 +1,63 @@
+import { expect, test } from "@playwright/test";
+
+const projectPath = "/portfolio/workforce-intelligence";
+const testPassword = process.env.WORKFORCE_E2E_PASSWORD;
+const local = process.env.WORKFORCE_PASSWORD_E2E === "true" && !!testPassword &&
+  process.env.PLAYWRIGHT_BASE_URL === "http://127.0.0.1:14300";
+
+test("the password demo takes a synthetic survey through manual publication and a tracked action", async ({ page }, info) => {
+  test.skip(!local || info.project.name !== "chromium", "Requires disposable local Workforce password demo");
+  test.setTimeout(90_000);
+  await page.goto(projectPath);
+  await expect(page.getByText("Built for the 16 November interview.")).toBeVisible();
+  await expect(page.getByText("Use the same demo password as Fleet VOR Hub.")).toHaveCount(0);
+  await page.getByLabel("Demo password").fill(testPassword!);
+  await page.getByRole("button", { name: "Enter demo" }).click();
+  await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("navigation", { name: "Workforce sections" }).getByRole("link", { name: "People Voice" }).click();
+  const builder = page.locator("#survey-builder");
+  await builder.getByText("Survey builder & question bank").click();
+  await builder.getByRole("button", { name: "Create campaign" }).click();
+  const monitor = page.locator("#voice-campaigns");
+  await expect(monitor.getByRole("heading", { name: "Career Development and Progression" })).toBeVisible();
+  await monitor.getByLabel("Response count").fill("15");
+  await monitor.getByLabel("Seed (blank for default)").fill("32");
+  await monitor.getByRole("button", { name: "Sample controls" }).click();
+  await monitor.getByLabel("Analysable text %").fill("100");
+  await monitor.getByLabel("Positive %").fill("0");
+  await monitor.getByLabel("Negative %").fill("100");
+  await monitor.getByLabel("Target concern %").fill("100");
+  await monitor.getByLabel("Ambiguous text %").fill("0");
+  await monitor.getByRole("button", { name: "Generate significant concern" }).click();
+  await expect(monitor.getByRole("status")).toHaveText("Synthetic responses generated.");
+  await expect(page.locator("#voice-analytics").getByText(/Survey weights correct group representation/)).toBeVisible();
+
+  const review = page.locator("#voice-review");
+  await review.getByRole("button", { name: "Use demonstration analysis" }).click();
+  await expect(review.getByRole("heading", { name: "Demonstration fallback result" })).toBeVisible();
+  const finding = review.getByRole("article").filter({ has: page.getByText(/Validated evidence \(/) }).first();
+  await expect(finding).toContainText("Awaiting analyst review");
+  await finding.getByText(/Validated evidence \(/).click();
+  await expect(finding.locator("q").first()).toBeVisible();
+  await finding.getByText("Review this finding").click();
+  await finding.getByLabel("Review rationale").fill("Evidence supports this synthetic finding.");
+  await finding.getByRole("button", { name: "Save decision" }).click();
+  await expect(finding).toContainText("Confirmed");
+  await finding.getByText("Review this finding").click();
+  await finding.getByLabel("Decision").selectOption("publish");
+  await finding.getByLabel("Review rationale").fill("Confirmed for the synthetic interview demonstration.");
+  await finding.getByRole("button", { name: "Publish finding" }).click();
+  await expect(finding).toContainText("Published");
+  await finding.getByText("Create management action").click();
+  await finding.getByLabel("Action title").fill("Trial an equipment checklist");
+  await finding.getByLabel("Due date").fill(new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10));
+  await finding.getByLabel("Baseline").fill("Checklist used inconsistently");
+  await finding.getByLabel("Target").fill("Trial the checklist on each shift");
+  await finding.getByLabel("Expected benefit").fill("Spot issues before shifts start");
+  await finding.getByRole("button", { name: "Create action", exact: true }).click();
+  const tracker = page.locator("#voice-tracker");
+  await expect(tracker.getByRole("heading", { name: "Trial an equipment checklist" })).toBeVisible();
+  await tracker.getByLabel("Progress notes").fill("The synthetic pilot has started.");
+  await tracker.getByRole("button", { name: "Update action" }).click();
+  await expect(tracker).toContainText("In progress");
+});

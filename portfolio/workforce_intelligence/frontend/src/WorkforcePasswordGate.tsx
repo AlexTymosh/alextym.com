@@ -74,11 +74,10 @@ export function WorkforcePasswordGate() {
           <p className={styles.eyebrow}>Portfolio demonstration · Synthetic data only</p>
           <h1 id="wi-intro-heading">Workforce &amp; Recruitment Intelligence</h1>
           <p>An interactive demonstration of workforce KPIs, recruitment funnels, vacancy ageing and data quality.</p>
-          <p className={styles.disclaimer}>Independent simulation. Not an official NHS or SCAS service.</p>
+          <p>Built for the 16 November interview.</p>
         </section>
         <section className={styles.access} aria-labelledby="wi-access-heading">
           <h2 id="wi-access-heading">Demo access</h2>
-          <p>Use the same demo password as Fleet VOR Hub.</p>
           {state === "error" ? (
             <button type="button" className={styles.button} onClick={() => window.location.reload()}>Retry</button>
           ) : (

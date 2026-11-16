@@ -64,8 +64,9 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(ageing).toBeVisible();
   await expect(ageing.getByRole("row")).toHaveCount(6); // Five bands plus header.
   await page.getByRole("button", { name: "View funnel for vac-004" }).click();
-  await expect(page.getByLabel("Vacancy", { exact: true })).toHaveValue("vac-004");
-  await page.getByLabel("Vacancy", { exact: true }).selectOption("");
+  const vacancy = page.getByRole("combobox", { name: "Vacancy", exact: true });
+  await expect(vacancy).toHaveValue("vac-004");
+  await vacancy.selectOption("");
   const trend = page.getByRole("region", { name: "Monthly Workforce trend table" });
   await expect(trend).toBeVisible();
   await expect(trend.getByRole("row")).toHaveCount(5); // 4 observed months plus header.
@@ -154,7 +155,7 @@ test("a member can inspect published evidence, a governed answer and the impleme
   await expect(page.getByText("These are four source-to-Silver reconciliation checks", { exact: false })).toBeVisible();
   const register = page.getByRole("region", { name: "Sources and assumptions" });
   await expect(register.getByText("Synthetic recruitment events")).toBeVisible();
-  await expect(register.getByText("SCAS People Strategy 2023–2026")).toBeVisible();
+  await expect(register.getByText("SCAS People Strategy 2023–2026 · Public reference", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   await expect(page.getByRole("region", { name: "Workforce Intelligence demo" })).toHaveAttribute("data-theme", "light");

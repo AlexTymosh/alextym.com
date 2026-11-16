@@ -1,10 +1,14 @@
-import type { SurveyReport } from "./data-api";
+import type { SurveyReport, WorkforceApiError } from "./data-api";
 import { displayDay, displayNumber, displayWindow } from "./format";
+import { VoiceWorkspace } from "./VoiceWorkspace";
 import styles from "./workforce-scaffold.module.css";
 
-export function PeopleVoice({ report }: { report: SurveyReport }) {
+export function PeopleVoice({ report, onAccessError }: { report: SurveyReport;
+  onAccessError: (error: WorkforceApiError) => void;
+}) {
   return (
     <div className={styles.stack}>
+      <VoiceWorkspace onAccessError={onAccessError} />
       <section id="voice-report" className={styles.panel} aria-labelledby="reviewed-report-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="reviewed-report-heading">{report.title}</h2>

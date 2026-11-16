@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasSameOrigin } from "../../../../../lib/portfolio-lab/session-origin";
+import { hasWorkforceOrigin } from "../../../../../lib/portfolio-lab/workforce-origin";
 import { hasLabJsonContent, readLabJson } from "../../../../../lib/portfolio-lab/request-json";
 import {
   WORKFORCE_COOKIE, WORKFORCE_COOKIE_PATH, WORKFORCE_SESSION_TTL,
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!workforceEnabled()) return json({ detail: "Not found" }, 404);
-  if (!hasSameOrigin(request)) return json({ detail: "Origin not allowed" }, 403);
+  if (!hasWorkforceOrigin(request)) return json({ detail: "Origin not allowed" }, 403);
   if (!hasLabJsonContent(request)) return json({ detail: "Send application/json" }, 415);
   const body = await readLabJson(request, 512);
   if (body === "too_large") return json({ detail: "Request too large" }, 413);
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
     const response = json({ ok: true });
     response.cookies.set(WORKFORCE_COOKIE, value.session, {
-      httpOnly: true, secure: request.nextUrl.protocol === "https:",
+      httpOnly: true, secure: Boolean(process.env.VERCEL) || request.nextUrl.protocol === "https:",
       sameSite: "strict", path: WORKFORCE_COOKIE_PATH, maxAge: WORKFORCE_SESSION_TTL,
     });
     return response;
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
 export function DELETE(request: NextRequest) {
   if (!workforceEnabled()) return json({ detail: "Not found" }, 404);
-  if (!hasSameOrigin(request)) return json({ detail: "Origin not allowed" }, 403);
+  if (!hasWorkforceOrigin(request)) return json({ detail: "Origin not allowed" }, 403);
   const response = json({ ok: true });
   response.cookies.delete({ name: WORKFORCE_COOKIE, path: WORKFORCE_COOKIE_PATH });
   return response;

@@ -8,6 +8,12 @@ from workforce_intelligence.operations_migration import (
 from workforce_intelligence.projections import PROJECTION_MIGRATION
 from workforce_intelligence.survey_migration import SURVEY_MIGRATION, SURVEY_TABLES
 from workforce_intelligence.workbook_migration import WORKBOOK_MIGRATION
+from workforce_intelligence.voice_migration import (
+    VOICE_REVIEW_MIGRATION,
+    VOICE_REVIEW_TABLES,
+    VOICE_SOURCE_MIGRATION,
+    VOICE_SOURCE_TABLES,
+)
 
 _TEMPORAL = """
     valid_from TEXT NOT NULL,
@@ -215,6 +221,8 @@ MIGRATIONS = (
     ),
     WORKBOOK_MIGRATION,
     CONFORMED_MIGRATION,
+    VOICE_SOURCE_MIGRATION,
+    VOICE_REVIEW_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.
@@ -235,5 +243,7 @@ SOURCE_TABLES = (
     "starter_events",
     *OPERATIONS_TABLES,
     *SURVEY_TABLES,
+    *VOICE_SOURCE_TABLES,
+    *VOICE_REVIEW_TABLES,
     "import_batches",
 )

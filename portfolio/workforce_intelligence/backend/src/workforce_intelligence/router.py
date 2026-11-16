@@ -77,6 +77,33 @@ from workforce_intelligence.schemas import (
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.voice_analysis import (
+    AnalyseRequest,
+    RunResponse,
+    VoiceProvider,
+    get_voice_provider,
+    run_analysis,
+)
+from workforce_intelligence.voice_analytics import VoiceAnalyticsResponse, analyse_survey
+from workforce_intelligence.voice_campaigns import (
+    CampaignCreate,
+    CampaignResponse,
+    GenerateResponses,
+    VoiceWorkspace,
+    create_campaign,
+    generate_responses,
+    workspace,
+)
+from workforce_intelligence.voice_review import (
+    ActionCreate,
+    ActionUpdate,
+    ReviewRequest,
+    ReviewWorkspace,
+    create_action,
+    read_review,
+    review_signal,
+    update_action,
+)
 from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
 from workforce_intelligence.workbook_http import (
@@ -106,6 +133,7 @@ router = APIRouter(
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=100_000)]
 PathId = Annotated[EntityId, Path()]
+Provider = Annotated[VoiceProvider | None, Depends(get_voice_provider)]
 
 
 class OperationResult(DatasetResponse):
@@ -452,6 +480,71 @@ def seed(command: SeedRequest, database: Db, actor: Member) -> ResetResponse:
     return ResetResponse(
         dataset=result.dataset, reset_generation=result.reset_generation, replayed=result.replayed
     )
+
+
+@router.get("/surveys")
+def people_voice_workspace(database: Db) -> VoiceWorkspace:
+    return workspace(database)
+
+
+@router.post("/surveys", status_code=201)
+def add_survey(command: CampaignCreate, database: Db, actor: Member) -> CampaignResponse:
+    return create_campaign(database, actor, command)
+
+
+@router.post("/surveys/{survey_id}/generate")
+def generate_survey(
+    survey_id: PathId, command: GenerateResponses, database: Db, actor: Member
+) -> CampaignResponse:
+    return generate_responses(database, actor, survey_id, command)
+
+
+@router.get("/surveys/{survey_id}/analytics")
+def survey_analytics(
+    survey_id: PathId,
+    database: Db,
+    dimension: str = "service",
+    weight_by: str = "service",
+    theme: str = "development",
+    trim_min: float = 0.5,
+    trim_max: float = 2,
+) -> VoiceAnalyticsResponse:
+    return analyse_survey(database, survey_id, dimension, weight_by, theme, trim_min, trim_max)
+
+
+@router.post("/surveys/{survey_id}/analyse")
+def analyse_campaign(
+    survey_id: PathId, command: AnalyseRequest, database: Db, actor: Member, provider: Provider
+) -> RunResponse:
+    return run_analysis(database, actor, survey_id, command, provider)
+
+
+@router.get("/surveys/{survey_id}/review")
+def survey_reviews(
+    survey_id: PathId, database: Db, analysis_id: EntityId | None = None
+) -> ReviewWorkspace:
+    return read_review(database, survey_id, analysis_id)
+
+
+@router.post("/surveys/signals/{signal_id}/review")
+def decide_signal(
+    signal_id: PathId, command: ReviewRequest, database: Db, actor: Member
+) -> ReviewWorkspace:
+    return review_signal(database, actor, signal_id, command)
+
+
+@router.post("/surveys/signals/{signal_id}/actions", status_code=201)
+def add_management_action(
+    signal_id: PathId, command: ActionCreate, database: Db, actor: Member
+) -> ReviewWorkspace:
+    return create_action(database, actor, signal_id, command)
+
+
+@router.patch("/surveys/actions/{action_id}")
+def update_management_action(
+    action_id: PathId, command: ActionUpdate, database: Db, actor: Member
+) -> ReviewWorkspace:
+    return update_action(database, actor, action_id, command)
 
 
 @router.get("/surveys/reports/rota-pressure")
