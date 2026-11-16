@@ -4,6 +4,7 @@ This package must not import website security implementations or other projects.
 Every project route is mounted with `require_workforce_member` by the host.
 """
 
+import logging
 import sqlite3
 from collections import Counter
 from dataclasses import replace
@@ -21,10 +22,21 @@ from workforce_intelligence.analytics import (
     quality_checks,
     reporting_window,
 )
+from workforce_intelligence.architecture import ArchitectureResponse, layer_examples
 from workforce_intelligence.contracts import change_fte, employees_at
 from workforce_intelligence.database import DatabaseUnavailable
 from workforce_intelligence.dataset import DatasetState, current_dataset, reset_dataset
+from workforce_intelligence.forecasting import (
+    ForecastHistory,
+    ForecastMetric,
+    ForecastRequest,
+    forecast_history,
+)
 from workforce_intelligence.http import Db, Member, WorkforceRoute, audit_actor
+from workforce_intelligence.inclusive_recruitment import (
+    inclusive_recruitment,
+    suppress_inclusive_report,
+)
 from workforce_intelligence.metric_catalogue import CATALOGUE
 from workforce_intelligence.operation_models import OperationRequest
 from workforce_intelligence.operation_reads import (
@@ -35,18 +47,21 @@ from workforce_intelligence.operation_reads import (
     read_section,
 )
 from workforce_intelligence.operations import run_operation
-from workforce_intelligence.inclusive_recruitment import (
-    inclusive_recruitment,
-    suppress_inclusive_report,
+from workforce_intelligence.planning_runs import (
+    ForecastRun,
+    ScenarioRun,
+    read_scenario,
+    run_forecast,
+    run_scenario,
 )
-from workforce_intelligence.recruitment_sources import recruitment_sources
-from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.recruitment import (
     cancel_vacancy,
     record_start,
     vacancy_snapshots,
 )
+from workforce_intelligence.recruitment_sources import recruitment_sources
 from workforce_intelligence.scale_seed import FULL_SEED
+from workforce_intelligence.scenarios import ScenarioInputs, ScenarioRequest
 from workforce_intelligence.schemas import (
     ActualStart,
     CatalogueResponse,
@@ -56,27 +71,28 @@ from workforce_intelligence.schemas import (
     EntityId,
     ErrorDetail,
     ExecutiveResponse,
-    InclusiveRecruitmentResponse,
     FteChange,
     FunnelResponse,
-    RecruitmentSourceResponse,
-    VacancyAgeingResponse,
-    WorkforceTrendResponse,
+    InclusiveRecruitmentResponse,
     InsightQuery,
     InsightResponse,
     MutationResponse,
     QualityResponse,
+    RecruitmentSourceResponse,
     ResetRequest,
     ResetResponse,
     SeedRequest,
     StarterResponse,
     SurveyReportResponse,
+    VacancyAgeingResponse,
     VacancyCancellation,
     VacancyLifecycle,
+    WorkforceTrendResponse,
 )
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.voice_analysis import (
     AnalyseRequest,
     RunResponse,
@@ -104,7 +120,6 @@ from workforce_intelligence.voice_review import (
     review_signal,
     update_action,
 )
-from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
 from workforce_intelligence.workbook_http import (
     FILE_RESPONSE,
@@ -121,6 +136,7 @@ from workforce_intelligence.workbook_import import (
     preview_import,
     read_preview,
 )
+from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.xlsx import template
 
 router = APIRouter(
@@ -132,6 +148,7 @@ router = APIRouter(
 )
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=100_000)]
+logger = logging.getLogger(__name__)
 PathId = Annotated[EntityId, Path()]
 Provider = Annotated[VoiceProvider | None, Depends(get_voice_provider)]
 
@@ -224,13 +241,28 @@ def workbook_template(database: Db, actor: Member) -> Response:
 async def validate_workbook(request: Request, database: Db, actor: Member) -> ImportPreview:
     await run_in_threadpool(throttle, database, actor, "preview")
     content = await read_upload(request)
-    return await run_in_threadpool(preview_import, database, actor, content)
+    preview = await run_in_threadpool(preview_import, database, actor, content)
+    logger.info(
+        "Workforce import %s status=%s invalid_rows=%d request_id=%s",
+        preview.batch_id,
+        "committed" if preview.committed else "preview",
+        preview.counts.invalid,
+        actor.correlation_id,
+    )
+    return preview
 
 
 @router.post("/import/commit")
 def confirm_workbook(command: ImportConfirmation, database: Db, actor: Member) -> ImportReceipt:
     throttle(database, actor, "commit")
-    return commit_import(database, actor, command)
+    receipt = commit_import(database, actor, command)
+    logger.info(
+        "Workforce import %s status=committed replayed=%s request_id=%s",
+        receipt.batch_id,
+        receipt.replayed,
+        actor.correlation_id,
+    )
+    return receipt
 
 
 @router.get("/import/{batch_id}/errors", response_class=Response, responses=FILE_RESPONSE)
@@ -434,12 +466,51 @@ def metric_catalogue() -> CatalogueResponse:
     return CatalogueResponse(metrics=list(CATALOGUE.values()))
 
 
+@router.get("/forecast/history")
+def actual_months(
+    metric: ForecastMetric, database: Db, as_of_date: date | None = None
+) -> ForecastHistory:
+    with database.transaction() as connection:
+        return forecast_history(connection, current_dataset(connection), as_of_date, metric)
+
+
+@router.post("/forecast")
+def create_forecast(command: ForecastRequest, database: Db, actor: Member) -> ForecastRun:
+    return run_forecast(database, command, actor)
+
+
+@router.post("/scenarios")
+def create_scenario(command: ScenarioRequest, database: Db, actor: Member) -> ScenarioRun:
+    return run_scenario(database, command, actor)
+
+
+@router.get("/scenarios")
+def scenario_baseline() -> ScenarioInputs:
+    return ScenarioInputs()
+
+
+@router.get("/scenarios/{run_id}")
+def scenario(run_id: UUID, database: Db) -> ScenarioRun:
+    return read_scenario(database, run_id)
+
+
 @router.get("/data-quality")
 def data_quality(database: Db, as_of_date: date | None = None) -> QualityResponse:
     with database.transaction() as connection:
         state = current_dataset(connection)
         cutoff = reporting_window(state, as_of_date, None).end.isoformat()
         return _quality(connection, state, cutoff)
+
+
+@router.get("/architecture/layers")
+def architecture_layers(database: Db, as_of_date: date | None = None) -> ArchitectureResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        cutoff = reporting_window(state, as_of_date, None).end
+        quality = _quality(connection, state, cutoff.isoformat())
+        return ArchitectureResponse(
+            **quality.model_dump(), layers=layer_examples(connection, cutoff)
+        )
 
 
 @router.post("/demo/reset")

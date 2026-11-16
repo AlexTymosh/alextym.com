@@ -1,19 +1,21 @@
 """Forward-only, application-owned migrations in schema order."""
 
+from workforce_intelligence.candidate_migration import CANDIDATE_MIGRATION
 from workforce_intelligence.conformed_migration import CONFORMED_MIGRATION
+from workforce_intelligence.forecast_migration import FORECAST_MIGRATION
 from workforce_intelligence.operations_migration import (
     OPERATIONS_MIGRATION,
     OPERATIONS_TABLES,
 )
 from workforce_intelligence.projections import PROJECTION_MIGRATION
 from workforce_intelligence.survey_migration import SURVEY_MIGRATION, SURVEY_TABLES
-from workforce_intelligence.workbook_migration import WORKBOOK_MIGRATION
 from workforce_intelligence.voice_migration import (
     VOICE_REVIEW_MIGRATION,
     VOICE_REVIEW_TABLES,
     VOICE_SOURCE_MIGRATION,
     VOICE_SOURCE_TABLES,
 )
+from workforce_intelligence.workbook_migration import WORKBOOK_MIGRATION
 
 _TEMPORAL = """
     valid_from TEXT NOT NULL,
@@ -223,6 +225,8 @@ MIGRATIONS = (
     CONFORMED_MIGRATION,
     VOICE_SOURCE_MIGRATION,
     VOICE_REVIEW_MIGRATION,
+    FORECAST_MIGRATION,
+    CANDIDATE_MIGRATION,
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.
@@ -246,4 +250,6 @@ SOURCE_TABLES = (
     *VOICE_SOURCE_TABLES,
     *VOICE_REVIEW_TABLES,
     "import_batches",
+    "forecast_runs",
+    "forecast_results",
 )

@@ -55,7 +55,7 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
     assert upgraded.seed_version == INTERVIEW_SEED.seed_version
     assert upgraded.dataset_id == initial.dataset_id
     assert upgraded.dataset_generation == 1
-    assert upgraded.revision == change.revision + 1
+    assert upgraded.revision == change.revision + 2
     with database.transaction() as connection:
         assert {
             table: list(

@@ -139,7 +139,14 @@ def test_empty_text_and_invalid_audience_counts_are_handled(voice_db):
     with pytest.raises(InvalidOperation, match="eligible"):
         create(voice_db, "no-exits", audience="exit")
     with voice_db.transaction() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM survey_response_themes").fetchone()[0] == 0
+        count = conn.execute(
+            """
+            SELECT COUNT(*) FROM survey_response_themes theme
+            JOIN survey_responses response ON response.id = theme.response_id
+            WHERE response.survey_id = 'new-voice'
+            """
+        ).fetchone()[0]
+        assert count == 0
 
 
 def test_weighting_uses_true_population_shares_and_trimmed_effective_size():

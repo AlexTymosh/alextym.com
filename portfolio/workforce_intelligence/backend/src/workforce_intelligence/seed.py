@@ -11,6 +11,7 @@ from workforce_intelligence.operations_migration import (
     RECRUITMENT_SOURCES,
 )
 from workforce_intelligence.survey_fixture import SEED_VERSION, populate_voice_report
+from workforce_intelligence.voice_campaigns import populate_candidate_feedback
 
 HISTORY_START = date(2026, 7, 1)
 AS_OF_DATE = date(2026, 10, 31)
@@ -326,7 +327,9 @@ def _application(
     )
 
 
-def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
+def populate_interview(
+    connection: sqlite3.Connection, generation_seed: int, *, candidate_feedback: bool = True
+) -> None:
     populate_core(connection, generation_seed)
     connection.executemany(
         "INSERT OR IGNORE INTO recruitment_sources (id, label) VALUES (?, ?)",
@@ -335,8 +338,10 @@ def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
     for statement in OPERATIONS_MIGRATION[-2:]:
         connection.execute(statement)
     populate_voice_report(connection)
+    if candidate_feedback:
+        populate_candidate_feedback(connection)
 
 
 INTERVIEW_SEED = SeedDefinition(
-    "interview-core", 1733, SEED_VERSION, HISTORY_START, AS_OF_DATE, _populate
+    "interview-core", 1733, SEED_VERSION, HISTORY_START, AS_OF_DATE, populate_interview
 )

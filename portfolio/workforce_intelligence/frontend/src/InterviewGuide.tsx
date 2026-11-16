@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { INTERVIEW_GUIDES, type GuideName, type GuidePosition } from "./interview";
+import { INTERVIEW_GUIDES, isGuideName, type GuideName, type GuidePosition } from "./interview";
 import styles from "./workforce-scaffold.module.css";
 
 export function InterviewGuide({ guide, onStart, onStep, onExit }: {
@@ -13,9 +13,11 @@ export function InterviewGuide({ guide, onStart, onStep, onExit }: {
     <form className={`${styles.filterBar} ${styles.guidePicker}`} aria-label="Interview walkthrough"
       onSubmit={(event) => { event.preventDefault(); onStart(choice); }}>
       <label>Guided demo
-        <select value={choice} onChange={(event) => setChoice(event.currentTarget.value === "extended" ? "extended" : "quick")}>
-          <option value="quick">{INTERVIEW_GUIDES.quick.label}</option>
-          <option value="extended">{INTERVIEW_GUIDES.extended.label}</option>
+        <select value={choice} onChange={(event) => {
+          if (isGuideName(event.currentTarget.value)) setChoice(event.currentTarget.value);
+        }}>
+          {Object.entries(INTERVIEW_GUIDES).map(([name, walkthrough]) =>
+            <option key={name} value={name}>{walkthrough.label}</option>)}
         </select>
       </label>
       <button type="submit" className={styles.secondaryButton}>Run interview scenario</button>

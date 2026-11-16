@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { datasetVersion, WorkforceApiError, workforceWrite } from "./data-api";
 import { displayCode, displayWindow } from "./format";
 import { VoiceAnalyticsPanel } from "./VoiceAnalyticsPanel";
@@ -10,9 +10,11 @@ type OnError = (error: WorkforceApiError) => void;
 const text = (fields: FormData, key: string) => String(fields.get(key) ?? "").trim();
 const optionalNumber = (fields: FormData, key: string) => text(fields, key) ? Number(text(fields, key)) : undefined;
 
-export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
+export function VoiceWorkspace({ onAccessError, initialCampaign = "" }: {
+  onAccessError: OnError; initialCampaign?: string;
+}) {
   const [data, setData] = useState<VoiceData>();
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(initialCampaign);
   const [series, setSeries] = useState("development");
   const [showControls, setShowControls] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -39,6 +41,7 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
   const campaign = data?.campaigns.find((item) => item.survey_id === selected);
   const bankComments = data?.bank.filter((item) => item.kind === "comment") ?? [];
   const bankRatings = data?.bank.filter((item) => item.kind === "rating") ?? [];
+  const candidateTemplate = series === "candidate";
 
   async function run(path: string, payload: object, outcome: string) {
     if (!data || busy) return;
@@ -70,7 +73,7 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
     const rating = bankRatings.find((question) => question.code === text(fields, "rating"));
     if (!prompt) return;
     void run("surveys", {
-      survey_id: surveyId, title: text(fields, "title"), audience: text(fields, "audience"),
+      survey_id: surveyId, title: text(fields, "title"), audience: candidateTemplate ? "candidates" : text(fields, "audience"),
       organisation_id: text(fields, "unit") || null, series, anonymity_min: Number(text(fields, "anonymity")),
       period_start: text(fields, "start"), period_end: text(fields, "end"), invited: optionalNumber(fields, "invited"),
       questions: [{ code: template?.code ?? "feedback", kind: "comment", prompt },
@@ -113,9 +116,12 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
         </select></label>
         <label>Campaign name<input name="title" key={series} defaultValue={data.series[series]} maxLength={160} required /></label>
         <label>Survey code (optional)<input name="id" maxLength={64} pattern="[a-z0-9][a-z0-9\-]{0,63}" /></label>
-        <label>Audience<select name="audience" key={series} defaultValue={series === "onboarding" ? "new_starters" : "employees"}>
-          <option value="employees">Current workforce</option><option value="new_starters">New starters, first year</option>
-          <option value="exit">Leavers in period</option>
+        <label>Audience<select name="audience" key={series} defaultValue={candidateTemplate ? "candidates" :
+          series === "onboarding" ? "new_starters" : "employees"}>
+          {candidateTemplate ? <option value="candidates">Candidate applications received in period</option> : <>
+            <option value="employees">Current workforce</option><option value="new_starters">New starters, first year</option>
+            <option value="exit">Leavers in period</option>
+          </>}
         </select></label>
         <label>Service area<select name="unit"><option value="">All service areas</option>
           {data.units.map((unit) => <option key={unit.id} value={unit.id}>{unit.label}</option>)}</select></label>
@@ -162,10 +168,10 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
         <button className={styles.secondaryButton} disabled={busy} value="exploratory" type="submit">Generate exploratory sample</button>
       </form> : null}
     </section>
-    {campaign?.generated_at ? <VoiceAnalyticsPanel key={campaign.survey_id}
-      campaign={campaign} source={data} onAccessError={onAccessError} /> : null}
-    {campaign?.generated_at ? <VoiceReviewPanel key={campaign.survey_id}
-      campaign={campaign} themes={data.themes} onAccessError={onAccessError} /> : null}
+    {campaign?.generated_at ? <Fragment key={campaign.survey_id}>
+      <VoiceAnalyticsPanel campaign={campaign} source={data} onAccessError={onAccessError} />
+      <VoiceReviewPanel campaign={campaign} themes={data.themes} onAccessError={onAccessError} />
+    </Fragment> : null}
   </>;
 }
 
@@ -174,6 +180,9 @@ function ResponseMonitor({ campaign }: { campaign: Campaign }) {
     <h3>{campaign.title}</h3>
     <p className={styles.caption}>{displayWindow({ start: campaign.period_start, end: campaign.period_end })} · {campaign.survey_id}
       {campaign.generation_mode ? ` · ${displayCode(campaign.generation_mode)} · Seed ${campaign.generation_seed}` : " · Awaiting responses"}</p>
+    {campaign.series === "candidate" ? <p className={styles.caption}>
+      The eligible unit is one synthetic application. Interview ratings cover applicants with a recorded interview.
+    </p> : null}
     <dl className={styles.summaryFacts}>
       <div><dt>Eligible</dt><dd>{campaign.eligible}</dd></div><div><dt>Invited</dt><dd>{campaign.invited}</dd></div>
       <div><dt>Responses</dt><dd>{campaign.responses}</dd></div><div><dt>Analysable comments</dt><dd>{campaign.analysable}</dd></div>

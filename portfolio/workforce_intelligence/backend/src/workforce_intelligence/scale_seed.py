@@ -6,7 +6,14 @@ from random import Random
 
 from workforce_intelligence.contracts import add_employment
 from workforce_intelligence.dataset import SeedDefinition
-from workforce_intelligence.seed import AS_OF_DATE, INTERVIEW_SEED, SOURCE_TIMESTAMP, _application
+from workforce_intelligence.seed import (
+    AS_OF_DATE,
+    INTERVIEW_SEED,
+    SOURCE_TIMESTAMP,
+    _application,
+    populate_interview,
+)
+from workforce_intelligence.voice_campaigns import populate_candidate_feedback
 
 HISTORY_START = date(2023, 11, 1)
 EMPLOYEE_COUNT = 4400
@@ -457,12 +464,13 @@ def _listening(conn: sqlite3.Connection, random: Random) -> None:
 
 
 def _populate(connection: sqlite3.Connection, seed: int) -> None:
-    INTERVIEW_SEED.populate(connection, INTERVIEW_SEED.generation_seed)
+    populate_interview(connection, INTERVIEW_SEED.generation_seed, candidate_feedback=False)
     random = Random(seed)
     lines = _reference_data(connection)
     _base_workforce(connection, random, lines)
     _recruitment(connection, random, lines)
     _listening(connection, random)
+    populate_candidate_feedback(connection)
 
 
 FULL_SEED = SeedDefinition("full-controlled", 424400, "2.0", HISTORY_START, AS_OF_DATE, _populate)

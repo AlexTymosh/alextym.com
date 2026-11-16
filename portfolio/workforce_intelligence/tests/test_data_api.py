@@ -53,6 +53,91 @@ def source_command(client, action, expected_status=200, **fields):
     return response.json()
 
 
+def test_planning_api_pins_revision_and_clears_saved_runs_on_reset(demo):
+    client, database = demo
+    state = client.get("demo/status").json()["dataset"]
+    snapshot = {**version(client), "source_revision": state["revision"]}
+    history = client.get("forecast/history", params={"metric": "vacancy_wte"})
+    assert history.status_code == 200
+    assert len(history.json()["history"]) == 4
+    assert history.headers["cache-control"] == "no-store"
+    request = {**snapshot, "metric": "vacancy_wte"}
+    blocked = client.post("forecast", json={**request, "horizon": 13})
+    assert blocked.status_code == 422
+    assert client.post("forecast", json={**request, "source_revision": 10}).status_code == 409
+    forecast = client.post("forecast", json=request)
+    assert forecast.status_code == 200
+    assert forecast.json()["forecast"]["status"] == "insufficient_history"
+    assert client.post("forecast", json=request).json() == forecast.json()
+
+    saved = client.post("scenarios", json={**snapshot, "inputs": {"approvals_per_month": 3}})
+    assert saved.status_code == 200
+    evaluation = saved.json()
+    assert client.get(f"scenarios/{evaluation['run_id']}").json() == evaluation
+    assert evaluation["evaluation"]["inputs"]["approvals_per_month"] == 3
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 2
+
+    assert (
+        client.post(
+            "demo/reset",
+            json={**version(client), "confirmed": True, "idempotency_key": str(uuid4())},
+        ).status_code
+        == 200
+    )
+    assert client.get(f"scenarios/{evaluation['run_id']}").status_code == 404
+    assert client.post("forecast", json=request).status_code == 409
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 0
+
+
+def test_architecture_examples_trace_the_same_contract_and_reconcile_to_gold(demo):
+    client, _ = demo
+    cutoff = "2026-10-15"
+    response = client.get("architecture/layers", params={"as_of_date": cutoff})
+    assert response.status_code == 200
+    report = response.json()
+    assert report["as_of_date"] == cutoff
+    assert report["quality_status"] == "passed"
+    sources = {layer["code"]: layer["values"] for layer in report["layers"]}
+    assert sources["bronze"]["contract_id"] == sources["operational"]["contract_id"]
+    assert sources["silver"]["employee_id"] == sources["operational"]["employee_id"]
+    assert (
+        sources["silver"]["contracted_fte_milli"] == sources["operational"]["contracted_fte_milli"]
+    )
+    assert sources["bronze"]["source_revision"] == report["dataset"]["revision"]
+    gold = executive(client, as_of_date=cutoff)
+    for code in ("budgeted_wte", "substantive_wte", "workforce_gap_wte"):
+        assert sources["gold"][code] == gold[code]["value"]
+    assert client.get("architecture/layers", params={"as_of_date": "2050-01-01"}).status_code == 422
+
+
+def test_candidate_feedback_uses_an_application_cohort_and_rating_rules(demo):
+    client, database = demo
+    campaigns = client.get("surveys").json()["campaigns"]
+    prepared = next(row for row in campaigns if row["survey_id"] == "candidate-feedback")
+    assert prepared["audience"] == "candidates" and prepared["responses"] < prepared["invited"]
+    with database.transaction() as connection:
+        eligible = connection.execute(
+            "SELECT COUNT(*) FROM fact_application WHERE received_on BETWEEN ? AND ?",
+            (prepared["period_start"], prepared["period_end"]),
+        ).fetchone()[0]
+        assert prepared["eligible"] == eligible
+    response = client.get(
+        "surveys/candidate-feedback/analytics",
+        params={
+            "dimension": "organisation",
+            "weight_by": "organisation",
+            "theme": "candidate-communication",
+        },
+    )
+    assert response.status_code == 200
+    ratings = response.json()["report"]["ratings"]
+    assert len(ratings) == 4
+    assert ratings[0]["mean"] is not None
+    assert ratings[-1]["answered"] is None or ratings[-1]["answered"] <= prepared["responses"]
+
+
 def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     client, _ = demo
     fields = dict(employee_id="demo-ops", contracted_fte="0.7")

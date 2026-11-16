@@ -51,6 +51,14 @@ export type Quality = Snapshot & {
   quality_status: "passed" | "review_required";
   issues: Record<string, number>;
 };
+export type Architecture = Quality & {
+  as_of_date: string;
+  layers: Array<{
+    code: "operational" | "bronze" | "silver" | "gold";
+    relation: string;
+    values: Record<string, string | number | null>;
+  }>;
+};
 export type Executive = Quality & {
   executive: { metrics: Comparison[]; current_window: Window; previous_window: Window | null };
 };
@@ -190,7 +198,7 @@ export type Workspace = Snapshot & (
   | { kind: "workforce-intelligence"; dashboard: Dashboard }
   | { kind: "workforce-management"; directory: Directory }
   | { kind: "people-voice"; report: SurveyReport }
-  | { kind: "data-architecture"; quality: Quality; metrics: MetricDefinition[] }
+  | { kind: "data-architecture"; architecture: Architecture; metrics: MetricDefinition[] }
 );
 
 export class WorkforceApiError extends Error {
@@ -251,9 +259,9 @@ export async function workforceDownload(path: string, fileName: string, payload?
   }
 }
 
-export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object) {
+export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object, signal?: AbortSignal) {
   return workforceRequest<T>(path, {
-    method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    method, signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
 }
 
@@ -298,11 +306,12 @@ export async function loadWorkspace(
     return { ...data, kind: mode };
   }
   if (mode === "data-architecture") {
-    const [quality, { metrics }] = await Promise.all([
-      workforceRequest<Quality>("data-quality", { signal }),
+    const cutoff = filters.end ? `?as_of_date=${encodeURIComponent(filters.end)}` : "";
+    const [architecture, { metrics }] = await Promise.all([
+      workforceRequest<Architecture>(`architecture/layers${cutoff}`, { signal }),
       workforceRequest<{ metrics: MetricDefinition[] }>("metrics", { signal }),
     ]);
-    return { ...quality, kind: mode, quality, metrics };
+    return { ...architecture, kind: mode, architecture, metrics };
   }
 
   const dates = new URLSearchParams();

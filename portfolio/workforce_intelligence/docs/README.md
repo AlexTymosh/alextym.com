@@ -12,3 +12,4 @@ The authoritative specification is maintained at
 - [MVP metric catalogue](metric-catalogue.md)
 - [Interview walkthroughs and verification](interview-runbook.md)
 - [People Voice walkthrough and methods](people-voice.md)
+- [Forecasting and what-if methods](planning.md)

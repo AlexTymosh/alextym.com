@@ -148,11 +148,14 @@ test("a member can inspect published evidence, a governed answer and the impleme
 
   await nav.getByRole("link", { name: "Data Architecture" }).click();
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
-  await expect(page.getByText("Executive metrics · gold_reviewed_survey_findings")).toBeVisible();
+  await page.getByRole("group", { name: "Data layer", exact: true }).getByRole("button", { name: "Gold" }).click();
+  await expect(page.getByRole("region", { name: "Gold example row" })).toContainText("workforce_gap_wte");
+  await page.getByRole("group", { name: "Data model subject" }).getByRole("button", { name: "People Voice" }).click();
+  await expect(page.getByText("gold_voice_published_findings", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Metric catalogue" })).toBeVisible();
   const qualityDetails = page.getByRole("region", { name: "Data quality rule details" });
   await expect(qualityDetails.getByRole("row", { name: /Excluded applications/ })).toBeVisible();
-  await expect(page.getByText("These are four source-to-Silver reconciliation checks", { exact: false })).toBeVisible();
+  await expect(page.getByText("Four reconciliation checks compare accepted source rows with Silver.", { exact: false })).toBeVisible();
   const register = page.getByRole("region", { name: "Sources and assumptions" });
   await expect(register.getByText("Synthetic recruitment events")).toBeVisible();
   await expect(register.getByText("SCAS People Strategy 2023–2026 · Public reference", { exact: true })).toBeVisible();
@@ -208,10 +211,17 @@ test("reset is confirmed and the interview guides restore their real views", asy
 
   await page.getByLabel("Guided demo").selectOption("extended");
   await page.getByRole("button", { name: "Run interview scenario" }).click();
-  for (const step of ["edit-fte", "updated-gap", "funnel", "voice-report", "evidence", "definition", "explain-rate", "lineage"]) {
+  for (const step of ["edit-fte", "updated-gap", "funnel", "candidate-feedback", "voice-report", "evidence",
+    "definition", "forecast", "explain-rate", "lineage"]) {
     await guide.getByRole("button", { name: "Next step" }).click();
     await expect(page).toHaveURL(new RegExp(`scenario=extended&step=${step}$`));
     if (step === "funnel") await expect(page.getByRole("heading", { name: "Candidate funnel" })).toBeVisible();
+    if (step === "candidate-feedback") {
+      await expect(page.getByRole("heading", { name: "Candidate feedback report" })).toBeVisible();
+      await page.getByText("Rating question results", { exact: true }).click();
+      await expect(page.getByText(/Overall satisfaction with the recruitment process/)).toBeVisible();
+    }
+    if (step === "forecast") await expect(page.getByLabel("Enable forecast")).toBeVisible();
     if (step === "evidence") await expect(page.getByRole("link", { name: "rota-001" })).toBeVisible();
   }
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
