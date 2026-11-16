@@ -26,8 +26,10 @@ from workforce_intelligence.voice_analytics import SEVERITY, priority, protected
 from workforce_intelligence.voice_campaigns import campaign
 from workforce_intelligence.voice_taxonomy import CLASSIFICATIONS, QUESTION_BANK, SEVERITIES, THEMES
 
-PROMPT_VERSION = "voice-classification-2"
+PROMPT_VERSION = "voice-classification-3"
 MAX_AI_COMMENTS = 60
+MAX_AI_SIGNALS = 12
+MAX_EXCERPT_LENGTH = 140
 MAX_RUNS = 80
 MAX_EXTERNAL_RUNS = 20
 EXTERNAL_COOLDOWN = 15
@@ -41,10 +43,12 @@ logger = logging.getLogger(__name__)
 class EvidenceItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     response_id: EntityId
-    excerpt: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=140)]
+    excerpt: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=6, max_length=MAX_EXCERPT_LENGTH)
+    ]
 
 
-class ClassifiedSignal(BaseModel):
+class SignalClassification(BaseModel):
     model_config = ConfigDict(extra="forbid")
     theme: Theme
     subtheme: (
@@ -53,15 +57,18 @@ class ClassifiedSignal(BaseModel):
     classification: Classification
     severity: Severity
     summary: Compact
+    priority_human_review: bool
+
+
+class ClassifiedSignal(SignalClassification):
     evidence: Annotated[list[EvidenceItem], Field(min_length=1, max_length=MAX_AI_COMMENTS)]
     unique_response_count: Annotated[int, Field(strict=True, ge=1, le=MAX_AI_COMMENTS)]
-    priority_human_review: bool
 
 
 class ClassifiedReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
     summary: Compact
-    signals: Annotated[list[ClassifiedSignal], Field(max_length=12)]
+    signals: Annotated[list[ClassifiedSignal], Field(max_length=MAX_AI_SIGNALS)]
 
 
 class AnalyseRequest(DatasetRequest):
@@ -71,6 +78,10 @@ class AnalyseRequest(DatasetRequest):
 
 class RunResponse(DatasetResponse):
     run: dict
+
+
+class VoiceProviderTimeout(RuntimeError):
+    """The external classifier did not respond before its deadline."""
 
 
 class VoiceProvider(Protocol):
@@ -177,7 +188,7 @@ def _demo_result(connection, comments: dict[str, str]) -> ClassifiedReport:
         )
     return ClassifiedReport(
         summary="Demonstration classifications use the known synthetic source labels. Human review is required.",
-        signals=signals[:12],
+        signals=signals[:MAX_AI_SIGNALS],
     )
 
 
@@ -419,6 +430,8 @@ def run_analysis(
             report = validate_evidence(raw, comments)
     except (InvalidOperation, ValidationError):
         failure = "evidence_validation_failed"
+    except VoiceProviderTimeout:
+        failure = "provider_timeout"
     except RuntimeError:
         failure = "provider_unavailable"
     with database.transaction(write=True) as connection:

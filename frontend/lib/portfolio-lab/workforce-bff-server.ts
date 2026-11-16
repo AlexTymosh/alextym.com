@@ -52,7 +52,7 @@ export async function forwardWorkforceRequest(request: NextRequest, operation: s
       body,
       cache: "no-store",
       redirect: "error",
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(path.endsWith("/analyse") ? 55_000 : 25_000),
     });
     if (!upstream.ok && ![401, 403, 404, 409, 413, 415, 422, 429, 503].includes(upstream.status)) {
       return reply(502, { detail: "Backend unavailable" });

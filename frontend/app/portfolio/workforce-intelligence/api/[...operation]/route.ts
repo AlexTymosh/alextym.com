@@ -3,6 +3,7 @@ import { forwardWorkforceRequest } from "../../../../../lib/portfolio-lab/workfo
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 async function forward(request: NextRequest, { params }: { params: Promise<{ operation: string[] }> }) {
   return forwardWorkforceRequest(request, (await params).operation);
