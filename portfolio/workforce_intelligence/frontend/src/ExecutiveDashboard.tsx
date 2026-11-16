@@ -42,9 +42,10 @@ type Props = {
   filters: Filters;
   onFilters: (filters: Filters) => void;
   pilot?: ReactNode;
+  planning?: ReactNode;
 };
 
-export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Props) {
+export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot, planning }: Props) {
   const { executive, quality_status: quality, dataset } = dashboard.executive;
   const currentWindow = executive.current_window;
   const metrics = new Map(executive.metrics.map((metric) => [metric.definition.code, metric]));
@@ -86,6 +87,8 @@ export function ExecutiveDashboard({ dashboard, filters, onFilters, pilot }: Pro
       </section>
 
       <WorkforceTrend trend={dashboard.trend} />
+
+      {planning}
 
       <VacancyAgeing ageing={dashboard.ageing} onSelectVacancy={(id) => {
         onFilters({ ...filters, vacancyId: id });

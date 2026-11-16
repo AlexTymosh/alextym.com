@@ -251,9 +251,9 @@ export async function workforceDownload(path: string, fileName: string, payload?
   }
 }
 
-export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object) {
+export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object, signal?: AbortSignal) {
   return workforceRequest<T>(path, {
-    method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    method, signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
 }
 

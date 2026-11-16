@@ -38,6 +38,11 @@ WITH RECURSIVE months(month_start) AS (
     SELECT date(month_start, '+1 month')
     FROM months
     WHERE date(month_start, '+1 month') <= date(:cutoff, 'start of month')
+), observed_starts AS MATERIALIZED (
+    SELECT started_on FROM fact_new_starter WHERE started_on BETWEEN :start AND :cutoff
+), observed_employment AS MATERIALIZED (
+    SELECT contracted_fte_milli, valid_from, valid_to FROM silver_substantive_employment
+    WHERE valid_from <= :cutoff AND (valid_to IS NULL OR valid_to > :start)
 ), cutoffs AS (
     SELECT month_start, substr(month_start, 1, 7) AS month_key,
            MIN(date(month_start, '+1 month', '-1 day'), :cutoff) AS snapshot_day,
@@ -51,11 +56,11 @@ SELECT cutoffs.month_key, cutoffs.snapshot_day, cutoffs.partial_period,
         WHERE budget.valid_from <= cutoffs.snapshot_day
           AND (budget.valid_to IS NULL OR budget.valid_to > cutoffs.snapshot_day)) AS budget_milli,
        (SELECT COALESCE(SUM(contracted_fte_milli), 0)
-        FROM fact_employment_interval employment
+        FROM observed_employment employment
         WHERE employment.valid_from <= cutoffs.snapshot_day
           AND (employment.valid_to IS NULL OR employment.valid_to > cutoffs.snapshot_day))
           AS substantive_milli,
-       (SELECT COUNT(*) FROM fact_new_starter starter
+       (SELECT COUNT(*) FROM observed_starts starter
         WHERE starter.started_on BETWEEN MAX(cutoffs.month_start, :start)
                                   AND cutoffs.snapshot_day) AS starters,
        (SELECT COUNT(*) FROM fact_leaver leaver

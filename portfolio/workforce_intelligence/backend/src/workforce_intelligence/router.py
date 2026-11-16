@@ -24,7 +24,17 @@ from workforce_intelligence.analytics import (
 from workforce_intelligence.contracts import change_fte, employees_at
 from workforce_intelligence.database import DatabaseUnavailable
 from workforce_intelligence.dataset import DatasetState, current_dataset, reset_dataset
+from workforce_intelligence.forecasting import (
+    ForecastHistory,
+    ForecastMetric,
+    ForecastRequest,
+    forecast_history,
+)
 from workforce_intelligence.http import Db, Member, WorkforceRoute, audit_actor
+from workforce_intelligence.inclusive_recruitment import (
+    inclusive_recruitment,
+    suppress_inclusive_report,
+)
 from workforce_intelligence.metric_catalogue import CATALOGUE
 from workforce_intelligence.operation_models import OperationRequest
 from workforce_intelligence.operation_reads import (
@@ -35,18 +45,21 @@ from workforce_intelligence.operation_reads import (
     read_section,
 )
 from workforce_intelligence.operations import run_operation
-from workforce_intelligence.inclusive_recruitment import (
-    inclusive_recruitment,
-    suppress_inclusive_report,
+from workforce_intelligence.planning_runs import (
+    ForecastRun,
+    ScenarioRun,
+    read_scenario,
+    run_forecast,
+    run_scenario,
 )
-from workforce_intelligence.recruitment_sources import recruitment_sources
-from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.recruitment import (
     cancel_vacancy,
     record_start,
     vacancy_snapshots,
 )
+from workforce_intelligence.recruitment_sources import recruitment_sources
 from workforce_intelligence.scale_seed import FULL_SEED
+from workforce_intelligence.scenarios import ScenarioInputs, ScenarioRequest
 from workforce_intelligence.schemas import (
     ActualStart,
     CatalogueResponse,
@@ -56,27 +69,28 @@ from workforce_intelligence.schemas import (
     EntityId,
     ErrorDetail,
     ExecutiveResponse,
-    InclusiveRecruitmentResponse,
     FteChange,
     FunnelResponse,
-    RecruitmentSourceResponse,
-    VacancyAgeingResponse,
-    WorkforceTrendResponse,
+    InclusiveRecruitmentResponse,
     InsightQuery,
     InsightResponse,
     MutationResponse,
     QualityResponse,
+    RecruitmentSourceResponse,
     ResetRequest,
     ResetResponse,
     SeedRequest,
     StarterResponse,
     SurveyReportResponse,
+    VacancyAgeingResponse,
     VacancyCancellation,
     VacancyLifecycle,
+    WorkforceTrendResponse,
 )
 from workforce_intelligence.seed import INTERVIEW_SEED
 from workforce_intelligence.survey_fixture import ANALYSIS_ID
 from workforce_intelligence.surveys import read_survey_report
+from workforce_intelligence.vacancy_ageing import vacancy_ageing
 from workforce_intelligence.voice_analysis import (
     AnalyseRequest,
     RunResponse,
@@ -104,7 +118,6 @@ from workforce_intelligence.voice_review import (
     review_signal,
     update_action,
 )
-from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.workbook_export import ExportRequest, errors_workbook, export_workbook
 from workforce_intelligence.workbook_http import (
     FILE_RESPONSE,
@@ -121,6 +134,7 @@ from workforce_intelligence.workbook_import import (
     preview_import,
     read_preview,
 )
+from workforce_intelligence.workforce_trend import workforce_trend
 from workforce_intelligence.xlsx import template
 
 router = APIRouter(
@@ -432,6 +446,34 @@ def funnel(
 @router.get("/metrics")
 def metric_catalogue() -> CatalogueResponse:
     return CatalogueResponse(metrics=list(CATALOGUE.values()))
+
+
+@router.get("/forecast/history")
+def actual_months(
+    metric: ForecastMetric, database: Db, as_of_date: date | None = None
+) -> ForecastHistory:
+    with database.transaction() as connection:
+        return forecast_history(connection, current_dataset(connection), as_of_date, metric)
+
+
+@router.post("/forecast")
+def create_forecast(command: ForecastRequest, database: Db, actor: Member) -> ForecastRun:
+    return run_forecast(database, command, actor)
+
+
+@router.post("/scenarios")
+def create_scenario(command: ScenarioRequest, database: Db, actor: Member) -> ScenarioRun:
+    return run_scenario(database, command, actor)
+
+
+@router.get("/scenarios")
+def scenario_baseline() -> ScenarioInputs:
+    return ScenarioInputs()
+
+
+@router.get("/scenarios/{run_id}")
+def scenario(run_id: UUID, database: Db) -> ScenarioRun:
+    return read_scenario(database, run_id)
 
 
 @router.get("/data-quality")

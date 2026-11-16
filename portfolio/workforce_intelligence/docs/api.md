@@ -32,6 +32,10 @@ Protected responses use `Cache-Control: no-store`.
 | `POST /surveys/{id}/analyse`, `GET /surveys/{id}/review` | Idempotent external or demonstration classification; view runs, drafts and redacted validated evidence. |
 | `POST /surveys/signals/{id}/review` | Confirm, amend, split, merge, reject or separately publish a finding with rationale. |
 | `POST /surveys/signals/{id}/actions`, `PATCH /surveys/actions/{id}` | Create an action from a published finding and record progress or closure evidence. |
+| `GET /forecast/history` | Complete monthly actuals for the specified `metric` and optional `as_of_date`. |
+| `POST /forecast` | Forecast from a pinned snapshot. Returns actuals, comparison scores and monthly projections or an explicit insufficient-history status. |
+| `GET /scenarios`, `POST /scenarios` | Reference inputs and revision-pinned evaluation of the edited and reference scenarios. |
+| `GET /scenarios/{run_id}` | Retrieve a saved evaluation with the original source revision in the active demo generation. |
 | `POST /insight-pilot/query` | Uses the executive vacancy-rate calculation for `intent: "explain_vacancy_rate"` and optional `as_of_date` and `period_start`. |
 | `PATCH /employees/{employee_id}/contracts` | Apply `contracted_fte` at `effective_from`. The MVP supports one effective contract per employee on a given date. |
 | `POST /vacancies/{vacancy_id}/cancel` | Close the remaining request with `cancelled_on`. Prior starts remain in the lifecycle. |
@@ -44,6 +48,11 @@ reports also take `period_start`. The default is the first observed day of the
 selected month through the selected date. Directory and vacancy requests accept
 `limit` (1–100, default 25) and `offset`. A populated `next_offset` continues
 pagination. Vacancy status counts cover the filtered date regardless of the page.
+
+Planning POSTs also require `source_revision`. Optional inputs include
+`as_of_date` and `horizon` (1–12 months). Forecasts accept a supported
+`metric` and scenarios accept `inputs` described by OpenAPI and the
+[planning methods](planning.md). A stale snapshot returns 409.
 
 Every write carries `dataset_id` and `dataset_generation` from the most recent
 GET. Record writes also take `record_version` from the employee or vacancy GET.

@@ -32,6 +32,10 @@ const operations: readonly [string, RegExp, readonly string[]][] = [
   ["POST", new RegExp(`^vacancies/${entity}/cancel$`), []],
   ["POST", /^(starters|demo\/(reset|seed))$/, []],
   ["POST", /^insight-pilot\/query$/, []],
+  ["POST", /^(forecast|scenarios)$/, []],
+  ["GET", /^forecast\/history$/, ["metric", "as_of_date"]],
+  ["GET", /^scenarios$/, []],
+  ["GET", new RegExp(`^scenarios/${batchId}$`), []],
 ];
 
 export function workforceUpstreamPath(method: string, parts: string[], query: URLSearchParams) {

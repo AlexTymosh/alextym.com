@@ -53,6 +53,44 @@ def source_command(client, action, expected_status=200, **fields):
     return response.json()
 
 
+def test_planning_api_pins_revision_and_clears_saved_runs_on_reset(demo):
+    client, database = demo
+    state = client.get("demo/status").json()["dataset"]
+    snapshot = {**version(client), "source_revision": state["revision"]}
+    history = client.get("forecast/history", params={"metric": "vacancy_wte"})
+    assert history.status_code == 200
+    assert len(history.json()["history"]) == 4
+    assert history.headers["cache-control"] == "no-store"
+    request = {**snapshot, "metric": "vacancy_wte"}
+    blocked = client.post("forecast", json={**request, "horizon": 13})
+    assert blocked.status_code == 422
+    assert client.post("forecast", json={**request, "source_revision": 10}).status_code == 409
+    forecast = client.post("forecast", json=request)
+    assert forecast.status_code == 200
+    assert forecast.json()["forecast"]["status"] == "insufficient_history"
+    assert client.post("forecast", json=request).json() == forecast.json()
+
+    saved = client.post("scenarios", json={**snapshot, "inputs": {"approvals_per_month": 3}})
+    assert saved.status_code == 200
+    evaluation = saved.json()
+    assert client.get(f"scenarios/{evaluation['run_id']}").json() == evaluation
+    assert evaluation["evaluation"]["inputs"]["approvals_per_month"] == 3
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 2
+
+    assert (
+        client.post(
+            "demo/reset",
+            json={**version(client), "confirmed": True, "idempotency_key": str(uuid4())},
+        ).status_code
+        == 200
+    )
+    assert client.get(f"scenarios/{evaluation['run_id']}").status_code == 404
+    assert client.post("forecast", json=request).status_code == 409
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 0
+
+
 def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     client, _ = demo
     fields = dict(employee_id="demo-ops", contracted_fte="0.7")

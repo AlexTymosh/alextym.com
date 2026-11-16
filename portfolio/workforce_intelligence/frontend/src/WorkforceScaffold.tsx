@@ -5,6 +5,7 @@ import { DataArchitecture } from "./DataArchitecture";
 import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
   type DatasetVersion, type Filters, type Workspace } from "./data-api";
 import { ExecutiveDashboard } from "./ExecutiveDashboard";
+import { ForecastPanel } from "./ForecastPanel";
 import { displayRefresh } from "./format";
 import { InsightPilot } from "./InsightPilot";
 import { InterviewGuide } from "./InterviewGuide";
@@ -13,6 +14,7 @@ import { WORKFORCE_MODES, modeFromSearch, workforceModeHref,
   type WorkforceMode } from "./mode-state";
 import { PeopleVoice } from "./PeopleVoice";
 import { ResetDemo } from "./ResetDemo";
+import { ScenarioPanel } from "./ScenarioPanel";
 import { operationalOutline } from "./SourceOperations";
 import { WorkforceManagement } from "./WorkforceManagement";
 import styles from "./workforce-scaffold.module.css";
@@ -54,8 +56,11 @@ const sections: Record<WorkforceMode, {
 }> = {
   "workforce-intelligence": {
     label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
-    outline: [["executive", "Recruitment overview"], ["workforce-trend", "Workforce trend"], ["vacancy-ageing", "Vacancy ageing"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["attraction", "Recruitment channels"], ["equality", "Inclusive recruitment"], ["outcomes", "Workforce outcomes"], ["insight-pilot", "Insight Pilot"]],
-    planned: "Further cohort drill-through, equality metrics and forecasting.",
+    outline: [["executive", "Recruitment overview"], ["workforce-trend", "Workforce trend"], ["forecast", "Forecasting"],
+      ["scenarios", "What-if scenarios"], ["vacancy-ageing", "Vacancy ageing"], ["vacancies", "Vacancy lifecycle"],
+      ["funnel", "Candidate funnel"], ["attraction", "Recruitment channels"], ["equality", "Inclusive recruitment"],
+      ["outcomes", "Workforce outcomes"], ["insight-pilot", "Insight Pilot"]],
+    planned: "",
   },
   "workforce-management": {
     label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",
@@ -166,6 +171,9 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   const reportAccessError = useCallback((failure: WorkforceApiError) => {
     setRead((current) => current?.key.startsWith(`${viewKey}:`) ? { key: readKey, error: failure } : current);
   }, [readKey, viewKey]);
+  const planningAccessError = useCallback((failure: WorkforceApiError) => {
+    if (failure.status === 401 || failure.status === 403) reportAccessError(failure);
+  }, [reportAccessError]);
   const interviewControls = workspace ? <InterviewGuide guide={guide} onStart={startGuide}
     onStep={(name, index) => moveTo(guideHref(name, index))}
     onExit={() => moveTo(workforceModeHref(mode))} /> : null;
@@ -253,6 +261,12 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             </div> : null}
             {workspace?.kind === "workforce-intelligence" ? <ExecutiveDashboard
               dashboard={workspace.dashboard} filters={filters} onFilters={setFilters}
+              planning={<div className={styles.stack} key={readKey}>
+                <ForecastPanel dataset={workspace.dataset} cutoff={workspace.dashboard.executive.executive.current_window.end}
+                  onError={planningAccessError} />
+                <ScenarioPanel dataset={workspace.dataset} cutoff={workspace.dashboard.executive.executive.current_window.end}
+                  onError={planningAccessError} />
+              </div>}
               pilot={<InsightPilot key={readKey} dataset={workspace.dataset}
                 window={workspace.dashboard.executive.executive.current_window} onAccessError={reportAccessError} />} /> : null}
             {workspace?.kind === "workforce-management" ? <WorkforceManagement directory={workspace.directory}

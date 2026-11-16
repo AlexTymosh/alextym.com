@@ -125,6 +125,39 @@ def _observed_conversion(advanced: int, eligible: int, observed_before_cutoff: i
     return _rate(advanced, eligible)
 
 
+def accepted_offer_durations(
+    connection: sqlite3.Connection, window: ReportingWindow
+) -> sqlite3.Cursor:
+    return connection.execute(
+        """
+            SELECT offer.resolved_on,
+                   CAST(julianday(offer.resolved_on) - julianday(vacancy.approved_on) AS INTEGER)
+            FROM silver_offers AS offer JOIN bronze_vacancies AS vacancy ON vacancy.id = offer.vacancy_id
+            WHERE offer.outcome = 'accepted' AND offer.resolved_on BETWEEN ? AND ?
+        """,
+        (window.start.isoformat(), window.end.isoformat()),
+    )
+
+
+def mature_starter_outcomes(
+    connection: sqlite3.Connection, window: ReportingWindow
+) -> sqlite3.Cursor:
+    return connection.execute(
+        """
+        WITH starters AS MATERIALIZED (
+            SELECT employee_id, started_on, date(started_on, '+365 days') AS followup_end
+            FROM fact_new_starter
+            WHERE started_on BETWEEN :start AND date(:cutoff, '-365 days')
+        )
+        SELECT followup_end, CASE WHEN leaver.leaving_date > starter.started_on
+                               AND leaver.leaving_date <= followup_end THEN 1 ELSE 0 END
+        FROM starters starter
+        LEFT JOIN fact_leaver leaver ON leaver.employee_id = starter.employee_id
+        """,
+        {"start": window.start.isoformat(), "cutoff": window.end.isoformat()},
+    )
+
+
 def _executive(connection: sqlite3.Connection, window: ReportingWindow) -> dict[str, Observation]:
     start, cutoff = window.start.isoformat(), window.end.isoformat()
     budget_milli, substantive_milli = connection.execute(
@@ -144,17 +177,6 @@ def _executive(connection: sqlite3.Connection, window: ReportingWindow) -> dict[
     starters = connection.execute(
         "SELECT COUNT(*) FROM silver_starters WHERE started_on BETWEEN ? AND ?", (start, cutoff)
     ).fetchone()[0]
-    durations = [
-        row[0]
-        for row in connection.execute(
-            """
-        SELECT CAST(julianday(offer.resolved_on) - julianday(vacancy.approved_on) AS INTEGER)
-        FROM silver_offers AS offer JOIN bronze_vacancies AS vacancy ON vacancy.id = offer.vacancy_id
-        WHERE offer.outcome = 'accepted' AND offer.resolved_on BETWEEN ? AND ?
-        """,
-            (start, cutoff),
-        )
-    ]
     offers, accepted = connection.execute(
         """
         SELECT COUNT(*), COUNT(CASE WHEN outcome = 'accepted' AND resolved_on <= :cutoff THEN 1 END)
@@ -173,7 +195,9 @@ def _executive(connection: sqlite3.Connection, window: ReportingWindow) -> dict[
         "substantive_wte": Observation(substantive, substantive),
         "workforce_gap_wte": Observation(gap, gap) if gap is not None else missing_budget,
         "new_starters": Observation(starters, starters),
-        "median_time_to_hire": _median(durations),
+        "median_time_to_hire": _median(
+            [days for _, days in accepted_offer_durations(connection, window)]
+        ),
         "offer_acceptance_rate": _rate(accepted, offers),
     }
     metrics.update(_outcome_metrics(connection, window))
@@ -206,20 +230,6 @@ def _outcome_metrics(
         FROM fact_new_starter starter
         JOIN fact_application app ON app.id = starter.application_id
         WHERE starter.started_on BETWEEN :start AND :cutoff
-        """,
-        {"start": start, "cutoff": cutoff},
-    ).fetchone()
-    mature, left_early = connection.execute(
-        """
-        SELECT COUNT(*), COUNT(CASE WHEN leaver.leaving_date IS NOT NULL
-                      AND leaver.leaving_date > starter.started_on
-                      AND leaver.leaving_date <= date(starter.started_on, '+365 days')
-                      THEN 1 END)
-        FROM fact_new_starter starter
-        LEFT JOIN fact_leaver leaver ON leaver.employee_id = starter.employee_id
-        WHERE starter.started_on >= :start
-          AND starter.started_on <= :cutoff
-          AND date(starter.started_on, '+365 days') <= :cutoff
         """,
         {"start": start, "cutoff": cutoff},
     ).fetchone()
@@ -272,9 +282,10 @@ def _outcome_metrics(
         """,
         (start, cutoff),
     ).fetchone()
+    early_outcomes = [left for _, left in mature_starter_outcomes(connection, window)]
     return {
         "offer_to_start_conversion": _rate(started, accepted),
-        "early_attrition_12m": _rate(left_early, mature),
+        "early_attrition_12m": _rate(sum(early_outcomes), len(early_outcomes)),
         "internal_appointment_rate": _rate(internal, hires),
         "retention_rate": _rate(remaining, opening),
         "new_leavers": Observation(leavers, leavers),
