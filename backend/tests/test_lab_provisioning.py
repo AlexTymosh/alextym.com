@@ -13,7 +13,7 @@ from app.security.lab_provisioning import (
     provision_initial_identity,
     validate_initial_password,
 )
-from scripts.provision_lab_identity import main
+from scripts.provision_lab_identity import build_parser, main
 
 
 class FakeAuth:
@@ -62,7 +62,7 @@ def provision(auth=None, store=None, **kwargs):
         actor_uid="pinned-owner-uid",
         email=" User@Example.test ",
         password="secure-secret-password",
-        days=90,
+        days=30,
         now_ms=1_800_000_000_000,
         **kwargs,
     )
@@ -72,7 +72,7 @@ def provision(auth=None, store=None, **kwargs):
 def test_new_identity_starts_disabled_until_durable_admission_is_activated() -> None:
     result, auth, store = provision()
     assert result.uid == "new-uid"
-    assert result.expires_at_ms == 1_800_000_000_000 + 90 * MILLIS_PER_DAY
+    assert result.expires_at_ms == 1_800_000_000_000 + 30 * MILLIS_PER_DAY
     assert [call[0] for call in auth.calls] == ["create", "update"]
     assert [call[0] for call in store.calls] == ["create_invited", "activate"]
     identity = store.calls[0][2]
@@ -119,9 +119,9 @@ def test_existing_firebase_account_is_never_adopted() -> None:
     assert not store.calls
 
 
-@pytest.mark.parametrize("days", [-1, 0, 91, 100, 2.5, True])
-def test_initial_validity_must_be_integer_from_one_to_ninety(days) -> None:
-    with pytest.raises(ValueError, match="1–90"):
+@pytest.mark.parametrize("days", [-1, 0, 31, 90, 2.5, True])
+def test_initial_validity_must_be_integer_from_one_to_thirty(days) -> None:
+    with pytest.raises(ValueError, match="1–30"):
         validate_initial_password("secure-secret-password", days)
 
 
@@ -142,7 +142,9 @@ def test_email_is_normalized_and_invalid_values_rejected() -> None:
 
 
 def test_cli_dry_run_makes_no_remote_calls(capsys) -> None:
-    assert main(["--email", "user@example.test", "--project-id", "dev-project"]) == 0
+    arguments = ["--email", "user@example.test", "--project-id", "dev-project"]
+    assert build_parser().parse_args(arguments).days == 30
+    assert main(arguments) == 0
     assert "DRY RUN" in capsys.readouterr().out
 
 

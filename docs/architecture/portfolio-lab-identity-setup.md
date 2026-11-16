@@ -122,7 +122,7 @@ cross-origin smoke. Keep the Lab feature flag off in production.
 This is **not** an admission/RBAC release. Before PR 2 is ready for merge, implement and test the remaining identity requirements:
 
 - Secure invitation and identity-claim process for users other than Owner, not simply trusting a matching email.
-- Initial password validity from 1 to 90 days, with server enforcement that cannot be bypassed by immediately exchanging a password-derived ID token for a long-lived session. The credential type and password age must be verified against trusted metadata; no native Firebase expiry is assumed.
+- Initial password validity from 1 to 30 days for new credentials. Both servers check the credential type and the stored expiry, including when a password-derived ID token is exchanged for a longer session.
 - Password-setup links and recovery with non-Owner users; no separate email-verification step, but proof of mailbox ownership through setup link where needed.
 - Real-provider tests for Microsoft, Google, GitHub, linking accounts with different emails, existing-credential collisions and corporate tenant restrictions.
 - Session revocation, token expiry, CSRF/Origin checks, backend direct-origin verification, and sign-out behavior.
@@ -182,7 +182,7 @@ least-privilege IAM.
 Development-only command: [Owner provisioning runbook](portfolio-lab-provisioning.md).
 Creates a **new** disabled Firebase UID, commits an `invited` identity and an audit
 record, enables Firebase Auth, then atomically activates the identity with a
-second audit event. Initial credential expiry is 1–90 days and admission remains
+second audit event. Initial credential expiry is 1–30 days and admission remains
 separate from project grants. Provisioning runs from the Owner CLI and records
 an audit event. Activation rechecks the invited state in a Firestore transaction.
 
@@ -258,8 +258,9 @@ Remove-Item Env:\PORTFOLIO_LAB_PROVISIONING_ENABLED
 
 For **existing** accounts, omit `--create-user`. This is a privileged command,
 not an HTTP endpoint. It prints the one-time link once; no email is sent.
-Change/reset code lifetime is controlled by Firebase, **not** by the 90-day
-initial-password rule. To recover an expired/consumed link, issue a new one.
+Firebase controls the lifetime of setup and reset codes. The 30-day policy
+applies to issuance of initial passwords and to application invitations.
+To recover an expired or consumed Firebase link, issue a new one.
 
 ### Partial-failure and security limitations
 

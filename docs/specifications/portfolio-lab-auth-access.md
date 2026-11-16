@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Document ID | `PL-IDENTITY-ACCESS-TRS-001` |
-| Version | `1.0` |
-| Date | 2026-11-12 |
-| Status | **Requirements agreed; architecture proposed for implementation; not yet implemented** |
+| Version | `1.1` |
+| Date | 2026-11-16 |
+| Status | **Identity foundation merged. Provider verification, invitations and rollout are pending.** |
 | Product | Portfolio Lab, integrated into the existing portfolio website |
 | Intended audience | Owner, maintainers, software engineers, QA, security reviewers, AI coding agents |
 | Primary stack | Next.js (Vercel), FastAPI (Render), Firebase Authentication, Cloud Firestore, Resend |
@@ -23,7 +23,7 @@
 
 Portfolio Lab shall give the Owner a private, administratively controlled way to demonstrate a growing collection of portfolio applications to selected visitors. A visitor may be granted different access levels for different projects, without receiving access to unrelated projects. The public portfolio, résumé, contact features, and public RAG/chat behavior shall continue to work without authentication unless individually designated otherwise.
 
-The agreed authentication methods are **Google, Microsoft, GitHub, and email/password**, implemented using **Firebase Authentication**. The Owner shall be able to create accounts with an administrator-selected initial password, or send/copy a link allowing the user to set their own password. Initial passwords need not be one-time; their application-enforced validity shall be configurable up to 90 days. Email verification shall **not** be a separate mandatory step. Users may securely link external accounts even when the email addresses differ.
+Firebase Authentication shall support **Google, Microsoft, GitHub, email/password and passwordless email-link sign-in**. The Owner can create an account with an initial password or issue a link for the recipient to choose a password. The Owner can explicitly email either a temporary password or a password-setup link. The application allows new initial passwords and invitations to remain valid for up to 30 days. Users may securely link external accounts with different email addresses after proving control of each account.
 
 Authorization shall be **per project**, with `No Access`, `View`, `Test`, and `Admin`, and a separate global `Owner` privilege. Authorized `Test` and `Admin` users shall be able to invoke real project functionality, including sending real emails within configurable quantity limits. `View` shall remain read-only. Grant changes and external-action policies shall be administered via the website, and access-notification emails shall be explicitly optional.
 
@@ -36,7 +36,7 @@ The target is a **modular monolith with project-owned business logic and data**,
 3. An Owner can grant a project-specific role, change it, revoke it, and optionally notify the user.
 4. A newly registered project is inaccessible to existing users until an explicit grant exists.
 5. `View` never changes state or triggers real external actions; `Test` and `Admin` can do so within the project policy and quotas.
-6. A user invited months earlier can still authenticate and access an unexpired grant even if Render was sleeping or demo SQLite was reset.
+6. A user with an active account and grant can return months later even if Render was sleeping or demo SQLite was reset.
 7. The Fleet application's established routes, internal business behavior, and public-site functionality survive migration.
 8. No unauthenticated direct request to Render bypasses the access policy.
 
@@ -75,7 +75,7 @@ Repository source paths reviewed on the default branch:
 | ID | Area | Agreed decision |
 |---|---|---|
 | D-01 | Authentication provider | Firebase Authentication |
-| D-02 | Login methods | Google, Microsoft, GitHub, email/password |
+| D-02 | Login methods | Google, Microsoft, GitHub, email/password and passwordless email-link sign-in |
 | D-03 | Access model | Pre-authorized users only; Owner controls admission |
 | D-04 | Project permissions | Independent `No Access`, `View`, `Test`, `Admin` per project |
 | D-05 | Global authority | `Owner` exclusively manages identities, grants and security policies |
@@ -84,11 +84,11 @@ Repository source paths reviewed on the default branch:
 | D-08 | Fleet storage | Remain on SQLite; no PostgreSQL migration in this initiative |
 | D-09 | Demo persistence | Test changes may reset on sleep/restart/redeploy |
 | D-10 | Control-plane persistence | Firestore recommended for durable users/grants/config/audit/quota ledger |
-| D-11 | Initial password | Owner-selected initial password supported; not single-use; validity up to 90 days |
+| D-11 | Initial password | Owner-selected or generated initial password, reusable for up to 30 days |
 | D-12 | Password setup | Alternative invitation link for user-selected password supported |
 | D-13 | Email verification | No separate mandatory email-verification step |
 | D-14 | Multiple identities | One person may link accounts with different emails, after secure proof of account control |
-| D-15 | Email notifications | Optional; never send automatically when Owner merely saves an invitation |
+| D-15 | Email notifications | Owner explicitly chooses whether to send a temporary password or a password-setup link |
 | D-16 | External actions | `Test`/`Admin` may execute real project actions, including emails, within quotas |
 | D-17 | Read-only role | `View` cannot write data or perform external actions |
 | D-18 | Email policy | Quantity is the intended user-facing restriction; no project-specific recipient-domain allowlist by default in target UX |
@@ -96,6 +96,7 @@ Repository source paths reviewed on the default branch:
 | D-20 | RAG | No separate per-user RAG knowledge-data authorization scope is required |
 | D-21 | Future projects | New projects are registered separately and begin with zero non-Owner grants |
 | D-22 | Cold start | Authentication and Lab catalogue should not require waking Render |
+| D-23 | Invitation expiry | Portfolio Lab invitations can stay open for up to 30 days. Firebase controls its action-code lifetime. |
 
 **Proposed technical refinements, not extra product commitments:** default five-day website sessions; Firestore as the only initial control-plane database; 15 recipients/day as the Fleet starting quota (subject to Owner configuration); one Firebase project per deployment environment where feasible; a dedicated Next.js session-issuance endpoint; a server-side Firebase validation dependency on every protected FastAPI route.
 
@@ -103,7 +104,7 @@ Repository source paths reviewed on the default branch:
 
 ### 4.1 In scope
 
-- Firebase project and OAuth configuration for the four login methods.
+- Firebase project and provider configuration for all five login methods.
 - Provisioning, access grants, credential lifecycle, password setup and reset, account linking.
 - Portfolio Lab login/logout, eligible-project catalogue and account/security screens.
 - Owner-only administrative access management, invitation creation and optional notification.
@@ -299,9 +300,9 @@ Auth failures should show clear, non-enumerating responses; never leak whether a
 
 1. Owner enters an email and assigns project grants.
 2. Owner chooses an initial password or uses a securely generated one.
-3. Owner specifies an initial-password validity period **from 1 to 90 days** (default proposal: 90 days).
+3. The Owner specifies an initial-password validity period of **1–30 days**. The default is 30 days.
 4. Server provisions/updates the Firebase account and persists account metadata and grants.
-5. Owner optionally sends a notification or copies a one-time display of onboarding details for manual delivery.
+5. The Owner may explicitly send the email and temporary password to the intended recipient or copy the onboarding details for private delivery.
 6. The password may be used repeatedly during its permitted period; no single-use requirement.
 
 **Mode B — recipient chooses password**
@@ -312,11 +313,19 @@ Auth failures should show clear, non-enumerating responses; never leak whether a
 4. Recipient follows Firebase's action-code flow and selects a password.
 5. No further email-verification gate is added by Portfolio Lab.
 
-**Constraint:** Firebase's password-reset action-code lifetime is a separate provider-managed limit. The application must not claim that a setup link remains usable for 90 days. Generate it close to the intended delivery time, handle expiration gracefully, and allow Owner-controlled regeneration.
+**Invitation and action-code expiry.** Portfolio Lab invitations have a maximum validity of 30 days. Firebase determines the lifetime of each password-setup or sign-in code. Generate the Firebase link near delivery and handle expiry with controlled reissue.
+
+**Passwordless sign-in**
+
+Send a Firebase sign-in link to an eligible account and confirm the intended
+email during redemption. The server must establish that a link was redeemed
+before applying the passwordless policy. Firebase uses the same email provider
+ID for both password and email-link sign-in. Apply the initial-password expiry
+policy to sessions created using that password.
 
 ### 9.2 Enforcing expiration of an initial password
 
-Firebase does not natively offer the desired per-user 1–90-day *initial-password only* validity rule. **Implement an application-level credential policy** associated with the UID, including issuance time, configured expiry and whether the initial credential was replaced.
+The application stores initial-password validity of 1–30 days alongside the UID, issuance time and password replacement state.
 
 - When the user authenticates using `password` and is still relying on an expired initial credential, reject issuance/use of protected application sessions and guide the user through reset/change.
 - Authentication through an independently linked Google/Microsoft/GitHub credential remains allowed if the grant is active.
@@ -607,7 +616,7 @@ Render Free web services may spin down after approximately 15 minutes without in
 
 ### 17.3 Credentials and invitation longevity
 
-A recipient invited today may visit months later. Grants default to no expiration, unless Owner chooses one. An **initial** password may expire at 90 days; this is independent of the account/grant's lifetime. After that, the user can reset/set a password or use a previously linked provider. Short-lived password-setup links can be regenerated. Sessions may expire after several days; routine re-login remains possible.
+A user with an active grant can return months later. Grants have their own expiry, which the Owner can configure. An initial password or pending invitation lasts at most 30 days. The user can set a new password or use a previously linked provider as applicable. The Owner can reissue an expired invitation or setup link. The user can sign in again after a session expires.
 
 ## 18. Testing and Acceptance Criteria
 
@@ -615,16 +624,18 @@ All functional changes should have automated tests before release, with Firebase
 
 ### 18.1 Identity and onboarding
 
-- [ ] Owner can provision an email/password account and configure a 1–90-day initial-credential policy.
+- [ ] Owner can provision an email/password account and configure a 1–30-day initial-credential policy.
 - [ ] Initial password works more than once before its expiry.
 - [ ] An expired initial password cannot establish/use a protected Portfolio Lab session.
-- [ ] A replaced initial password is not incorrectly expired after 90 days.
+- [ ] A user-selected replacement password works after the original credential expiry date.
 - [ ] OAuth access via Google works; linked accounts preserve UID and grants.
 - [ ] OAuth access via Microsoft works with supported test account; enterprise restrictions are handled.
 - [ ] OAuth access via GitHub works; untrusted provider emails cannot auto-claim invitations.
 - [ ] An additional OAuth account with a different email is safely linked to the existing UID.
 - [ ] Account collision or linking to another UID does not transfer rights.
 - [ ] Owner can generate setup link, copy it, or explicitly send it.
+- [ ] Owner can explicitly email the temporary password to the intended recipient.
+- [ ] Passwordless email-link sign-in works for an eligible account and applies the invitation and grant checks.
 - [ ] Expired/used setup links yield recovery instructions, not accidental grants.
 - [ ] Owner can create an invitation without any email being sent.
 - [ ] Email verification is not an extra mandatory gate; untrusted email assertions do not bypass admission.
@@ -674,7 +685,7 @@ All functional changes should have automated tests before release, with Firebase
 - [ ] `/login` and `/lab` access control work while Render is asleep.
 - [ ] Cold-start UI retries idempotent reads and does not replay unsafe actions.
 - [ ] Returning invited user can reauthenticate months later if grant remains valid.
-- [ ] Password setup link expiry is distinct from 90-day initial-password expiry.
+- [ ] Application invitations expire within 30 days. Firebase link expiry and initial-password expiry are enforced for their respective credentials.
 - [ ] `task ci` and all relevant GitHub CI jobs succeed.
 - [ ] Production smoke tests use disposable test accounts and controlled email recipients.
 - [ ] Logs contain no plaintext passwords, reset URLs, access tokens or provider secrets.
@@ -771,7 +782,7 @@ Product requirements are sufficiently agreed to begin engineering. These are **i
 
 This initiative is complete only when:
 
-- All four sign-in methods have working, tested user flows (with safe guided linking where needed).
+- All five sign-in methods have working, tested user flows, with guided linking where needed.
 - Owner can manage users, select any combination of registered projects, set project roles, revoke access and configure live-action quotas.
 - Both Owner-defined initial password and self-set-password-link onboarding work, with optional notification and documented expiry.
 - `View` is read-only; `Test` and `Admin` can execute normal project actions and real email within project policy and quantity limits.

@@ -1,8 +1,9 @@
 # ADR-0001: Portfolio Lab identity and access boundaries
 
-- **Status:** Accepted design direction; not yet implemented
+- **Status:** Accepted. Identity foundation merged and rollout pending.
 - **Date:** 2026-11-12
-- **Specification:** [Portfolio Lab TRS v1.0](../specifications/portfolio-lab-auth-access.md)
+- **Updated:** 2026-11-16
+- **Specification:** [Portfolio Lab TRS v1.1](../specifications/portfolio-lab-auth-access.md)
 
 ## Context
 
@@ -12,11 +13,11 @@ A frontend route guard cannot secure `/api/*`: Next.js rewrites these paths to R
 
 ## Decision
 
-1. **Identity:** Use Firebase Authentication (Google, Microsoft, GitHub, and email/password). An authenticated identity receives **no project access by default**.
+1. **Identity.** Firebase Authentication supports Google, Microsoft, GitHub, email/password and passwordless email-link sign-in. Project access requires a grant.
 2. **Durable control plane:** Firestore stores access grants, identity associations, policies, audit events, and durable outbound-email quota state. The Git-controlled `portfolio/catalog/registry.json` and each `project.json` remain the canonical catalogue, not Firestore.
 3. **Authorization:** Project-scoped `No Access`, `View`, `Test`, and `Admin`; global `Owner` authority pinned to a trusted Firebase UID. Project `Admin` cannot manage central access grants or security policy.
 4. **Capabilities:** `View` is read-only. `Test` and `Admin` may change demo data and perform real external actions, including email delivery, within Owner-managed quotas and abuse protections. Only `Admin` and `Owner` may reset demo data.
-5. **Invitations:** Owner provisions accounts and grants, may set an initial password valid for up to 90 days or issue a link for self-setting a password, and explicitly chooses whether to send an invitation. No separate mandatory email-verification step, but untrusted OAuth email claims are insufficient to claim an invitation.
+5. **Invitations.** The Owner provisions accounts and grants and may explicitly send a temporary password or a password-setup link. New initial passwords and application invitations have a maximum validity of 30 days. Firebase manages the lifetime of each action code. Admission requires proof of control of the invited account.
 6. **Identity linking:** Users may link providers with different emails only after proof of control of the trusted existing account and the additional provider; never auto-merge Firebase UIDs based on email.
 7. **Project ownership:** Shared identity and policy are thin platform services. Each project owns its frontend, API, business logic, data store, seed/reset, and migrations. Cross-project imports and mutations are forbidden. Users testing the same project share its demo environment.
 8. **Persistence:** Fleet retains SQLite. Loss of demo mutations after Render restart/redeploy is acceptable. Identity, grants, quotas and security policy must not rely on Fleet SQLite.
