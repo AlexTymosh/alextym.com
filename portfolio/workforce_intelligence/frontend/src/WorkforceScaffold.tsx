@@ -77,8 +77,10 @@ const sections: Record<WorkforceMode, {
   },
   "data-architecture": {
     label: "Data Architecture", description: "Data ownership, quality and lineage.",
-    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["sources", "Sources and assumptions"], ["catalogue", "Metric catalogue"]],
-    planned: "Interactive model diagrams, source registry and BPMN.",
+    outline: [["data-lineage", "Overview and lineage"], ["data-layers", "Data layers"], ["data-model", "Data model"],
+      ["quality", "Data quality"], ["sources", "Sources and assumptions"], ["catalogue", "Metric catalogue"],
+      ["voice-process", "People Voice BPMN"]],
+    planned: "",
   },
 };
 
@@ -275,7 +277,8 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
               initialEmployee={guide?.step.edit ? "emp-001" : undefined}
               effectiveDate={guide?.step.edit ? "2026-10-20" : undefined} onError={reportAccessError} /> : null}
             {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} onAccessError={reportAccessError} /> : null}
-            {workspace?.kind === "data-architecture" ? <DataArchitecture quality={workspace.quality} metrics={workspace.metrics} /> : null}
+            {workspace?.kind === "data-architecture" ?
+              <DataArchitecture architecture={workspace.architecture} metrics={workspace.metrics} /> : null}
             {workspace && selected.planned ? <details className={styles.planned}>
               <summary>Planned capabilities</summary><p>{selected.planned}</p>
             </details> : null}

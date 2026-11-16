@@ -25,6 +25,7 @@ Protected responses use `Cache-Control: no-store`.
 | `GET /analytics/executive` | Executive metrics, comparator, calculation components and data-quality checks. |
 | `GET /analytics/candidate-funnel` | Sequential application cohort, stage counts, conversions and median step durations. Optional `vacancy_id`. |
 | `GET /metrics`, `GET /data-quality` | Canonical metric definitions and diagnostics for the implemented projections. |
+| `GET /architecture/layers` | Safe Operational, Bronze, Silver and Gold examples with same-snapshot quality checks. Takes optional `as_of_date`. |
 | `GET /surveys/reports/rota-pressure` | The controlled People Voice report with published evidence, draft status and its linked management action. |
 | `GET /surveys`, `POST /surveys` | Campaigns, question bank, scoped audiences and campaign creation. |
 | `POST /surveys/{id}/generate` | Confirmed synthetic response generation for a campaign using a specified scenario and seed. |

@@ -21,6 +21,7 @@ from workforce_intelligence.analytics import (
     quality_checks,
     reporting_window,
 )
+from workforce_intelligence.architecture import ArchitectureResponse, layer_examples
 from workforce_intelligence.contracts import change_fte, employees_at
 from workforce_intelligence.database import DatabaseUnavailable
 from workforce_intelligence.dataset import DatasetState, current_dataset, reset_dataset
@@ -482,6 +483,15 @@ def data_quality(database: Db, as_of_date: date | None = None) -> QualityRespons
         state = current_dataset(connection)
         cutoff = reporting_window(state, as_of_date, None).end.isoformat()
         return _quality(connection, state, cutoff)
+
+
+@router.get("/architecture/layers")
+def architecture_layers(database: Db, as_of_date: date | None = None) -> ArchitectureResponse:
+    with database.transaction() as connection:
+        state = current_dataset(connection)
+        cutoff = reporting_window(state, as_of_date, None).end
+        quality = _quality(connection, state, cutoff.isoformat())
+        return ArchitectureResponse(**quality.model_dump(), layers=layer_examples(connection, cutoff))
 
 
 @router.post("/demo/reset")

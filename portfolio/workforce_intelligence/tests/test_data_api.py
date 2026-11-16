@@ -91,6 +91,27 @@ def test_planning_api_pins_revision_and_clears_saved_runs_on_reset(demo):
         assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 0
 
 
+def test_architecture_examples_trace_the_same_contract_and_reconcile_to_gold(demo):
+    client, _ = demo
+    cutoff = "2026-10-15"
+    response = client.get("architecture/layers", params={"as_of_date": cutoff})
+    assert response.status_code == 200
+    report = response.json()
+    assert report["as_of_date"] == cutoff
+    assert report["quality_status"] == "passed"
+    sources = {layer["code"]: layer["values"] for layer in report["layers"]}
+    assert sources["bronze"]["contract_id"] == sources["operational"]["contract_id"]
+    assert sources["silver"]["employee_id"] == sources["operational"]["employee_id"]
+    assert (
+        sources["silver"]["contracted_fte_milli"] == sources["operational"]["contracted_fte_milli"]
+    )
+    assert sources["bronze"]["source_revision"] == report["dataset"]["revision"]
+    gold = executive(client, as_of_date=cutoff)
+    for code in ("budgeted_wte", "substantive_wte", "workforce_gap_wte"):
+        assert sources["gold"][code] == gold[code]["value"]
+    assert client.get("architecture/layers", params={"as_of_date": "2050-01-01"}).status_code == 422
+
+
 def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     client, _ = demo
     fields = dict(employee_id="demo-ops", contracted_fte="0.7")
