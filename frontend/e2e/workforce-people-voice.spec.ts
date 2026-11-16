@@ -30,9 +30,13 @@ test("the password demo takes a synthetic survey through manual publication and 
   await monitor.getByLabel("Ambiguous text %").fill("0");
   await monitor.getByRole("button", { name: "Generate significant concern" }).click();
   await expect(monitor.getByRole("status")).toHaveText("Synthetic responses generated.");
-  await expect(page.locator("#voice-analytics").getByText(/Survey weights correct group representation/)).toBeVisible();
+  const analytics = page.locator("#voice-analytics");
+  await expect(analytics).toHaveCount(1);
+  await expect(analytics.getByRole("heading", { name: "Survey analytics" })).toBeVisible();
+  await expect(analytics.getByText(/Survey weights correct group representation/)).toBeVisible();
 
   const review = page.locator("#voice-review");
+  await expect(review).toHaveCount(1);
   await review.getByRole("button", { name: "Use demonstration analysis" }).click();
   await expect(review.getByRole("heading", { name: "Demonstration fallback result" })).toBeVisible();
   const finding = review.getByRole("article").filter({ has: page.getByText(/Validated evidence \(/) }).first();

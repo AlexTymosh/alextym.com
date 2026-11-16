@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { datasetVersion, WorkforceApiError, workforceWrite } from "./data-api";
 import { displayCode, displayWindow } from "./format";
 import { VoiceAnalyticsPanel } from "./VoiceAnalyticsPanel";
@@ -168,10 +168,10 @@ export function VoiceWorkspace({ onAccessError, initialCampaign = "" }: {
         <button className={styles.secondaryButton} disabled={busy} value="exploratory" type="submit">Generate exploratory sample</button>
       </form> : null}
     </section>
-    {campaign?.generated_at ? <VoiceAnalyticsPanel key={campaign.survey_id}
-      campaign={campaign} source={data} onAccessError={onAccessError} /> : null}
-    {campaign?.generated_at ? <VoiceReviewPanel key={campaign.survey_id}
-      campaign={campaign} themes={data.themes} onAccessError={onAccessError} /> : null}
+    {campaign?.generated_at ? <Fragment key={campaign.survey_id}>
+      <VoiceAnalyticsPanel campaign={campaign} source={data} onAccessError={onAccessError} />
+      <VoiceReviewPanel campaign={campaign} themes={data.themes} onAccessError={onAccessError} />
+    </Fragment> : null}
   </>;
 }
 

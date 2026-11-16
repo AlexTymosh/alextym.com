@@ -348,7 +348,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | MERGED | [#248](https://github.com/AlexTymosh/alextym.com/pull/248) | `c47c7d5aa216ce64387898bfe77af233f49fa6dc` |
 | PR 5 | 13–15 | Full workforce analytics and assurance | MERGED | [#249](https://github.com/AlexTymosh/alextym.com/pull/249) | `02bb1bea1e2a403813cb219f7e76379db58db4e2` |
 | PR 6 | 16–18 | Surveys, weighting, external AI and review | MERGED | [#250](https://github.com/AlexTymosh/alextym.com/pull/250) | `68fa6ee9959a529a29d239da1feece1f221f2c29` |
-| PR 7 | 19–21 | Forecasts, diagrams, production hardening | IN PROGRESS — review | [Release branch](https://github.com/AlexTymosh/alextym.com/compare/main...codex/workforce-intelligence-release) | — |
+| PR 7 | 19–21 | Forecasts, diagrams, production hardening | IN PROGRESS — review | [#253](https://github.com/AlexTymosh/alextym.com/pull/253) | — |
 
 | # | State | Commit SHA | Verification notes |
 |---:|---|---|---|
@@ -372,14 +372,14 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 18 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Validated evidence and manual decisions, publication and action tracking. |
 | 19 | DONE | `f436cdeeb447a0d4c51caf107054b971f746a87b` | Tested monthly cutoff, model holdout, reproducible runs, insufficient history, stale revisions and what-if flows. |
 | 20 | DONE | `516a5d96c7c47bd8a6c6e1bcbe1c52dc701dccd5` | Same-snapshot layer examples and Gold reconciliation, model relationships and interactive process. |
-| 21 | IN PROGRESS — review | Release branch head | Three interview guides, prepared candidate report, safe run logs and updated runbook. See verification below. |
+| 21 | DONE | `2162f2cdf216ddb45a11f00f5afa6ec599e57b6a` plus review fix | Three interview guides, prepared candidate report, safe run logs, updated runbook and production-build campaign-switch regression test. |
 
 ### Latest checkpoint (fill after every coding session)
 
 - **Current branch** `codex/workforce-intelligence-release`.
 - **Base `main`** `68fa6ee9959a529a29d239da1feece1f221f2c29`, merged PR #250.
 - **Interview guide** Use the short fixture for the 90-second run and the full controlled 36-month fixture to show the plotted forecast. [Interview runbook](docs/interview-runbook.md)
-- **Local verification** 994 tests passed with four opt-in skips. All 15 password-demo Chromium checks passed, including Excel preview and commit, manual publication, a forecast and what-if comparison on the full fixture, and the mobile BPMN walkthrough. The Next.js production build, TypeScript, Ruff and the scoped Workforce lint passed.
+- **Local verification** 994 tests passed with four opt-in skips. All 15 password-demo Chromium checks passed on the Next.js production build with a local HTTPS backend. They cover Excel, campaign switching, manual publication, full-fixture planning and the mobile BPMN walkthrough. Another 34 desktop/mobile checks covered a disabled Workforce flag, public catalogue and route guards. TypeScript, Ruff and scoped Workforce lint passed.
 - **Local latency sample** During the browser run, executive requests took 20–166 ms, workforce trend took 17–151 ms, forecast runs took 32–48 ms and the full controlled fixture loaded in 701 ms at FastAPI. These measurements cover local backend time.
 - **Current production smoke, 16 November** The public catalogue included both projects, the Workforce gate and public site routes responded, and Render liveness returned 200. Workforce data returned 401 without a session at both the site and Render. The same-origin invalid password probe returned `401 Incorrect password`. This was a smoke check of the deployed baseline.
 - **Release gate** The owner merges after review. Verify the exact deployed revision with a valid demo password and measure the warm hosted paths. This branch uses the current signed password session. Firebase remains deferred.
