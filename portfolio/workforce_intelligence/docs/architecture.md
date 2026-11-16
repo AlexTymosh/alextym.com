@@ -109,3 +109,10 @@ Migration 10 adds `forecast_runs`, `forecast_results` and `fact_forecast`.
 A run is pinned to its input revision and stored idempotently without advancing
 the source revision. A reset removes those derived rows and starts a new
 generation. [Planning methods](planning.md)
+
+Migration 11 adds a candidate audience to the existing survey settings and
+seeds a candidate feedback report where the controlled cohort exists. It
+preserves saved campaigns and review history. Candidate surveys use one
+synthetic application as their eligible unit. Rating the interview requires a
+recorded interview. The report applies the existing suppression and review
+rules.

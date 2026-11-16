@@ -75,6 +75,11 @@ QUESTION_BANK = (
         "kind": "comment",
     },
     {
+        "code": "candidate",
+        "prompt": "What helped or made the application and interview process harder?",
+        "kind": "comment",
+    },
+    {
         "code": "support",
         "prompt": "I received the support I needed.",
         "kind": "rating",
@@ -92,7 +97,15 @@ SERIES = {
     "general": "Wellbeing and Communication",
     "onboarding": "New starter and onboarding experience",
     "development": "Career Development and Progression",
+    "candidate": "Candidate feedback",
 }
+
+CANDIDATE_RATINGS = (
+    ("satisfaction", "Overall satisfaction with the recruitment process"),
+    ("candidate-updates", "Quality of recruitment communication"),
+    ("role-clarity", "Clarity of the role description"),
+    ("interview-experience", "Rating of the interview experience, if attended"),
+)
 
 # Each tuple is a literal synthetic sentence and its known generator labels.
 _FEEDBACK = {
@@ -138,6 +151,20 @@ _FEEDBACK = {
             "Clearer criteria would help staff understand progression opportunities.",
         ),
     ),
+    "candidate": (
+        (
+            "candidate-communication",
+            "Complaint",
+            "Medium",
+            "After my interview I waited without an update about the next stage.",
+        ),
+        (
+            "candidate-communication",
+            "Suggestion",
+            "Medium",
+            "A timeline for feedback would have made it easier to plan.",
+        ),
+    ),
 }
 _SUPPORT = (
     (
@@ -170,6 +197,24 @@ _SAFETY = (
 
 
 def generated_feedback(random, series, mode, direction, possible_concern, ambiguous, severity):
+    if series == "candidate":
+        if ambiguous:
+            return "Some stages seemed clearer than others.", []
+        if direction == "positive":
+            choices = (
+                (
+                    "candidate-communication",
+                    "Positive feedback",
+                    "Low",
+                    "The recruitment team explained the application process clearly.",
+                ),
+            )
+        elif possible_concern or direction == "negative":
+            choices = _FEEDBACK[series]
+        else:
+            return "My application went as I had expected.", []
+        theme, classification, default_severity, excerpt = random.choice(choices)
+        return excerpt, [(theme, classification, severity or default_severity, excerpt)]
     if ambiguous:
         return "It depended on the shift and is difficult to describe in this survey.", []
     if direction == "positive":

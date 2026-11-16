@@ -142,8 +142,8 @@ function ScenarioComparison({ result }: { result: ScenarioRun }) {
   ];
 
   return <section aria-labelledby="scenario-comparison">
-    <h3 id="scenario-comparison" role="status">Scenario comparison</h3>
-    <p className={styles.caption}>
+    <h3 id="scenario-comparison">Scenario comparison</h3>
+    <p className={styles.caption} role="status">
       Opening position · {valueText(opening.vacancy_wte)} vacancy WTE · {valueText(opening.substantive_wte)} substantive WTE
       {" "}· {valueText(opening.budgeted_wte)} budget WTE
     </p>

@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PRs 1–5 merged. PR 6 adds People Voice and fixes interview access. Hosted acceptance is still to be verified on the merged release.
+**Document status:** PRs 1–6 merged. PR 7 implements the planning, architecture and interview release stage. The authenticated hosted walkthrough is a separate release check after the merge.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -302,7 +302,8 @@ The v1.2 file was saved in `docs/specifications/`, whereas its own header/Append
 
 ### PR 7 — Forecasting, architecture and full release hardening
 
-**Branch:** `feat/workforce-intelligence-release`  
+**Branch:** `codex/workforce-intelligence-release`
+
 **Goal:** finish forecasting/architecture and satisfy full acceptance, including production resilience.  
 **Spec:** §§14–16, 21, 24–30, Full PoC Phases 4–5.
 
@@ -327,7 +328,7 @@ The v1.2 file was saved in `docs/specifications/`, whereas its own header/Append
 `✅ test(workforce): verify full PoC security and release readiness`
 
 - Complete resilience/concurrency/error-path checks, accessibility and responsive passes, cold start, performance/indexing and production authorization tests.
-- Validate current registered project grants, negative direct Render routes, public site, Fleet, RAG, Telegram, host configs and all five GitHub CI jobs.
+- Validate the Workforce password session, negative direct Render routes, public site and Fleet transport. Run all five GitHub CI jobs for the existing host and project checks.
 - Finish README, deployment/runbook, current source register, canonical specification links, final test evidence and Full PoC checklist.
 - Rollout only after security and smoke gates pass; document precise working status and rollback/feature-off procedure.
 
@@ -346,8 +347,8 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR 3 | 07–09 | Executive UI, reviewed survey, Interview MVP | MERGED | [#247](https://github.com/AlexTymosh/alextym.com/pull/247) | `2555f2f25b690479eb2aad2df58d6b77f8e87293` |
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | MERGED | [#248](https://github.com/AlexTymosh/alextym.com/pull/248) | `c47c7d5aa216ce64387898bfe77af233f49fa6dc` |
 | PR 5 | 13–15 | Full workforce analytics and assurance | MERGED | [#249](https://github.com/AlexTymosh/alextym.com/pull/249) | `02bb1bea1e2a403813cb219f7e76379db58db4e2` |
-| PR 6 | 16–18 | Surveys, weighting, external AI and review | IN PROGRESS — review | [#250](https://github.com/AlexTymosh/alextym.com/pull/250) | — |
-| PR 7 | 19–21 | Forecasts, diagrams, production hardening | NOT STARTED | — | — |
+| PR 6 | 16–18 | Surveys, weighting, external AI and review | MERGED | [#250](https://github.com/AlexTymosh/alextym.com/pull/250) | `68fa6ee9959a529a29d239da1feece1f221f2c29` |
+| PR 7 | 19–21 | Forecasts, diagrams, production hardening | IN PROGRESS — review | [Release branch](https://github.com/AlexTymosh/alextym.com/compare/main...codex/workforce-intelligence-release) | — |
 
 | # | State | Commit SHA | Verification notes |
 |---:|---|---|---|
@@ -369,20 +370,19 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | 16 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Campaigns, question bank, audience snapshots and reproducible synthetic samples. |
 | 17 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Weighted/unweighted metrics, effective sample size, suppression, review priority and linked indicators. |
 | 18 | DONE | `8f38dae8a73098eef7f9ff60ce57f977e3edbf49` | Validated evidence and manual decisions, publication and action tracking. |
-| 19 | NOT STARTED | — | — |
-| 20 | NOT STARTED | — | — |
-| 21 | NOT STARTED | — | — |
+| 19 | DONE | `f436cdeeb447a0d4c51caf107054b971f746a87b` | Tested monthly cutoff, model holdout, reproducible runs, insufficient history, stale revisions and what-if flows. |
+| 20 | DONE | `516a5d96c7c47bd8a6c6e1bcbe1c52dc701dccd5` | Same-snapshot layer examples and Gold reconciliation, model relationships and interactive process. |
+| 21 | IN PROGRESS — review | Release branch head | Three interview guides, prepared candidate report, safe run logs and updated runbook. See verification below. |
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch:** `feat/workforce-intelligence-people-voice`
-- **Base `main` SHA:** `02bb1bea1e2a403813cb219f7e76379db58db4e2`, merged PR #249.
-- **Active scope:** PR 6 and interview launch fixes. Follow the [People Voice walkthrough](docs/people-voice.md).
-- **Review:** [PR #250](https://github.com/AlexTymosh/alextym.com/pull/250) · [GitHub checks](https://github.com/AlexTymosh/alextym.com/pull/250/checks).
-- **Launch fix:** `a0910a7073976755b1dec2fb6d292dacedcdbea3`. Locally verified the two catalogue links and a real password session with Firebase disabled.
-- **Hosted diagnosis:** A same-origin password probe to `alextym.com` returned `403 Origin not allowed` before checking the password. The direct Render session probe returned `200`. The branch separates Workforce origin checks from Portfolio Lab configuration.
-- **Local verification:** 19 targeted backend checks and 12 opt-in Chromium checks passed. Chromium used a disposable SQLite database and a local password, with Firebase and live AI disabled. TypeScript and Ruff passed.
-- **Next exact task:** Merge PR 6 after review; verify sign-in and the demo walkthrough on the deployed revision. Follow with PR 7 for forecasting, architecture/BPMN and release checks. Firebase is not a prerequisite for this interview.
+- **Current branch** `codex/workforce-intelligence-release`.
+- **Base `main`** `68fa6ee9959a529a29d239da1feece1f221f2c29`, merged PR #250.
+- **Interview guide** Use the short fixture for the 90-second run and the full controlled 36-month fixture to show the plotted forecast. [Interview runbook](docs/interview-runbook.md)
+- **Local verification** 994 tests passed with four opt-in skips. All 15 password-demo Chromium checks passed, including Excel preview and commit, manual publication, a forecast and what-if comparison on the full fixture, and the mobile BPMN walkthrough. The Next.js production build, TypeScript, Ruff and the scoped Workforce lint passed.
+- **Local latency sample** During the browser run, executive requests took 20–166 ms, workforce trend took 17–151 ms, forecast runs took 32–48 ms and the full controlled fixture loaded in 701 ms at FastAPI. These measurements cover local backend time.
+- **Current production smoke, 16 November** The public catalogue included both projects, the Workforce gate and public site routes responded, and Render liveness returned 200. Workforce data returned 401 without a session at both the site and Render. The same-origin invalid password probe returned `401 Incorrect password`. This was a smoke check of the deployed baseline.
+- **Release gate** The owner merges after review. Verify the exact deployed revision with a valid demo password and measure the warm hosted paths. This branch uses the current signed password session. Firebase remains deferred.
 
 #### 2026-11-15 — Commit 04: isolated SQLite and temporal history
 
@@ -609,17 +609,17 @@ At the start of **every** new coding session:
 - [x] Real source change updates the Gold KPI and definition. Cancellation, actual starts and application grain have tests.
 - [x] Executive dashboard, seeded survey review evidence, controlled Insight Pilot and architecture overview.
 - [x] Guided 90-second and five-minute flows verified locally without a live AI provider.
-- [x] Planned capabilities and synthetic/unofficial notices appear in the UI.
+- [x] Working capabilities and synthetic/unofficial notices appear in the UI.
 - [ ] `task ci` + GitHub CI + protected hosted smoke + Fleet/public-site regressions pass.
 
 ### Full PoC (PR 7 gate)
 
 - [x] Operational lifecycle, complete synthetic cohort/history and Excel transaction/exports (PR 4 code and local acceptance).
 - [ ] Full metric catalogue, analytics/drill-through and reconciliation, quality and confidentiality suppression.
-- [ ] Survey generation, representativeness, weighting, segmentation, priority and triangulation.
+- [x] Survey generation, representativeness, weighting, segmentation, priority and triangulation.
 - [ ] External AI structured evidence validation, explicit human approval, three demonstration reports and action tracking.
-- [ ] Forecasting, scenario planning, architecture/lineage/BPMN and all guided modes.
+- [x] Forecasting, scenario planning, architecture/lineage/BPMN and all guided modes.
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** PRs 1–5 merged. PR 6 uses password-only Workforce access for the interview. Hosted verification remains a release gate.
+**Current overall state:** PRs 1–6 merged. The interview release is in PR 7 review. Hosted verification on the new revision remains a release gate.

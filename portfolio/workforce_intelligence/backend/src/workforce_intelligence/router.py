@@ -4,6 +4,7 @@ This package must not import website security implementations or other projects.
 Every project route is mounted with `require_workforce_member` by the host.
 """
 
+import logging
 import sqlite3
 from collections import Counter
 from dataclasses import replace
@@ -147,6 +148,7 @@ router = APIRouter(
 )
 Limit = Annotated[int, Query(ge=1, le=100)]
 Offset = Annotated[int, Query(ge=0, le=100_000)]
+logger = logging.getLogger(__name__)
 PathId = Annotated[EntityId, Path()]
 Provider = Annotated[VoiceProvider | None, Depends(get_voice_provider)]
 
@@ -239,13 +241,28 @@ def workbook_template(database: Db, actor: Member) -> Response:
 async def validate_workbook(request: Request, database: Db, actor: Member) -> ImportPreview:
     await run_in_threadpool(throttle, database, actor, "preview")
     content = await read_upload(request)
-    return await run_in_threadpool(preview_import, database, actor, content)
+    preview = await run_in_threadpool(preview_import, database, actor, content)
+    logger.info(
+        "Workforce import %s status=%s invalid_rows=%d request_id=%s",
+        preview.batch_id,
+        "committed" if preview.committed else "preview",
+        preview.counts.invalid,
+        actor.correlation_id,
+    )
+    return preview
 
 
 @router.post("/import/commit")
 def confirm_workbook(command: ImportConfirmation, database: Db, actor: Member) -> ImportReceipt:
     throttle(database, actor, "commit")
-    return commit_import(database, actor, command)
+    receipt = commit_import(database, actor, command)
+    logger.info(
+        "Workforce import %s status=committed replayed=%s request_id=%s",
+        receipt.batch_id,
+        receipt.replayed,
+        actor.correlation_id,
+    )
+    return receipt
 
 
 @router.get("/import/{batch_id}/errors", response_class=Response, responses=FILE_RESPONSE)
@@ -491,7 +508,9 @@ def architecture_layers(database: Db, as_of_date: date | None = None) -> Archite
         state = current_dataset(connection)
         cutoff = reporting_window(state, as_of_date, None).end
         quality = _quality(connection, state, cutoff.isoformat())
-        return ArchitectureResponse(**quality.model_dump(), layers=layer_examples(connection, cutoff))
+        return ArchitectureResponse(
+            **quality.model_dump(), layers=layer_examples(connection, cutoff)
+        )
 
 
 @router.post("/demo/reset")

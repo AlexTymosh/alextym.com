@@ -27,11 +27,12 @@ constraints, setup, and release checks.
 - `/portfolio/workforce-intelligence/api/*`: same-origin BFF to protected FastAPI.
 - `/portfolio/workforce-intelligence/preview`: development-only offline UI.
 
-The UI contains Workforce Intelligence, Workforce Management, People Voice,
-and Data Architecture. The [People Voice walkthrough](docs/people-voice.md)
-covers survey generation, weighting, evidence review and tracked actions.
-Password sessions are scoped to Workforce; they are **not** Fleet
-cookies, Firebase sessions, or per-person identities.
+The UI includes recruitment and workforce analysis, effective-dated edits and
+Excel import, People Voice campaigns and review, and live SQLite lineage with a
+People Voice to Action process diagram. Forecasting compares seasonal naïve
+and exponential smoothing. What-if scenarios show the effect of recruitment
+assumptions on expected starts and WTE. The Workforce session uses a
+project-scoped cookie and a shared demo identity.
 
 ## Reference documentation
 
@@ -43,6 +44,8 @@ cookies, Firebase sessions, or per-person identities.
 - [Metrics catalogue](docs/metric-catalogue.md)
 - [Assurance and source register](docs/assurance-register.md)
 - [Interview walkthrough](docs/interview-runbook.md)
+- [Forecasting and what-if methods](docs/planning.md)
+- [People Voice walkthrough](docs/people-voice.md)
 
 ## Validation
 

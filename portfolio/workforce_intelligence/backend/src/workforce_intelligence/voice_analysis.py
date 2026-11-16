@@ -1,6 +1,7 @@
 """Bounded external classification, validated evidence and recoverable demo runs."""
 
 import json
+import logging
 import re
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
@@ -25,7 +26,7 @@ from workforce_intelligence.voice_analytics import SEVERITY, priority, protected
 from workforce_intelligence.voice_campaigns import campaign
 from workforce_intelligence.voice_taxonomy import CLASSIFICATIONS, QUESTION_BANK, SEVERITIES, THEMES
 
-PROMPT_VERSION = "voice-classification-1"
+PROMPT_VERSION = "voice-classification-2"
 MAX_AI_COMMENTS = 60
 MAX_RUNS = 80
 MAX_EXTERNAL_RUNS = 20
@@ -34,6 +35,7 @@ Theme = Literal[*THEMES]
 Classification = Literal[*CLASSIFICATIONS]
 Severity = Literal[*SEVERITIES]
 Compact = Annotated[str, StringConstraints(strip_whitespace=True, min_length=4, max_length=320)]
+logger = logging.getLogger(__name__)
 
 
 class EvidenceItem(BaseModel):
@@ -286,6 +288,15 @@ def _finish(
             "signal_count": len(report.signals) if report else 0,
             "failure": failure,
         },
+    )
+    logger.info(
+        "Workforce analysis %s status=%s model=%s prompt_version=%s failure=%s request_id=%s",
+        run_id,
+        "ready" if report is not None else "failed",
+        run["model"],
+        run["prompt_version"],
+        failure,
+        editor.actor.correlation_id,
     )
     return RunResponse(
         dataset=editor.state, run=_run_card(editor.get("voice_analysis_runs", "id", run_id))

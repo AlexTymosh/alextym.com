@@ -52,7 +52,7 @@ const getBrowserTheme = (): AppTheme => {
 const getServerTheme = (): AppTheme => "dark";
 
 const sections: Record<WorkforceMode, {
-  label: string; description: string; outline: [id: string, name: string][]; planned: string;
+  label: string; description: string; outline: [id: string, name: string][];
 }> = {
   "workforce-intelligence": {
     label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
@@ -60,12 +60,10 @@ const sections: Record<WorkforceMode, {
       ["scenarios", "What-if scenarios"], ["vacancy-ageing", "Vacancy ageing"], ["vacancies", "Vacancy lifecycle"],
       ["funnel", "Candidate funnel"], ["attraction", "Recruitment channels"], ["equality", "Inclusive recruitment"],
       ["outcomes", "Workforce outcomes"], ["insight-pilot", "Insight Pilot"]],
-    planned: "",
   },
   "workforce-management": {
     label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",
     outline: operationalOutline,
-    planned: "",
   },
   "people-voice": {
     label: "People Voice", description: "Evidence from synthetic staff surveys.",
@@ -73,14 +71,12 @@ const sections: Record<WorkforceMode, {
       ["voice-analytics", "Survey analytics"],
       ["voice-review", "Analyst review"], ["voice-tracker", "Action tracker"],
       ["voice-report", "Prepared report"], ["signals", "Published findings"], ["voice-actions", "Management action"]],
-    planned: "",
   },
   "data-architecture": {
     label: "Data Architecture", description: "Data ownership, quality and lineage.",
     outline: [["data-lineage", "Overview and lineage"], ["data-layers", "Data layers"], ["data-model", "Data model"],
       ["quality", "Data quality"], ["sources", "Sources and assumptions"], ["catalogue", "Metric catalogue"],
       ["voice-process", "People Voice BPMN"]],
-    planned: "",
   },
 };
 
@@ -98,6 +94,7 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   const [notice, setNotice] = useState("");
   const priorGeneration = useRef<DatasetVersion | null>(null);
   const scrolledTo = useRef("");
+  const mainContent = useRef<HTMLElement>(null);
   const { start, end, vacancyId } = filters;
   const viewKey = `${mode}:${start}:${end}:${vacancyId}:${offset}`;
   const readKey = `${viewKey}:${reload}`;
@@ -137,13 +134,24 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   }, [previewMode]);
 
   useEffect(() => {
-    if (!guideTarget) scrolledTo.current = "";
+    if (!guideTarget || !workspace) scrolledTo.current = "";
     if (!workspace || !guideTarget || scrolledTo.current === guideKey) return;
-    const frame = requestAnimationFrame(() => {
-      document.getElementById(guideTarget)?.scrollIntoView({ block: "start" });
+    const targetScope = mainContent.current;
+    const revealTarget = () => {
+      const target = document.getElementById(guideTarget);
+      if (!target) return false;
+      if (target instanceof HTMLDetailsElement) target.open = true;
+      target.scrollIntoView({ block: "start" });
       scrolledTo.current = guideKey;
+      return true;
+    };
+    const observer = new MutationObserver(() => {
+      if (revealTarget()) observer.disconnect();
     });
-    return () => cancelAnimationFrame(frame);
+    const frame = requestAnimationFrame(() => {
+      if (!revealTarget() && targetScope) observer.observe(targetScope, { subtree: true, childList: true });
+    });
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
   }, [guideKey, guideTarget, workspace]);
 
   const navigate = (event: MouseEvent<HTMLAnchorElement>, destination: WorkforceMode) => {
@@ -188,7 +196,7 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
         <div className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">WI</span>
           <div><p className={styles.brandName}>Workforce & Recruitment Intelligence</p>
-            <p className={styles.brandContext}>Portfolio Lab</p></div>
+            <p className={styles.brandContext}>Workforce demo</p></div>
         </div>
         <div className={styles.headerActions}>
           {dataset ? <ResetDemo key={dataset.dataset_id + ":" + dataset.dataset_generation} dataset={dataset}
@@ -228,7 +236,7 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             }}>{name}</a>)}
           </nav> : null}
           <div className={styles.sidebarFoot}>{previewMode ? <span>Local-only UI preview</span> :
-            <a href="/portfolio">Back to Portfolio Lab</a>}</div>
+            <a href="/portfolio">Back to portfolio</a>}</div>
         </aside>
         <div className={styles.content}>
           <div className={styles.statusBar} role="status">
@@ -241,7 +249,7 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             ) : <span>{error ? "Data unavailable" : "Loading protected data…"}</span>}
           </div>
 
-          <section className={styles.mainContent} id="workforce-panel" aria-labelledby="workforce-heading">
+          <section ref={mainContent} className={styles.mainContent} id="workforce-panel" aria-labelledby="workforce-heading">
             <div className={styles.pageHeadingRow}>
               <div className={styles.pageHeading}><h1 id="workforce-heading">{selected.label}</h1>
                 <p>{selected.description}</p></div>
@@ -253,9 +261,9 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             {error ? <div className={styles.panel} role="alert">
               <h2>{restricted ? "Workspace access unavailable" : "Unable to load this view"}</h2>
               <p>{error.status === 401 ? "Your sign-in session has expired." : error.status === 403 ?
-                "Your Workforce project membership is no longer active." : error.status === 404 ?
+                "This session cannot access Workforce data." : error.status === 404 ?
                   "This workspace is currently disabled." : error.message}</p>
-              {error.status === 401 ? <a href="/lab/login">Return to sign in</a> :
+              {error.status === 401 ? <a href="/portfolio/workforce-intelligence">Return to demo sign in</a> :
                 <button type="button" className={styles.secondaryButton}
                   onClick={() => { if (error.status === 422) setFilters(DEFAULT_FILTERS); refresh(); }}>
                   {error.status === 422 ? "Restore default dates" : "Retry"}
@@ -276,12 +284,10 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
               onConflict={() => { setNotice("The dataset or contract changed. Choose the employee again after refresh."); refresh(); }}
               initialEmployee={guide?.step.edit ? "emp-001" : undefined}
               effectiveDate={guide?.step.edit ? "2026-10-20" : undefined} onError={reportAccessError} /> : null}
-            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} onAccessError={reportAccessError} /> : null}
+            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} onAccessError={reportAccessError}
+              initialCampaign={guide?.step.id === "candidate-feedback" ? "candidate-feedback" : undefined} /> : null}
             {workspace?.kind === "data-architecture" ?
               <DataArchitecture architecture={workspace.architecture} metrics={workspace.metrics} /> : null}
-            {workspace && selected.planned ? <details className={styles.planned}>
-              <summary>Planned capabilities</summary><p>{selected.planned}</p>
-            </details> : null}
           </section>
         </div>
       </div>

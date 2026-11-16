@@ -3,12 +3,12 @@ import { displayDay, displayNumber, displayWindow } from "./format";
 import { VoiceWorkspace } from "./VoiceWorkspace";
 import styles from "./workforce-scaffold.module.css";
 
-export function PeopleVoice({ report, onAccessError }: { report: SurveyReport;
-  onAccessError: (error: WorkforceApiError) => void;
+export function PeopleVoice({ report, onAccessError, initialCampaign }: { report: SurveyReport;
+  onAccessError: (error: WorkforceApiError) => void; initialCampaign?: string;
 }) {
   return (
     <div className={styles.stack}>
-      <VoiceWorkspace onAccessError={onAccessError} />
+      <VoiceWorkspace key={initialCampaign} initialCampaign={initialCampaign} onAccessError={onAccessError} />
       <section id="voice-report" className={styles.panel} aria-labelledby="reviewed-report-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="reviewed-report-heading">{report.title}</h2>

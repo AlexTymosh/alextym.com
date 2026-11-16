@@ -30,7 +30,7 @@ def test_full_fixture_reconciles_against_direct_sources_across_observed_history(
             "roles": 27,
             "recruitment_campaigns": 36,
             "starter_events": 290,
-            "survey_campaigns": 37,
+            "survey_campaigns": 38,
         }.items():
             assert conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count
         assert [r["display_order"] for r in employees_at(conn, state.as_of_date, 15, 0)] == list(

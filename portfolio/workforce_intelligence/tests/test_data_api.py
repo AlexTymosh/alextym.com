@@ -112,6 +112,32 @@ def test_architecture_examples_trace_the_same_contract_and_reconcile_to_gold(dem
     assert client.get("architecture/layers", params={"as_of_date": "2050-01-01"}).status_code == 422
 
 
+def test_candidate_feedback_uses_an_application_cohort_and_rating_rules(demo):
+    client, database = demo
+    campaigns = client.get("surveys").json()["campaigns"]
+    prepared = next(row for row in campaigns if row["survey_id"] == "candidate-feedback")
+    assert prepared["audience"] == "candidates" and prepared["responses"] < prepared["invited"]
+    with database.transaction() as connection:
+        eligible = connection.execute(
+            "SELECT COUNT(*) FROM fact_application WHERE received_on BETWEEN ? AND ?",
+            (prepared["period_start"], prepared["period_end"]),
+        ).fetchone()[0]
+        assert prepared["eligible"] == eligible
+    response = client.get(
+        "surveys/candidate-feedback/analytics",
+        params={
+            "dimension": "organisation",
+            "weight_by": "organisation",
+            "theme": "candidate-communication",
+        },
+    )
+    assert response.status_code == 200
+    ratings = response.json()["report"]["ratings"]
+    assert len(ratings) == 4
+    assert ratings[0]["mean"] is not None
+    assert ratings[-1]["answered"] is None or ratings[-1]["answered"] <= prepared["responses"]
+
+
 def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     client, _ = demo
     fields = dict(employee_id="demo-ops", contracted_fte="0.7")
