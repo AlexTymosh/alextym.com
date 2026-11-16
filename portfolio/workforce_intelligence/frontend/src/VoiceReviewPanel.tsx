@@ -15,6 +15,7 @@ const levels = ["Low", "Medium", "High", "Critical"];
 const field = (fields: FormData, key: string) => String(fields.get(key) ?? "").trim();
 const failures: Record<string, string> = {
   provider_not_configured: "External AI is not configured on this host. The demonstration option is available.",
+  provider_timeout: "OpenAI exceeded the analysis time limit. Retry or use the demonstration option.",
   provider_unavailable: "External AI did not complete. Retry or use the demonstration option.",
   evidence_validation_failed: "The analysis returned invalid evidence. Nothing from that run can be published.",
   interrupted: "The analysis was interrupted. Start it again or use the demonstration option.",
@@ -28,7 +29,8 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError, screen, camp
   const [data, setData] = useState<VoiceReview | null>(null);
   const [selected, setSelected] = useState("");
   const [reload, setReload] = useState(0);
-  const [working, setWorking] = useState(false);
+  const [progress, setProgress] = useState("");
+  const working = Boolean(progress);
   const [error, setError] = useState("");
   const pending = useRef<{ mode: string; key: string } | null>(null);
   const surveyId = campaign.survey_id;
@@ -46,15 +48,15 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError, screen, camp
     return () => controller.abort();
   }, [surveyId, selected, reload, onAccessError]);
 
-  async function run(operation: () => Promise<void>) {
+  async function run(operation: () => Promise<void>, message = "Working on People Voice…") {
     if (!data || working) return;
-    setWorking(true); setError("");
+    setProgress(message); setError("");
     try {
       await operation();
     } catch (failure) {
       if (failure instanceof WorkforceApiError && [401, 403].includes(failure.status)) onAccessError(failure);
       else setError(failure instanceof Error ? failure.message : "Unable to save your change.");
-    } finally { setWorking(false); }
+    } finally { setProgress(""); }
   }
 
   function analyse(mode: "ai" | "demo") {
@@ -67,7 +69,7 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError, screen, camp
       if (receipt.status !== "running") pending.current = null;
       setSelected(receipt.id);
       setReload((value) => value + 1);
-    });
+    }, mode === "ai" ? "Analysing survey comments… This can take up to a minute." : undefined);
   }
 
   const save: Save = (path, method, payload) => {
@@ -81,7 +83,9 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError, screen, camp
 
   const selectedRun = data?.selected_run;
   const feedback = <>
-    {working || (!data && !error) ? <p role="status" className={styles.message}>Working on People Voice…</p> : null}
+    {progress || (!data && !error) ? <p role="status" className={styles.message}>
+      {progress || "Loading People Voice…"}
+    </p> : null}
     {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
   </>;
   if (screen === "voice-tracker") return (

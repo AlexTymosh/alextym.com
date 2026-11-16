@@ -11,6 +11,7 @@ from workforce_intelligence.voice_analysis import (
     ClassifiedReport,
     ClassifiedSignal,
     EvidenceItem,
+    VoiceProviderTimeout,
     redact,
     run_analysis,
 )
@@ -210,6 +211,8 @@ class Classifier:
         self.received.append((question, comments))
         if self.mode == "outage":
             raise RuntimeError("Do not surface provider error details")
+        if self.mode == "timeout":
+            raise VoiceProviderTimeout("Do not surface timeout details")
         evidence = [
             EvidenceItem(response_id=row["response_id"], excerpt=row["comment"][:100])
             for row in comments[: 1 if self.mode == "small" else 7]
@@ -234,14 +237,26 @@ class Classifier:
         )
 
 
-@pytest.mark.parametrize("mode", ["invented", "unsupported", "bad-count", "outage"])
-def test_invalid_provider_runs_do_not_create_findings_and_retry_is_idempotent(voice_db, mode):
+@pytest.mark.parametrize(
+    ("mode", "failure"),
+    [
+        ("invented", "evidence_validation_failed"),
+        ("unsupported", "evidence_validation_failed"),
+        ("bad-count", "evidence_validation_failed"),
+        ("outage", "provider_unavailable"),
+        ("timeout", "provider_timeout"),
+    ],
+)
+def test_invalid_provider_runs_do_not_create_findings_and_retry_is_idempotent(
+    voice_db, mode, failure
+):
     create(voice_db)
     generate(voice_db)
     fake = Classifier(mode)
     key = uuid4()
     result = analyse(voice_db, "ai", fake, key=key)
     assert result.run["status"] == "failed"
+    assert result.run["failure"] == failure
     again = analyse(voice_db, "ai", fake, key=key)
     assert again.run == result.run and len(fake.received) == 1
     assert read_review(voice_db, "new-voice", result.run["id"]).signals == []

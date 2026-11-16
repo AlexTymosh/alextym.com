@@ -50,6 +50,10 @@ selected month through the selected date. Directory and vacancy requests accept
 `limit` (1–100, default 25) and `offset`. A populated `next_offset` continues
 pagination. Vacancy status counts cover the filtered date regardless of the page.
 
+An external survey analysis that times out returns a failed run with
+`failure: "provider_timeout"`. Review reads still show the attempt, and its
+failure leaves no findings to publish.
+
 The directory and employee detail return `directory_job_title` and
 `directory_department` for the 20 featured profiles. The
 `directory_title_inferred` and `directory_department_inferred` flags identify

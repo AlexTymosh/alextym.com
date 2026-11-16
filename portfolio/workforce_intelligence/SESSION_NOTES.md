@@ -376,10 +376,10 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch** `codex/workforce-screens-directory-profiles`.
-- **Base `main`** `de218ccdd3713ca4a73b0952a0526b315f2b8f4b`, merged PR #254. That PR delivered the standalone workspace, emblem and ordered synthetic directory.
-- **Current scope** All four workspaces use grouped navigation and display one selected screen with Back and reload support. The narrow layout uses a Section selector. Migration 13 adds directory titles and departments for the 20 featured profiles. The directory marks inferred fields and identifies titles that were unavailable.
-- **Current checks** 85 Workforce and host tests and 26 local Chromium checks passed on a production build with Webpack. The development-only preview test was skipped in the production run. Tests covered the existing SQLite migration, login, directory, source edits, navigation, People Voice and the interview guides.
+- **Current branch** `codex/workforce-voice-analysis-reliability`.
+- **Base `main`** `906816c079e4a1ae9b74b276baf6e7baef3c8e11`, merged PR #255 with grouped navigation and featured directory profiles.
+- **Current scope** Render recorded a candidate analysis failure at 10.048 seconds under the 10-second OpenAI timeout. An earlier run on the same model completed in 8.191 seconds. The classifier now allows 45 seconds and returns a separate timeout category. The proxy allows 55 seconds for analysis. Prompt version 3 uses prelabelled excerpts and resolves evidence and unique counts on the server. The classifier uses the same model, key and reasoning effort as chat.
+- **Current checks** 92 Workforce, host and shared-client tests passed. The local production browser run created a Career Development and Progression campaign and generated 15 responses with seed 32. OpenAI analysed 14 comments with `gpt-5-mini` in 11.675 seconds. The review displayed six findings, with six validated excerpts on one eligible finding. [People Voice walkthrough](docs/people-voice.md)
 - **Interview guide** Use the short fixture for the 90-second run and the full controlled 36-month fixture to show the plotted forecast. [Interview runbook](docs/interview-runbook.md)
 - **Local verification** 994 tests passed with four opt-in skips. All 15 password-demo Chromium checks passed on the Next.js production build with a local HTTPS backend. They cover Excel, campaign switching, manual publication, full-fixture planning and the mobile BPMN walkthrough. Another 34 desktop/mobile checks covered a disabled Workforce flag, public catalogue and route guards. TypeScript, Ruff and scoped Workforce lint passed.
 - **Local latency sample** During the browser run, executive requests took 20–166 ms, workforce trend took 17–151 ms, forecast runs took 32–48 ms and the full controlled fixture loaded in 701 ms at FastAPI. These measurements cover local backend time.
@@ -624,4 +624,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state** PRs 1–7 and the standalone workspace follow-up are merged. Grouped screen navigation and featured directory profiles are on the current branch.
+**Current overall state** PRs 1–7 and both workspace follow-ups are merged. The People Voice analysis fix is on the current branch.
