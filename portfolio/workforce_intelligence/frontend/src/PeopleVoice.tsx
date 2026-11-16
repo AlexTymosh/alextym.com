@@ -1,15 +1,18 @@
 import type { SurveyReport, WorkforceApiError } from "./data-api";
 import { displayDay, displayNumber, displayWindow } from "./format";
+import type { OpenWorkforceScreen, WorkforceScreen } from "./mode-state";
 import { VoiceWorkspace } from "./VoiceWorkspace";
 import styles from "./workforce-scaffold.module.css";
 
-export function PeopleVoice({ report, onAccessError, initialCampaign }: { report: SurveyReport;
+export function PeopleVoice({ report, onAccessError, initialCampaign, screen, onOpenScreen }: { report: SurveyReport;
   onAccessError: (error: WorkforceApiError) => void; initialCampaign?: string;
+  screen: WorkforceScreen; onOpenScreen: OpenWorkforceScreen;
 }) {
   return (
     <div className={styles.stack}>
-      <VoiceWorkspace key={initialCampaign} initialCampaign={initialCampaign} onAccessError={onAccessError} />
-      <section id="voice-report" className={styles.panel} aria-labelledby="reviewed-report-heading">
+      <VoiceWorkspace key={initialCampaign} initialCampaign={initialCampaign} onAccessError={onAccessError}
+        screen={screen} onOpenScreen={onOpenScreen} />
+      {screen === "voice-report" ? <section id="voice-report" className={styles.panel} aria-labelledby="reviewed-report-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="reviewed-report-heading">{report.title}</h2>
             <p>{displayWindow({ start: report.period_start, end: report.period_end })} · {report.survey_id}</p></div>
@@ -22,8 +25,8 @@ export function PeopleVoice({ report, onAccessError, initialCampaign }: { report
         </dl>
         <p className={styles.caption}>Survey question · {report.question}</p>
         <p className={styles.caption}>All responses describe a fictional workforce cohort.</p>
-      </section>
-      <section id="signals" className={styles.panel} aria-labelledby="reviewed-signals-heading">
+      </section> : null}
+      {screen === "signals" ? <section id="signals" className={styles.panel} aria-labelledby="reviewed-signals-heading">
         <div className={styles.sectionHeader}><div><h2 id="reviewed-signals-heading">Published findings</h2>
           <p>{report.analysis_id} · Analysed {displayDay(report.analysed_on)}</p></div></div>
         <p className={styles.message}>AI-identified signals require analyst review before operational or workforce decisions are made.</p>
@@ -54,12 +57,13 @@ export function PeopleVoice({ report, onAccessError, initialCampaign }: { report
           <summary>Unpublished drafts ({report.drafts.length})</summary>
           {report.drafts.map((draft) => <p key={draft.id}>{draft.theme} · {draft.review_status}</p>)}
         </details> : null}
-      </section>
-      {report.actions.length ? <section id="voice-actions" className={styles.panel} aria-labelledby="voice-actions-heading">
+      </section> : null}
+      {screen === "voice-actions" ? <section id="voice-actions" className={styles.panel} aria-labelledby="voice-actions-heading">
         <div className={styles.sectionHeader}><h2 id="voice-actions-heading">Linked management action</h2></div>
         {report.actions.map((action) => <article className={styles.finding} key={action.id}>
           <h3>{action.title}</h3><p className={styles.caption}>{action.status} · {action.assigned_team} · Due {displayDay(action.due_on)} · {action.signal_id}</p>
         </article>)}
+        {!report.actions.length ? <p className={styles.message}>There are no linked actions in the prepared report.</p> : null}
       </section> : null}
     </div>
   );

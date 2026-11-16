@@ -69,5 +69,6 @@ assert.match(preview, /notFound\(\)/);
 assert.doesNotMatch(preview, /WorkforcePasswordGate|FirebaseSession/);
 const scaffold = read("portfolio/workforce_intelligence/frontend/src/WorkforceScaffold.tsx");
 assert.match(scaffold, /if \(previewMode\) return;/);
-assert.match(scaffold, /workforceModeHref\(destination, previewMode\)/);
+assert.match(scaffold, /workforceModeHref\(id, previewMode\)/);
+assert.match(scaffold, /workforceModeHref\(mode, previewMode, destination\)/);
 console.log("Workforce password-demo guard and project boundaries (structural PASS).");

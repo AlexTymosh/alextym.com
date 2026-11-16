@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { datasetVersion, sameGeneration, WorkforceApiError, workforceRequest, workforceWrite,
-  type Dataset, type Snapshot } from "./data-api";
+  type Dataset, type DirectoryProfile, type Snapshot } from "./data-api";
+import type { WorkforceScreen } from "./mode-state";
 import { operationForms, type Action, type Input } from "./operation-forms";
 import styles from "./workforce-scaffold.module.css";
 
@@ -8,7 +9,7 @@ type Scalar = string | number | boolean | null;
 type Row = Record<string, Scalar | Record<string, Scalar>>;
 type Page = Snapshot & { items: Row[]; next_offset: number | null };
 type EmployeeProfile = Snapshot & {
-  employee: {
+  employee: DirectoryProfile & {
     id: string; display_name: string; employment_status: string; leaving_date: string | null;
     contracts: Row[]; assignments: Row[];
   };
@@ -21,7 +22,7 @@ type Props = {
   onError: (error: WorkforceApiError) => void;
 };
 type Group = {
-  id: string; title: string; description: string; section?: string; columns?: string[];
+  id: WorkforceScreen; title: string; description: string; section?: string; columns?: string[];
   actions: Action[]; pick?: string;
 };
 
@@ -51,12 +52,6 @@ const groups: Group[] = [
   { id: "audit-history", title: "Audit history", description: "Review the latest source changes, the request reference and the recorded values.",
     section: "audit", columns: ["occurred_at", "action", "entity_type", "entity_key", "source_channel", "correlation_id", "old_values", "new_values"],
     actions: [] },
-];
-
-export const operationalOutline: [string, string][] = [
-  ["directory", "People Directory"], ["employee-profile", "Employee Profile"], ["contracts", "Contracts & FTE"],
-  ...groups.map(({ id, title }): [string, string] => [id, title]),
-  ["import-export", "Import / Export"],
 ];
 
 const labelFor = (name: string) => name.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -188,7 +183,6 @@ function menu(rows: Row[] | undefined) {
 }
 
 function Panel({ group, ...props }: Props & { group: Group }) {
-  const [expanded, setExpanded] = useState(false);
   const [offset, setOffset] = useState(0);
   const [read, setRead] = useState<{ key: string; data?: Page; error?: string } | null>(null);
   const [selected, setSelected] = useState<Row | null>(null);
@@ -198,7 +192,7 @@ function Panel({ group, ...props }: Props & { group: Group }) {
   const error = read?.key === readKey ? read.error : undefined;
 
   useEffect(() => {
-    if (!expanded || !group.section) return;
+    if (!group.section) return;
     const controller = new AbortController();
     void workforceRequest<Page>(`operations/${group.section}?limit=15&offset=${offset}`, { signal: controller.signal }).then((data) => {
       if (controller.signal.aborted) return;
@@ -211,7 +205,7 @@ function Panel({ group, ...props }: Props & { group: Group }) {
       else setRead({ key: readKey, error: failure.message });
     });
     return () => controller.abort();
-  }, [dataset, expanded, group.section, offset, onError, readKey]);
+  }, [dataset, group.section, offset, onError, readKey]);
 
   const defaults: Record<string, string> = {};
   if (selectedId) defaults.employee_id = selectedId;
@@ -221,10 +215,10 @@ function Panel({ group, ...props }: Props & { group: Group }) {
       if (typeof selected[key] === "string") defaults[key] = selected[key];
     }
   }
-  return <details id={group.id} className={styles.panel} onToggle={(event) => setExpanded(event.currentTarget.open)}>
-    <summary className={styles.operationHeading}>{group.title}</summary>
+  return <section id={group.id} className={styles.panel} aria-labelledby={`${group.id}-heading`}>
+    <h2 id={`${group.id}-heading`}>{group.title}</h2>
     <p className={styles.message}>{group.description}</p>
-    {expanded && group.section && !page && !error ? <p role="status" className={styles.message}>Loading records…</p> : null}
+    {group.section && !page && !error ? <p role="status" className={styles.message}>Loading records…</p> : null}
     {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
     {page && group.columns ? <Values columns={group.columns} rows={page.items}
       identity={group.pick} onPick={group.pick ? setSelected : undefined} /> : null}
@@ -234,14 +228,13 @@ function Panel({ group, ...props }: Props & { group: Group }) {
       <button type="button" className={styles.secondaryButton} disabled={page.next_offset === null}
         onClick={() => setOffset(page.next_offset ?? offset)}>Next {group.title.toLowerCase()}</button>
     </div> : null}
-    {expanded && group.actions.length ? <OperationForm {...props} actions={group.actions} defaults={defaults} /> : null}
-  </details>;
+    {group.actions.length ? <OperationForm {...props} actions={group.actions} defaults={defaults} /> : null}
+  </section>;
 }
 
 export function EmployeeOperations(props: Props) {
   const { dataset, selectedId, onError } = props;
   const [lookup, setLookup] = useState<{ id: string; selectedId: string | null }>();
-  const [expanded, setExpanded] = useState(false);
   const personId = lookup && lookup.selectedId === selectedId ? lookup.id : selectedId;
   const readKey = `${personId}:${dataset.dataset_id}:${dataset.dataset_generation}:${dataset.revision}`;
   const [read, setRead] = useState<{ key: string; data?: EmployeeProfile; error?: string } | null>(null);
@@ -249,7 +242,7 @@ export function EmployeeOperations(props: Props) {
   const error = read?.key === readKey ? read.error : undefined;
 
   useEffect(() => {
-    if (!personId || !expanded) return;
+    if (!personId) return;
     const controller = new AbortController();
     void workforceRequest<EmployeeProfile>(`employees/${encodeURIComponent(personId)}`, { signal: controller.signal })
       .then((data) => { if (!controller.signal.aborted) setRead({ key: readKey, data }); })
@@ -259,15 +252,15 @@ export function EmployeeOperations(props: Props) {
         else setRead({ key: readKey, error: failure.message });
       });
     return () => controller.abort();
-  }, [personId, expanded, readKey, onError]);
+  }, [personId, readKey, onError]);
 
   function find(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLookup({ id: String(new FormData(event.currentTarget).get("employee")).trim(), selectedId });
   }
 
-  return <details className={styles.panel} id="employee-profile" onToggle={(event) => setExpanded(event.currentTarget.open)}>
-    <summary className={styles.operationHeading}>Employee profile</summary>
+  return <section className={styles.panel} id="employee-profile" aria-labelledby="employee-profile-heading">
+    <h2 id="employee-profile-heading">Employee profile</h2>
     <p className={styles.message}>Only enter fictional display names and source codes. Search by ID to find active employees or leavers.</p>
     <form className={styles.filterBar} onSubmit={find}>
       <label>Find employee by ID<input name="employee" pattern="[a-z0-9][a-z0-9\-]{0,63}" required
@@ -279,17 +272,24 @@ export function EmployeeOperations(props: Props) {
     {employee ? <>
       <p className={styles.message}><strong>{employee.display_name}</strong> · {employee.id} · {employee.employment_status}
         {employee.leaving_date ? ` since ${employee.leaving_date}` : ""}</p>
+      {employee.directory_department ? <dl className={styles.summaryFacts}>
+        <div><dt>Department</dt><dd>{employee.directory_department}
+          {employee.directory_department_inferred ? <small className={styles.sourceCode}>Inferred</small> : null}</dd></div>
+        <div><dt>Job title</dt><dd>{employee.directory_job_title ?? "Title not supplied"}
+          {employee.directory_title_inferred ? <small className={styles.sourceCode}>Inferred</small> : null}</dd></div>
+      </dl> : null}
       <h3>Contract history</h3>
       <Values columns={["valid_from", "valid_to", "contracted_fte", "is_substantive", "change_reason"]} rows={employee.contracts} />
-      <h3>Assignment history</h3>
+      <h3>Establishment assignment history</h3>
       <Values columns={["valid_from", "valid_to", "line_id", "organisation", "location", "role", "pay_band", "change_reason"]}
         rows={employee.assignments} />
     </> : null}
-    {expanded ? <OperationForm {...props} actions={["add_employee", "edit_profile"]}
-      defaults={employee ? { employee_id: employee.id, display_name: employee.display_name } : {}} /> : null}
-  </details>;
+    <OperationForm {...props} actions={["add_employee", "edit_profile"]}
+      defaults={employee ? { employee_id: employee.id, display_name: employee.display_name } : {}} />
+  </section>;
 }
 
-export function SourceOperations(props: Props) {
-  return <>{groups.map((group) => <Panel key={group.id} {...props} group={group} />)}</>;
+export function SourceOperations({ screen, ...props }: Props & { screen: WorkforceScreen }) {
+  const group = groups.find(({ id }) => id === screen);
+  return group ? <Panel key={group.id} {...props} group={group} /> : null;
 }

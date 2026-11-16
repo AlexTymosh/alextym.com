@@ -40,7 +40,9 @@ def test_full_fixture_reconciles_against_direct_sources_across_observed_history(
         first_page = employees_at(conn, state.as_of_date, 21, 0)
         assert [row["display_name"] for row in first_page[:20]] == list(FEATURED_NAMES)
         assert [row["display_order"] for row in first_page[:20]] == list(range(1, 21))
+        assert all(row["directory_department"] for row in first_page[:20])
         assert re.fullmatch(r"[A-Z][a-z]+ [A-Z]\.", first_page[20]["display_name"])
+        assert first_page[20]["directory_department"] is None
         assert conn.execute("SELECT COUNT(*) FROM promotion_events").fetchone()[0] > 100
         assert conn.execute("SELECT COUNT(*) FROM candidate_demographics").fetchone()[0] > 2000
         assert conn.execute("SELECT COUNT(*) FROM leaver_events").fetchone()[0] > 150
@@ -101,7 +103,7 @@ def test_full_fixture_changes_only_when_generation_seed_changes(tmp_path):
 def test_upgrade_preserves_full_fixture_edits_and_analytical_sources(tmp_path, monkeypatch):
     database = Database(tmp_path / "legacy-full.sqlite3")
     migrations = sqlite_store.MIGRATIONS
-    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:-1])
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:11])
     original = ensure_dataset(database, replace(FULL_SEED, seed_version="2.0"))
     with database.transaction(write=True) as conn:
         conn.execute(

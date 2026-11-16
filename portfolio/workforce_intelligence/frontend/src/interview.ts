@@ -1,9 +1,9 @@
-import { modeFromSearch, workforceModeHref, type WorkforceMode } from "./mode-state";
+import { modeFromSearch, workforceModeHref, type WorkforceMode, type WorkforceScreen } from "./mode-state";
 
 type Step = {
   id: string;
   mode: WorkforceMode;
-  target: string;
+  target: WorkforceScreen;
   title: string;
   instruction: string;
   edit?: boolean;
@@ -42,7 +42,7 @@ const extended = [
     instruction: "Enable forecast. With the full dataset, point out the forecast boundary and seasonal baseline error. With the short fixture, show the history requirement." },
   pilot,
   { id: "lineage", mode: "data-architecture", target: "data-lineage", title: "Trace the data to Gold",
-    instruction: "Follow one contract through the layers and compare the Gold gap with Recruitment overview." },
+    instruction: "Follow a contract from the operational source to the reporting model. Open Data layers to inspect a live example." },
 ] satisfies Step[];
 
 export const INTERVIEW_GUIDES = {
@@ -55,9 +55,9 @@ export const INTERVIEW_GUIDES = {
     { id: "scenario", mode: "workforce-intelligence", target: "scenarios", title: "Test a recruitment scenario",
       instruction: "Shorten pre-employment checks or change offer acceptance. Run the scenario and compare starts and WTE with the reference." },
     { id: "review", mode: "people-voice", target: "voice-review", title: "Review and publish evidence",
-      instruction: "Choose a generated campaign, run the demonstration analysis and inspect evidence IDs. Confirm a supported finding with rationale, then publish it separately." },
+      instruction: "Choose a generated campaign, run the demonstration analysis and inspect evidence IDs. Confirm a supported finding, publish it and create a management action." },
     { id: "action", mode: "people-voice", target: "voice-tracker", title: "Assign a management action",
-      instruction: "Open the published finding, assign an action with a due date and record progress against its target." },
+      instruction: "Open the action in the tracker, then record progress against its target." },
     { id: "process", mode: "data-architecture", target: "voice-process", title: "Walk through People Voice to Action",
       instruction: "Use Next activity or pick a node. Show the evidence decision and its exception paths." },
     { id: "audit", mode: "workforce-management", target: "audit-history", title: "Check audit history",

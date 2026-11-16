@@ -391,6 +391,19 @@ def test_effective_edit_refreshes_gold_and_keeps_dates_and_audit(demo):
     rest = client.get("employees", params={"limit": 15, "offset": 15}).json()
     assert [person["display_name"] for person in rest["items"]] == list(FEATURED_NAMES[15:])
     assert rest["next_offset"] is None
+    james, lynn, _, craig, *_ = full["items"]
+    assert james["directory_job_title"] == "Senior Management Information Analyst"
+    assert james["directory_department"] == "Digital and Data - Data and Analytics"
+    assert james["directory_department_inferred"] is False
+    assert lynn["directory_department_inferred"] is True
+    assert craig["directory_job_title"] is None
+    lisa = full["items"][9]
+    assert lisa["directory_job_title"] == "Recruitment Manager"
+    assert lisa["directory_title_inferred"] is True
+    profile = client.get(f"employees/{lisa['id']}").json()["employee"]
+    assert profile["directory_job_title"] == lisa["directory_job_title"]
+    assert profile["directory_department"] == lisa["directory_department"]
+    assert profile["directory_title_inferred"] is True
     before = executive(client)["workforce_gap_wte"]["value"]
     historical = executive(client, as_of_date="2026-10-19")["workforce_gap_wte"]["value"]
     change = {

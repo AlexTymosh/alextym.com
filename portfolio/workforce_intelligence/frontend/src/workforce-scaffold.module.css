@@ -147,10 +147,13 @@
   border-right: 1px solid var(--wi-border);
   background: var(--wi-surface);
 }
-.sidebar nav { display: grid; gap: 3px; }
-.sidebar a { padding: 8px 9px; font-size: .78rem; line-height: 1.4; }
-.sidebar nav a { color: var(--wi-muted); border-radius: 6px; text-decoration: none; }
-.sidebar nav a:hover { background: var(--wi-elevated); color: var(--wi-ink); }
+.screenMenu { display: grid; gap: 13px; position: sticky; top: 12px; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.screenMenu > div { display: grid; gap: 2px; }
+.screenGroup { margin: 0 0 3px; padding-inline: 9px; color: var(--wi-muted); font-size: .7rem; font-weight: 650; }
+.screenMenu a { padding: 6px 9px; font-size: .78rem; line-height: 1.4; color: var(--wi-muted); border-radius: 6px; text-decoration: none; }
+.screenMenu a:hover { background: var(--wi-elevated); color: var(--wi-ink); }
+.screenMenu a[aria-current="page"] { background: var(--wi-accent-soft); color: var(--wi-ink); font-weight: 650; }
+.mobileSections { display: none; }
 .content { min-width: 0; }
 .statusBar {
   display: flex;
@@ -282,7 +285,6 @@
   background: var(--wi-bg);
   color: var(--wi-ink);
 }
-.panelSummary { color: var(--wi-ink); font-size: 1.08rem; font-weight: 700; cursor: pointer; }
 .trendLegend { display: flex; gap: 20px; flex-wrap: wrap; font-size: .78rem; color: var(--wi-muted); margin: 14px 0 6px; }
 .trendLegend > span { display: inline-flex; align-items: center; gap: 7px; }
 .trendBudgetKey, .trendStaffKey { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
@@ -298,7 +300,6 @@
 .editForm > p { font-size: .85rem; margin: 13px 0; }
 .errorText { color: var(--wi-error); }
 .notice { margin: 0 0 15px; padding: 10px 12px; border-left: 2px solid var(--wi-accent); border-radius: 4px; background: var(--wi-accent-soft); font-size: .84rem; line-height: 1.5; }
-.operationHeading { font-size: 1.02rem; font-weight: 650; cursor: pointer; }
 .operationForm { margin-top: 14px; }
 .filterBar .inlineCheck { display: flex; flex-direction: row; align-items: center; gap: 7px; }
 .root input[type="checkbox"] { min-height: auto; width: auto; }
@@ -452,7 +453,6 @@
 .guide p, .dialog p { margin: 5px 0 0; color: var(--wi-muted); font-size: .83rem; line-height: 1.5; }
 .guide .guideProgress { margin: 0 0 4px; color: var(--wi-accent); font-size: .73rem; }
 .guideActions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
-.root[data-guided="true"] .stack > :is(section, details) { scroll-margin-top: 158px; }
 .dialog {
   max-width: min(460px, calc(100% - 28px));
   margin: auto;
@@ -472,12 +472,13 @@
 }
 @media (max-width: 760px) {
   .body { display: block; }
-  .sidebar { padding: 0 16px; border-right: 0; border-bottom: 1px solid var(--wi-border); }
-  .sidebar nav { display: flex; flex-wrap: wrap; gap: 0 7px; }
+  .sidebar { padding: 9px 16px; border-right: 0; border-bottom: 1px solid var(--wi-border); }
+  .screenMenu { display: none; }
+  .mobileSections { display: flex; align-items: center; gap: 10px; color: var(--wi-muted); font-size: .78rem; }
+  .mobileSections select { flex: 1; min-width: 0; }
   .metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .navigation { gap: 0 18px; padding-inline: 16px; }
   .disclosure, .header { padding-inline: 16px; }
-  .root[data-guided="true"] .stack > :is(section, details) { scroll-margin-top: 190px; }
 }
 @media (max-width: 380px) {
   .metricGrid { grid-template-columns: 1fr; }

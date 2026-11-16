@@ -376,10 +376,10 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch** `codex/workforce-standalone-directory`.
-- **Base `main`** `719b13f95f6567527fd7f189a78b41e11bebe1fe`, merged PR #253.
-- **Current scope** The Workforce route fills the viewport and uses the supplied emblem. Migration 12 applies the featured directory order and updates legacy generated aliases in place. The short fixture adds three bank contracts. The full fixture retains 4,400 employee records.
-- **Current checks** 84 Workforce and host tests and 14 Chromium checks passed, including the migration, first 20 directory entries and standalone production build.
+- **Current branch** `codex/workforce-screens-directory-profiles`.
+- **Base `main`** `de218ccdd3713ca4a73b0952a0526b315f2b8f4b`, merged PR #254. That PR delivered the standalone workspace, emblem and ordered synthetic directory.
+- **Current scope** All four workspaces use grouped navigation and display one selected screen with Back and reload support. The narrow layout uses a Section selector. Migration 13 adds directory titles and departments for the 20 featured profiles. The directory marks inferred fields and identifies titles that were unavailable.
+- **Current checks** 85 Workforce and host tests and 26 local Chromium checks passed on a production build with Webpack. The development-only preview test was skipped in the production run. Tests covered the existing SQLite migration, login, directory, source edits, navigation, People Voice and the interview guides.
 - **Interview guide** Use the short fixture for the 90-second run and the full controlled 36-month fixture to show the plotted forecast. [Interview runbook](docs/interview-runbook.md)
 - **Local verification** 994 tests passed with four opt-in skips. All 15 password-demo Chromium checks passed on the Next.js production build with a local HTTPS backend. They cover Excel, campaign switching, manual publication, full-fixture planning and the mobile BPMN walkthrough. Another 34 desktop/mobile checks covered a disabled Workforce flag, public catalogue and route guards. TypeScript, Ruff and scoped Workforce lint passed.
 - **Local latency sample** During the browser run, executive requests took 20–166 ms, workforce trend took 17–151 ms, forecast runs took 32–48 ms and the full controlled fixture loaded in 701 ms at FastAPI. These measurements cover local backend time.
@@ -624,4 +624,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** PRs 1–7 merged. The standalone workspace and synthetic directory update are in review.
+**Current overall state** PRs 1–7 and the standalone workspace follow-up are merged. Grouped screen navigation and featured directory profiles are on the current branch.

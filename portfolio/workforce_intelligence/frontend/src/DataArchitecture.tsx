@@ -3,6 +3,7 @@ import type { Architecture, MetricDefinition } from "./data-api";
 import { DataModel } from "./DataModel";
 import { displayCode, displayDay, displayNumber } from "./format";
 import { QUALITY_RULE_GUIDANCE } from "./assurance-register";
+import type { OpenWorkforceScreen, WorkforceScreen } from "./mode-state";
 import { SourcesAndAssumptions } from "./SourcesAndAssumptions";
 import { VoiceProcess } from "./VoiceProcess";
 import styles from "./workforce-scaffold.module.css";
@@ -34,14 +35,16 @@ const lineage = {
   },
 };
 
-export function DataArchitecture({ architecture, metrics }: { architecture: Architecture; metrics: MetricDefinition[] }) {
+export function DataArchitecture({ architecture, metrics, screen, onOpenScreen }: {
+  architecture: Architecture; metrics: MetricDefinition[]; screen: WorkforceScreen; onOpenScreen: OpenWorkforceScreen;
+}) {
   const [layer, setLayer] = useState<(typeof architecture.layers)[number]["code"]>("operational");
   const metadata = lineage[layer];
   const example = architecture.layers.find((row) => row.code === layer);
   const status = architecture.quality_status === "passed" ? "Passed" : "Review required";
   return (
     <div className={styles.stack}>
-      <section id="data-lineage" className={styles.panel} aria-labelledby="lineage-heading">
+      {screen === "data-lineage" ? <section id="data-lineage" className={styles.panel} aria-labelledby="lineage-heading">
         <div className={styles.sectionHeader}><div><h2 id="lineage-heading">From source records to reports</h2>
           <p>Architecture overview · Workforce-owned SQLite · Revision {architecture.dataset.revision}</p></div></div>
         <p className={styles.caption}>The shared backend reads a committed snapshot. Reports reflect accepted
@@ -50,8 +53,9 @@ export function DataArchitecture({ architecture, metrics }: { architecture: Arch
           {Object.values(lineage).map(({ title, purpose }) =>
             <li key={title}><strong>{title}</strong><span>{purpose}</span></li>)}
         </ol>
-      </section>
-      <section id="data-layers" className={styles.panel} aria-labelledby="layer-heading">
+        <button type="button" className={styles.linkButton} onClick={() => onOpenScreen("data-layers")}>Explore the data layers</button>
+      </section> : null}
+      {screen === "data-layers" ? <section id="data-layers" className={styles.panel} aria-labelledby="layer-heading">
         <div className={styles.sectionHeader}><div><h2 id="layer-heading">Explore the data layers</h2>
           <p>Live synthetic examples at {displayDay(architecture.as_of_date)}.</p></div></div>
         <div className={styles.diagramControls} role="group" aria-label="Data layer">
@@ -64,7 +68,8 @@ export function DataArchitecture({ architecture, metrics }: { architecture: Arch
             <div><dt>Permitted content</dt><dd>{metadata.content}</dd></div>
             <div><dt>Transformation</dt><dd>{metadata.transform}</dd></div>
             <div><dt>Demo owner</dt><dd>{metadata.owner}</dd></div>
-            <div><dt>Snapshot quality</dt><dd>{status} · <a href="#quality">See checks</a></dd></div>
+            <div><dt>Snapshot quality</dt><dd>{status} · <button type="button" className={styles.linkButton}
+              onClick={() => onOpenScreen("quality")}>See checks</button></dd></div>
           </dl>
           {example ? <div>
             <h3>Example row</h3>
@@ -81,9 +86,9 @@ export function DataArchitecture({ architecture, metrics }: { architecture: Arch
             </div> : <p>No matching row at this date.</p>}
           </div> : null}
         </div>
-      </section>
-      <DataModel />
-      <section id="quality" className={styles.panel} aria-labelledby="quality-heading">
+      </section> : null}
+      {screen === "data-model" ? <DataModel /> : null}
+      {screen === "quality" ? <section id="quality" className={styles.panel} aria-labelledby="quality-heading">
         <div className={styles.sectionHeader}><div><h2 id="quality-heading">Data quality checks</h2>
           <p>Revision {architecture.dataset.revision} · {displayDay(architecture.as_of_date)}</p></div>
           <span className={architecture.quality_status === "passed" ? styles.statusBadge : styles.warningBadge}>
@@ -112,15 +117,15 @@ export function DataArchitecture({ architecture, metrics }: { architecture: Arch
         <p className={styles.caption}>
           Any nonzero check flags the current snapshot for review. Investigate its lineage before drawing a conclusion.
         </p>
-      </section>
-      <VoiceProcess />
-      <SourcesAndAssumptions />
-      <section id="catalogue" className={styles.panel} aria-labelledby="metric-catalogue-heading">
+      </section> : null}
+      {screen === "voice-process" ? <VoiceProcess /> : null}
+      {screen === "sources" ? <SourcesAndAssumptions /> : null}
+      {screen === "catalogue" ? <section id="catalogue" className={styles.panel} aria-labelledby="metric-catalogue-heading">
         <div className={styles.sectionHeader}><h2 id="metric-catalogue-heading">Metric catalogue</h2></div>
         {metrics.map((metric) => <details key={metric.code} className={styles.catalogueEntry}>
           <summary>{metric.name}</summary><p>{metric.formula} · v{metric.version}</p><p>{metric.caveat}</p>
         </details>)}
-      </section>
+      </section> : null}
     </div>
   );
 }

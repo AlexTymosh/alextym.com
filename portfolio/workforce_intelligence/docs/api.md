@@ -50,6 +50,13 @@ selected month through the selected date. Directory and vacancy requests accept
 `limit` (1–100, default 25) and `offset`. A populated `next_offset` continues
 pagination. Vacancy status counts cover the filtered date regardless of the page.
 
+The directory and employee detail return `directory_job_title` and
+`directory_department` for the 20 featured profiles. The
+`directory_title_inferred` and `directory_department_inferred` flags identify
+inferred values. A missing featured title is null. Other employees use their
+effective establishment assignment. The directory's `organisation` and `role`
+and the detail's assignment history describe establishment assignments.
+
 Planning POSTs also require `source_revision`. Optional inputs include
 `as_of_date` and `horizon` (1–12 months). Forecasts accept a supported
 `metric` and scenarios accept `inputs` described by OpenAPI and the

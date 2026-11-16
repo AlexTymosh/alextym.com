@@ -88,8 +88,8 @@ export function ImportExport({ dataset, onSaved, onError }: {
     }));
   }
 
-  return <details id="import-export" className={styles.panel}>
-    <summary className={styles.operationHeading}>Import / Export</summary>
+  return <section id="import-export" className={styles.panel} aria-labelledby="import-export-heading">
+    <h2 id="import-export-heading">Import / Export</h2>
     <p className={styles.message}>Use only synthetic records. A workbook can contain up to 500 data rows and be at most 1 MiB.
       Validation previews changes for 15 minutes. It does not save source records.</p>
     <form className={styles.filterBar} aria-label="Validate Excel workbook" onSubmit={validate}>
@@ -166,5 +166,5 @@ export function ImportExport({ dataset, onSaved, onError }: {
         <button type="submit" className={styles.secondaryButton} disabled={working}>Download workbook</button>
       </form>
     </div>
-  </details>;
+  </section>;
 }

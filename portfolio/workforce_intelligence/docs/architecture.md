@@ -123,3 +123,9 @@ three non-substantive contracts to the short fixture. The full fixture reuses
 existing employee records for its additional featured rows. The migration
 retains the dataset ID and employment history and advances the revision so
 clients and outstanding workbook previews can detect the change.
+
+Migration 13 adds a directory profile lookup keyed by featured display order.
+The directory and employee detail use its titles, departments and inference
+flags. The lookup persists across synthetic dataset replacements. This migration
+leaves the dataset revision and effective establishment assignments intact.
+The latter continue to feed workforce metrics and survey eligibility.

@@ -11,11 +11,23 @@ the shared synthetic generation. Allow 15 seconds between replacements.
 
 For a cold Render instance, open the workspace early and let the first data
 request finish. Use **Retry** if the data service is still starting. People
-Voice can open the **Demonstration fallback result** using the persisted fixture.
+Voice shows the **Demonstration fallback result** under **Prepared example →
+Prepared report**.
 Its labelled seeded review, evidence IDs and linked action support a live demo
 without an AI provider call. Prepare a synthetic Excel workbook from
 **Workforce Management → Import / Export → Download template** for the
 ten-minute run.
+
+Use the grouped sidebar to switch the central screen. On a narrow display the
+same groups are available in the **Section** selector. A screen link restores
+its selection on reload, and browser Back returns to the previous screen.
+
+| Mode | Groups |
+| --- | --- |
+| Workforce Intelligence | Performance overview, Recruitment pipeline, Planning & insight |
+| Workforce Management | People & employment, Recruitment operations, Data administration |
+| People Voice | Survey setup, Analysis & actions, Prepared example |
+| Data Architecture | Architecture, Governance, Process |
 
 ## 90-second walkthrough
 
@@ -38,9 +50,10 @@ People Voice, forecasting, Insight Pilot and Data Architecture.
   conversions use distinct applications in the reporting window.
 - Open **Rating question results** in the prepared candidate report and compare
   the response rate and ratings with the recorded application indicators.
-- Open **Rota Changes and Workforce Pressure**. The fixture has 12 responses
-  and 10 analysable comments. Follow `rota-001` from the published finding and
-  show the separate seeded review and linked management action.
+- Open **Prepared report** for **Rota Changes and Workforce Pressure**. The
+  fixture has 12 responses and 10 analysable comments. Open **Published findings**
+  and follow `rota-001` to the seeded evidence. Open **Management action** to see
+  the action linked to that finding.
 - Open the **Workforce gap** definition. It includes effective budget WTE,
   substantive WTE, date window, quality and version.
 - Select **Enable forecast**. The controlled full fixture shows a dashed
@@ -59,13 +72,13 @@ Select **Ten-minute walkthrough** for the five-minute sequence plus these steps.
 2. Change **Pre-employment checks (days)** or **Offer acceptance (%)** and
    select **Run scenario**. Compare starts, open vacancy WTE and workforce gap
    with the reference. Open the assumptions panel to explain internal moves.
-3. Choose a generated campaign. Run **Analyze with demo fallback**, inspect
+3. In **Analyst review**, choose a generated campaign. Run **Use demonstration analysis**, inspect
    the evidence IDs and excerpt, then confirm or amend a supported finding
    with a rationale. Publish it separately. If the narrow candidate sample
    suppresses a finding, use a larger generated staff campaign and the
    [People Voice walkthrough](people-voice.md).
-4. In the action tracker, create a management action tied to the published
-   finding and record its target, due date and progress.
+4. Create a management action on the published finding in **Analyst review**
+   with a target and due date. The **Action tracker** opens so you can record progress.
 5. Open **People Voice to Action**. Select the structured evidence gateway to
    show the invalid JSON and unsupported-evidence paths.
 6. Open **Audit history** to find the source edit or review event, then show
