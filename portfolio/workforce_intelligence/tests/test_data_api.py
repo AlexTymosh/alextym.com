@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.testclient import TestClient
 
 from workforce_intelligence.database import Database
+from workforce_intelligence.directory_names import FEATURED_NAMES
 from workforce_intelligence.http import get_database
 from workforce_intelligence.router import router
 
@@ -149,7 +150,7 @@ def test_employment_workflow_preserves_contract_and_assignment_history(demo):
         start_on="2026-08-01",
         **fields,
     )
-    source_command(client, "edit_profile", employee_id="demo-ops", display_name="Demo Ops A.")
+    source_command(client, "edit_profile", employee_id="demo-ops", display_name="Aria P.")
     source_command(
         client,
         "set_assignment",
@@ -204,7 +205,7 @@ def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     assert [r["line_id"] for r in current["assignments"]] == ["line-2", "line-1"]
     actions = {row["action"] for row in client.get("operations/audit").json()["items"]}
     assert {"promotion", "record_leaver", "record_pdr"}.issubset(actions)
-    assert current["display_name"] == "Demo Ops A."
+    assert current["display_name"] == "Aria P."
     assert client.delete("employees/demo-ops").status_code == 405
 
 
@@ -385,10 +386,11 @@ def test_period_kpis_and_application_grain_reconcile(demo):
 def test_effective_edit_refreshes_gold_and_keeps_dates_and_audit(demo):
     client, database = demo
     full = client.get("employees", params={"limit": 15}).json()
-    assert [person["display_name"] for person in full["items"]] == [
-        f"Demo {c}." for c in "ABCDEFGHIJKLMNO"
-    ]
+    assert [person["display_name"] for person in full["items"]] == list(FEATURED_NAMES[:15])
     assert full["next_offset"] == 15
+    rest = client.get("employees", params={"limit": 15, "offset": 15}).json()
+    assert [person["display_name"] for person in rest["items"]] == list(FEATURED_NAMES[15:])
+    assert rest["next_offset"] is None
     before = executive(client)["workforce_gap_wte"]["value"]
     historical = executive(client, as_of_date="2026-10-19")["workforce_gap_wte"]["value"]
     change = {

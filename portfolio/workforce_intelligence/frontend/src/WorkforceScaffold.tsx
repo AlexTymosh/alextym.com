@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { DataArchitecture } from "./DataArchitecture";
 import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
@@ -191,10 +192,11 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   return (
     <section className={styles.root} data-theme={theme} data-guided={guide ? "true" : undefined}
       aria-label="Workforce Intelligence demo">
-      <p className={styles.disclosure}>Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system</p>
+      <p className={styles.disclosure}>Demo v1.0 · Prepared for an SCAS interview · Synthetic data only</p>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">WI</span>
+          <Image className={styles.brandLogo} src="/workforce-simulation-logo.png" width={56} height={56}
+            alt="Workforce Analytics Simulation Environment emblem" />
           <div><p className={styles.brandName}>Workforce & Recruitment Intelligence</p>
             <p className={styles.brandContext}>Workforce demo</p></div>
         </div>
@@ -235,8 +237,6 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
               if (target instanceof HTMLDetailsElement) target.open = true;
             }}>{name}</a>)}
           </nav> : null}
-          <div className={styles.sidebarFoot}>{previewMode ? <span>Local-only UI preview</span> :
-            <a href="/portfolio">Back to portfolio</a>}</div>
         </aside>
         <div className={styles.content}>
           <div className={styles.statusBar} role="status">
@@ -291,7 +291,6 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
           </section>
         </div>
       </div>
-      <p className={styles.disclosure}>Demo environment. Changes may be reset periodically.</p>
     </section>
   );
 }

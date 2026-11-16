@@ -20,6 +20,8 @@ test("the Vercel password gate accepts its HTTPS site without Portfolio Lab conf
 
 test("the public portfolio has working links to both demos", async ({ page }) => {
   await page.goto("/portfolio/");
+  await expect(page.locator(".site-header")).toBeVisible();
+  await expect(page.locator(".site-footer")).toBeVisible();
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { name: "Portfolio demonstrations" })).toBeVisible();
   await expect(main.getByRole("link", { name: /Fleet VOR Hub/ })).toHaveAttribute("href", "/fleet-vor-hub");

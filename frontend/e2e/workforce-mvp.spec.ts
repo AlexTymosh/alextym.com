@@ -56,6 +56,16 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await signIn(page);
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
+  const app = page.getByRole("region", { name: "Workforce Intelligence demo" });
+  await expect(page.locator(".app-shell, .site-header, .site-footer")).toHaveCount(0);
+  await expect(page.getByRole("main")).toHaveCount(1);
+  const emblem = app.getByRole("img", { name: "Workforce Analytics Simulation Environment emblem" });
+  await expect(emblem).toBeVisible();
+  await expect.poll(() => emblem.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+  expect(await app.evaluate((element) => element.getBoundingClientRect().width)).toBe(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+  await expect(app.getByText(/not an official SCAS system/i)).toHaveCount(0);
   const workspaceNav = page.getByRole("navigation", { name: "Workforce sections" });
   await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
   const channels = page.getByRole("region", { name: "Recruitment channel table" });
@@ -90,7 +100,13 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await page.evaluate(() => { document.documentElement.dataset.workforceApp = "running"; });
 
   await workspaceNav.getByRole("link", { name: "Workforce Management" }).click();
-  await page.getByRole("button", { name: "Edit FTE for Demo A.", exact: true }).click({ timeout: 20_000 });
+  const directory = page.getByRole("region", { name: "People directory table" });
+  await expect(directory.getByRole("rowheader").getByRole("button")).toHaveText([
+    "James W.", "Lynn L.", "Mark G.", "Craig E.", "Stuart R.", "Jo Q.", "Michelle S.", "Colin D.",
+    "William B.", "Lisa B.", "Anna H.", "Amy C.", "Philip S.", "Katie W.", "David W.", "Marta M.",
+    "Steve C.", "Nadim A.", "Tony S.", "Sophie R.",
+  ]);
+  await page.getByRole("button", { name: "Edit FTE for James W.", exact: true }).click({ timeout: 20_000 });
   const field = page.getByLabel("New contracted FTE");
   const oldFte = Number(await field.inputValue());
   const newFte = oldFte === 1 ? 0.8 : 1;
@@ -99,7 +115,7 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
     res.request().method() === "PATCH");
   await page.getByRole("button", { name: "Save FTE" }).click();
   expect((await saved).status()).toBe(200);
-  await expect(page.getByRole("status").filter({ hasText: "Demo A. contract saved" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "James W. contract saved" })).toBeVisible();
 
   await workspaceNav.getByRole("link", { name: "Workforce Intelligence" }).click();
   await expect(gap).toHaveText(`${Number((prior + oldFte - newFte).toFixed(3))} WTE`);
@@ -201,7 +217,7 @@ test("reset is confirmed and the interview guides restore their real views", asy
   await expect(page.getByLabel("Effective date")).toHaveValue("2026-10-20");
   await page.getByLabel("New contracted FTE").fill("0.8");
   await page.getByRole("button", { name: "Save FTE" }).click();
-  await expect(page.getByText("Demo A. contract saved", { exact: false })).toBeVisible();
+  await expect(page.getByText("James W. contract saved", { exact: false })).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
   await expect(gap).toHaveText(`${Number((baselineGap + 0.2).toFixed(3))} WTE`);
   await guide.getByRole("button", { name: "Next step" }).click();

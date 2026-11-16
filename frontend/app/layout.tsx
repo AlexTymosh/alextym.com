@@ -3,6 +3,7 @@ import Link from "next/link";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { PrivacySafeAnalytics } from "../components/privacy-safe-analytics";
+import { SiteFrame } from "../components/site-frame";
 import { SiteNavigation } from "../components/site-navigation";
 import {
   getPersonJsonLd,
@@ -91,9 +92,7 @@ export default function RootLayout({
       </head>
       <body>
         <PrivacySafeAnalytics />
-        <div className="app-shell">
-          <SiteNavigation />
-          <main className="site-main">{children}</main>
+        <SiteFrame navigation={<SiteNavigation />} footer={
           <footer className="site-footer site-footer--with-disclaimer">
             <div className="site-footer__visit">
               <span className="site-footer__bracket">{"{"}</span>
@@ -105,7 +104,9 @@ export default function RootLayout({
               {siteConfig.footer.disclaimerLabel}
             </Link>
           </footer>
-        </div>
+        }>
+          {children}
+        </SiteFrame>
       </body>
     </html>
   );

@@ -63,8 +63,8 @@ export function WorkforcePasswordGate() {
     }
   };
 
-  if (state === "unlocked") return <WorkforceScaffold onSignOut={() => void signOut()} />;
-  if (state === "loading") return <div className={styles.loading} role="status">Checking demo access…</div>;
+  if (state === "unlocked") return <main><WorkforceScaffold onSignOut={() => void signOut()} /></main>;
+  if (state === "loading") return <main className={styles.loading}><p role="status">Checking demo access…</p></main>;
 
   return (
     <main className={styles.page}>

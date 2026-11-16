@@ -34,7 +34,7 @@ DemoName = Annotated[
     StringConstraints(
         strip_whitespace=True,
         max_length=48,
-        pattern=r"^Demo [A-Za-z0-9][A-Za-z0-9 .\-]{0,40}$",
+        pattern=r"^(?:[\p{L}\p{M}]+(?:[ '’\-][\p{L}\p{M}]+)* \p{Lu}\.|Demo [A-Za-z0-9][A-Za-z0-9 .\-]{0,40})$",
     ),
 ]
 PositionCount = Annotated[int, Field(strict=True, ge=1, le=100)]

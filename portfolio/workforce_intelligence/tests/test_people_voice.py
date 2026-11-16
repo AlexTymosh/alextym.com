@@ -122,7 +122,7 @@ def test_survey_builder_records_population_and_deterministic_responses(voice_db)
         assert conn.execute(
             "SELECT SUM(eligible), SUM(invited) FROM voice_population "
             "WHERE survey_id = 'new-voice' AND dimension = 'clinical'"
-        ).fetchone()[:] == (17, 16)
+        ).fetchone()[:] == (20, 16)
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     assert outcome.campaign["responses"] == outcome.campaign["analysable"] == 15
     assert outcome.campaign["generation_seed"] == 32

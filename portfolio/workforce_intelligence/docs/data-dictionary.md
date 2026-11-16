@@ -1,9 +1,10 @@
 # Workforce MVP source data
 
-The `interview-core` seed uses generation seed `1733`, version `1.1`, and the
-observed dates 1 July to 31 October 2026. It contains 15 featured people, two
-additional people recruited during the observed period, three synthetic budget
-lines, six vacancies, nine applications and six offers. Dates, source IDs and
+The `interview-core` seed uses generation seed `1733`, version `1.2`, and the
+observed dates 1 July to 31 October 2026. It contains 20 featured people,
+including two recorded starters and three employees on non-substantive
+contracts. The dataset has three synthetic budget lines, six vacancies, nine
+applications and six offers. Dates, source IDs and
 values are reproducible on a fresh database and after reset. Bootstrap and reset
 timestamps record the actual operation time. Separate installation UUIDs identify
 separate runtime files.

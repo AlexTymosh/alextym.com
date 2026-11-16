@@ -13,11 +13,12 @@
   --wi-error: #ffb8aa;
   min-width: 0;
   width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   overflow: clip;
   color-scheme: dark;
   isolation: isolate;
-  border: 1px solid var(--wi-border);
-  border-radius: 16px;
   background: var(--wi-bg);
   color: var(--wi-ink);
 }
@@ -61,18 +62,12 @@
   padding: 18px 22px;
   background: var(--wi-surface);
 }
-.brandMark {
-  display: grid;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid var(--wi-border);
-  border-radius: 11px;
-  background: var(--wi-accent-soft);
-  color: var(--wi-accent);
-  font-size: .95rem;
-  font-weight: 750;
+.brandLogo {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 9px;
+  object-fit: contain;
 }
 .brandName { margin: 0; font-size: clamp(1rem, 1.5vw, 1.23rem); font-weight: 700; letter-spacing: -.03em; }
 .brandContext { margin: 3px 0 0; color: var(--wi-muted); font-size: .74rem; }
@@ -143,21 +138,19 @@
 }
 .navigation .navItem:hover { color: var(--wi-ink); }
 .navigation .navItemActive { border-color: var(--wi-accent); color: var(--wi-ink); }
-.body { display: grid; grid-template-columns: 185px minmax(0, 1fr); min-height: 65vh; }
+.body { display: grid; grid-template-columns: 185px minmax(0, 1fr); flex: 1; }
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 26px;
   min-width: 0;
   padding: 23px 12px;
   border-right: 1px solid var(--wi-border);
   background: var(--wi-surface);
 }
 .sidebar nav { display: grid; gap: 3px; }
-.sidebar a, .sidebarFoot span { padding: 8px 9px; font-size: .78rem; line-height: 1.4; }
+.sidebar a { padding: 8px 9px; font-size: .78rem; line-height: 1.4; }
 .sidebar nav a { color: var(--wi-muted); border-radius: 6px; text-decoration: none; }
 .sidebar nav a:hover { background: var(--wi-elevated); color: var(--wi-ink); }
-.sidebarFoot { margin-top: auto; color: var(--wi-muted); }
 .content { min-width: 0; }
 .statusBar {
   display: flex;
@@ -481,7 +474,6 @@
   .body { display: block; }
   .sidebar { padding: 0 16px; border-right: 0; border-bottom: 1px solid var(--wi-border); }
   .sidebar nav { display: flex; flex-wrap: wrap; gap: 0 7px; }
-  .sidebarFoot { display: none; }
   .metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .navigation { gap: 0 18px; padding-inline: 16px; }
   .disclosure, .header { padding-inline: 16px; }

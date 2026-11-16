@@ -4,7 +4,7 @@ import { WorkforceScaffold } from "@workforce-intelligence";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Workforce Intelligence — Local UI preview",
+  title: { absolute: "Workforce Intelligence — Local UI preview" },
   robots: { index: false, follow: false },
 };
 
@@ -15,5 +15,5 @@ export default function WorkforceLocalPreviewPage() {
       Boolean(process.env.VERCEL)) {
     notFound();
   }
-  return <WorkforceScaffold previewMode />;
+  return <main><WorkforceScaffold previewMode /></main>;
 }

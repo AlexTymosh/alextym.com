@@ -53,6 +53,11 @@ The canonical public routes are also used by `sitemap.xml`:
 
 ## Frontend application
 
+Workforce Intelligence uses its own full-page frame at
+`/portfolio/workforce-intelligence`. The shared Next.js layout supplies the
+document and global CSS, while the Workforce route renders its own navigation
+and content landmark. The public catalogue and site pages use the site frame.
+
 Frontend stack:
 
 ```text
