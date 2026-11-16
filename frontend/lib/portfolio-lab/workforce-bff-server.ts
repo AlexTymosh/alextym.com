@@ -3,7 +3,7 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { WORKFORCE_COOKIE, workforceBackendOrigin, workforceEnabled } from "./workforce-password-server";
 import { hasLabJsonContent, readLabJson } from "./request-json";
-import { hasSameOrigin } from "./session-origin";
+import { hasWorkforceOrigin } from "./workforce-origin";
 import { workforceUpstreamPath } from "./workforce-transport";
 import { hasWorkbookContent, readWorkbookBytes, XLSX_CONTENT_TYPE } from "./workforce-workbooks";
 
@@ -27,7 +27,7 @@ export async function forwardWorkforceRequest(request: NextRequest, operation: s
     Accept: download ? XLSX_CONTENT_TYPE : "application/json" });
   let body: string | ArrayBuffer | undefined;
   if (request.method !== "GET") {
-    if (!hasSameOrigin(request)) return reply(403, { detail: "Origin not allowed" });
+    if (!hasWorkforceOrigin(request)) return reply(403, { detail: "Origin not allowed" });
     if (upload) {
       if (!hasWorkbookContent(request)) return reply(415, { detail: "Send an .xlsx workbook." });
       const bytes = await readWorkbookBytes(request);

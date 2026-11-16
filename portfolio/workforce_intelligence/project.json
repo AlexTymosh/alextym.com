@@ -5,7 +5,7 @@
   "title": "Workforce & Recruitment Intelligence",
   "summary": "Protected synthetic workforce and recruitment analytics interview demonstration.",
   "category": "Data & Analytics",
-  "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "SQLite", "Firebase Authentication"],
+  "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "SQLite"],
   "mode": "embedded",
   "demo": {
     "path": "/portfolio/workforce-intelligence",

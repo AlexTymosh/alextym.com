@@ -4,7 +4,7 @@ The Workforce demo now shares the existing **Fleet password value**, not the
 Fleet session. The authoritative secret is `VOR_DEMO_PASSWORD` on **Render only**.
 The backend issues an eight-hour HMAC-SHA256, purpose-separated Workforce bearer
 session on successful login. The Next.js BFF stores it in an `HttpOnly`,
-`SameSite=Strict`, HTTPS-only-on-HTTPS, path-scoped cookie. It forwards the token
+`SameSite=Strict`, secure-on-Vercel, path-scoped cookie. It forwards the token
 to FastAPI over the protected `BACKEND_ORIGIN` HTTPS connection. FastAPI verifies
 all Workforce data calls, including direct Render calls. The browser never
 receives the configured password in a JavaScript-readable configuration.
@@ -13,13 +13,14 @@ receives the configured password in a JavaScript-readable configuration.
 
 - Render: set `WORKFORCE_INTELLIGENCE_ENABLED=true` and retain existing Fleet
   `VOR_DEMO_PASSWORD`. Keep `VOR_DEMO_ENABLED` separate.
-- Vercel: set `WORKFORCE_INTELLIGENCE_ENABLED=true`, `BACKEND_ORIGIN` to the
-  HTTPS Render origin, and `PORTFOLIO_LAB_ORIGIN` to the site's canonical HTTPS
-  origin (needed for same-origin mutation and sign-in validation).
+- Vercel: set `WORKFORCE_INTELLIGENCE_ENABLED=true` and `BACKEND_ORIGIN` to the
+  HTTPS Render origin. Workforce checks the HTTPS browser Origin against the
+  routed Host on Vercel. The Firebase-specific `PORTFOLIO_LAB_ORIGIN` setting
+  does not control Workforce login, logout or writes.
 - Do **not** put `VOR_DEMO_PASSWORD` into Vercel, `NEXT_PUBLIC_*`, Git or browser
   source. Do not enable Firebase merely to access Workforce.
 - `/portfolio/workforce-intelligence` is the project landing and password form.
-- `/portfolio` is a minimal public project link when Workforce is enabled.
+- `/portfolio` is a public catalogue for the two portfolio demos.
 - `/portfolio/workforce-intelligence/preview` remains the development-only UI
   preview with no API calls or authentication.
 

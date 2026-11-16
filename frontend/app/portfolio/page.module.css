@@ -1,0 +1,18 @@
+.portfolio { width: min(100% - 2rem, 62rem); margin: 0 auto; padding: clamp(2.5rem, 8vw, 6rem) 0; }
+.portfolio > h1 { margin: 0 0 .4rem; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.15; }
+.portfolio > p { opacity: .8; }
+.projects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 2rem 0 0; }
+.card {
+  display: flex; min-width: 0; height: 100%; flex-direction: column; align-items: flex-start; gap: .65rem;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent); border-radius: 1rem;
+  padding: clamp(1.15rem, 3vw, 1.75rem); text-decoration: none; color: inherit;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+.card:hover, .card:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.card h2 { margin: 0; font-size: 1.35rem; line-height: 1.25; }
+.card p { margin: 0 0 .5rem; line-height: 1.5; opacity: .85; }
+.logo { width: 4rem; height: 4rem; display: grid; place-items: center; object-fit: contain; border-radius: .8rem; }
+span.logo { background: #164e64; color: #fff; }
+.cta { margin-top: auto; font-weight: 650; text-underline-offset: .2em; }
+.card:hover .cta { text-decoration: underline; }
+@media (max-width: 610px) { .projects { grid-template-columns: 1fr; } }
