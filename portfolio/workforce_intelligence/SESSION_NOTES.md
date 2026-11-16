@@ -1,7 +1,7 @@
 # Workforce & Recruitment Intelligence — Implementation Session Notes
 
 **Project:** `workforce_intelligence`  
-**Document status:** PRs 1–6 merged. PR 7 implements the planning, architecture and interview release stage. The authenticated hosted walkthrough is a separate release check after the merge.
+**Document status:** PRs 1–7 merged. The current follow-up gives Workforce a full-page layout and updates the synthetic employee directory.
 
 **Plan version:** 1.0  
 **Prepared:** 2026-11-14  
@@ -348,7 +348,7 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 | PR 4 | 10–12 | Full operational flows, 4,400 seed, Excel | MERGED | [#248](https://github.com/AlexTymosh/alextym.com/pull/248) | `c47c7d5aa216ce64387898bfe77af233f49fa6dc` |
 | PR 5 | 13–15 | Full workforce analytics and assurance | MERGED | [#249](https://github.com/AlexTymosh/alextym.com/pull/249) | `02bb1bea1e2a403813cb219f7e76379db58db4e2` |
 | PR 6 | 16–18 | Surveys, weighting, external AI and review | MERGED | [#250](https://github.com/AlexTymosh/alextym.com/pull/250) | `68fa6ee9959a529a29d239da1feece1f221f2c29` |
-| PR 7 | 19–21 | Forecasts, diagrams, production hardening | IN PROGRESS — review | [#253](https://github.com/AlexTymosh/alextym.com/pull/253) | — |
+| PR 7 | 19–21 | Forecasts, diagrams, production hardening | MERGED | [#253](https://github.com/AlexTymosh/alextym.com/pull/253) | `719b13f95f6567527fd7f189a78b41e11bebe1fe` |
 
 | # | State | Commit SHA | Verification notes |
 |---:|---|---|---|
@@ -376,8 +376,10 @@ Status vocabulary: `NOT STARTED` → `IN PROGRESS` → `DONE` or `BLOCKED`; `MER
 
 ### Latest checkpoint (fill after every coding session)
 
-- **Current branch** `codex/workforce-intelligence-release`.
-- **Base `main`** `68fa6ee9959a529a29d239da1feece1f221f2c29`, merged PR #250.
+- **Current branch** `codex/workforce-standalone-directory`.
+- **Base `main`** `719b13f95f6567527fd7f189a78b41e11bebe1fe`, merged PR #253.
+- **Current scope** The Workforce route fills the viewport and uses the supplied emblem. Migration 12 applies the featured directory order and updates legacy generated aliases in place. The short fixture adds three bank contracts. The full fixture retains 4,400 employee records.
+- **Current checks** 84 Workforce and host tests and 14 Chromium checks passed, including the migration, first 20 directory entries and standalone production build.
 - **Interview guide** Use the short fixture for the 90-second run and the full controlled 36-month fixture to show the plotted forecast. [Interview runbook](docs/interview-runbook.md)
 - **Local verification** 994 tests passed with four opt-in skips. All 15 password-demo Chromium checks passed on the Next.js production build with a local HTTPS backend. They cover Excel, campaign switching, manual publication, full-fixture planning and the mobile BPMN walkthrough. Another 34 desktop/mobile checks covered a disabled Workforce flag, public catalogue and route guards. TypeScript, Ruff and scoped Workforce lint passed.
 - **Local latency sample** During the browser run, executive requests took 20–166 ms, workforce trend took 17–151 ms, forecast runs took 32–48 ms and the full controlled fixture loaded in 701 ms at FastAPI. These measurements cover local backend time.
@@ -622,4 +624,4 @@ At the start of **every** new coding session:
 - [ ] Accessibility, performance, concurrency/reset, security failure modes, production smoke and rollback tested.
 - [ ] All functional sections of v1.2 accounted for; any gaps documented explicitly, not silently marked complete.
 
-**Current overall state:** PRs 1–6 merged. The interview release is in PR 7 review. Hosted verification on the new revision remains a release gate.
+**Current overall state:** PRs 1–7 merged. The standalone workspace and synthetic directory update are in review.

@@ -93,7 +93,7 @@ and workbook downloads are never cached by either host.
 ## Architecture explorer and planning
 
 The Data Architecture workspace reads four live examples at a single dataset
-cutoff and revision. The explorer follows one synthetic contract from its
+cutoff and revision. The explorer follows one substantive synthetic contract from its
 operational row through Bronze and the compatible Silver interval. The Gold
 example shows the aggregate establishment, substantive WTE and gap at the same
 cutoff. The examples select fixed columns and omit names, survey text and
@@ -116,3 +116,10 @@ preserves saved campaigns and review history. Candidate surveys use one
 synthetic application as their eligible unit. Rating the interview requires a
 recorded interview. The report applies the existing suppression and review
 rules.
+
+Migration 12 updates the employee directory in place. It gives the first 20
+synthetic employees a fixed display order, updates generated aliases, and adds
+three non-substantive contracts to the short fixture. The full fixture reuses
+existing employee records for its additional featured rows. The migration
+retains the dataset ID and employment history and advances the revision so
+clients and outstanding workbook previews can detect the change.

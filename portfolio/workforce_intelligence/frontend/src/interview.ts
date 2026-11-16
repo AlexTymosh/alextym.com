@@ -15,7 +15,7 @@ const overview: Step = {
 };
 const edit: Step = {
   id: "edit-fte", mode: "workforce-management", target: "contracts", title: "Record a contract change",
-  instruction: "For Demo A., enter 0.8 FTE effective 20 October 2026 and select Save FTE.", edit: true,
+  instruction: "For James W., enter 0.8 FTE effective 20 October 2026 and select Save FTE.", edit: true,
 };
 const refresh: Step = {
   id: "updated-gap", mode: "workforce-intelligence", target: "executive", title: "Check the revised gap",

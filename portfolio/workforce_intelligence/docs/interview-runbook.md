@@ -21,7 +21,7 @@ ten-minute run.
 
 1. Select **90-second walkthrough** and **Run interview scenario**. Show
    Workforce gap and Median time to hire for 1–31 October 2026.
-2. Select **Next step** to open the effective-dated contract for Demo A. Change
+2. Select **Next step** to open the effective-dated contract for James W. Change
    contracted FTE from 1.0 to 0.8 effective 20 October 2026. Select **Save FTE**.
 3. Select **Next step**. Read the updated Workforce gap from Recruitment overview.
    It increases by 0.2 WTE from the seed and the reporting dates stay the same.
@@ -82,7 +82,7 @@ For a predictable baseline, choose **Reset demo** and confirm before starting.
 
 1. Open **Workforce Management → Import / Export** and select **Download template**.
 2. Populate the **Employees** sheet with a fictional employee code and a display
-   alias beginning with `Demo`. Keep the workbook metadata, exact sheet headers
+   alias such as `Aria P.`. Keep the workbook metadata, exact sheet headers
    and the required fields; use an existing establishment line ID. The current
    accepted actions and keys are in [Excel import/export](workbooks.md).
 3. Upload the workbook and select **Validate workbook**. Confirm the row-level

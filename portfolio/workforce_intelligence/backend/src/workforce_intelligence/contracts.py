@@ -55,8 +55,9 @@ def add_employment(
     created_by: str,
     change_reason: str,
     featured_order: int | None = None,
+    substantive: bool = True,
 ) -> None:
-    """Create an employee's initial substantive contract and budget-line assignment."""
+    """Create an employee's initial contract and budget-line assignment."""
     connection.execute(
         "INSERT INTO employees (id, display_name, is_featured_demo_employee, display_order) VALUES (?, ?, ?, ?)",
         (employee_id, display_name, int(featured_order is not None), featured_order),
@@ -65,9 +66,9 @@ def add_employment(
         """
         INSERT INTO employment_contracts (employee_id, contracted_fte_milli, is_substantive,
             valid_from, created_at, created_by, change_reason)
-        VALUES (?, ?, 1, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (employee_id, fte_milli, start, created_at, created_by, change_reason),
+        (employee_id, fte_milli, substantive, start, created_at, created_by, change_reason),
     )
     connection.execute(
         """

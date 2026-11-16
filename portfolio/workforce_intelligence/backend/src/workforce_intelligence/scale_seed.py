@@ -6,6 +6,12 @@ from random import Random
 
 from workforce_intelligence.contracts import add_employment
 from workforce_intelligence.dataset import SeedDefinition
+from workforce_intelligence.directory_names import (
+    FEATURED_NAMES,
+    FULL_FEATURED_IDS,
+    FULL_SEED_VERSION,
+    synthetic_name,
+)
 from workforce_intelligence.seed import (
     AS_OF_DATE,
     INTERVIEW_SEED,
@@ -20,6 +26,7 @@ EMPLOYEE_COUNT = 4400
 MONTHS = 36
 HIRES_PER_MONTH = 8
 BASE_PEOPLE = EMPLOYEE_COUNT - 17 - MONTHS * HIRES_PER_MONTH
+FEATURED_ORDER = {employee_id: order for order, employee_id in enumerate(FULL_FEATURED_IDS, 1)}
 UNIT_LABELS = (
     "Patient Flow",
     "Integrated Care",
@@ -125,11 +132,11 @@ def _employment(
     conn: sqlite3.Connection,
     random: Random,
     employee: str,
-    label: str,
     line: str,
     start: str,
     fte: int,
     *,
+    featured_order: int | None = None,
     temporary: bool = False,
     leave: str | None = None,
     leave_reason: str | None = None,
@@ -137,20 +144,23 @@ def _employment(
     add_employment(
         conn,
         employee_id=employee,
-        display_name=label,
+        display_name=FEATURED_NAMES[featured_order - 1]
+        if featured_order
+        else synthetic_name(employee),
         line_id=line,
         fte_milli=fte,
         start=start,
         created_at=SOURCE_TIMESTAMP,
         created_by="synthetic-seed",
         change_reason="synthetic_baseline",
+        featured_order=featured_order,
+        substantive=not temporary,
     )
-    if temporary or leave:
-        conn.execute(
-            "UPDATE employment_contracts SET is_substantive = ?, valid_to = ? WHERE employee_id = ?",
-            (not temporary, leave, employee),
-        )
     if leave:
+        conn.execute(
+            "UPDATE employment_contracts SET valid_to = ? WHERE employee_id = ?",
+            (leave, employee),
+        )
         conn.execute(
             "UPDATE organisation_assignments SET valid_to = ? WHERE employee_id = ?",
             (leave, employee),
@@ -183,12 +193,12 @@ def _base_workforce(conn: sqlite3.Connection, random: Random, lines: list[str]) 
             conn,
             random,
             employee_id,
-            f"Demo Staff {index + 1:04}.",
             line,
             date(
                 random.randint(2008, 2023), random.randint(1, 10), random.randint(1, 28)
             ).isoformat(),
             fte,
+            featured_order=FEATURED_ORDER.get(employee_id),
             temporary=temporary,
             leave=leave,
             leave_reason=reason,
@@ -410,7 +420,7 @@ def _candidate(
     if slot >= HIRES_PER_MONTH:
         return
     employee = f"hire-{key}"
-    _employment(conn, random, employee, f"Demo Starter {key}.", line, actual, fte)
+    _employment(conn, random, employee, line, actual, fte)
     conn.execute("INSERT INTO starter_events VALUES (?, ?, ?, ?)", (offer, employee, actual, fte))
     if month + 2 < MONTHS:
         outcome = random.choices(("passed", "extended", "unsuccessful"), (86, 11, 3))[0]
@@ -464,7 +474,7 @@ def _listening(conn: sqlite3.Connection, random: Random) -> None:
 
 
 def _populate(connection: sqlite3.Connection, seed: int) -> None:
-    populate_interview(connection, INTERVIEW_SEED.generation_seed, candidate_feedback=False)
+    populate_interview(connection, INTERVIEW_SEED.generation_seed, full_fixture=True)
     random = Random(seed)
     lines = _reference_data(connection)
     _base_workforce(connection, random, lines)
@@ -473,4 +483,6 @@ def _populate(connection: sqlite3.Connection, seed: int) -> None:
     populate_candidate_feedback(connection)
 
 
-FULL_SEED = SeedDefinition("full-controlled", 424400, "2.0", HISTORY_START, AS_OF_DATE, _populate)
+FULL_SEED = SeedDefinition(
+    "full-controlled", 424400, FULL_SEED_VERSION, HISTORY_START, AS_OF_DATE, _populate
+)

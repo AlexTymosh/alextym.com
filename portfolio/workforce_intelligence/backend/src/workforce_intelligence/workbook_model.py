@@ -13,7 +13,7 @@ from workforce_intelligence.schemas import EntityId
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 WORKBOOK_VERSION = "1"
 METADATA_TITLE = "Workforce workbook version"
-SYNTHETIC_NOTICE = "Synthetic demonstration data only. Not an official SCAS system."
+SYNTHETIC_NOTICE = "Synthetic demonstration data only."
 MAX_UPLOAD_BYTES = 1024 * 1024
 MAX_ROWS = 500
 

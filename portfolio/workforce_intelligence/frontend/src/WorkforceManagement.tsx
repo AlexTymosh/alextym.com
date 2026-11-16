@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { changeContractFte, WorkforceApiError, type Directory, type Employee } from "./data-api";
+import { changeContractFte, DIRECTORY_PAGE_SIZE, WorkforceApiError, type Directory, type Employee } from "./data-api";
 import { displayNumber } from "./format";
 import { ImportExport } from "./ImportExport";
 import { EmployeeOperations, OperationForm, SourceOperations } from "./SourceOperations";
@@ -55,7 +55,7 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
         {offset > 0 || directory.next_offset !== null ? (
           <div className={styles.pagination}>
             <button type="button" className={styles.secondaryButton} disabled={offset === 0}
-              onClick={() => onPage(Math.max(0, offset - 15))}>Previous</button>
+              onClick={() => onPage(Math.max(0, offset - DIRECTORY_PAGE_SIZE))}>Previous</button>
             <span>{offset + 1}–{offset + directory.items.length}</span>
             <button type="button" className={styles.secondaryButton} disabled={directory.next_offset === null}
               onClick={() => onPage(directory.next_offset ?? offset)}>Next</button>

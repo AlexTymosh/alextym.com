@@ -26,6 +26,7 @@ from workforce_intelligence.architecture import ArchitectureResponse, layer_exam
 from workforce_intelligence.contracts import change_fte, employees_at
 from workforce_intelligence.database import DatabaseUnavailable
 from workforce_intelligence.dataset import DatasetState, current_dataset, reset_dataset
+from workforce_intelligence.directory_migration import has_only_directory_refresh
 from workforce_intelligence.forecasting import (
     ForecastHistory,
     ForecastMetric,
@@ -401,13 +402,13 @@ def inclusive_recruitment_report(request: Request, database: Db) -> InclusiveRec
     with database.transaction() as connection:
         state = current_dataset(connection)
         report = inclusive_recruitment(connection, as_of_date=state.as_of_date)
-        # A released baseline must be immutable and reproducible. Any edit or
-        # exploratory seed can reveal a small group by subtracting two reads.
+        # An edit to analytical inputs or an exploratory seed can reveal a
+        # small group by subtracting two reads. The directory refresh changes aliases only here.
         baseline = (
-            state.revision == 0
-            and state.scenario_code == FULL_SEED.scenario_code
+            state.scenario_code == FULL_SEED.scenario_code
             and state.generation_seed == FULL_SEED.generation_seed
             and state.seed_version == FULL_SEED.seed_version
+            and (state.revision == 0 or has_only_directory_refresh(connection, state))
         )
         if not baseline:
             report = suppress_inclusive_report(

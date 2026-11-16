@@ -2,6 +2,7 @@
 
 from workforce_intelligence.candidate_migration import CANDIDATE_MIGRATION
 from workforce_intelligence.conformed_migration import CONFORMED_MIGRATION
+from workforce_intelligence.directory_migration import refresh_employee_directory
 from workforce_intelligence.forecast_migration import FORECAST_MIGRATION
 from workforce_intelligence.operations_migration import (
     OPERATIONS_MIGRATION,
@@ -227,6 +228,7 @@ MIGRATIONS = (
     VOICE_REVIEW_MIGRATION,
     FORECAST_MIGRATION,
     CANDIDATE_MIGRATION,
+    (refresh_employee_directory,),
 )
 
 # Parent-first order, reversed when replacing the data within a transaction.

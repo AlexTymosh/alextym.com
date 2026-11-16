@@ -1,14 +1,14 @@
 # Workforce & Recruitment Intelligence â€” portfolio demonstration
 
-**Temporary access:** shared Fleet demo password, no Firebase. The system is a
-synthetic-data simulation and is not an official SCAS or NHS product.
+**Temporary access:** shared Fleet demo password, no Firebase. The simulation
+uses synthetic data.
 
 ## Open the demo
 
 Open `/portfolio/workforce-intelligence`. The landing page displays the project
 emblem and a short description beside a password form. Enter the **same demo
-password** used at `/fleet-vor-hub`. After sign-in, the existing Workforce
-Intelligence UI opens. Sign out from the app header.
+password** used at `/fleet-vor-hub`. After sign-in, Workforce Intelligence opens
+as a full-page workspace. Sign out from the Workforce header.
 
 - `WORKFORCE_INTELLIGENCE_ENABLED=true` must be set on Vercel and Render.
 - `VOR_DEMO_PASSWORD` stays **only on Render** (Fleet already uses it).

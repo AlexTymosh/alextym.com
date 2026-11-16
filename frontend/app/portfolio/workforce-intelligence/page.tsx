@@ -5,7 +5,8 @@ import { workforceEnabled } from "../../../lib/portfolio-lab/workforce-password-
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Workforce & Recruitment Intelligence — Demo",
+  title: { absolute: "Workforce & Recruitment Intelligence — Demo" },
+  icons: { icon: "/workforce-simulation-logo.png" },
   robots: { index: false, follow: false },
 };
 

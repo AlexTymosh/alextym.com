@@ -1,8 +1,10 @@
 import calendar
+import re
 from dataclasses import replace
 from datetime import date
 from time import perf_counter
 
+from workforce_intelligence import database as sqlite_store
 from workforce_intelligence.analytics import (
     application_funnel,
     executive_metrics,
@@ -11,7 +13,9 @@ from workforce_intelligence.analytics import (
 )
 from workforce_intelligence.contracts import employees_at
 from workforce_intelligence.database import Database
-from workforce_intelligence.dataset import ensure_dataset
+from workforce_intelligence.dataset import advance_revision, current_dataset, ensure_dataset
+from workforce_intelligence.directory_migration import has_only_directory_refresh
+from workforce_intelligence.directory_names import FEATURED_NAMES
 from workforce_intelligence.scale_seed import FULL_SEED
 
 
@@ -33,9 +37,10 @@ def test_full_fixture_reconciles_against_direct_sources_across_observed_history(
             "survey_campaigns": 38,
         }.items():
             assert conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count
-        assert [r["display_order"] for r in employees_at(conn, state.as_of_date, 15, 0)] == list(
-            range(1, 16)
-        )
+        first_page = employees_at(conn, state.as_of_date, 21, 0)
+        assert [row["display_name"] for row in first_page[:20]] == list(FEATURED_NAMES)
+        assert [row["display_order"] for row in first_page[:20]] == list(range(1, 21))
+        assert re.fullmatch(r"[A-Z][a-z]+ [A-Z]\.", first_page[20]["display_name"])
         assert conn.execute("SELECT COUNT(*) FROM promotion_events").fetchone()[0] > 100
         assert conn.execute("SELECT COUNT(*) FROM candidate_demographics").fetchone()[0] > 2000
         assert conn.execute("SELECT COUNT(*) FROM leaver_events").fetchone()[0] > 150
@@ -91,3 +96,44 @@ def test_full_fixture_changes_only_when_generation_seed_changes(tmp_path):
     baseline = projection("controlled", FULL_SEED)
     assert projection("reproduced", FULL_SEED) == baseline
     assert projection("exploratory", replace(FULL_SEED, generation_seed=1)) != baseline
+
+
+def test_upgrade_preserves_full_fixture_edits_and_analytical_sources(tmp_path, monkeypatch):
+    database = Database(tmp_path / "legacy-full.sqlite3")
+    migrations = sqlite_store.MIGRATIONS
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:-1])
+    original = ensure_dataset(database, replace(FULL_SEED, seed_version="2.0"))
+    with database.transaction(write=True) as conn:
+        conn.execute(
+            "UPDATE employees SET display_name = 'Demo Staff 0002.', display_order = NULL, "
+            "is_featured_demo_employee = 0 WHERE id = 'demo-0002'"
+        )
+        conn.execute(
+            "UPDATE employees SET display_name = 'Demo Staff 0005.' WHERE id = 'demo-0005'"
+        )
+        conn.execute("UPDATE employees SET display_name = 'Alexis V.' WHERE id = 'demo-0006'")
+        demographics = conn.execute(
+            "SELECT * FROM candidate_demographics ORDER BY application_id"
+        ).fetchall()
+
+    monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations)
+    with database.transaction(write=True) as conn:
+        updated = current_dataset(conn)
+        assert updated.dataset_id == original.dataset_id
+        assert updated.dataset_generation == original.dataset_generation
+        assert updated.seed_version == FULL_SEED.seed_version and updated.revision == 1
+        assert has_only_directory_refresh(conn, updated)
+        assert not has_only_directory_refresh(conn, advance_revision(conn, updated))
+        assert conn.execute("SELECT COUNT(*) FROM employees").fetchone()[0] == 4400
+        assert (
+            conn.execute("SELECT * FROM candidate_demographics ORDER BY application_id").fetchall()
+            == demographics
+        )
+        assert [r["display_name"] for r in employees_at(conn, updated.as_of_date, 20, 0)] == list(
+            FEATURED_NAMES
+        )
+        legacy, custom = conn.execute(
+            "SELECT display_name FROM employees WHERE id IN ('demo-0005', 'demo-0006') ORDER BY id"
+        ).fetchall()
+        assert re.fullmatch(r"[A-Z][a-z]+ [A-Z]\.", legacy["display_name"])
+        assert custom["display_name"] == "Alexis V."

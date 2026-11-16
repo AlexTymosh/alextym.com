@@ -3,6 +3,7 @@ import type { WorkforceMode } from "./mode-state";
 const API = "/portfolio/workforce-intelligence/api";
 export const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const MAX_WORKBOOK_BYTES = 1024 * 1024;
+export const DIRECTORY_PAGE_SIZE = 20;
 
 export type DatasetVersion = { dataset_id: string; dataset_generation: number };
 export type Dataset = DatasetVersion & {
@@ -298,7 +299,9 @@ export async function loadWorkspace(
   mode: WorkforceMode, filters: Filters, offset: number, signal: AbortSignal,
 ): Promise<Workspace> {
   if (mode === "workforce-management") {
-    const directory = await workforceRequest<Directory>(`employees?limit=15&offset=${offset}`, { signal });
+    const directory = await workforceRequest<Directory>(
+      `employees?limit=${DIRECTORY_PAGE_SIZE}&offset=${offset}`, { signal },
+    );
     return { ...directory, kind: mode, directory };
   }
   if (mode === "people-voice") {

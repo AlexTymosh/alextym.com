@@ -29,7 +29,7 @@ def layer_examples(connection: sqlite3.Connection, cutoff: date) -> list[LayerEx
         """
         SELECT id AS contract_id, employee_id, valid_from, valid_to, contracted_fte_milli
         FROM employment_contracts
-        WHERE valid_from <= ? AND (valid_to IS NULL OR valid_to > ?)
+        WHERE is_substantive = 1 AND valid_from <= ? AND (valid_to IS NULL OR valid_to > ?)
         ORDER BY employee_id, id LIMIT 1
         """,
         (day, day),

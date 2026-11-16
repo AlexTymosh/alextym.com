@@ -7,8 +7,9 @@ each code. Audit History shows the recorded changes and request correlation.
 
 - Add a synthetic employee with an initial contract and assignment. Click their
   name or look up the employee ID to see effective-dated history. The profile
-  accepts a fictional display alias beginning with `Demo`. A contract can be
-  substantive or temporary, with a fixed end date if needed.
+  accepts a fictional first name and surname initial such as `Aria P.`.
+  Existing aliases beginning with `Demo` are also accepted. A contract can
+  be substantive or temporary, with a fixed end date if needed.
 - A changed contract or assignment takes effect on the chosen day. Existing
   intervals are half-open: their end date is the first day they no longer apply.
   A second change at the same boundary corrects that interval and records an

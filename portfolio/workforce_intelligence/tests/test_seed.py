@@ -4,9 +4,10 @@ from datetime import date
 import pytest
 
 from workforce_intelligence import database as sqlite_store
-from workforce_intelligence.contracts import change_fte
+from workforce_intelligence.contracts import change_fte, employees_at
 from workforce_intelligence.database import Database
 from workforce_intelligence.dataset import AuditActor, ensure_dataset, reset_dataset
+from workforce_intelligence.directory_names import FEATURED_NAMES
 from workforce_intelligence.migrations import SOURCE_TABLES
 from workforce_intelligence.seed import INTERVIEW_SEED, populate_core
 from workforce_intelligence.surveys import link_evidence
@@ -26,6 +27,8 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
     monkeypatch.setattr(sqlite_store, "MIGRATIONS", migrations[:1])
     legacy = replace(INTERVIEW_SEED, seed_version="1.0", populate=populate_core)
     initial = ensure_dataset(database, legacy)
+    with database.transaction(write=True) as connection:
+        connection.execute("UPDATE employees SET display_name = 'Demo A.' WHERE id = 'emp-001'")
     change, _ = change_fte(
         database,
         employee_id="emp-001",
@@ -55,8 +58,13 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
     assert upgraded.seed_version == INTERVIEW_SEED.seed_version
     assert upgraded.dataset_id == initial.dataset_id
     assert upgraded.dataset_generation == 1
-    assert upgraded.revision == change.revision + 2
+    assert upgraded.revision == change.revision + 3
     with database.transaction() as connection:
+        unchanged_tables = set(core) - {
+            "employees",
+            "employment_contracts",
+            "organisation_assignments",
+        }
         assert {
             table: list(
                 map(
@@ -65,7 +73,24 @@ def test_reporting_migration_keeps_the_existing_seed(tmp_path, monkeypatch):
                 )
             )
             for table, columns in core.items()
-        } == source
+            if table in unchanged_tables
+        } == {table: source[table] for table in unchanged_tables}
+        for table in ("employment_contracts", "organisation_assignments"):
+            assert [
+                tuple(row)
+                for row in connection.execute(
+                    f"SELECT {core[table]} FROM {table} WHERE employee_id NOT LIKE 'bank-%' ORDER BY 1"
+                )
+            ] == source[table]
+        directory = employees_at(connection, upgraded.as_of_date, 20, 0)
+        assert [row["display_name"] for row in directory] == list(FEATURED_NAMES)
+        assert directory[0]["record_version"] == 3
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) FROM employment_contracts WHERE employee_id LIKE 'bank-%' AND is_substantive = 0"
+            ).fetchone()[0]
+            == 3
+        )
         assert connection.execute("SELECT COUNT(*) FROM interviews").fetchone()[0] == 6
         assert connection.execute("SELECT COUNT(*) FROM silver_applications").fetchone()[0] == 9
         assert (
@@ -147,9 +172,9 @@ def test_featured_people_and_recruitment_source_events_reconcile(tmp_path):
             SELECT display_name, display_order FROM employees
             WHERE is_featured_demo_employee = 1 ORDER BY display_order
         """).fetchall()
-        assert [tuple(row) for row in people] == [
-            (f"Demo {letter}.", order) for order, letter in enumerate("ABCDEFGHIJKLMNO", start=1)
-        ]
+        assert [tuple(row) for row in people] == list(
+            zip(FEATURED_NAMES, range(1, 21), strict=True)
+        )
         events = connection.execute("""
             SELECT v.id, v.closure_kind, o.outcome, s.started_fte_milli, contract.contracted_fte_milli
             FROM vacancies v
