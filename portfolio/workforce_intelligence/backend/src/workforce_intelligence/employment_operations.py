@@ -47,9 +47,8 @@ def add_employee(editor: SourceEditor, command: EmployeeCreate) -> Change:
         created_by=editor.actor.uid,
         created_at=editor.prepare().refreshed_at,
         change_reason="initial_employment",
+        substantive=command.substantive,
     )
-    if not command.substantive:
-        editor.update("employment_contracts", "employee_id", identity, {"is_substantive": 0})
     editor.insert("employee_profiles", {"employee_id": identity})
     return editor.audit(
         "employee",

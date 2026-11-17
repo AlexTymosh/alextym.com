@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from typing import Any, TypeVar
 
+import structlog
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -9,6 +10,7 @@ from app.llm.client import ProviderConfigurationError, ProviderRequestError
 from app.rag.prompt_builder import PromptBundle
 
 StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
+logger = structlog.get_logger(__name__)
 
 
 class OpenAIEmbeddingClient:
@@ -145,6 +147,20 @@ class OpenAIResponsesClient:
         except Exception as exc:
             raise ProviderRequestError("OpenAI structured response request failed.") from exc
 
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            tokens = {
+                name: value
+                for name in ("input_tokens", "output_tokens", "total_tokens")
+                if type(value := getattr(usage, name, None)) is int
+            }
+            if tokens:
+                logger.info(
+                    "llm.structured.usage",
+                    model=self._model,
+                    schema=response_model.__name__,
+                    **tokens,
+                )
         parsed_response = getattr(response, "output_parsed", None)
         if not isinstance(parsed_response, response_model):
             raise ProviderRequestError("OpenAI response did not contain structured output.")

@@ -58,7 +58,7 @@ The portal must demonstrate an end-to-end analytical process:
 9. require human review before an AI finding can be treated as a published analytical result;
 10. support forecasts, scenarios and management actions.
 
-The full portal is accessed from the shared `/portfolio` catalogue and hosted at `/portfolio/workforce-intelligence`. Internal modes and dashboard pages behave like a single-page application: navigation changes panels without unnecessary full document reloads, while remaining part of the existing Next.js application. The UI may draw inspiration from Fleet VOR Hub's navigation, surfaces, tables, filters and color system, but must not import Fleet business code or globally scoped styles.
+The full portal is accessed from the shared `/portfolio` catalogue and hosted at `/portfolio/workforce-intelligence` in a standalone full-page frame. Internal modes and dashboard pages behave like a single-page application: navigation changes panels without unnecessary full document reloads, while remaining part of the existing Next.js application. The UI may draw inspiration from Fleet VOR Hub's navigation, surfaces, tables, filters and color system, but must not import Fleet business code or globally scoped styles.
 
 Authentication is provided by the existing Firebase identity foundation. The Owner will provision email/password accounts and share credentials privately. Social providers are not a delivery prerequisite. Each invited user receives **one uniform Workforce demo access level** through the shared project-grant mechanism, permitting all application functions. Global Owner account/grant management remains outside this application's domain.
 
@@ -68,7 +68,7 @@ The visual design should resemble the navigation density and analytical characte
 
 The application must display permanently:
 
-> **Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system**
+> **Demo v1.0 · Prepared for an SCAS interview · Synthetic data only**
 
 ---
 
@@ -320,7 +320,7 @@ Provide light and dark modes. Theme preference may be stored in local browser st
 Recommended initial dataset:
 
 - approximately 4,400 synthetic employee records to represent publicly described organisational scale;
-- 15 featured display names shown first, using entirely fictional abbreviated names such as `Demo A.`;
+- 20 featured synthetic display aliases shown first in the configured order, using a given name and surname initial;
 - 30 to 50 representative locations, subject to verification from public sources;
 - 10 to 15 service areas or organisational units;
 - 20 to 35 role families;
@@ -1995,7 +1995,7 @@ All demonstration records are synthetic, but the redaction pipeline must still r
 Display:
 
 - synthetic-data notice;
-- unofficial-product notice;
+- synthetic demonstration notice;
 - possible periodic **Workforce database** reset notice;
 - AI-human-review notice;
 - illustrative-forecast notice;
@@ -2441,7 +2441,7 @@ The full PoC is complete when:
 - Workforce Intelligence opens by default;
 - four primary modes work against one **Workforce-owned** persisted data model;
 - the synthetic dataset is reproducible;
-- the first 15 fictional featured names appear as configured;
+- the first 20 synthetic display aliases appear in the configured order;
 - workforce and recruitment changes affect dashboards;
 - Excel validation/import/export works;
 - material metrics have governed definitions and tooltips;
@@ -2458,7 +2458,7 @@ The full PoC is complete when:
 - Bronze/Silver/Gold, lineage, quality and BPMN are visible;
 - light and dark themes work;
 - the demo can be reset to a stable state without touching Fleet or Firestore access control;
-- all screens clearly identify the product/data as unofficial and synthetic;
+- all screens clearly identify the synthetic demonstration data;
 - central user identities/grants remain durable after any Workforce database loss;
 - there is no project-specific role hierarchy, separate credential store, or new paid infrastructure by default.
 
@@ -2714,7 +2714,7 @@ These checks are implementation-time validation steps, **not unresolved product-
 
 ### Global banner
 
-> **Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system**
+> **Demo v1.0 · Prepared for an SCAS interview · Synthetic data only**
 
 ### Demo reset notice
 

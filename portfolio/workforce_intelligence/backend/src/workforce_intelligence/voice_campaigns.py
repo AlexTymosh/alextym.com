@@ -22,6 +22,7 @@ from workforce_intelligence.dataset import (
 from workforce_intelligence.operation_store import SourceEditor
 from workforce_intelligence.schemas import DatasetRequest, DatasetResponse, EntityId
 from workforce_intelligence.voice_taxonomy import (
+    CANDIDATE_RATINGS,
     DIMENSIONS,
     QUESTION_BANK,
     SERIES,
@@ -34,8 +35,9 @@ from workforce_intelligence.voice_taxonomy import (
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=4, max_length=160)]
 Percent = Annotated[int, Field(strict=True, ge=0, le=100)]
 Seed = Annotated[int, Field(strict=True, ge=0, le=2**32 - 1)]
-Audience = Literal["employees", "new_starters", "exit"]
-Series = Literal["general", "onboarding", "development"]
+Audience = Literal["employees", "new_starters", "exit", "candidates"]
+Series = Literal["general", "onboarding", "development", "candidate"]
+TEMPLATE_ID = "candidate-feedback"
 
 
 class SurveyQuestion(BaseModel):
@@ -66,6 +68,8 @@ class CampaignCreate(DatasetRequest):
 
     @model_validator(mode="after")
     def check_questions(self):
+        if (self.series == "candidate") != (self.audience == "candidates"):
+            raise ValueError("Use the candidate template with the candidate audience.")
         if self.period_end < self.period_start:
             raise ValueError("Survey end date cannot precede its start.")
         if len({question.code for question in self.questions}) != len(self.questions):
@@ -206,6 +210,51 @@ def _segments(row, audience: str) -> dict[str, str]:
     }
 
 
+def _candidate_samples(connection, *, organisation_id: str | None, start: str, end: str):
+    rows = connection.execute(
+        """
+        SELECT app.id, unit.label AS organisation, loc.label AS location, role.label AS role,
+               role.pay_band, app.source_code AS source,
+               EXISTS (SELECT 1 FROM application_stage_events e
+                   WHERE e.application_id = app.id AND e.stage_code = 'interviewed'
+                     AND e.occurred_on <= :end) AS interviewed
+        FROM fact_application app
+        JOIN organisational_units unit ON unit.id = app.organisation_id
+        JOIN locations loc ON loc.id = app.location_id
+        JOIN roles role ON role.id = app.role_id
+        WHERE app.received_on BETWEEN :start AND :end
+          AND (:organisation IS NULL OR app.organisation_id = :organisation)
+        ORDER BY app.id
+        """,
+        {"start": start, "end": end, "organisation": organisation_id},
+    )
+    return [
+        (
+            item["id"],
+            {
+                **dict.fromkeys(DIMENSIONS, "Not applicable"),
+                **{
+                    key: item[key]
+                    for key in ("organisation", "location", "role", "pay_band", "source")
+                },
+            },
+            bool(item["interviewed"]),
+        )
+        for item in rows
+    ]
+
+
+def _samples(connection, *, audience: str, organisation_id: str | None, start: str, end: str):
+    if audience == "candidates":
+        return _candidate_samples(connection, organisation_id=organisation_id, start=start, end=end)
+    return [
+        (row["id"], _segments(row, audience), True)
+        for row in _eligible(
+            connection, audience=audience, organisation_id=organisation_id, start=start, end=end
+        )
+    ]
+
+
 def campaign(connection, survey_id: str) -> dict:
     row = connection.execute(
         """
@@ -219,6 +268,7 @@ def campaign(connection, survey_id: str) -> dict:
     if row is None:
         raise RecordNotFound("Survey campaign not found.")
     info = dict(row)
+    info["audience"] = info.pop("candidate_audience") or info["audience"]
     info["questions"] = [
         dict(question)
         for question in connection.execute(
@@ -274,7 +324,7 @@ def create_campaign(
         if command.organisation_id:
             editor.reference("organisational_units", command.organisation_id)
         eligible = len(
-            _eligible(
+            _samples(
                 connection,
                 audience=command.audience,
                 organisation_id=command.organisation_id,
@@ -301,7 +351,8 @@ def create_campaign(
         )
         values = {
             "survey_id": command.survey_id,
-            "audience": command.audience,
+            "audience": "employees" if command.audience == "candidates" else command.audience,
+            "candidate_audience": "candidates" if command.audience == "candidates" else None,
             "organisation_id": command.organisation_id,
             "series": command.series,
             "anonymity_min": command.anonymity_min,
@@ -344,17 +395,18 @@ def _draw(random: Random, data, size: int, mode: str):
     )[:size]
 
 
-def _make_responses(editor: SourceEditor, info: dict, data, options: GenerateResponses, seed: int):
+def _make_responses(conn, info: dict, data, options: GenerateResponses, seed: int):
     random = Random(seed)
     invitations = random.sample(data, info["invited"])
     picked = _draw(random, invitations, options.count, options.mode)
     eligible = Counter(
-        (dimension, category) for _, groups in data for dimension, category in groups.items()
+        (dimension, category) for _, groups, _ in data for dimension, category in groups.items()
     )
     invited = Counter(
-        (dimension, category) for _, groups in invitations for dimension, category in groups.items()
+        (dimension, category)
+        for _, groups, _ in invitations
+        for dimension, category in groups.items()
     )
-    conn = editor.connection
     conn.executemany(
         "INSERT INTO voice_population VALUES (?, ?, ?, ?, ?)",
         [
@@ -364,7 +416,7 @@ def _make_responses(editor: SourceEditor, info: dict, data, options: GenerateRes
     )
     start, end = date.fromisoformat(info["period_start"]), date.fromisoformat(info["period_end"])
     prefix = sha256(info["survey_id"].encode()).hexdigest()[:20]
-    for number, (_, groups) in enumerate(picked, 1):
+    for number, (_, groups, interviewed) in enumerate(picked, 1):
         response_id = f"voice-{prefix}-{number:03d}"
         submitted = (start + timedelta(days=random.randint(0, (end - start).days))).isoformat()
         value = random.randrange(100)
@@ -412,7 +464,8 @@ def _make_responses(editor: SourceEditor, info: dict, data, options: GenerateRes
             if question["kind"] == "rating":
                 rating = (
                     None
-                    if random.random() < 0.07
+                    if (question["code"] == "interview-experience" and not interviewed)
+                    or random.random() < 0.07
                     else min(
                         question["scale_max"],
                         max(
@@ -441,7 +494,7 @@ def generate_responses(
             )
         if options.count > info["invited"]:
             raise InvalidOperation("Response count cannot exceed the number invited.")
-        rows = _eligible(
+        rows = _samples(
             connection,
             audience=info["audience"],
             organisation_id=info["organisation_id"],
@@ -450,7 +503,7 @@ def generate_responses(
         )
         if len(rows) < info["invited"]:
             raise Conflict(
-                "The eligible workforce changed. Create a campaign for the current cohort."
+                "The eligible population changed. Create a campaign for the current cohort."
             )
         seed = (
             options.seed
@@ -459,9 +512,9 @@ def generate_responses(
         )
         editor = SourceEditor(connection, state, actor)
         _make_responses(
-            editor,
+            connection,
             info,
-            [(row["id"], _segments(row, info["audience"])) for row in rows],
+            rows,
             options,
             seed,
         )
@@ -489,3 +542,61 @@ def generate_responses(
             },
         )
         return CampaignResponse(dataset=editor.state, campaign=campaign(connection, survey_id))
+
+
+def populate_candidate_feedback(connection) -> bool:
+    """Seed an immediately demonstrable candidate report from the interview cohort."""
+    state = current_dataset(connection)
+    start, end = max(state.history_start, "2026-09-01"), state.as_of_date
+    exists = connection.execute(
+        "SELECT 1 FROM survey_campaigns WHERE id = ?", (TEMPLATE_ID,)
+    ).fetchone()
+    if exists:
+        return False
+    samples = _candidate_samples(connection, organisation_id=None, start=start, end=end)
+    if start > end or len(samples) < 5:
+        return False
+    invited = min(24, len(samples))
+    count = max(5, invited - 2)
+    question = next(q for q in QUESTION_BANK if q["code"] == "candidate")
+    connection.execute(
+        "INSERT INTO survey_campaigns VALUES (?, ?, ?, ?, ?, ?)",
+        (TEMPLATE_ID, SERIES["candidate"], question["prompt"], start, end, invited),
+    )
+    options = GenerateResponses(
+        dataset_id=state.dataset_id,
+        dataset_generation=state.dataset_generation,
+        count=count,
+        mode="balanced",
+        analysable_percent=100,
+        ambiguous_percent=0,
+    )
+    connection.execute(
+        """
+        INSERT INTO voice_campaign_settings
+            (survey_id, audience, candidate_audience, series, anonymity_min, taxonomy_version,
+             eligible, generated_at, generation_seed, generation_mode, generation_parameters, population_revision)
+        VALUES (?, 'employees', 'candidates', 'candidate', 5, ?, ?, ?, 1516, 'balanced', ?, ?)
+        """,
+        (
+            TEMPLATE_ID,
+            TAXONOMY_VERSION,
+            len(samples),
+            f"{end}T00:00:00+00:00",
+            options.model_dump_json(exclude={"dataset_id", "dataset_generation"}),
+            state.revision,
+        ),
+    )
+    connection.execute(
+        "INSERT INTO survey_questions VALUES (?, ?, ?, 'comment', NULL, 0)",
+        (TEMPLATE_ID, question["code"], question["prompt"]),
+    )
+    connection.executemany(
+        "INSERT INTO survey_questions VALUES (?, ?, ?, 'rating', 5, ?)",
+        [
+            (TEMPLATE_ID, key, prompt, order)
+            for order, (key, prompt) in enumerate(CANDIDATE_RATINGS, 1)
+        ],
+    )
+    _make_responses(connection, campaign(connection, TEMPLATE_ID), samples, options, 1516)
+    return True

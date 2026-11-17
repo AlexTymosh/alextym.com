@@ -134,9 +134,14 @@ def employee_details(connection: sqlite3.Connection, employee_id: str, day: str)
     row = connection.execute(
         """
         SELECT e.id, e.display_name, e.record_version, p.leaving_date, p.leaving_reason,
+               featured.job_title AS directory_job_title, featured.department AS directory_department,
+               COALESCE(featured.title_inferred, 0) AS directory_title_inferred,
+               COALESCE(featured.department_inferred, 0) AS directory_department_inferred,
                CASE WHEN p.leaving_date <= :day THEN 'Leaver'
                     WHEN c.id IS NOT NULL THEN 'Active' ELSE 'Inactive' END AS employment_status
         FROM employees e LEFT JOIN employee_profiles p ON p.employee_id = e.id
+        LEFT JOIN featured_directory_profiles featured ON e.is_featured_demo_employee = 1
+          AND featured.display_order = e.display_order
         LEFT JOIN employment_contracts c ON c.employee_id = e.id AND c.valid_from <= :day
           AND (c.valid_to IS NULL OR c.valid_to > :day)
         WHERE e.id = :identity
@@ -166,6 +171,8 @@ def employee_details(connection: sqlite3.Connection, employee_id: str, day: str)
     )
     return {
         **dict(row),
+        "directory_title_inferred": bool(row["directory_title_inferred"]),
+        "directory_department_inferred": bool(row["directory_department_inferred"]),
         "as_of_date": day,
         "contracts": [dict(c) for c in contracts],
         "assignments": [dict(a) for a in assignments],

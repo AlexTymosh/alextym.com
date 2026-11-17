@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { changeContractFte, WorkforceApiError, type Directory, type Employee } from "./data-api";
+import { changeContractFte, DIRECTORY_PAGE_SIZE, WorkforceApiError, type Directory, type Employee } from "./data-api";
 import { displayNumber } from "./format";
 import { ImportExport } from "./ImportExport";
+import type { OpenWorkforceScreen, WorkforceScreen } from "./mode-state";
 import { EmployeeOperations, OperationForm, SourceOperations } from "./SourceOperations";
 import styles from "./workforce-scaffold.module.css";
 
-export function WorkforceManagement({ directory, offset, onPage, onSaved, onConflict, initialEmployee, effectiveDate, onError }: {
+export function WorkforceManagement({ directory, offset, onPage, onSaved, onConflict,
+  initialEmployee, effectiveDate, onError, screen, onOpenScreen }: {
   directory: Directory;
   offset: number;
   onPage: (offset: number) => void;
@@ -14,12 +16,13 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
   initialEmployee?: string;
   effectiveDate?: string;
   onError: (error: WorkforceApiError) => void;
+  screen: WorkforceScreen;
+  onOpenScreen: OpenWorkforceScreen;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployee ?? null);
   const selected = directory.items.find((employee) => employee.id === selectedId);
   const operations = { dataset: directory.dataset, selectedId, onSaved, onConflict, onError };
-  return (
-    <div className={styles.stack}>
+  if (screen === "directory") return (
       <section id="directory" className={styles.panel} aria-labelledby="directory-heading">
         <div className={styles.sectionHeader}>
           <div><h2 id="directory-heading">People directory</h2><p>Active synthetic employees and current contracts.</p></div>
@@ -27,25 +30,25 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
         {directory.items.length ? (
           <div className={styles.tableScroll} tabIndex={0} role="region" aria-label="People directory table">
             <table className={styles.table}>
-              <thead><tr><th scope="col">Name</th><th scope="col">Service area</th>
-                <th scope="col">Role</th><th scope="col">FTE</th><th scope="col">Contract</th></tr></thead>
+              <thead><tr><th scope="col">Name</th><th scope="col">Department</th>
+                <th scope="col">Job title</th><th scope="col">FTE</th><th scope="col">Contract</th></tr></thead>
               <tbody>{directory.items.map((employee) => (
                 <tr key={employee.id}>
                   <th scope="row"><button type="button" className={styles.linkButton}
                     onClick={() => {
                       setSelectedId(employee.id);
-                      const profile = document.getElementById("employee-profile");
-                      if (profile instanceof HTMLDetailsElement) profile.open = true;
-                      profile?.scrollIntoView({ block: "nearest" });
+                      onOpenScreen("employee-profile");
                     }}>{employee.display_name}</button><small className={styles.sourceCode}>{employee.id}</small></th>
-                  <td>{employee.organisation ?? "Unassigned"}</td>
-                  <td>{employee.role ?? "—"}</td><td>{displayNumber(employee.contracted_fte)}</td>
+                  <td>{employee.directory_department ?? employee.organisation ?? "Unassigned"}
+                    {employee.directory_department_inferred ? <small className={styles.sourceCode}>Inferred</small> : null}</td>
+                  <td>{employee.directory_department ? employee.directory_job_title ?? "Title not supplied" : employee.role ?? "—"}
+                    {employee.directory_title_inferred ? <small className={styles.sourceCode}>Inferred</small> : null}</td>
+                  <td>{displayNumber(employee.contracted_fte)}</td>
                   <td><button type="button" className={styles.linkButton}
-                    aria-label={`Edit FTE for ${employee.display_name}`} aria-controls="contracts"
-                    aria-expanded={selectedId === employee.id}
+                    aria-label={`Edit FTE for ${employee.display_name}`}
                     onClick={() => {
                       setSelectedId(employee.id);
-                      document.getElementById("contracts")?.scrollIntoView({ block: "nearest" });
+                      onOpenScreen("contracts");
                     }}>Edit FTE</button></td>
                 </tr>
               ))}</tbody>
@@ -55,30 +58,33 @@ export function WorkforceManagement({ directory, offset, onPage, onSaved, onConf
         {offset > 0 || directory.next_offset !== null ? (
           <div className={styles.pagination}>
             <button type="button" className={styles.secondaryButton} disabled={offset === 0}
-              onClick={() => onPage(Math.max(0, offset - 15))}>Previous</button>
+              onClick={() => onPage(Math.max(0, offset - DIRECTORY_PAGE_SIZE))}>Previous</button>
             <span>{offset + 1}–{offset + directory.items.length}</span>
             <button type="button" className={styles.secondaryButton} disabled={directory.next_offset === null}
               onClick={() => onPage(directory.next_offset ?? offset)}>Next</button>
           </div>
         ) : null}
       </section>
-      <EmployeeOperations {...operations} />
+  );
+  if (screen === "employee-profile") return <EmployeeOperations {...operations} />;
+  if (screen === "contracts") return (
       <section id="contracts" className={styles.panel} aria-labelledby="contracts-heading">
         <div className={styles.sectionHeader}><h2 id="contracts-heading">Contracts & FTE</h2></div>
         {selected ? <FteForm key={selected.id} directory={directory} employee={selected}
           effectiveDate={effectiveDate} onCancel={() => setSelectedId(null)}
           onSaved={(message) => { setSelectedId(null); onSaved(message); }}
           onConflict={onConflict} onError={onError} /> :
-          <p className={styles.message}>Choose Edit FTE next to an employee to record an effective-dated change.</p>}
+          <p className={styles.message}>Choose Edit FTE next to an employee in the{" "}
+            <button type="button" className={styles.linkButton} onClick={() => onOpenScreen("directory")}>People directory</button>.
+          </p>}
         <details className={styles.planned}><summary>Add or change a contract period</summary>
           <OperationForm {...operations} actions={["set_contract"]}
             defaults={selectedId ? { employee_id: selectedId } : {}} />
         </details>
       </section>
-      <SourceOperations {...operations} />
-      <ImportExport dataset={directory.dataset} onSaved={onSaved} onError={onError} />
-    </div>
   );
+  if (screen === "import-export") return <ImportExport dataset={directory.dataset} onSaved={onSaved} onError={onError} />;
+  return <SourceOperations {...operations} screen={screen} />;
 }
 
 function FteForm({ directory, employee, effectiveDate, onCancel, onSaved, onConflict, onError }: {

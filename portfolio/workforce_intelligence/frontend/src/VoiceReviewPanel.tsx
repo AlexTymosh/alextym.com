@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { datasetVersion, WorkforceApiError, workforceRequest, workforceWrite, type Snapshot } from "./data-api";
 import { displayCode, displayDay, displayNumber } from "./format";
+import type { OpenWorkforceScreen } from "./mode-state";
 import { PriorityDetails } from "./VoiceAnalyticsPanel";
 import type { Campaign, Signal, VoiceAction, VoiceReview, VoiceRun } from "./voice-api";
 import styles from "./workforce-scaffold.module.css";
@@ -14,18 +15,22 @@ const levels = ["Low", "Medium", "High", "Critical"];
 const field = (fields: FormData, key: string) => String(fields.get(key) ?? "").trim();
 const failures: Record<string, string> = {
   provider_not_configured: "External AI is not configured on this host. The demonstration option is available.",
+  provider_timeout: "OpenAI exceeded the analysis time limit. Retry or use the demonstration option.",
   provider_unavailable: "External AI did not complete. Retry or use the demonstration option.",
   evidence_validation_failed: "The analysis returned invalid evidence. Nothing from that run can be published.",
   interrupted: "The analysis was interrupted. Start it again or use the demonstration option.",
 };
 
-export function VoiceReviewPanel({ campaign, themes, onAccessError }: {
+export function VoiceReviewPanel({ campaign, themes, onAccessError, screen, campaignPicker, onOpenScreen }: {
   campaign: Campaign; themes: Record<string, string>; onAccessError: OnAccessError;
+  screen: "voice-review" | "voice-tracker"; campaignPicker: ReactNode;
+  onOpenScreen: OpenWorkforceScreen;
 }) {
   const [data, setData] = useState<VoiceReview | null>(null);
   const [selected, setSelected] = useState("");
   const [reload, setReload] = useState(0);
-  const [working, setWorking] = useState(false);
+  const [progress, setProgress] = useState("");
+  const working = Boolean(progress);
   const [error, setError] = useState("");
   const pending = useRef<{ mode: string; key: string } | null>(null);
   const surveyId = campaign.survey_id;
@@ -43,15 +48,15 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError }: {
     return () => controller.abort();
   }, [surveyId, selected, reload, onAccessError]);
 
-  async function run(operation: () => Promise<void>) {
+  async function run(operation: () => Promise<void>, message = "Working on People Voice…") {
     if (!data || working) return;
-    setWorking(true); setError("");
+    setProgress(message); setError("");
     try {
       await operation();
     } catch (failure) {
       if (failure instanceof WorkforceApiError && [401, 403].includes(failure.status)) onAccessError(failure);
       else setError(failure instanceof Error ? failure.message : "Unable to save your change.");
-    } finally { setWorking(false); }
+    } finally { setProgress(""); }
   }
 
   function analyse(mode: "ai" | "demo") {
@@ -64,21 +69,40 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError }: {
       if (receipt.status !== "running") pending.current = null;
       setSelected(receipt.id);
       setReload((value) => value + 1);
-    });
+    }, mode === "ai" ? "Analysing survey comments… This can take up to a minute." : undefined);
   }
 
   const save: Save = (path, method, payload) => {
     if (!data) return;
+    const startingLocation = window.location.href;
     void run(async () => {
       setData(await workforceWrite<VoiceReview>(path, method, { ...datasetVersion(data.dataset), ...payload }));
+      if (path.endsWith("/actions") && window.location.href === startingLocation) onOpenScreen("voice-tracker");
     });
   };
 
   const selectedRun = data?.selected_run;
-  return <>
+  const feedback = <>
+    {progress || (!data && !error) ? <p role="status" className={styles.message}>
+      {progress || "Loading People Voice…"}
+    </p> : null}
+    {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
+  </>;
+  if (screen === "voice-tracker") return (
+    <section id="voice-tracker" className={styles.panel} aria-labelledby="voice-tracker-heading">
+      <h2 id="voice-tracker-heading">Action tracker</h2>
+      {campaignPicker}
+      {feedback}
+      {data?.actions.length ? data.actions.map((action) => <TrackerCard key={`${action.id}:${action.status}`}
+        action={action} working={working} save={save} />) : data ?
+        <p className={styles.message}>Actions appear here after a reviewed finding is published and an action is created.</p> : null}
+    </section>
+  );
+  return (
     <section id="voice-review" className={styles.panel} aria-labelledby="voice-review-heading">
       <div className={styles.sectionHeader}><div><h2 id="voice-review-heading">Report analysis & analyst review</h2>
         <p>Classification creates a draft. A person must review it and publish it separately.</p></div></div>
+      {campaignPicker}
       <div className={styles.filterBar}>
         <button type="button" className={styles.primaryButton} disabled={!data || working || campaign.analysable < campaign.anonymity_min}
           onClick={() => analyse("ai")}>Analyse with AI</button>
@@ -90,8 +114,7 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError }: {
             {attempt.label} · {statusLabel(attempt.status)} · {displayDay(attempt.started_at)}</option>)}
         </select></label> : null}
       </div>
-      {working ? <p role="status" className={styles.message}>Working on People Voice…</p> : null}
-      {error ? <p role="alert" className={styles.errorText}>{error}</p> : null}
+      {feedback}
       {campaign.analysable < campaign.anonymity_min ? <p className={styles.message}>
         Generate at least {campaign.anonymity_min} analysable comments before analysis.</p> : null}
       {selectedRun ? <div className={styles.finding}>
@@ -106,18 +129,12 @@ export function VoiceReviewPanel({ campaign, themes, onAccessError }: {
           <p className={styles.sourceCode}>Input hash: {selectedRun.input_hash}</p>
           {selectedRun.supersedes ? <p>Previous run: {selectedRun.supersedes}</p> : null}
         </details>
-      </div> : <p className={styles.message}>No analysis yet. Use the demonstration option when AI is unavailable.</p>}
+      </div> : data ? <p className={styles.message}>No analysis yet. Use the demonstration option when AI is unavailable.</p> : null}
       {data?.signals.map((signal) => <SignalCard key={`${signal.id}:${signal.state}:${signal.review_history.length}`} signal={signal}
         siblings={data.signals} themes={themes} teams={data.teams} sample={selectedRun?.sample_size ?? 0} working={working} save={save} />)}
       {selectedRun?.status === "ready" && !data?.signals.length ? <p className={styles.message}>No validated signals were identified.</p> : null}
     </section>
-    <section id="voice-tracker" className={styles.panel} aria-labelledby="voice-tracker-heading">
-      <h2 id="voice-tracker-heading">Action tracker</h2>
-      {data?.actions.length ? data.actions.map((action) => <TrackerCard key={`${action.id}:${action.status}`}
-        action={action} working={working} save={save} />) :
-        <p className={styles.message}>Actions appear here after a reviewed finding is published and an action is created.</p>}
-    </section>
-  </>;
+  );
 }
 
 function SignalCard({ signal, siblings, themes, teams, sample, working, save }: {

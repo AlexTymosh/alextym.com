@@ -1,14 +1,14 @@
 # Workforce & Recruitment Intelligence â€” portfolio demonstration
 
-**Temporary access:** shared Fleet demo password, no Firebase. The system is a
-synthetic-data simulation and is not an official SCAS or NHS product.
+**Temporary access:** shared Fleet demo password, no Firebase. The simulation
+uses synthetic data.
 
 ## Open the demo
 
 Open `/portfolio/workforce-intelligence`. The landing page displays the project
 emblem and a short description beside a password form. Enter the **same demo
-password** used at `/fleet-vor-hub`. After sign-in, the existing Workforce
-Intelligence UI opens. Sign out from the app header.
+password** used at `/fleet-vor-hub`. After sign-in, Workforce Intelligence opens
+as a full-page workspace. Sign out from the Workforce header.
 
 - `WORKFORCE_INTELLIGENCE_ENABLED=true` must be set on Vercel and Render.
 - `VOR_DEMO_PASSWORD` stays **only on Render** (Fleet already uses it).
@@ -27,11 +27,12 @@ constraints, setup, and release checks.
 - `/portfolio/workforce-intelligence/api/*`: same-origin BFF to protected FastAPI.
 - `/portfolio/workforce-intelligence/preview`: development-only offline UI.
 
-The UI contains Workforce Intelligence, Workforce Management, People Voice,
-and Data Architecture. The [People Voice walkthrough](docs/people-voice.md)
-covers survey generation, weighting, evidence review and tracked actions.
-Password sessions are scoped to Workforce; they are **not** Fleet
-cookies, Firebase sessions, or per-person identities.
+The UI includes recruitment and workforce analysis, effective-dated edits and
+Excel import, People Voice campaigns and review, and live SQLite lineage with a
+People Voice to Action process diagram. Forecasting compares seasonal naïve
+and exponential smoothing. What-if scenarios show the effect of recruitment
+assumptions on expected starts and WTE. The Workforce session uses a
+project-scoped cookie and a shared demo identity.
 
 ## Reference documentation
 
@@ -43,6 +44,8 @@ cookies, Firebase sessions, or per-person identities.
 - [Metrics catalogue](docs/metric-catalogue.md)
 - [Assurance and source register](docs/assurance-register.md)
 - [Interview walkthrough](docs/interview-runbook.md)
+- [Forecasting and what-if methods](docs/planning.md)
+- [People Voice walkthrough](docs/people-voice.md)
 
 ## Validation
 

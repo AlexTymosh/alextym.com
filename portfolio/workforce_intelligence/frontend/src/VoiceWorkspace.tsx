@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { datasetVersion, WorkforceApiError, workforceWrite } from "./data-api";
 import { displayCode, displayWindow } from "./format";
+import type { OpenWorkforceScreen, WorkforceScreen } from "./mode-state";
 import { VoiceAnalyticsPanel } from "./VoiceAnalyticsPanel";
 import { VoiceReviewPanel } from "./VoiceReviewPanel";
 import { loadVoice, type Campaign, type CampaignResponse, type VoiceWorkspace as VoiceData } from "./voice-api";
@@ -9,18 +10,31 @@ import styles from "./workforce-scaffold.module.css";
 type OnError = (error: WorkforceApiError) => void;
 const text = (fields: FormData, key: string) => String(fields.get(key) ?? "").trim();
 const optionalNumber = (fields: FormData, key: string) => text(fields, key) ? Number(text(fields, key)) : undefined;
+const workspaceTitles: Partial<Record<WorkforceScreen, string>> = {
+  "survey-builder": "Survey builder & question bank",
+  "voice-campaigns": "Campaigns & response monitor",
+  "voice-analytics": "Survey analytics",
+  "voice-review": "Report analysis & analyst review",
+  "voice-tracker": "Action tracker",
+};
 
-export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
+export function VoiceWorkspace({ onAccessError, initialCampaign = "", screen, onOpenScreen }: {
+  onAccessError: OnError; initialCampaign?: string;
+  screen: WorkforceScreen; onOpenScreen: OpenWorkforceScreen;
+}) {
   const [data, setData] = useState<VoiceData>();
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(initialCampaign);
   const [series, setSeries] = useState("development");
   const [showControls, setShowControls] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [reload, setReload] = useState(0);
+  const title = workspaceTitles[screen];
+  const active = Boolean(title);
 
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     void loadVoice(controller.signal).then((value) => {
       if (!controller.signal.aborted) {
@@ -34,14 +48,16 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
       else setFailure(error instanceof Error ? error.message : "Survey workspace unavailable.");
     });
     return () => controller.abort();
-  }, [onAccessError, reload]);
+  }, [active, onAccessError, reload]);
 
   const campaign = data?.campaigns.find((item) => item.survey_id === selected);
   const bankComments = data?.bank.filter((item) => item.kind === "comment") ?? [];
   const bankRatings = data?.bank.filter((item) => item.kind === "rating") ?? [];
+  const candidateTemplate = series === "candidate";
 
   async function run(path: string, payload: object, outcome: string) {
     if (!data || busy) return;
+    const startingLocation = window.location.href;
     setBusy(true);
     setMessage("");
     setFailure("");
@@ -54,6 +70,7 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
       ] });
       setSelected(result.campaign.survey_id);
       setMessage(outcome);
+      if (path === "surveys" && window.location.href === startingLocation) onOpenScreen("voice-campaigns");
     } catch (error) {
       if (error instanceof WorkforceApiError && [401, 403].includes(error.status)) onAccessError(error);
       else setFailure(error instanceof Error ? error.message : "Survey request failed.");
@@ -70,7 +87,7 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
     const rating = bankRatings.find((question) => question.code === text(fields, "rating"));
     if (!prompt) return;
     void run("surveys", {
-      survey_id: surveyId, title: text(fields, "title"), audience: text(fields, "audience"),
+      survey_id: surveyId, title: text(fields, "title"), audience: candidateTemplate ? "candidates" : text(fields, "audience"),
       organisation_id: text(fields, "unit") || null, series, anonymity_min: Number(text(fields, "anonymity")),
       period_start: text(fields, "start"), period_end: text(fields, "end"), invited: optionalNumber(fields, "invited"),
       questions: [{ code: template?.code ?? "feedback", kind: "comment", prompt },
@@ -94,8 +111,9 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
     }, "Synthetic responses generated.");
   }
 
-  if (!data) return <section id="survey-builder" className={styles.panel}>
-    <h2>Survey builder</h2>
+  if (!title) return null;
+  if (!data) return <section id={screen} className={styles.panel}>
+    <h2>{title}</h2>
     {failure ? <p role="alert">{failure} <button type="button" className={styles.linkButton}
       onClick={() => { setFailure(""); setReload((value) => value + 1); }}>Retry</button></p> :
       <p role="status">Loading survey workspace…</p>}
@@ -103,9 +121,15 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
 
   const day = data.dataset.as_of_date;
   const start = day.slice(0, 8) + "01";
-  return <>
-    <details id="survey-builder" className={styles.panel}>
-      <summary className={styles.operationHeading}>Survey builder & question bank</summary>
+  const campaignPicker = data.campaigns.length ? <label className={styles.control}>Campaign
+    <select value={selected} disabled={busy} onChange={(event) => {
+      setSelected(event.target.value); setFailure(""); setMessage("");
+    }}>{data.campaigns.map((item) => <option key={item.survey_id} value={item.survey_id}>{item.title} · {item.survey_id}</option>)}</select>
+  </label> : null;
+
+  if (screen === "survey-builder") return (
+    <section id={screen} className={styles.panel} aria-labelledby="survey-builder-heading">
+      <h2 id="survey-builder-heading">{title}</h2>
       <p className={styles.message}>Create a synthetic campaign. Choose a question from the bank or write your own.</p>
       <form className={styles.filterBar} aria-label="Create survey campaign" onSubmit={create}>
         <label>Report template<select value={series} onChange={(event) => setSeries(event.target.value)}>
@@ -113,9 +137,12 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
         </select></label>
         <label>Campaign name<input name="title" key={series} defaultValue={data.series[series]} maxLength={160} required /></label>
         <label>Survey code (optional)<input name="id" maxLength={64} pattern="[a-z0-9][a-z0-9\-]{0,63}" /></label>
-        <label>Audience<select name="audience" key={series} defaultValue={series === "onboarding" ? "new_starters" : "employees"}>
-          <option value="employees">Current workforce</option><option value="new_starters">New starters, first year</option>
-          <option value="exit">Leavers in period</option>
+        <label>Audience<select name="audience" key={series} defaultValue={candidateTemplate ? "candidates" :
+          series === "onboarding" ? "new_starters" : "employees"}>
+          {candidateTemplate ? <option value="candidates">Candidate applications received in period</option> : <>
+            <option value="employees">Current workforce</option><option value="new_starters">New starters, first year</option>
+            <option value="exit">Leavers in period</option>
+          </>}
         </select></label>
         <label>Service area<select name="unit"><option value="">All service areas</option>
           {data.units.map((unit) => <option key={unit.id} value={unit.id}>{unit.label}</option>)}</select></label>
@@ -131,14 +158,15 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
         <label>Rating scale<select name="scale"><option value="5">1–5</option><option value="7">1–7</option></select></label>
         <button className={styles.primaryButton} type="submit" disabled={busy}>Create campaign</button>
       </form>
-    </details>
-    <section id="voice-campaigns" className={styles.panel} aria-labelledby="campaigns-heading">
-      <div className={styles.sectionHeader}><div><h2 id="campaigns-heading">Campaigns & response monitor</h2>
+      {failure ? <p role="alert" className={styles.errorText}>{failure}</p> : null}
+    </section>
+  );
+  if (screen === "voice-campaigns") return (
+    <section id={screen} className={styles.panel} aria-labelledby="campaigns-heading">
+      <div className={styles.sectionHeader}><div><h2 id="campaigns-heading">{title}</h2>
         <p>Eligible people, invitations and responses are counted separately.</p></div></div>
-      {!data.campaigns.length ? <p className={styles.message}>Create a campaign above, or open the ready-to-show report below.</p> :
-        <label className={styles.control}>Campaign<select value={selected} onChange={(event) => {
-          setSelected(event.target.value); setFailure(""); setMessage("");
-        }}>{data.campaigns.map((item) => <option key={item.survey_id} value={item.survey_id}>{item.title} · {item.survey_id}</option>)}</select></label>}
+      {campaignPicker ?? <button type="button" className={styles.secondaryButton}
+        onClick={() => onOpenScreen("survey-builder")}>Create a survey</button>}
       {message ? <p role="status" className={styles.notice}>{message}</p> : null}
       {failure ? <p role="alert" className={styles.errorText}>{failure}</p> : null}
       {campaign ? <ResponseMonitor campaign={campaign} /> : null}
@@ -161,12 +189,23 @@ export function VoiceWorkspace({ onAccessError }: { onAccessError: OnError }) {
         <button className={styles.secondaryButton} disabled={busy} value="significant" type="submit">Generate significant concern</button>
         <button className={styles.secondaryButton} disabled={busy} value="exploratory" type="submit">Generate exploratory sample</button>
       </form> : null}
+      {campaign?.generated_at ? <button type="button" className={styles.secondaryButton}
+        onClick={() => onOpenScreen("voice-analytics")}>View survey analytics</button> : null}
     </section>
-    {campaign?.generated_at ? <VoiceAnalyticsPanel key={campaign.survey_id}
-      campaign={campaign} source={data} onAccessError={onAccessError} /> : null}
-    {campaign?.generated_at ? <VoiceReviewPanel key={campaign.survey_id}
-      campaign={campaign} themes={data.themes} onAccessError={onAccessError} /> : null}
-  </>;
+  );
+  if (!campaign?.generated_at) return <section id={screen} className={styles.panel}>
+    <h2>{title}</h2>
+    {campaignPicker}
+    <p className={styles.message}>Generate responses for a campaign to use this screen.</p>
+    <button type="button" className={styles.secondaryButton}
+      onClick={() => onOpenScreen("voice-campaigns")}>Open campaigns & responses</button>
+  </section>;
+  if (screen === "voice-analytics") return <VoiceAnalyticsPanel key={campaign.survey_id}
+    campaign={campaign} source={data} onAccessError={onAccessError} campaignPicker={campaignPicker} />;
+  if (screen === "voice-review" || screen === "voice-tracker") return <VoiceReviewPanel key={campaign.survey_id}
+    campaign={campaign} themes={data.themes} onAccessError={onAccessError} screen={screen}
+    campaignPicker={campaignPicker} onOpenScreen={onOpenScreen} />;
+  return null;
 }
 
 function ResponseMonitor({ campaign }: { campaign: Campaign }) {
@@ -174,6 +213,9 @@ function ResponseMonitor({ campaign }: { campaign: Campaign }) {
     <h3>{campaign.title}</h3>
     <p className={styles.caption}>{displayWindow({ start: campaign.period_start, end: campaign.period_end })} · {campaign.survey_id}
       {campaign.generation_mode ? ` · ${displayCode(campaign.generation_mode)} · Seed ${campaign.generation_seed}` : " · Awaiting responses"}</p>
+    {campaign.series === "candidate" ? <p className={styles.caption}>
+      The eligible unit is one synthetic application. Interview ratings cover applicants with a recorded interview.
+    </p> : null}
     <dl className={styles.summaryFacts}>
       <div><dt>Eligible</dt><dd>{campaign.eligible}</dd></div><div><dt>Invited</dt><dd>{campaign.invited}</dd></div>
       <div><dt>Responses</dt><dd>{campaign.responses}</dd></div><div><dt>Analysable comments</dt><dd>{campaign.analysable}</dd></div>

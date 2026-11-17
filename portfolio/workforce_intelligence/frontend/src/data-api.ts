@@ -3,6 +3,7 @@ import type { WorkforceMode } from "./mode-state";
 const API = "/portfolio/workforce-intelligence/api";
 export const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const MAX_WORKBOOK_BYTES = 1024 * 1024;
+export const DIRECTORY_PAGE_SIZE = 20;
 
 export type DatasetVersion = { dataset_id: string; dataset_generation: number };
 export type Dataset = DatasetVersion & {
@@ -51,6 +52,14 @@ export type Quality = Snapshot & {
   quality_status: "passed" | "review_required";
   issues: Record<string, number>;
 };
+export type Architecture = Quality & {
+  as_of_date: string;
+  layers: Array<{
+    code: "operational" | "bronze" | "silver" | "gold";
+    relation: string;
+    values: Record<string, string | number | null>;
+  }>;
+};
 export type Executive = Quality & {
   executive: { metrics: Comparison[]; current_window: Window; previous_window: Window | null };
 };
@@ -79,7 +88,13 @@ export type Funnel = Quality & {
     application_to_start: Observation;
   };
 };
-export type Employee = {
+export type DirectoryProfile = {
+  directory_job_title?: string | null;
+  directory_department?: string | null;
+  directory_title_inferred?: boolean;
+  directory_department_inferred?: boolean;
+};
+export type Employee = DirectoryProfile & {
   id: string;
   display_name: string;
   record_version: number;
@@ -190,7 +205,7 @@ export type Workspace = Snapshot & (
   | { kind: "workforce-intelligence"; dashboard: Dashboard }
   | { kind: "workforce-management"; directory: Directory }
   | { kind: "people-voice"; report: SurveyReport }
-  | { kind: "data-architecture"; quality: Quality; metrics: MetricDefinition[] }
+  | { kind: "data-architecture"; architecture: Architecture; metrics: MetricDefinition[] }
 );
 
 export class WorkforceApiError extends Error {
@@ -251,9 +266,9 @@ export async function workforceDownload(path: string, fileName: string, payload?
   }
 }
 
-export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object) {
+export function workforceWrite<T>(path: string, method: "POST" | "PATCH", body: object, signal?: AbortSignal) {
   return workforceRequest<T>(path, {
-    method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    method, signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
 }
 
@@ -290,7 +305,9 @@ export async function loadWorkspace(
   mode: WorkforceMode, filters: Filters, offset: number, signal: AbortSignal,
 ): Promise<Workspace> {
   if (mode === "workforce-management") {
-    const directory = await workforceRequest<Directory>(`employees?limit=15&offset=${offset}`, { signal });
+    const directory = await workforceRequest<Directory>(
+      `employees?limit=${DIRECTORY_PAGE_SIZE}&offset=${offset}`, { signal },
+    );
     return { ...directory, kind: mode, directory };
   }
   if (mode === "people-voice") {
@@ -298,11 +315,12 @@ export async function loadWorkspace(
     return { ...data, kind: mode };
   }
   if (mode === "data-architecture") {
-    const [quality, { metrics }] = await Promise.all([
-      workforceRequest<Quality>("data-quality", { signal }),
+    const cutoff = filters.end ? `?as_of_date=${encodeURIComponent(filters.end)}` : "";
+    const [architecture, { metrics }] = await Promise.all([
+      workforceRequest<Architecture>(`architecture/layers${cutoff}`, { signal }),
       workforceRequest<{ metrics: MetricDefinition[] }>("metrics", { signal }),
     ]);
-    return { ...quality, kind: mode, quality, metrics };
+    return { ...architecture, kind: mode, architecture, metrics };
   }
 
   const dates = new URLSearchParams();

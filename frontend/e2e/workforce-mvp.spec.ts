@@ -22,8 +22,9 @@ test("a member previews a workbook before confirming source and dashboard change
   await signIn(page);
   await page.goto(`${path}?mode=workforce-management`);
   const outline = page.getByRole("navigation", { name: "Workforce Management outline" });
-  await outline.getByRole("link", { name: "Import / Export" }).click();
+  await outline.getByRole("group", { name: "Data administration" }).getByRole("link", { name: "Import / Export" }).click();
   const importPanel = page.locator("#import-export");
+  await expect(page.locator("#directory")).toHaveCount(0);
   const template = page.waitForEvent("download");
   await importPanel.getByRole("button", { name: "Download template" }).click();
   expect((await template).suggestedFilename()).toBe("workforce-template.xlsx");
@@ -56,10 +57,33 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await signIn(page);
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
+  const app = page.getByRole("region", { name: "Workforce Intelligence demo" });
+  await expect(page.locator(".app-shell, .site-header, .site-footer")).toHaveCount(0);
+  await expect(page.getByRole("main")).toHaveCount(1);
+  const emblem = app.getByRole("img", { name: "Workforce Analytics Simulation Environment emblem" });
+  await expect(emblem).toBeVisible();
+  await expect.poll(() => emblem.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+  expect(await app.evaluate((element) => element.getBoundingClientRect().width)).toBe(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
+  await expect(app.getByText(/not an official SCAS system/i)).toHaveCount(0);
   const workspaceNav = page.getByRole("navigation", { name: "Workforce sections" });
+  const intelligence = page.getByRole("navigation", { name: "Workforce Intelligence outline" });
+  const pipeline = intelligence.getByRole("group", { name: "Recruitment pipeline" });
+  await pipeline.getByRole("link", { name: "Recruitment channels" }).click();
   await expect(page.getByRole("heading", { name: "Recruitment channels" })).toBeVisible();
+  await expect(page.locator("#executive")).toHaveCount(0);
   const channels = page.getByRole("region", { name: "Recruitment channel table" });
+  await expect(channels.getByRole("row").filter({ hasText: "Careers" })).toBeVisible();
+  const ageingLink = pipeline.getByRole("link", { name: "Vacancy ageing" });
+  await ageingLink.click();
+  await expect(ageingLink).toHaveAttribute("aria-current", "page");
+  await expect(page).toHaveURL(/section=vacancy-ageing$/);
+  await expect(channels).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await page.goBack();
   await expect(channels).toBeVisible();
+  await page.goForward();
   const ageing = page.getByRole("region", { name: "Vacancy ageing bands" });
   await expect(ageing).toBeVisible();
   await expect(ageing.getByRole("row")).toHaveCount(6); // Five bands plus header.
@@ -67,10 +91,12 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   const vacancy = page.getByRole("combobox", { name: "Vacancy", exact: true });
   await expect(vacancy).toHaveValue("vac-004");
   await vacancy.selectOption("");
+  await intelligence.getByRole("link", { name: "Workforce trend" }).click();
   const trend = page.getByRole("region", { name: "Monthly Workforce trend table" });
   await expect(trend).toBeVisible();
   await expect(trend.getByRole("row")).toHaveCount(5); // 4 observed months plus header.
   await expect(trend.getByRole("row", { name: /2026-10/ })).toBeVisible();
+  await pipeline.getByRole("link", { name: "Inclusive recruitment" }).click();
   const inclusive = page.getByRole("region", { name: "Inclusive recruitment", exact: true });
   await expect(inclusive).toBeVisible();
   await expect(inclusive.getByRole("heading", { name: "Age band" })).toBeVisible();
@@ -79,18 +105,36 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await expect(inclusive.getByText("This disclosure-controlled report is independent", { exact: false })).toBeVisible();
   const withheld = await page.request.get(`${path}/api/analytics/inclusive-recruitment?as_of_date=2026-10-31`);
   expect(withheld.status()).toBe(404); // BFF blocks attempts to filter sensitive dimensions.
+  await intelligence.getByRole("link", { name: "Workforce outcomes" }).click();
   const outcomes = page.getByRole("region", { name: "Workforce outcomes" });
   await expect(outcomes).toBeVisible();
   await expect(outcomes.locator("[data-metric=offer_to_start_conversion]")).toBeVisible();
   await expect(outcomes.locator("[data-metric=retention_rate]")).toBeVisible();
   await expect(outcomes.locator("[data-metric=early_attrition_12m]")).toHaveText("Not available");
-  await expect(channels.getByRole("row").filter({ hasText: "Careers" })).toBeVisible();
+  await intelligence.getByRole("link", { name: "Recruitment overview" }).click();
   const gap = page.locator("[data-metric=workforce_gap_wte]");
   const prior = Number((await gap.innerText()).split(" ")[0]);
   await page.evaluate(() => { document.documentElement.dataset.workforceApp = "running"; });
 
   await workspaceNav.getByRole("link", { name: "Workforce Management" }).click();
-  await page.getByRole("button", { name: "Edit FTE for Demo A.", exact: true }).click({ timeout: 20_000 });
+  const directory = page.getByRole("region", { name: "People directory table" });
+  await expect(directory.getByRole("rowheader").getByRole("button")).toHaveText([
+    "James W.", "Lynn L.", "Mark G.", "Craig E.", "Stuart R.", "Jo Q.", "Michelle S.", "Colin D.",
+    "William B.", "Lisa B.", "Anna H.", "Amy C.", "Philip S.", "Katie W.", "David W.", "Marta M.",
+    "Steve C.", "Nadim A.", "Tony S.", "Sophie R.",
+  ]);
+  const james = directory.getByRole("row", { name: /^James W\./ });
+  await expect(james.getByRole("cell", { name: "Senior Management Information Analyst" })).toBeVisible();
+  await expect(james.getByRole("cell", { name: "Digital and Data - Data and Analytics" })).toBeVisible();
+  const craig = directory.getByRole("row", { name: /^Craig E\./ });
+  await expect(craig.getByRole("cell", { name: "Title not supplied" })).toBeVisible();
+  const lisa = directory.getByRole("row", { name: /^Lisa B\./ });
+  await expect(lisa.getByRole("cell", { name: "Recruitment Manager Inferred" })).toBeVisible();
+  await james.getByRole("button", { name: "James W.", exact: true }).click();
+  await expect(page.locator("#employee-profile").getByText("Senior Management Information Analyst", { exact: true })).toBeVisible();
+  await expect(directory).toHaveCount(0);
+  await page.goBack();
+  await page.getByRole("button", { name: "Edit FTE for James W.", exact: true }).click({ timeout: 20_000 });
   const field = page.getByLabel("New contracted FTE");
   const oldFte = Number(await field.inputValue());
   const newFte = oldFte === 1 ? 0.8 : 1;
@@ -99,7 +143,7 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
     res.request().method() === "PATCH");
   await page.getByRole("button", { name: "Save FTE" }).click();
   expect((await saved).status()).toBe(200);
-  await expect(page.getByRole("status").filter({ hasText: "Demo A. contract saved" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "James W. contract saved" })).toBeVisible();
 
   await workspaceNav.getByRole("link", { name: "Workforce Intelligence" }).click();
   await expect(gap).toHaveText(`${Number((prior + oldFte - newFte).toFixed(3))} WTE`);
@@ -112,12 +156,16 @@ test("an admitted Workforce member can save effective FTE and see Gold refresh",
   await page.getByLabel("Period start").fill("2026-07-01");
   await page.getByLabel("As of date").fill("2026-07-30");
   await page.getByRole("button", { name: "Apply dates" }).click();
+  await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
+  await pipeline.getByRole("link", { name: "Candidate funnel" }).click();
   await expect(page.getByText("There are no applications in this cohort.")).toBeVisible();
+  await pipeline.getByRole("link", { name: "Recruitment channels" }).click();
   await expect(page.getByText("There are no applications in this reporting window.")).toBeVisible();
+  await intelligence.getByRole("link", { name: "Workforce outcomes" }).click();
   await expect(page.getByRole("region", { name: "Workforce outcomes" })).toBeVisible();
+  await intelligence.getByRole("link", { name: "Workforce trend" }).click();
   const partialMonth = page.getByRole("region", { name: "Monthly Workforce trend table" });
   await expect(partialMonth.getByRole("row", { name: /2026-07 \(partial\)/ })).toBeVisible();
-  await expect(page.locator("[data-metric=offer_acceptance_rate]")).toHaveText("Not available");
 });
 
 test("a member can inspect published evidence, a governed answer and the implemented lineage", async ({ page }, info) => {
@@ -129,14 +177,19 @@ test("a member can inspect published evidence, a governed answer and the impleme
   const nav = page.getByRole("navigation", { name: "Workforce sections" });
   const rate = await page.locator("[data-metric=vacancy_rate]").innerText();
   await page.screenshot({ path: info.outputPath("workforce-recruitment.png"), style: "nextjs-portal { display: none }" });
+  await page.getByRole("navigation", { name: "Workforce Intelligence outline" }).getByRole("link", { name: "Insight Pilot" }).click();
   await page.getByRole("button", { name: "Explain the vacancy rate" }).click();
   const answer = page.locator("#insight-pilot").getByRole("status");
   await expect(answer).toContainText(rate);
   await expect(answer).toContainText("Open vacancy WTE ÷ budgeted establishment WTE × 100");
 
   await nav.getByRole("link", { name: "People Voice" }).click();
+  const example = page.getByRole("navigation", { name: "People Voice outline" }).getByRole("group", { name: "Prepared example" });
+  await example.getByRole("link", { name: "Prepared report" }).click();
   await expect(page.getByRole("heading", { name: "Rota Changes and Workforce Pressure" })).toBeVisible();
   await expect(page.getByText("Demonstration fallback result")).toBeVisible();
+  await example.getByRole("link", { name: "Published findings" }).click();
+  await expect(page.locator("#voice-report")).toHaveCount(0);
   const findings = page.getByRole("region", { name: "Published findings" });
   await expect(findings.getByText("6 of 10 comments")).toBeVisible();
   await expect(findings.getByText("Seeded demonstration review")).toBeVisible();
@@ -144,15 +197,26 @@ test("a member can inspect published evidence, a governed answer and the impleme
   await findings.getByRole("link", { name: "rota-001" }).click();
   await expect(page).toHaveURL(/#response-rota-001$/);
   await expect(findings.locator("#response-rota-001")).toContainText("Give the team a little more notice");
+  await example.getByRole("link", { name: "Management action" }).click();
   await expect(page.getByRole("heading", { name: "Linked management action" })).toBeVisible();
 
   await nav.getByRole("link", { name: "Data Architecture" }).click();
+  const architecture = page.getByRole("navigation", { name: "Data Architecture outline" });
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();
-  await expect(page.getByText("Executive metrics · gold_reviewed_survey_findings")).toBeVisible();
+  await page.getByRole("button", { name: "Explore the data layers" }).click();
+  await expect(page.locator("#data-lineage")).toHaveCount(0);
+  await page.getByRole("group", { name: "Data layer", exact: true }).getByRole("button", { name: "Gold" }).click();
+  await expect(page.getByRole("region", { name: "Gold example row" })).toContainText("workforce_gap_wte");
+  await architecture.getByRole("link", { name: "Data model" }).click();
+  await page.getByRole("group", { name: "Data model subject" }).getByRole("button", { name: "People Voice" }).click();
+  await expect(page.getByText("gold_voice_published_findings", { exact: true })).toBeVisible();
+  await architecture.getByRole("link", { name: "Metric catalogue" }).click();
   await expect(page.getByRole("heading", { name: "Metric catalogue" })).toBeVisible();
+  await architecture.getByRole("link", { name: "Data quality" }).click();
   const qualityDetails = page.getByRole("region", { name: "Data quality rule details" });
   await expect(qualityDetails.getByRole("row", { name: /Excluded applications/ })).toBeVisible();
-  await expect(page.getByText("These are four source-to-Silver reconciliation checks", { exact: false })).toBeVisible();
+  await expect(page.getByText("Four reconciliation checks compare accepted source rows with Silver.", { exact: false })).toBeVisible();
+  await architecture.getByRole("link", { name: "Sources and assumptions" }).click();
   const register = page.getByRole("region", { name: "Sources and assumptions" });
   await expect(register.getByText("Synthetic recruitment events")).toBeVisible();
   await expect(register.getByText("SCAS People Strategy 2023–2026 · Public reference", { exact: true })).toBeVisible();
@@ -198,9 +262,13 @@ test("reset is confirmed and the interview guides restore their real views", asy
   await expect(page.getByLabel("Effective date")).toHaveValue("2026-10-20");
   await page.getByLabel("New contracted FTE").fill("0.8");
   await page.getByRole("button", { name: "Save FTE" }).click();
-  await expect(page.getByText("Demo A. contract saved", { exact: false })).toBeVisible();
+  await expect(page.getByText("James W. contract saved", { exact: false })).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
   await expect(gap).toHaveText(`${Number((baselineGap + 0.2).toFixed(3))} WTE`);
+  await page.getByRole("navigation", { name: "Workforce Intelligence outline" })
+    .getByRole("link", { name: "Workforce outcomes" }).click();
+  await expect(page).toHaveURL(/section=outcomes&scenario=quick&step=updated-gap$/);
+  await expect(page.getByRole("heading", { name: "Workforce outcomes" })).toBeVisible();
   await guide.getByRole("button", { name: "Next step" }).click();
   await page.getByRole("button", { name: "Explain the vacancy rate" }).click();
   await expect(page.locator("#insight-pilot").getByRole("status")).toContainText("14.29%");
@@ -208,10 +276,17 @@ test("reset is confirmed and the interview guides restore their real views", asy
 
   await page.getByLabel("Guided demo").selectOption("extended");
   await page.getByRole("button", { name: "Run interview scenario" }).click();
-  for (const step of ["edit-fte", "updated-gap", "funnel", "voice-report", "evidence", "definition", "explain-rate", "lineage"]) {
+  for (const step of ["edit-fte", "updated-gap", "funnel", "candidate-feedback", "voice-report", "evidence",
+    "definition", "forecast", "explain-rate", "lineage"]) {
     await guide.getByRole("button", { name: "Next step" }).click();
     await expect(page).toHaveURL(new RegExp(`scenario=extended&step=${step}$`));
     if (step === "funnel") await expect(page.getByRole("heading", { name: "Candidate funnel" })).toBeVisible();
+    if (step === "candidate-feedback") {
+      await expect(page.getByRole("heading", { name: "Candidate feedback report" })).toBeVisible();
+      await page.getByText("Rating question results", { exact: true }).click();
+      await expect(page.getByText(/Overall satisfaction with the recruitment process/)).toBeVisible();
+    }
+    if (step === "forecast") await expect(page.getByLabel("Enable forecast")).toBeVisible();
     if (step === "evidence") await expect(page.getByRole("link", { name: "rota-001" })).toBeVisible();
   }
   await expect(page.getByRole("heading", { name: "From source records to reports" })).toBeVisible();

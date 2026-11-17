@@ -230,7 +230,8 @@ def _previous(connection, info):
         SELECT settings.survey_id FROM voice_campaign_settings settings
         JOIN survey_campaigns campaign ON campaign.id = settings.survey_id
         WHERE settings.generated_at IS NOT NULL AND settings.series = :series
-          AND settings.audience = :audience AND settings.organisation_id IS :organisation_id
+          AND COALESCE(settings.candidate_audience, settings.audience) = :audience
+          AND settings.organisation_id IS :organisation_id
           AND campaign.period_end < :period_start
         ORDER BY campaign.period_end DESC, settings.survey_id LIMIT 1
         """,
@@ -239,6 +240,8 @@ def _previous(connection, info):
 
 
 def _triangulate(connection, info):
+    if info["audience"] == "candidates":
+        return _candidate_indicators(connection, info)
     values = []
     for dimension, match, label in (
         (
@@ -264,6 +267,42 @@ def _triangulate(connection, info):
                 }
             )
     return values
+
+
+def _candidate_indicators(connection, info):
+    total, timely, withdrawn = connection.execute(
+        """
+        WITH cohort AS MATERIALIZED (
+            SELECT id, received_on, disposition, disposed_on FROM fact_application
+            WHERE received_on BETWEEN :period_start AND :period_end
+              AND (:organisation_id IS NULL OR organisation_id = :organisation_id)
+        ), updates AS (
+            SELECT event.application_id, MIN(event.occurred_on) AS first_update
+            FROM fact_application_stage_event event JOIN cohort ON cohort.id = event.application_id
+            WHERE event.stage_code <> 'received' AND event.occurred_on <= :period_end
+            GROUP BY event.application_id
+        )
+        SELECT COUNT(*), COUNT(CASE WHEN updates.first_update <= date(cohort.received_on, '+7 days') THEN 1 END),
+               COUNT(CASE WHEN disposition = 'withdrawn' AND disposed_on <= :period_end THEN 1 END)
+        FROM cohort LEFT JOIN updates ON updates.application_id = cohort.id
+        WHERE cohort.received_on <= date(:period_end, '-7 days')
+        """,
+        info,
+    ).fetchone()
+    return [
+        {
+            "indicator": label,
+            "eligible": total,
+            "count": count,
+            "percent": ratio(count, total),
+            "relation": "Application events for the eligible cohort. Recorded stages are a proxy for candidate updates.",
+        }
+        for label, count in (
+            ("Recorded stage movement within seven days", timely),
+            ("Application withdrawn by the cutoff", withdrawn),
+        )
+        if not protected(total, count, info["anonymity_min"])
+    ]
 
 
 def _rating_summary(connection, info):

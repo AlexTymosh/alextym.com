@@ -26,8 +26,13 @@ def employees_at(
         SELECT employee.id, employee.display_name, employee.is_featured_demo_employee,
                employee.display_order, employee.record_version,
                contract.contracted_fte_milli / 1000.0 AS contracted_fte,
-               unit.label AS organisation, location.label AS location, role.label AS role
+               unit.label AS organisation, location.label AS location, role.label AS role,
+               featured.job_title AS directory_job_title, featured.department AS directory_department,
+               COALESCE(featured.title_inferred, 0) AS directory_title_inferred,
+               COALESCE(featured.department_inferred, 0) AS directory_department_inferred
         FROM employees AS employee
+        LEFT JOIN featured_directory_profiles AS featured ON employee.is_featured_demo_employee = 1
+          AND featured.display_order = employee.display_order
         JOIN employment_contracts AS contract ON contract.employee_id = employee.id
           AND contract.valid_from <= :day AND (contract.valid_to IS NULL OR contract.valid_to > :day)
         LEFT JOIN organisation_assignments AS assignment ON assignment.employee_id = employee.id
@@ -55,8 +60,9 @@ def add_employment(
     created_by: str,
     change_reason: str,
     featured_order: int | None = None,
+    substantive: bool = True,
 ) -> None:
-    """Create an employee's initial substantive contract and budget-line assignment."""
+    """Create an employee's initial contract and budget-line assignment."""
     connection.execute(
         "INSERT INTO employees (id, display_name, is_featured_demo_employee, display_order) VALUES (?, ?, ?, ?)",
         (employee_id, display_name, int(featured_order is not None), featured_order),
@@ -65,9 +71,9 @@ def add_employment(
         """
         INSERT INTO employment_contracts (employee_id, contracted_fte_milli, is_substantive,
             valid_from, created_at, created_by, change_reason)
-        VALUES (?, ?, 1, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (employee_id, fte_milli, start, created_at, created_by, change_reason),
+        (employee_id, fte_milli, substantive, start, created_at, created_by, change_reason),
     )
     connection.execute(
         """

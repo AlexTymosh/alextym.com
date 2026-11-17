@@ -11,8 +11,8 @@ seed failure stays on the Workforce request path.
 
 Paths are relative to the backend working directory. This is disposable synthetic
 state on the existing filesystem. The SQLite application marker prevents Workforce
-migrations and resets from adopting another project's database. Firebase identities
-and Firestore grants remain in the shared control plane.
+migrations and resets from adopting another project's database. Workforce uses
+the [password demo session](password-demo-access.md) at the shared host.
 
 Each operation uses its own connection with foreign keys enabled. Schema migration
 history is recorded in `schema_migrations`. Initial seed, each migration run, and
@@ -26,7 +26,7 @@ The dataset has a UUID for the current database incarnation, a numeric generatio
 that increments on reset, and a revision that increments on material edits. A
 new file gets a new UUID even though it begins at generation 1. Writes compare the
 expected UUID and generation under the writer lock. Record revisions also prevent
-two Members overwriting the same record from separate tabs.
+two sessions overwriting the same record from separate tabs.
 
 Effective periods use dates with inclusive `valid_from` and exclusive `valid_to`.
 An open-ended row has a null `valid_to`. A historical query selects the applicable
@@ -37,11 +37,11 @@ the start of an existing interval keeps the previous value in the mutation audit
 
 Reset serializes with edits and replaces the synthetic source tables in one
 transaction. It keeps reset receipts and records a fresh audit event. Retrying a
-successful reset with the same Member and idempotency key returns the receipt.
+successful reset with the same demo actor and idempotency key returns the receipt.
 Replacement with a full or exploratory fixture uses the same lock, confirmation
 and receipts. New replacements have a 15-second project-wide cooldown. The audit's demo session ID
-identifies the shared dataset generation. It contains neither a Firebase credential
-nor an individual browser session identifier.
+identifies the shared dataset generation. Audit entries contain the operation,
+correlation ID and shared demo actor.
 
 ## Analytical projections
 
@@ -70,9 +70,9 @@ the next generation.
 `gold_reviewed_survey_findings` requires an approved review that predates
 publication and evidence comments from the same campaign. The fixture contains
 one published finding and one draft. The audit and UI label the former as a
-seeded demonstration review. The report uses a demonstration fallback that is
-available independently of AI provider availability. The later live review
-workflow will collect Member decisions and publication events.
+seeded demonstration review. The report uses a demonstration fallback available
+independently of the AI provider. The campaign workflow also collects analyst
+decisions and separate publication events.
 
 ## Operational history and workbook staging
 
@@ -89,3 +89,43 @@ snapshot. Confirmation holds the writer lock, verifies the preview's generation
 and revision, and commits row changes, audit and the idempotent receipt together.
 The report projections read only committed source tables. Authenticated reports
 and workbook downloads are never cached by either host.
+
+## Architecture explorer and planning
+
+The Data Architecture workspace reads four live examples at a single dataset
+cutoff and revision. The explorer follows one substantive synthetic contract from its
+operational row through Bronze and the compatible Silver interval. The Gold
+example shows the aggregate establishment, substantive WTE and gap at the same
+cutoff. The examples select fixed columns and omit names, survey text and
+sensitive attributes. The accompanying checks compare committed source rows
+with Silver. The model diagrams show the implemented facts, grain and keys.
+
+The People Voice BPMN covers the campaign, review gate and action lifecycle.
+Campaign approval, communication and governance escalation illustrate roles in
+the process. The demo records survey, analysis, review, publication and action
+state. Teams carry out any communication or escalation outside it.
+
+Migration 10 adds `forecast_runs`, `forecast_results` and `fact_forecast`.
+A run is pinned to its input revision and stored idempotently without advancing
+the source revision. A reset removes those derived rows and starts a new
+generation. [Planning methods](planning.md)
+
+Migration 11 adds a candidate audience to the existing survey settings and
+seeds a candidate feedback report where the controlled cohort exists. It
+preserves saved campaigns and review history. Candidate surveys use one
+synthetic application as their eligible unit. Rating the interview requires a
+recorded interview. The report applies the existing suppression and review
+rules.
+
+Migration 12 updates the employee directory in place. It gives the first 20
+synthetic employees a fixed display order, updates generated aliases, and adds
+three non-substantive contracts to the short fixture. The full fixture reuses
+existing employee records for its additional featured rows. The migration
+retains the dataset ID and employment history and advances the revision so
+clients and outstanding workbook previews can detect the change.
+
+Migration 13 adds a directory profile lookup keyed by featured display order.
+The directory and employee detail use its titles, departments and inference
+flags. The lookup persists across synthetic dataset replacements. This migration
+leaves the dataset revision and effective establishment assignments intact.
+The latter continue to feed workforce metrics and survey eligibility.

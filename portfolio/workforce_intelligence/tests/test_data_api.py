@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.testclient import TestClient
 
 from workforce_intelligence.database import Database
+from workforce_intelligence.directory_names import FEATURED_NAMES
 from workforce_intelligence.http import get_database
 from workforce_intelligence.router import router
 
@@ -53,6 +54,91 @@ def source_command(client, action, expected_status=200, **fields):
     return response.json()
 
 
+def test_planning_api_pins_revision_and_clears_saved_runs_on_reset(demo):
+    client, database = demo
+    state = client.get("demo/status").json()["dataset"]
+    snapshot = {**version(client), "source_revision": state["revision"]}
+    history = client.get("forecast/history", params={"metric": "vacancy_wte"})
+    assert history.status_code == 200
+    assert len(history.json()["history"]) == 4
+    assert history.headers["cache-control"] == "no-store"
+    request = {**snapshot, "metric": "vacancy_wte"}
+    blocked = client.post("forecast", json={**request, "horizon": 13})
+    assert blocked.status_code == 422
+    assert client.post("forecast", json={**request, "source_revision": 10}).status_code == 409
+    forecast = client.post("forecast", json=request)
+    assert forecast.status_code == 200
+    assert forecast.json()["forecast"]["status"] == "insufficient_history"
+    assert client.post("forecast", json=request).json() == forecast.json()
+
+    saved = client.post("scenarios", json={**snapshot, "inputs": {"approvals_per_month": 3}})
+    assert saved.status_code == 200
+    evaluation = saved.json()
+    assert client.get(f"scenarios/{evaluation['run_id']}").json() == evaluation
+    assert evaluation["evaluation"]["inputs"]["approvals_per_month"] == 3
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 2
+
+    assert (
+        client.post(
+            "demo/reset",
+            json={**version(client), "confirmed": True, "idempotency_key": str(uuid4())},
+        ).status_code
+        == 200
+    )
+    assert client.get(f"scenarios/{evaluation['run_id']}").status_code == 404
+    assert client.post("forecast", json=request).status_code == 409
+    with database.transaction() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM forecast_runs").fetchone()[0] == 0
+
+
+def test_architecture_examples_trace_the_same_contract_and_reconcile_to_gold(demo):
+    client, _ = demo
+    cutoff = "2026-10-15"
+    response = client.get("architecture/layers", params={"as_of_date": cutoff})
+    assert response.status_code == 200
+    report = response.json()
+    assert report["as_of_date"] == cutoff
+    assert report["quality_status"] == "passed"
+    sources = {layer["code"]: layer["values"] for layer in report["layers"]}
+    assert sources["bronze"]["contract_id"] == sources["operational"]["contract_id"]
+    assert sources["silver"]["employee_id"] == sources["operational"]["employee_id"]
+    assert (
+        sources["silver"]["contracted_fte_milli"] == sources["operational"]["contracted_fte_milli"]
+    )
+    assert sources["bronze"]["source_revision"] == report["dataset"]["revision"]
+    gold = executive(client, as_of_date=cutoff)
+    for code in ("budgeted_wte", "substantive_wte", "workforce_gap_wte"):
+        assert sources["gold"][code] == gold[code]["value"]
+    assert client.get("architecture/layers", params={"as_of_date": "2050-01-01"}).status_code == 422
+
+
+def test_candidate_feedback_uses_an_application_cohort_and_rating_rules(demo):
+    client, database = demo
+    campaigns = client.get("surveys").json()["campaigns"]
+    prepared = next(row for row in campaigns if row["survey_id"] == "candidate-feedback")
+    assert prepared["audience"] == "candidates" and prepared["responses"] < prepared["invited"]
+    with database.transaction() as connection:
+        eligible = connection.execute(
+            "SELECT COUNT(*) FROM fact_application WHERE received_on BETWEEN ? AND ?",
+            (prepared["period_start"], prepared["period_end"]),
+        ).fetchone()[0]
+        assert prepared["eligible"] == eligible
+    response = client.get(
+        "surveys/candidate-feedback/analytics",
+        params={
+            "dimension": "organisation",
+            "weight_by": "organisation",
+            "theme": "candidate-communication",
+        },
+    )
+    assert response.status_code == 200
+    ratings = response.json()["report"]["ratings"]
+    assert len(ratings) == 4
+    assert ratings[0]["mean"] is not None
+    assert ratings[-1]["answered"] is None or ratings[-1]["answered"] <= prepared["responses"]
+
+
 def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     client, _ = demo
     fields = dict(employee_id="demo-ops", contracted_fte="0.7")
@@ -64,7 +150,7 @@ def test_employment_workflow_preserves_contract_and_assignment_history(demo):
         start_on="2026-08-01",
         **fields,
     )
-    source_command(client, "edit_profile", employee_id="demo-ops", display_name="Demo Ops A.")
+    source_command(client, "edit_profile", employee_id="demo-ops", display_name="Aria P.")
     source_command(
         client,
         "set_assignment",
@@ -119,7 +205,7 @@ def test_employment_workflow_preserves_contract_and_assignment_history(demo):
     assert [r["line_id"] for r in current["assignments"]] == ["line-2", "line-1"]
     actions = {row["action"] for row in client.get("operations/audit").json()["items"]}
     assert {"promotion", "record_leaver", "record_pdr"}.issubset(actions)
-    assert current["display_name"] == "Demo Ops A."
+    assert current["display_name"] == "Aria P."
     assert client.delete("employees/demo-ops").status_code == 405
 
 
@@ -300,10 +386,24 @@ def test_period_kpis_and_application_grain_reconcile(demo):
 def test_effective_edit_refreshes_gold_and_keeps_dates_and_audit(demo):
     client, database = demo
     full = client.get("employees", params={"limit": 15}).json()
-    assert [person["display_name"] for person in full["items"]] == [
-        f"Demo {c}." for c in "ABCDEFGHIJKLMNO"
-    ]
+    assert [person["display_name"] for person in full["items"]] == list(FEATURED_NAMES[:15])
     assert full["next_offset"] == 15
+    rest = client.get("employees", params={"limit": 15, "offset": 15}).json()
+    assert [person["display_name"] for person in rest["items"]] == list(FEATURED_NAMES[15:])
+    assert rest["next_offset"] is None
+    james, lynn, _, craig, *_ = full["items"]
+    assert james["directory_job_title"] == "Senior Management Information Analyst"
+    assert james["directory_department"] == "Digital and Data - Data and Analytics"
+    assert james["directory_department_inferred"] is False
+    assert lynn["directory_department_inferred"] is True
+    assert craig["directory_job_title"] is None
+    lisa = full["items"][9]
+    assert lisa["directory_job_title"] == "Recruitment Manager"
+    assert lisa["directory_title_inferred"] is True
+    profile = client.get(f"employees/{lisa['id']}").json()["employee"]
+    assert profile["directory_job_title"] == lisa["directory_job_title"]
+    assert profile["directory_department"] == lisa["directory_department"]
+    assert profile["directory_title_inferred"] is True
     before = executive(client)["workforce_gap_wte"]["value"]
     historical = executive(client, as_of_date="2026-10-19")["workforce_gap_wte"]["value"]
     change = {

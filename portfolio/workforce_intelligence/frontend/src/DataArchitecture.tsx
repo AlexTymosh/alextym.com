@@ -1,44 +1,109 @@
-import type { MetricDefinition, Quality } from "./data-api";
-import { displayCode } from "./format";
+import { useState } from "react";
+import type { Architecture, MetricDefinition } from "./data-api";
+import { DataModel } from "./DataModel";
+import { displayCode, displayDay, displayNumber } from "./format";
 import { QUALITY_RULE_GUIDANCE } from "./assurance-register";
+import type { OpenWorkforceScreen, WorkforceScreen } from "./mode-state";
 import { SourcesAndAssumptions } from "./SourcesAndAssumptions";
+import { VoiceProcess } from "./VoiceProcess";
 import styles from "./workforce-scaffold.module.css";
 
-const lineage = [
-  { title: "Operational", identifier: "employment_contracts · starter_events", description: "Workforce SQLite stores effective-dated FTE, dated recruitment events and the mutation audit." },
-  { title: "Bronze", identifier: "bronze_employment_contracts · bronze_starter_events", description: "Source-grain views carry the dataset generation and revision into each report." },
-  { title: "Silver", identifier: "silver_substantive_employment · silver_starters", description: "Conformed employment intervals and starter evidence reconcile to contracts, offers and dated starts." },
-  { title: "Gold", identifier: "Executive metrics · gold_reviewed_survey_findings", description: "Governed reports compute KPIs from a consistent snapshot. The survey view requires valid evidence and an earlier review." },
-];
+const lineage = {
+  operational: {
+    title: "Operational", purpose: "Capture approved synthetic source changes.",
+    content: "Effective-dated contracts, recruitment events, survey campaign records and import audit.",
+    transform: "The UI and validated workbooks create source rows under transaction and version checks.",
+    owner: "People Team",
+  },
+  bronze: {
+    title: "Bronze", purpose: "Expose accepted source rows with lineage.",
+    content: "Source-grain synthetic records and dataset metadata.",
+    transform: "Views add the dataset generation and source revision. Source grain is preserved.",
+    owner: "Data & Analytics",
+  },
+  silver: {
+    title: "Silver", purpose: "Conform effective dates and keys for analysis.",
+    content: "Valid employment intervals, applications, offers, starter events and dimensions.",
+    transform: "Intersect contracts with assignments and reconcile starters to accepted offers and effective employment.",
+    owner: "Data & Analytics",
+  },
+  gold: {
+    title: "Gold", purpose: "Publish governed metrics and evidence-backed findings.",
+    content: "Aggregate KPIs, registered comparisons, forecast results and reviewed survey findings.",
+    transform: "Calculate metrics at the cutoff. People Voice admits only evidence-linked findings with a prior review and explicit publication.",
+    owner: "Analyst Reviewer",
+  },
+};
 
-export function DataArchitecture({ quality, metrics }: { quality: Quality; metrics: MetricDefinition[] }) {
+export function DataArchitecture({ architecture, metrics, screen, onOpenScreen }: {
+  architecture: Architecture; metrics: MetricDefinition[]; screen: WorkforceScreen; onOpenScreen: OpenWorkforceScreen;
+}) {
+  const [layer, setLayer] = useState<(typeof architecture.layers)[number]["code"]>("operational");
+  const metadata = lineage[layer];
+  const example = architecture.layers.find((row) => row.code === layer);
+  const status = architecture.quality_status === "passed" ? "Passed" : "Review required";
   return (
     <div className={styles.stack}>
-      <section id="data-lineage" className={styles.panel} aria-labelledby="lineage-heading">
+      {screen === "data-lineage" ? <section id="data-lineage" className={styles.panel} aria-labelledby="lineage-heading">
         <div className={styles.sectionHeader}><div><h2 id="lineage-heading">From source records to reports</h2>
-          <p>Workforce owns this SQLite dataset. Portfolio Lab manages identity and grants in Firestore.</p></div></div>
-        <ol className={styles.lineage}>
-          {lineage.map((layer) => <li key={layer.title}><h3>{layer.title}</h3>
-            <code>{layer.identifier}</code><p>{layer.description}</p></li>)}
+          <p>Architecture overview · Workforce-owned SQLite · Revision {architecture.dataset.revision}</p></div></div>
+        <p className={styles.caption}>The shared backend reads a committed snapshot. Reports reflect accepted
+          source changes on the next query. Survey publication adds its own evidence and review gate.</p>
+        <ol className={styles.lineageFlow} aria-label="Data lineage">
+          {Object.values(lineage).map(({ title, purpose }) =>
+            <li key={title}><strong>{title}</strong><span>{purpose}</span></li>)}
         </ol>
-      </section>
-      <section id="quality" className={styles.panel} aria-labelledby="quality-heading">
+        <button type="button" className={styles.linkButton} onClick={() => onOpenScreen("data-layers")}>Explore the data layers</button>
+      </section> : null}
+      {screen === "data-layers" ? <section id="data-layers" className={styles.panel} aria-labelledby="layer-heading">
+        <div className={styles.sectionHeader}><div><h2 id="layer-heading">Explore the data layers</h2>
+          <p>Live synthetic examples at {displayDay(architecture.as_of_date)}.</p></div></div>
+        <div className={styles.diagramControls} role="group" aria-label="Data layer">
+          {architecture.layers.map(({ code }) => <button key={code} type="button" className={styles.secondaryButton}
+            aria-pressed={layer === code} onClick={() => setLayer(code)}>{lineage[code].title}</button>)}
+        </div>
+        <div className={styles.layerDetails}>
+          <dl>
+            <div><dt>Purpose</dt><dd>{metadata.purpose}</dd></div>
+            <div><dt>Permitted content</dt><dd>{metadata.content}</dd></div>
+            <div><dt>Transformation</dt><dd>{metadata.transform}</dd></div>
+            <div><dt>Demo owner</dt><dd>{metadata.owner}</dd></div>
+            <div><dt>Snapshot quality</dt><dd>{status} · <button type="button" className={styles.linkButton}
+              onClick={() => onOpenScreen("quality")}>See checks</button></dd></div>
+          </dl>
+          {example ? <div>
+            <h3>Example row</h3>
+            <p><code>{example.relation}</code></p>
+            {Object.keys(example.values).length ? <div className={styles.tableScroll} tabIndex={0} role="region"
+              aria-label={`${metadata.title} example row`}>
+              <table className={styles.table}>
+                <thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead>
+                <tbody>{Object.entries(example.values).map(([field, value]) => <tr key={field}>
+                  <th scope="row"><code>{field}</code></th>
+                  <td>{typeof value === "number" ? displayNumber(value) : value ?? "Null"}</td>
+                </tr>)}</tbody>
+              </table>
+            </div> : <p>No matching row at this date.</p>}
+          </div> : null}
+        </div>
+      </section> : null}
+      {screen === "data-model" ? <DataModel /> : null}
+      {screen === "quality" ? <section id="quality" className={styles.panel} aria-labelledby="quality-heading">
         <div className={styles.sectionHeader}><div><h2 id="quality-heading">Data quality checks</h2>
-          <p>Checked against the active dataset revision.</p></div>
-          <span className={quality.quality_status === "passed" ? styles.statusBadge : styles.warningBadge}>
-            {quality.quality_status === "passed" ? "Passed" : "Review required"}
+          <p>Revision {architecture.dataset.revision} · {displayDay(architecture.as_of_date)}</p></div>
+          <span className={architecture.quality_status === "passed" ? styles.statusBadge : styles.warningBadge}>
+            {status}
           </span>
         </div>
         <p className={styles.caption}>
-          These are four source-to-Silver reconciliation checks, not a full validation
-          of completeness, protected-characteristic quality or all Workforce KPIs.
-          Counts describe affected records per rule and may overlap; do not sum them.
+          Four reconciliation checks compare accepted source rows with Silver. Counts describe
+          affected records per rule and may overlap.
         </p>
         <div className={styles.tableScroll} tabIndex={0} role="region" aria-label="Data quality rule details">
           <table className={styles.table}>
             <thead><tr><th scope="col">Implemented check</th><th scope="col">Issues</th>
               <th scope="col">Potential metric impact</th><th scope="col">Suggested investigation</th></tr></thead>
-            <tbody>{Object.entries(quality.issues).map(([code, count]) => {
+            <tbody>{Object.entries(architecture.issues).map(([code, count]) => {
               const guidance = QUALITY_RULE_GUIDANCE[code];
               return <tr key={code}>
                 <th scope="row">{guidance?.title ?? displayCode(code)}</th>
@@ -50,17 +115,17 @@ export function DataArchitecture({ quality, metrics }: { quality: Quality; metri
           </table>
         </div>
         <p className={styles.caption}>
-          Any nonzero check flags the current dataset for review. These impact descriptions
-          are guidance, not proof that a particular reported KPI is wrong.
+          Any nonzero check flags the current snapshot for review. Investigate its lineage before drawing a conclusion.
         </p>
-      </section>
-      <SourcesAndAssumptions />
-      <section id="catalogue" className={styles.panel} aria-labelledby="metric-catalogue-heading">
+      </section> : null}
+      {screen === "voice-process" ? <VoiceProcess /> : null}
+      {screen === "sources" ? <SourcesAndAssumptions /> : null}
+      {screen === "catalogue" ? <section id="catalogue" className={styles.panel} aria-labelledby="metric-catalogue-heading">
         <div className={styles.sectionHeader}><h2 id="metric-catalogue-heading">Metric catalogue</h2></div>
         {metrics.map((metric) => <details key={metric.code} className={styles.catalogueEntry}>
           <summary>{metric.name}</summary><p>{metric.formula} · v{metric.version}</p><p>{metric.caveat}</p>
         </details>)}
-      </section>
+      </section> : null}
     </div>
   );
 }

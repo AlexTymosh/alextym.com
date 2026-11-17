@@ -6,11 +6,17 @@ from random import Random
 
 from workforce_intelligence.contracts import add_employment
 from workforce_intelligence.dataset import SeedDefinition
+from workforce_intelligence.directory_names import (
+    FEATURED_NAMES,
+    INTERVIEW_BANK_IDS,
+    INTERVIEW_SEED_VERSION,
+)
 from workforce_intelligence.operations_migration import (
     OPERATIONS_MIGRATION,
     RECRUITMENT_SOURCES,
 )
-from workforce_intelligence.survey_fixture import SEED_VERSION, populate_voice_report
+from workforce_intelligence.survey_fixture import populate_voice_report
+from workforce_intelligence.voice_campaigns import populate_candidate_feedback
 
 HISTORY_START = date(2026, 7, 1)
 AS_OF_DATE = date(2026, 10, 31)
@@ -70,14 +76,14 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
     )
 
     random = Random(generation_seed)
-    for order, letter in enumerate("ABCDEFGHIJKLMNO", start=1):
+    for order, name in enumerate(FEATURED_NAMES[:15], start=1):
         employee_id = f"emp-{order:03d}"
         line_id = lines[(order - 1) // 5][0]
         fte = 1000 if order in (1, 3) else random.choice((600, 800, 1000))
         _employee(
             connection,
             employee_id,
-            f"Demo {letter}.",
+            name,
             line_id,
             fte,
             HISTORY_START.isoformat(),
@@ -272,12 +278,14 @@ def populate_core(connection: sqlite3.Connection, generation_seed: int) -> None:
             ("offer-006", "app-009", "2026-10-21", "2026-10-23", "declined"),
         ],
     )
-    for offer, line, start, fte in [
-        ("offer-001", "line-1", "2026-10-09", 1000),
-        ("offer-004", "line-3", "2026-09-27", 800),
+    for offer, line, start, fte, order in [
+        ("offer-001", "line-1", "2026-10-09", 1000, 16),
+        ("offer-004", "line-3", "2026-09-27", 800, 17),
     ]:
         employee = f"starter-{offer}"
-        _employee(connection, employee, f"Demo Starter {offer[-3:]}.", line, fte, start)
+        _employee(
+            connection, employee, FEATURED_NAMES[order - 1], line, fte, start, featured_order=order
+        )
         connection.execute(
             "INSERT INTO starter_events VALUES (?, ?, ?, ?)",
             (offer, employee, start, fte),
@@ -326,7 +334,9 @@ def _application(
     )
 
 
-def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
+def populate_interview(
+    connection: sqlite3.Connection, generation_seed: int, *, full_fixture: bool = False
+) -> None:
     populate_core(connection, generation_seed)
     connection.executemany(
         "INSERT OR IGNORE INTO recruitment_sources (id, label) VALUES (?, ?)",
@@ -335,8 +345,35 @@ def _populate(connection: sqlite3.Connection, generation_seed: int) -> None:
     for statement in OPERATIONS_MIGRATION[-2:]:
         connection.execute(statement)
     populate_voice_report(connection)
+    if not full_fixture:
+        add_interview_bank_employees(connection)
+        populate_candidate_feedback(connection)
+
+
+def add_interview_bank_employees(connection: sqlite3.Connection) -> None:
+    """Complete the featured roster with non-substantive contracts."""
+    occupied = {row[0] for row in connection.execute("SELECT id FROM employees")}
+    for order, base_id in enumerate(INTERVIEW_BANK_IDS, start=18):
+        employee_id = base_id
+        suffix = 2
+        while employee_id in occupied:
+            employee_id = f"{base_id}-{suffix}"
+            suffix += 1
+        add_employment(
+            connection,
+            employee_id=employee_id,
+            display_name=FEATURED_NAMES[order - 1],
+            line_id=f"line-{order - 17}",
+            fte_milli=600,
+            start=HISTORY_START.isoformat(),
+            created_at=SOURCE_TIMESTAMP,
+            created_by="synthetic-seed",
+            change_reason="demo_baseline",
+            featured_order=order,
+            substantive=False,
+        )
 
 
 INTERVIEW_SEED = SeedDefinition(
-    "interview-core", 1733, SEED_VERSION, HISTORY_START, AS_OF_DATE, _populate
+    "interview-core", 1733, INTERVIEW_SEED_VERSION, HISTORY_START, AS_OF_DATE, populate_interview
 )

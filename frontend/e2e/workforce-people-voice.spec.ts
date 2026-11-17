@@ -15,11 +15,14 @@ test("the password demo takes a synthetic survey through manual publication and 
   await page.getByRole("button", { name: "Enter demo" }).click();
   await expect(page.getByRole("heading", { name: "Recruitment overview" })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("navigation", { name: "Workforce sections" }).getByRole("link", { name: "People Voice" }).click();
+  const analysis = page.getByRole("navigation", { name: "People Voice outline" })
+    .getByRole("group", { name: "Analysis & actions" });
   const builder = page.locator("#survey-builder");
-  await builder.getByText("Survey builder & question bank").click();
+  await expect(builder.getByRole("heading", { name: "Survey builder & question bank" })).toBeVisible();
   await builder.getByRole("button", { name: "Create campaign" }).click();
   const monitor = page.locator("#voice-campaigns");
   await expect(monitor.getByRole("heading", { name: "Career Development and Progression" })).toBeVisible();
+  await expect(builder).toHaveCount(0);
   await monitor.getByLabel("Response count").fill("15");
   await monitor.getByLabel("Seed (blank for default)").fill("32");
   await monitor.getByRole("button", { name: "Sample controls" }).click();
@@ -30,9 +33,18 @@ test("the password demo takes a synthetic survey through manual publication and 
   await monitor.getByLabel("Ambiguous text %").fill("0");
   await monitor.getByRole("button", { name: "Generate significant concern" }).click();
   await expect(monitor.getByRole("status")).toHaveText("Synthetic responses generated.");
-  await expect(page.locator("#voice-analytics").getByText(/Survey weights correct group representation/)).toBeVisible();
+  const campaign = await monitor.getByLabel("Campaign").inputValue();
+  await monitor.getByRole("button", { name: "View survey analytics" }).click();
+  const analytics = page.locator("#voice-analytics");
+  await expect(monitor).toHaveCount(0);
+  await expect(analytics.getByLabel("Campaign")).toHaveValue(campaign);
+  await expect(analytics.getByRole("heading", { name: "Survey analytics" })).toBeVisible();
+  await expect(analytics.getByText(/Survey weights correct group representation/)).toBeVisible();
 
+  await analysis.getByRole("link", { name: "Analyst review" }).click();
   const review = page.locator("#voice-review");
+  await expect(analytics).toHaveCount(0);
+  await expect(review.getByLabel("Campaign")).toHaveValue(campaign);
   await review.getByRole("button", { name: "Use demonstration analysis" }).click();
   await expect(review.getByRole("heading", { name: "Demonstration fallback result" })).toBeVisible();
   const finding = review.getByRole("article").filter({ has: page.getByText(/Validated evidence \(/) }).first();
@@ -55,9 +67,11 @@ test("the password demo takes a synthetic survey through manual publication and 
   await finding.getByLabel("Target").fill("Trial the checklist on each shift");
   await finding.getByLabel("Expected benefit").fill("Spot issues before shifts start");
   await finding.getByRole("button", { name: "Create action", exact: true }).click();
+  await expect(analysis.getByRole("link", { name: "Action tracker" })).toHaveAttribute("aria-current", "page");
   const tracker = page.locator("#voice-tracker");
+  await expect(review).toHaveCount(0);
   await expect(tracker.getByRole("heading", { name: "Trial an equipment checklist" })).toBeVisible();
   await tracker.getByLabel("Progress notes").fill("The synthetic pilot has started.");
   await tracker.getByRole("button", { name: "Update action" }).click();
-  await expect(tracker).toContainText("In progress");
+  await expect(tracker.getByText("The synthetic pilot has started.")).toBeVisible();
 });

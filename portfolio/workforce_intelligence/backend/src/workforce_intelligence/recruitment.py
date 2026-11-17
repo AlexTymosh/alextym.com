@@ -16,6 +16,7 @@ from workforce_intelligence.dataset import (
     InvalidOperation,
     current_dataset,
 )
+from workforce_intelligence.directory_names import synthetic_name
 from workforce_intelligence.operation_store import Change, SourceEditor, duplicate
 
 VacancyStatus = Literal[
@@ -237,7 +238,7 @@ def write_start(
     add_employment(
         editor.connection,
         employee_id=employee_id,
-        display_name=f"Demo Starter {suffix[:30]}.",
+        display_name=synthetic_name(employee_id),
         line_id=vacancy["line_id"],
         fte_milli=fte_milli,
         start=day,

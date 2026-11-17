@@ -1,19 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { DataArchitecture } from "./DataArchitecture";
 import { DEFAULT_FILTERS, loadWorkspace, sameGeneration, WorkforceApiError,
   type DatasetVersion, type Filters, type Workspace } from "./data-api";
 import { ExecutiveDashboard } from "./ExecutiveDashboard";
+import { ForecastPanel } from "./ForecastPanel";
 import { displayRefresh } from "./format";
 import { InsightPilot } from "./InsightPilot";
 import { InterviewGuide } from "./InterviewGuide";
 import { guideHref, readGuide, type GuideName } from "./interview";
-import { WORKFORCE_MODES, modeFromSearch, workforceModeHref,
-  type WorkforceMode } from "./mode-state";
+import { WORKFORCE_MODES, WORKFORCE_NAVIGATION, modeFromSearch, screenFromLocation, workforceModeHref,
+  type WorkforceScreen } from "./mode-state";
 import { PeopleVoice } from "./PeopleVoice";
 import { ResetDemo } from "./ResetDemo";
-import { operationalOutline } from "./SourceOperations";
+import { ScenarioPanel } from "./ScenarioPanel";
 import { WorkforceManagement } from "./WorkforceManagement";
 import styles from "./workforce-scaffold.module.css";
 
@@ -22,10 +24,14 @@ type ReadResult = { key: string; data: Workspace } | { key: string; error: Workf
 
 const subscribeToLocation = (notify: () => void) => {
   window.addEventListener("popstate", notify);
-  return () => window.removeEventListener("popstate", notify);
+  window.addEventListener("hashchange", notify);
+  return () => {
+    window.removeEventListener("popstate", notify);
+    window.removeEventListener("hashchange", notify);
+  };
 };
-const getLocationSearch = () => window.location.search;
-const getServerSearch = () => "";
+const getBrowserLocation = () => window.location.search + window.location.hash;
+const getServerLocation = () => "";
 
 function moveTo(href: string) {
   if (window.location.pathname + window.location.search + window.location.hash !== href) {
@@ -49,40 +55,13 @@ const getBrowserTheme = (): AppTheme => {
 };
 const getServerTheme = (): AppTheme => "dark";
 
-const sections: Record<WorkforceMode, {
-  label: string; description: string; outline: [id: string, name: string][]; planned: string;
-}> = {
-  "workforce-intelligence": {
-    label: "Workforce Intelligence", description: "Recruitment performance and establishment at a glance.",
-    outline: [["executive", "Recruitment overview"], ["workforce-trend", "Workforce trend"], ["vacancy-ageing", "Vacancy ageing"], ["vacancies", "Vacancy lifecycle"], ["funnel", "Candidate funnel"], ["attraction", "Recruitment channels"], ["equality", "Inclusive recruitment"], ["outcomes", "Workforce outcomes"], ["insight-pilot", "Insight Pilot"]],
-    planned: "Further cohort drill-through, equality metrics and forecasting.",
-  },
-  "workforce-management": {
-    label: "Workforce Management", description: "Manage synthetic employment, recruitment and development records.",
-    outline: operationalOutline,
-    planned: "",
-  },
-  "people-voice": {
-    label: "People Voice", description: "Evidence from synthetic staff surveys.",
-    outline: [["survey-builder", "Survey builder"], ["voice-campaigns", "Campaigns & responses"],
-      ["voice-analytics", "Survey analytics"],
-      ["voice-review", "Analyst review"], ["voice-tracker", "Action tracker"],
-      ["voice-report", "Prepared report"], ["signals", "Published findings"], ["voice-actions", "Management action"]],
-    planned: "",
-  },
-  "data-architecture": {
-    label: "Data Architecture", description: "Data ownership, quality and lineage.",
-    outline: [["data-lineage", "Lineage"], ["quality", "Data quality"], ["sources", "Sources and assumptions"], ["catalogue", "Metric catalogue"]],
-    planned: "Interactive model diagrams, source registry and BPMN.",
-  },
-};
-
 export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewMode?: boolean; onSignOut?: () => void }) {
-  const search = useSyncExternalStore(subscribeToLocation, getLocationSearch, getServerSearch);
+  const location = useSyncExternalStore(subscribeToLocation, getBrowserLocation, getServerLocation);
+  const [search, fragment] = location.split("#", 2);
   const mode = modeFromSearch(search);
   const guide = previewMode ? null : readGuide(search);
-  const guideTarget = guide?.step.target;
-  const guideKey = guide ? `${guide.name}:${guide.step.id}` : "";
+  const screen = guide && !new URLSearchParams(search).has("section")
+    ? guide.step.target : screenFromLocation(mode, search, fragment ? `#${fragment}` : "");
   const theme = useSyncExternalStore(subscribeToTheme, getBrowserTheme, getServerTheme);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [offset, setOffset] = useState(0);
@@ -90,7 +69,6 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   const [read, setRead] = useState<ReadResult | null>(null);
   const [notice, setNotice] = useState("");
   const priorGeneration = useRef<DatasetVersion | null>(null);
-  const scrolledTo = useRef("");
   const { start, end, vacancyId } = filters;
   const viewKey = `${mode}:${start}:${end}:${vacancyId}:${offset}`;
   const readKey = `${viewKey}:${reload}`;
@@ -99,7 +77,7 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   const workspace = active && "data" in active ? active.data : null;
   const error = active && "error" in active ? active.error : null;
   const dataset = workspace?.dataset;
-  const selected = sections[mode];
+  const selected = WORKFORCE_NAVIGATION[mode];
   const refresh = () => setReload((version) => version + 1);
 
   useEffect(() => {
@@ -130,22 +108,20 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   }, [previewMode]);
 
   useEffect(() => {
-    if (!guideTarget) scrolledTo.current = "";
-    if (!workspace || !guideTarget || scrolledTo.current === guideKey) return;
-    const frame = requestAnimationFrame(() => {
-      document.getElementById(guideTarget)?.scrollIntoView({ block: "start" });
-      scrolledTo.current = guideKey;
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [guideKey, guideTarget, workspace]);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [mode, screen]);
 
-  const navigate = (event: MouseEvent<HTMLAnchorElement>, destination: WorkforceMode) => {
+  const screenHref = (destination: WorkforceScreen) => {
+    const href = workforceModeHref(mode, previewMode, destination);
+    return guide ? `${href}&scenario=${guide.name}&step=${guide.step.id}` : href;
+  };
+  const openScreen = (destination: WorkforceScreen) => moveTo(screenHref(destination));
+
+  const navigate = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey ||
         event.altKey || event.shiftKey) return;
     event.preventDefault();
-    const href = workforceModeHref(destination, previewMode);
     moveTo(href);
-    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const startGuide = (name: GuideName) => {
@@ -166,19 +142,22 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
   const reportAccessError = useCallback((failure: WorkforceApiError) => {
     setRead((current) => current?.key.startsWith(`${viewKey}:`) ? { key: readKey, error: failure } : current);
   }, [readKey, viewKey]);
+  const planningAccessError = useCallback((failure: WorkforceApiError) => {
+    if (failure.status === 401 || failure.status === 403) reportAccessError(failure);
+  }, [reportAccessError]);
   const interviewControls = workspace ? <InterviewGuide guide={guide} onStart={startGuide}
     onStep={(name, index) => moveTo(guideHref(name, index))}
-    onExit={() => moveTo(workforceModeHref(mode))} /> : null;
+    onExit={() => moveTo(workforceModeHref(mode, previewMode, screen))} /> : null;
 
   return (
-    <section className={styles.root} data-theme={theme} data-guided={guide ? "true" : undefined}
-      aria-label="Workforce Intelligence demo">
-      <p className={styles.disclosure}>Demo v1.0 | Prepared for an SCAS interview | Synthetic data only | Not an official SCAS system</p>
+    <section className={styles.root} data-theme={theme} aria-label="Workforce Intelligence demo">
+      <p className={styles.disclosure}>Demo v1.0 · Prepared for an SCAS interview · Synthetic data only</p>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">WI</span>
+          <Image className={styles.brandLogo} src="/workforce-simulation-logo.png" width={56} height={56}
+            alt="Workforce Analytics Simulation Environment emblem" />
           <div><p className={styles.brandName}>Workforce & Recruitment Intelligence</p>
-            <p className={styles.brandContext}>Portfolio Lab</p></div>
+            <p className={styles.brandContext}>Workforce demo</p></div>
         </div>
         <div className={styles.headerActions}>
           {dataset ? <ResetDemo key={dataset.dataset_id + ":" + dataset.dataset_generation} dataset={dataset}
@@ -202,23 +181,33 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
         </div>
       </header>
       <nav aria-label="Workforce sections" className={styles.navigation}>
-        {WORKFORCE_MODES.map((id) => (
-          <a key={id} href={workforceModeHref(id, previewMode)} aria-current={mode === id ? "page" : undefined}
+        {WORKFORCE_MODES.map((id) => {
+          const href = workforceModeHref(id, previewMode);
+          return <a key={id} href={href} aria-current={mode === id ? "page" : undefined}
             className={`${styles.navItem} ${mode === id ? styles.navItemActive : ""}`}
-            onClick={(event) => navigate(event, id)}>{sections[id].label}</a>
-        ))}
+            onClick={(event) => navigate(event, href)}>{WORKFORCE_NAVIGATION[id].label}</a>;
+        })}
       </nav>
 
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          {workspace && selected.outline.length ? <nav aria-label={`${selected.label} outline`}>
-            {selected.outline.map(([id, name]) => <a key={id} href={`#${id}`} onClick={() => {
-              const target = document.getElementById(id);
-              if (target instanceof HTMLDetailsElement) target.open = true;
-            }}>{name}</a>)}
-          </nav> : null}
-          <div className={styles.sidebarFoot}>{previewMode ? <span>Local-only UI preview</span> :
-            <a href="/portfolio">Back to Portfolio Lab</a>}</div>
+          <nav aria-label={`${selected.label} outline`} className={styles.screenMenu}>
+            {selected.groups.map((group) => <div key={group.label} role="group" aria-label={group.label}>
+              <p className={styles.screenGroup}>{group.label}</p>
+              {group.screens.map(([id, name]) => {
+                const href = screenHref(id);
+                return <a key={id} href={href} aria-current={screen === id ? "page" : undefined}
+                  onClick={(event) => navigate(event, href)}>{name}</a>;
+              })}
+            </div>)}
+          </nav>
+          <label className={styles.mobileSections}>Section
+            <select value={screen} onChange={(event) => openScreen(event.target.value as WorkforceScreen)}>
+              {selected.groups.map((group) => <optgroup key={group.label} label={group.label}>
+                {group.screens.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </optgroup>)}
+            </select>
+          </label>
         </aside>
         <div className={styles.content}>
           <div className={styles.statusBar} role="status">
@@ -243,32 +232,37 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             {error ? <div className={styles.panel} role="alert">
               <h2>{restricted ? "Workspace access unavailable" : "Unable to load this view"}</h2>
               <p>{error.status === 401 ? "Your sign-in session has expired." : error.status === 403 ?
-                "Your Workforce project membership is no longer active." : error.status === 404 ?
+                "This session cannot access Workforce data." : error.status === 404 ?
                   "This workspace is currently disabled." : error.message}</p>
-              {error.status === 401 ? <a href="/lab/login">Return to sign in</a> :
+              {error.status === 401 ? <a href="/portfolio/workforce-intelligence">Return to demo sign in</a> :
                 <button type="button" className={styles.secondaryButton}
                   onClick={() => { if (error.status === 422) setFilters(DEFAULT_FILTERS); refresh(); }}>
                   {error.status === 422 ? "Restore default dates" : "Retry"}
                 </button>}
             </div> : null}
             {workspace?.kind === "workforce-intelligence" ? <ExecutiveDashboard
-              dashboard={workspace.dashboard} filters={filters} onFilters={setFilters}
-              pilot={<InsightPilot key={readKey} dataset={workspace.dataset}
-                window={workspace.dashboard.executive.executive.current_window} onAccessError={reportAccessError} />} /> : null}
+              dashboard={workspace.dashboard} filters={filters} onFilters={setFilters} screen={screen} onOpenScreen={openScreen}
+              planning={screen === "forecast" ? <ForecastPanel key={readKey} dataset={workspace.dataset}
+                cutoff={workspace.dashboard.executive.executive.current_window.end} onError={planningAccessError} /> :
+                screen === "scenarios" ? <ScenarioPanel key={readKey} dataset={workspace.dataset}
+                  cutoff={workspace.dashboard.executive.executive.current_window.end} onError={planningAccessError} /> : null}
+              pilot={screen === "insight-pilot" ? <InsightPilot key={readKey} dataset={workspace.dataset}
+                window={workspace.dashboard.executive.executive.current_window} onAccessError={reportAccessError} /> : null} /> : null}
             {workspace?.kind === "workforce-management" ? <WorkforceManagement directory={workspace.directory}
+              screen={screen} onOpenScreen={openScreen}
               offset={offset} onPage={setOffset} onSaved={(message) => { setNotice(message); refresh(); }}
               onConflict={() => { setNotice("The dataset or contract changed. Choose the employee again after refresh."); refresh(); }}
               initialEmployee={guide?.step.edit ? "emp-001" : undefined}
               effectiveDate={guide?.step.edit ? "2026-10-20" : undefined} onError={reportAccessError} /> : null}
-            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} onAccessError={reportAccessError} /> : null}
-            {workspace?.kind === "data-architecture" ? <DataArchitecture quality={workspace.quality} metrics={workspace.metrics} /> : null}
-            {workspace && selected.planned ? <details className={styles.planned}>
-              <summary>Planned capabilities</summary><p>{selected.planned}</p>
-            </details> : null}
+            {workspace?.kind === "people-voice" ? <PeopleVoice report={workspace.report} onAccessError={reportAccessError}
+              screen={screen} onOpenScreen={openScreen}
+              initialCampaign={guide?.step.id === "candidate-feedback" ? "candidate-feedback" : undefined} /> : null}
+            {workspace?.kind === "data-architecture" ?
+              <DataArchitecture architecture={workspace.architecture} metrics={workspace.metrics}
+                screen={screen} onOpenScreen={openScreen} /> : null}
           </section>
         </div>
       </div>
-      <p className={styles.disclosure}>Demo environment. Changes may be reset periodically.</p>
     </section>
   );
 }

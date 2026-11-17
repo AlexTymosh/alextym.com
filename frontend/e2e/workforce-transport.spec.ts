@@ -20,6 +20,8 @@ test("the Vercel password gate accepts its HTTPS site without Portfolio Lab conf
 
 test("the public portfolio has working links to both demos", async ({ page }) => {
   await page.goto("/portfolio/");
+  await expect(page.locator(".site-header")).toBeVisible();
+  await expect(page.locator(".site-footer")).toBeVisible();
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { name: "Portfolio demonstrations" })).toBeVisible();
   await expect(main.getByRole("link", { name: /Fleet VOR Hub/ })).toHaveAttribute("href", "/fleet-vor-hub");
@@ -46,6 +48,18 @@ test("rejects path traversal, unapproved operations, and target overrides", () =
   expect(workforceUpstreamPath("GET", ["demo", "reset"], empty)).toBeNull();
   expect(workforceUpstreamPath("POST", ["demo", "reset"], new URLSearchParams("url=https://untrusted.example"))).toBeNull();
   expect(workforceUpstreamPath("GET", ["employees"], new URLSearchParams("limit=5&limit=15"))).toBeNull();
+});
+
+test("planning and architecture allow only their expected queries and methods", () => {
+  const empty = new URLSearchParams();
+  const run = "53d71d60-7483-473c-83e0-89ab63b9672b";
+  expect(workforceUpstreamPath("GET", ["forecast", "history"], new URLSearchParams("metric=vacancy_wte")))
+    .toBe("/api/workforce/forecast/history?metric=vacancy_wte");
+  expect(workforceUpstreamPath("POST", ["forecast"], empty)).toBe("/api/workforce/forecast");
+  expect(workforceUpstreamPath("GET", ["scenarios", run], empty)).toBe(`/api/workforce/scenarios/${run}`);
+  expect(workforceUpstreamPath("POST", ["scenarios", run], empty)).toBeNull();
+  expect(workforceUpstreamPath("GET", ["scenarios", "other-site"], empty)).toBeNull();
+  expect(workforceUpstreamPath("GET", ["architecture", "layers"], new URLSearchParams("table=employees"))).toBeNull();
 });
 
 test("the live browser route rejects an unsigned Workforce data request", async ({ request }) => {

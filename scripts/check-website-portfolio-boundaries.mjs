@@ -112,8 +112,10 @@ for (const file of walk(websiteApp).filter((p) => supportedSource.has(extname(p)
 }
 
 const rootLayout = readFileSync(join(websiteApp, "layout.tsx"), "utf8");
+const siteFrame = readFileSync(join(repo, "frontend/components/site-frame.tsx"), "utf8");
 assert.match(rootLayout, /<SiteNavigation\s*\/>/, "Existing website navigation must remain mounted");
-assert.match(rootLayout, /className="site-main"/, "Existing website shell must remain unchanged");
+assert.match(rootLayout, /<SiteFrame\b/, "Root layout must render the route-aware website shell");
+assert.match(siteFrame, /className="site-main"/, "Existing website shell must remain mounted on site routes");
 assert.match(rootLayout, /className="site-footer site-footer--with-disclaimer"/, "Footer contract changed");
 const globalCss = readFileSync(join(websiteApp, "globals.css"), "utf8");
 assert.doesNotMatch(globalCss, /\.(?:fleet[-_]?hub|vor[-_]?hub)(?:\b|[_-])/i, "Website stylesheet must not target Fleet domain classes");

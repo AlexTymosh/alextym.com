@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { WorkforceApiError, workforceRequest, type Snapshot } from "./data-api";
 import { displayCode, displayNumber } from "./format";
 import type { Campaign, ReviewPriority, VoiceAnalytics, VoiceWorkspace } from "./voice-api";
@@ -18,11 +18,20 @@ export function PriorityDetails({ priority }: { priority: ReviewPriority }) {
   </details>;
 }
 
-export function VoiceAnalyticsPanel({ campaign, source, onAccessError }: {
+export function VoiceAnalyticsPanel({ campaign, source, onAccessError, campaignPicker }: {
   campaign: Campaign; source: VoiceWorkspace; onAccessError: (error: WorkforceApiError) => void;
+  campaignPicker: ReactNode;
 }) {
-  const defaultTheme = campaign.series === "development" ? "development" : campaign.series === "onboarding" ? "onboarding" : "workload";
-  const [query, setQuery] = useState(() => new URLSearchParams({ theme: defaultTheme }).toString());
+  const candidate = campaign.series === "candidate";
+  const defaultTheme = candidate ? "candidate-communication" : campaign.series === "development" ? "development" :
+    campaign.series === "onboarding" ? "onboarding" : "workload";
+  const dimension = candidate ? "organisation" : "service";
+  const selectableDimensions = candidate ?
+    Object.entries(source.dimensions).filter(([code]) => ["organisation", "location", "role", "pay_band", "source"].includes(code)) :
+    Object.entries(source.dimensions);
+  const weights = candidate ? source.weighting_dimensions.filter((code) => ["organisation", "location", "role"].includes(code)) :
+    source.weighting_dimensions;
+  const [query, setQuery] = useState(() => new URLSearchParams({ theme: defaultTheme, dimension, weight_by: dimension }).toString());
   const [read, setRead] = useState<{ query: string; report?: VoiceAnalytics; error?: string }>();
   const report = read?.query === query ? read.report : undefined;
   const error = read?.query === query ? read.error : undefined;
@@ -49,17 +58,19 @@ export function VoiceAnalyticsPanel({ campaign, source, onAccessError }: {
   }
 
   return <section id="voice-analytics" className={styles.panel} aria-labelledby="voice-analytics-heading">
-    <div className={styles.sectionHeader}><div><h2 id="voice-analytics-heading">Survey analytics</h2>
-      <p>Representation, theme prevalence and independent workforce measures.</p></div></div>
+    <div className={styles.sectionHeader}><div><h2 id="voice-analytics-heading">{candidate ? "Candidate feedback report" : "Survey analytics"}</h2>
+      <p>{candidate ? "Response rate, recruitment experience ratings and related application indicators." :
+        "Representation, theme prevalence and independent workforce measures."}</p></div></div>
+    {campaignPicker}
     <form className={styles.filterBar} onSubmit={apply}>
       <label>Theme<select name="theme" defaultValue={defaultTheme}>
         {Object.entries(source.themes).map(([code, label]) => <option value={code} key={code}>{label}</option>)}
       </select></label>
-      <label>Group results by<select name="dimension" defaultValue="service">
-        {Object.entries(source.dimensions).map(([code, label]) => <option value={code} key={code}>{label}</option>)}
+      <label>Group results by<select name="dimension" defaultValue={dimension}>
+        {selectableDimensions.map(([code, label]) => <option value={code} key={code}>{label}</option>)}
       </select></label>
-      <label>Weight by<select name="weight_by" defaultValue="service">
-        {source.weighting_dimensions.map((code) => <option value={code} key={code}>{source.dimensions[code]}</option>)}
+      <label>Weight by<select name="weight_by" defaultValue={dimension}>
+        {weights.map((code) => <option value={code} key={code}>{source.dimensions[code]}</option>)}
       </select></label>
       <label>Weight minimum<input name="trim_min" type="number" min=".25" max="1" step=".05" defaultValue=".5" required /></label>
       <label>Weight maximum<input name="trim_max" type="number" min="1" max="4" step=".1" defaultValue="2" required /></label>
