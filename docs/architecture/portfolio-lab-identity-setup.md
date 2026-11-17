@@ -14,6 +14,7 @@ The [requirements specification](../specifications/portfolio-lab-auth-access.md)
 - FastAPI independently verifies `Authorization: Bearer` ID tokens or `Authorization: FirebaseSession` session cookies at `/api/lab/identity` and applies the current UID admission policy.
 - Both paths are disabled by default, and neither grants access to Fleet VOR Hub or any other project.
 - Linking starts from a recent admitted session. Firebase authenticates the additional provider, then the server records its verified subject under the same UID.
+- The signed-in Lab page identifies the active sign-in method from the verified session. It marks a provider as linked when the approved Firestore subject matches the current Firebase Auth user.
 
 ## Environment variables
 
@@ -53,6 +54,10 @@ All `NEXT_PUBLIC_*` values are public client application identifiers; **never** 
 4. Under Authentication settings, select **Create multiple accounts for each identity provider** and keep email enumeration protection enabled. Create a fictional Email/Password Owner and pin that Firebase UID in both runtimes. Bootstrap the Owner's OAuth bindings from a recent password sign-in.
 5. Configure trusted service-account credentials only in local ignored `.env` files or Vercel/Render secrets. Use one Firebase project per environment where practical. Rotate exposed secrets immediately.
 6. Keep `PORTFOLIO_LAB_ENABLED=false` in production. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
+
+Sign in with the invited account before testing a new provider. Under **Linked identities**, select **Link**, **Open**, and **Confirm** for that provider. Once its row shows **Linked**, sign out and use the provider on the login page. The signed-in page shows the provider used for the new session.
+
+`POST /lab/session` returns HTTP 403 with `code: "ACCESS_DENIED"` when a verified Firebase identity lacks Lab admission, or `code: "PASSWORD_EXPIRED"` for an expired initial password. The login page uses these codes for recovery instructions and presents Firebase popup failures separately.
 
 ## Dependencies and local test commands
 

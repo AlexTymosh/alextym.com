@@ -50,7 +50,12 @@ export async function POST(request: NextRequest) {
     } catch {
       return json({ error: "Admission service unavailable" }, 503);
     }
-    if (admission !== "allowed") return json({ error: "Access denied" }, 403);
+    if (admission !== "allowed") {
+      return json({
+        error: "Access denied",
+        code: admission === "password_expired" ? "PASSWORD_EXPIRED" : "ACCESS_DENIED",
+      }, 403);
+    }
     // PR 3 adds project capabilities; admitted identity does not grant project access.
     const cookie = await admin.createSessionCookie(idToken, { expiresIn: LAB_SESSION_MAX_AGE_MS });
     const response = json({ ok: true }, 200);

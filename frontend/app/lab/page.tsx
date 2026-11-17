@@ -3,7 +3,10 @@ import type { DecodedIdToken } from "firebase-admin/auth";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { LabAccountActions } from "../../components/lab-account-actions";
-import { getLabAdmissionDecision } from "../../lib/portfolio-lab/lab-admission-server";
+import styles from "../../components/lab-auth.module.css";
+import { isLabOAuthProvider, labSignInProvider } from "../../lib/portfolio-lab/admission-policy";
+import { labProviderNames } from "../../lib/portfolio-lab/auth-ui";
+import { getLabAdmissionDecision, getLabLinkedProviders } from "../../lib/portfolio-lab/lab-admission-server";
 import {
   getLabAdminAuth,
   getOwnerUid,
@@ -34,11 +37,17 @@ export default async function LabPage() {
     notFound();
   }
   if (admission !== "allowed") redirect("/lab/login");
+  const provider = labSignInProvider(verifiedClaims);
+  const signInMethod = isLabOAuthProvider(provider) ? labProviderNames[provider] : "email and password";
+  const linkedProviders = await getLabLinkedProviders(verifiedClaims.uid).catch(() => null);
+
   return (
-    <section style={{ maxWidth: 660, margin: "4rem auto", padding: "1rem" }}>
-      <h1>Portfolio Lab — Identity preview</h1>
-      <p>Authenticated identity preview. Project access and administration remain disabled until the RBAC release.</p>
-      <LabAccountActions />
+    <section className={`${styles.panel} ${styles.accountPanel}`} aria-labelledby="lab-account-title">
+      <header className={styles.header}>
+        <h1 id="lab-account-title">Portfolio Lab — Identity preview</h1>
+        <p>Signed in with <strong className={styles.signInMethod}>{signInMethod}</strong></p>
+      </header>
+      <LabAccountActions linkedProviders={linkedProviders} />
     </section>
   );
 }

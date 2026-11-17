@@ -239,11 +239,11 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 
 ## 7. Current handoff
 
-1. Check the dev Firebase credentials and allowed origins. Start live Google
-   and GitHub sign-in and account-linking checks when their test providers are
-   configured. Microsoft Entra reported that the selected account does not
-   exist in the directory. Check which directory the account opens and whether
-   it permits app registration. [Microsoft troubleshooting](https://learn.microsoft.com/en-us/troubleshoot/entra/entra-id/app-integration/error-code-aadsts50020-user-account-identity-provider-does-not-exist)
+1. Microsoft is enabled in the development Firebase project. A direct test
+   sign-in produced a Microsoft Auth record without a Lab identity. Resolve
+   that test account conflict, then complete the link and sign in again. Start
+   live Google and GitHub sign-in and account-linking checks once their test
+   providers are configured.
 2. Implement and verify email-link sign-in. Then wire shared project
    authorization and the Owner console, including both explicit email delivery
    options and invitation expiry.

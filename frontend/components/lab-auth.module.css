@@ -1,0 +1,222 @@
+.panel {
+  width: min(100%, 476px);
+  margin: clamp(12px, 4vh, 44px) auto 0;
+  padding: clamp(20px, 5vw, 36px);
+  display: grid;
+  gap: 22px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px var(--shadow);
+}
+
+.accountPanel {
+  width: min(100%, 620px);
+}
+
+.header {
+  display: grid;
+  gap: 8px;
+}
+
+.header h1 {
+  font-size: clamp(1.65rem, 4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.header p,
+.hint {
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.stack,
+.form,
+.accountActions {
+  display: grid;
+  gap: 10px;
+}
+
+.form,
+.accountActions {
+  gap: 14px;
+}
+
+.providerButton,
+.primaryButton,
+.secondaryButton {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.providerButton {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+}
+
+.providerButton,
+.secondaryButton {
+  border-color: var(--border-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+.providerButton:enabled:hover,
+.secondaryButton:enabled:hover {
+  border-color: var(--accent);
+}
+
+.providerButton svg,
+.providerIdentity svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.primaryButton {
+  background: color-mix(in srgb, var(--accent) 75%, #000);
+  color: #fff;
+}
+
+.primaryButton:enabled:hover {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.divider::before,
+.divider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  content: "";
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.panel :is(button, input, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.textAction {
+  justify-self: center;
+  min-height: 44px;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.textAction:hover,
+.hint a {
+  color: var(--text);
+}
+
+.hint a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.notice {
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.error {
+  border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+}
+
+.success {
+  border-color: color-mix(in srgb, var(--ok) 60%, var(--border));
+}
+
+.accountActions h2 {
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+.providerList {
+  display: grid;
+  gap: 8px;
+}
+
+.providerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.providerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.providerLabel,
+.signInMethod {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.providerState {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.linked {
+  color: color-mix(in srgb, var(--ok) 75%, var(--text));
+}
+
+.signOut {
+  justify-self: start;
+  margin-top: 4px;
+}
