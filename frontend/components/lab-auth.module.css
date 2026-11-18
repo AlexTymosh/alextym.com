@@ -155,7 +155,7 @@
   color: var(--text);
 }
 
-.panel :is(button, input, a):focus-visible {
+.panel :is(button, input, select, a):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -246,7 +246,7 @@
 }
 
 .ownerPanel {
-  width: min(100%, 760px);
+  width: min(100%, var(--page-width));
 }
 
 .userCard {
@@ -264,15 +264,12 @@
 }
 
 .grantForm {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 8px 12px;
+  display: grid;
+  gap: 8px;
 }
 
 .grantForm label {
-  flex: 1;
-  min-width: min(100%, 210px);
+  min-width: 140px;
   font-size: 0.8125rem;
 }
 
@@ -286,5 +283,90 @@
 }
 
 .grantForm p {
-  flex-basis: 100%;
+  max-width: 200px;
+}
+
+.tableScroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tableScroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.accessTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.accessTable th,
+.accessTable td {
+  padding: 16px;
+  vertical-align: top;
+}
+
+.accessTable thead {
+  background: var(--surface-strong);
+}
+
+.accessTable thead th {
+  font-weight: 650;
+}
+
+.accessTable tbody tr {
+  border-top: 1px solid var(--border);
+}
+
+.accessTable tbody th {
+  min-width: 190px;
+  max-width: 260px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.accessTable .accountId {
+  margin-top: 6px;
+}
+
+.linkedAccounts {
+  display: grid;
+  gap: 12px;
+  min-width: 160px;
+  max-width: 230px;
+}
+
+.methodName,
+.methodEmail {
+  display: block;
+}
+
+.methodName {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.methodEmail {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

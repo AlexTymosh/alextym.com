@@ -5,6 +5,8 @@ import { getLabAdminAuth, getOwnerUid } from "./firebase-server";
 import { labProjects } from "./project-catalog";
 import { projectGrantRole } from "./project-grants";
 import type { GrantChange } from "./grant-change";
+import { isLabOAuthProvider, labOAuthBindings } from "./admission-policy";
+import { labProviderNames } from "./auth-ui";
 
 function grantRef(db: ReturnType<typeof getFirestore>, projectId: string, uid: string) {
   return db.collection("portfolio_lab_projects").doc(projectId).collection("grants").doc(uid);
@@ -19,6 +21,7 @@ export async function listLabUsers(after?: string) {
   const identities = records.docs.slice(0, 25);
   if (identities.length === 0) return { users: [], next: null };
   const accounts = await auth.getUsers(identities.map((identity) => ({ uid: identity.id })));
+  const recordsByUid = new Map(identities.map((identity) => [identity.id, identity.data()]));
   const users = await Promise.all(accounts.users.map(async (account) => {
     const grants = await Promise.all(labProjects.map(async (project) => {
       const record = (await grantRef(db, project.id, account.uid).get()).data();
@@ -28,7 +31,16 @@ export async function listLabUsers(after?: string) {
         revision: record?.revision ?? 0,
       };
     }));
-    return { uid: account.uid, email: account.email ?? null, disabled: account.disabled, grants };
+    const bindings = labOAuthBindings(recordsByUid.get(account.uid) ?? {});
+    const linkedAccounts = account.providerData.filter((provider) =>
+      provider.providerId === "password" || isLabOAuthProvider(provider.providerId) &&
+        bindings[provider.providerId] === provider.uid,
+    ).map((provider) => ({
+      provider: provider.providerId,
+      name: isLabOAuthProvider(provider.providerId) ? labProviderNames[provider.providerId] : "Email & password",
+      email: provider.email ?? null,
+    }));
+    return { uid: account.uid, email: account.email ?? null, disabled: account.disabled, linkedAccounts, grants };
   }));
   return { users, next: records.size > 25 ? identities[identities.length - 1].id : null };
 }

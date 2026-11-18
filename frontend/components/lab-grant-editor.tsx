@@ -4,12 +4,9 @@ import { useState, type FormEvent } from "react";
 import { projectRoles, type ProjectRole } from "../lib/portfolio-lab/project-grants";
 import styles from "./lab-auth.module.css";
 
-type Role = ProjectRole | "No Access";
-
 export function LabGrantEditor({ uid, projectId, title, role, revision, disabled }: {
   uid: string; projectId: string; title: string; role: string; revision: number; disabled: boolean;
 }) {
-  const [value, setValue] = useState<Role>(role as Role);
   const [version, setVersion] = useState(revision);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -17,6 +14,7 @@ export function LabGrantEditor({ uid, projectId, title, role, revision, disabled
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const value = new FormData(event.currentTarget).get("role") as ProjectRole | "No Access";
     setBusy(true);
     setNotice("");
     try {
@@ -38,7 +36,7 @@ export function LabGrantEditor({ uid, projectId, title, role, revision, disabled
       setNotice(value === "No Access" ? "Access revoked." : `${value} access saved.`);
     } catch {
       setFailed(true);
-      setNotice("Could not reach Portfolio Lab. Try again.");
+      setNotice("Could not save access. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -47,8 +45,8 @@ export function LabGrantEditor({ uid, projectId, title, role, revision, disabled
   return (
     <form className={styles.grantForm} onSubmit={save}>
       <label className={styles.field}>
-        <span>{title}</span>
-        <select value={value} disabled={disabled || busy} onChange={(event) => setValue(event.target.value as Role)}>
+        <span className={styles.srOnly}>{title}</span>
+        <select name="role" defaultValue={role} disabled={disabled || busy}>
           {["No Access", ...projectRoles].map((option) => <option key={option}>{option}</option>)}
         </select>
       </label>

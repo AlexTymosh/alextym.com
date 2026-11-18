@@ -11,9 +11,9 @@ const enabled = process.env.LAB_EMULATOR_E2E === "true" &&
   process.env.PLAYWRIGHT_BASE_URL === site;
 
 async function mockProvider(page: Page, action: string, email: string) {
-  const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("button", { name: action, exact: true }).click();
-  const popup = await popupPromise;
+  const button = page.getByRole("button", { name: action, exact: true });
+  await button.waitFor({ timeout: 15_000 });
+  const [popup] = await Promise.all([page.waitForEvent("popup", { timeout: 15_000 }), button.click()]);
   await popup.waitForURL(emulator + "/**");
   const account = popup.getByText(email, { exact: true });
   const input = popup.locator("#email-input");
@@ -38,6 +38,18 @@ async function ownerSession(request: APIRequestContext) {
   const { idToken } = await login.json();
   const session = await request.post(site + "/lab/session", { headers: { Origin: site }, data: { idToken } });
   expect(session.status()).toBe(200);
+}
+
+async function findUserRow(page: Page, uid: string) {
+  await page.goto("/lab/admin");
+  for (;;) {
+    const row = page.locator(`tr[data-user-id="${uid}"]`);
+    if (await row.count()) return row;
+    const next = page.getByRole("link", { name: "Next accounts", exact: true });
+    await expect(next).toBeVisible();
+    const href = await next.getAttribute("href");
+    await page.goto(href!);
+  }
 }
 
 test.describe("Portfolio Lab self-service approval", () => {
@@ -115,6 +127,79 @@ test.describe("Portfolio Lab self-service approval", () => {
       await expect(page.getByText("Fleet VOR Hub", { exact: true })).toHaveCount(0);
     } finally {
       await owner.dispose();
+    }
+  });
+
+  test("one table row grants and revokes access for every linked sign-in method", async ({ page, browser }, testInfo) => {
+    test.setTimeout(120_000);
+    const suffix = randomBytes(6).toString("hex");
+    const email = `linked-user-${suffix}@example.test`;
+    const linkedEmails = { Microsoft: `microsoft-${suffix}@example.test`, Google: `google-${suffix}@example.test` };
+    await page.goto("/lab/login");
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    const signup = page.waitForResponse((response) => response.url().includes("accounts:signUp"));
+    await page.getByRole("button", { name: "Create account with email", exact: true }).click();
+    const { localId: uid } = await (await signup).json();
+    await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
+    for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
+      await page.getByRole("button", { name: "Link " + name, exact: true }).click();
+      await mockProvider(page, "Open " + name, linkedEmail);
+      await mockProvider(page, "Confirm " + name, linkedEmail);
+      await expect(page.getByRole("status").filter({ hasText: name + " is linked" })).toBeVisible();
+    }
+
+    const owner = await browser.newContext({ baseURL: site, viewport: page.viewportSize() });
+    try {
+      await ownerSession(owner.request);
+      const admin = await owner.newPage();
+      const row = await findUserRow(admin, uid);
+      await expect(row).toHaveCount(1);
+      await expect(row.getByText("Email & password", { exact: true })).toBeVisible();
+      for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
+        await expect(row.getByText(name, { exact: true })).toBeVisible();
+        await expect(row.getByText(linkedEmail, { exact: true })).toBeVisible();
+      }
+      const role = row.getByRole("combobox", { name: `Fleet VOR Hub access for ${email}`, exact: true });
+      await expect(role).toHaveValue("No Access");
+      await role.selectOption("View");
+      await role.locator("xpath=ancestor::form").getByRole("button", { name: "Save access" }).click();
+      await expect(row.getByRole("status")).toHaveText("View access saved.");
+      await row.scrollIntoViewIfNeeded();
+      await admin.screenshot({ path: testInfo.outputPath("linked-user-access-table.png"), fullPage: false, caret: "initial" });
+      expect(await admin.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+
+      for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
+        await page.getByRole("button", { name: "Sign out", exact: true }).click();
+        await page.getByRole("button", { name: "Continue with " + name, exact: true }).waitFor();
+        await mockProvider(page, "Continue with " + name, linkedEmail);
+        await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
+        await expect(page.getByText("View access", { exact: true })).toBeVisible();
+        expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(200);
+        expect((await page.request.get("/portfolio/workforce-intelligence/api/status")).status()).toBe(403);
+      }
+      await page.getByRole("button", { name: "Sign out", exact: true }).click();
+      await page.getByLabel("Email", { exact: true }).fill(email);
+      await page.getByLabel("Password", { exact: true }).fill(password);
+      await page.getByRole("button", { name: "Sign in with email", exact: true }).click();
+      await expect(page.getByText("View access", { exact: true })).toBeVisible();
+      expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(200);
+
+      await role.selectOption("No Access");
+      await role.locator("xpath=ancestor::form").getByRole("button", { name: "Save access" }).click();
+      await expect(row.getByRole("status")).toHaveText("Access revoked.");
+      expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
+      for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
+        await page.getByRole("button", { name: "Sign out", exact: true }).click();
+        await page.getByRole("button", { name: "Continue with " + name, exact: true }).waitFor();
+        await mockProvider(page, "Continue with " + name, linkedEmail);
+        await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
+        expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
+      }
+    } finally {
+      await owner.close();
     }
   });
 

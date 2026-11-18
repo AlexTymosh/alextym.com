@@ -59,7 +59,7 @@ All `NEXT_PUBLIC_*` values are public client application identifiers; **never** 
 
 New visitors can register using any configured sign-in method. Existing invited users sign in with their issued credentials to use the same UID and grants. Under **Linked identities**, select **Link**, **Open**, and **Confirm** to add another provider. A provider already attached to another UID requires Owner-assisted recovery.
 
-The pinned Owner uses `/lab/admin` to assign or revoke `View`, `Test` or `Admin` separately for each project. The list is paginated. Each change requires a recent Owner session, checks the document revision and writes a grant and audit event in the same Firestore transaction. Existing future expiries are retained. Renewed expired grants remain active until revoked.
+The pinned Owner uses `/lab/admin` to assign or revoke `View`, `Test` or `Admin` separately for each project. The paginated table has one row per Firebase UID, shows its confirmed linked accounts, and provides a role dropdown and Save access button for each project. Grants apply to the UID, so email/password and every confirmed linked provider share the same access and revocation. Separate Firebase users are never combined by matching email alone. Each change requires a recent Owner session, checks the document revision and writes a grant and audit event in the same Firestore transaction. Existing future expiries are retained. Renewed expired grants remain active until revoked.
 
 The frontend catalogue is generated from `portfolio/catalog/registry.json` and the registered `project.json` files during `sync:project-config`. Adding a registered project makes it available in the access editor without duplicating its metadata in Firestore.
 
