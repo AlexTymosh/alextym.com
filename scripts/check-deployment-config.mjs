@@ -33,12 +33,12 @@ try {
   );
 
   process.env.BACKEND_ORIGIN = "https://backend.example.com/";
-  assert.deepEqual(await nextConfig.rewrites(), [
+  assert.deepEqual(await nextConfig.rewrites(), { fallback: [
     {
       source: "/api/:path*",
       destination: "https://backend.example.com/api/:path*",
     },
-  ]);
+  ] }, "Backend proxy must be a fallback so protected local API handlers run first.");
 
   delete process.env.BACKEND_ORIGIN;
   process.env.VERCEL = "1";

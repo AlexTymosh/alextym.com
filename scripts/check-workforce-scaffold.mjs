@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Structural checks for the deliberately scoped password-only demo gateway.
+// Structural checks for the flag-controlled Firebase and legacy password gateways.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -20,14 +20,16 @@ const portfolio = read("frontend/app/portfolio/page.tsx");
 const page = read("frontend/app/portfolio/workforce-intelligence/page.tsx");
 for (const source of [portfolio, page]) {
   assert.match(source, /robots:\s*\{\s*index:\s*false,\s*follow:\s*false/);
-  assert.doesNotMatch(source, /firebase|getWorkforceAccess|LAB_SESSION_COOKIE/);
 }
+assert.doesNotMatch(portfolio, /firebase|getWorkforceAccess|LAB_SESSION_COOKIE/);
 assert.match(portfolio, /href="\/fleet-vor-hub"/);
 assert.match(portfolio, /href="\/portfolio\/workforce-intelligence"/);
 assert.doesNotMatch(portfolio, /workforceEnabled\(|notFound\(/);
 assert.match(page, /workforceEnabled\(/);
 assert.match(page, /notFound\(\)/);
 assert.match(page, /<WorkforcePasswordGate/);
+assert.match(page, /await requireLabProjectPage\("workforce_intelligence"\)/);
+assert.match(page, /loginPath=\{isLabEnabled\(\) \? "\/lab\/login" : undefined\}/);
 const gate = read("portfolio/workforce_intelligence/frontend/src/WorkforcePasswordGate.tsx");
 assert.match(gate, /workforce-simulation-logo\.png/);
 assert.match(gate, /Demo password/);
@@ -40,13 +42,20 @@ const security = read("backend/app/security/workforce_demo.py");
 assert.match(security, /VOR_DEMO_PASSWORD/);
 assert.match(security, /hmac\.compare_digest/);
 assert.match(security, /request\.state\.workforce_uid/);
+assert.match(security, /require_project_access\(request, WORKFORCE_PROJECT_ID\)/);
+assert.match(security, /if os\.getenv\("PORTFOLIO_LAB_ENABLED"\) == "true":/);
+assert.match(security, /@router\.post\("\/login"\)[\s\S]*?if os\.getenv\("PORTFOLIO_LAB_ENABLED"\) == "true":\s+raise HTTPException\(404, "Not found"\)/,
+  "Legacy password login must be unavailable when Firebase authorization is enabled");
 assert.doesNotMatch(security, /firebase_admin|from app\.security\.firebase/);
 const bff = read("frontend/lib/portfolio-lab/workforce-bff-server.ts");
-assert.match(bff, /WorkforceDemo \$\{sessionCookie\}/);
+assert.match(bff, /const lab = isLabEnabled\(\)/);
+assert.match(bff, /request\.cookies\.get\(lab \? LAB_SESSION_COOKIE : WORKFORCE_COOKIE\)/);
+assert.match(bff, /labProjectAccess\(sessionCookie, "workforce_intelligence", request\.method, path\)/);
+assert.match(bff, /if \(access\.status !== 200\) return reply\(access\.status,/);
+assert.match(bff, /Authorization: `\$\{lab \? "FirebaseSession" : "WorkforceDemo"\} \$\{sessionCookie\}`/);
 assert.match(bff, /workforceEnabled\(\)/);
 assert.match(bff, /hasWorkforceOrigin\(request\)/);
 assert.match(bff, /workforceUpstreamPath\(/);
-assert.doesNotMatch(bff, /FirebaseSession|getWorkforceAccess|LAB_SESSION_COOKIE/);
 for (const path of ["status", "[...operation]"]) {
   const adapter = read(`frontend/app/portfolio/workforce-intelligence/api/${path}/route.ts`);
   assert.match(adapter, /return forwardWorkforceRequest\(request,/);
@@ -71,4 +80,4 @@ const scaffold = read("portfolio/workforce_intelligence/frontend/src/WorkforceSc
 assert.match(scaffold, /if \(previewMode\) return;/);
 assert.match(scaffold, /workforceModeHref\(id, previewMode\)/);
 assert.match(scaffold, /workforceModeHref\(mode, previewMode, destination\)/);
-console.log("Workforce password-demo guard and project boundaries (structural PASS).");
+console.log("Workforce Firebase/legacy password guards and project boundaries (structural PASS).");

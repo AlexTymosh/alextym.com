@@ -28,8 +28,10 @@ for (const [kind, names] of [["api", api], ["services", services]]) {
 const router = read(`${owned}/router.py`);
 for (const name of api) assert.ok(router.includes(`    ${name},`));
 const main = read("backend/app/main.py");
-assert.match(main, /from fleet_hub\.router import router as fleet_router/);
-assert.equal((main.match(/app\.include_router\(fleet_router, prefix="\/api"\)/g) || []).length, 1);
+assert.match(main, /from fleet_hub\.router import configure_host_access, router as fleet_router/);
+assert.match(main, /configure_host_access\(app, require_fleet_access\)/);
+assert.equal((main.match(/app\.include_router\(fleet_router, prefix="\/api", dependencies=\[Depends\(guard_fleet_routes\)\]\)/g) || []).length, 1,
+  "Mount the Fleet public router once with the host authorization dependency");
 assert.doesNotMatch(main, /app\.include_router\(vor(?:_\w+)?_router,/);
 
 const backendConfig = read("backend/pyproject.toml");

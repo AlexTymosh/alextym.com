@@ -17,12 +17,12 @@ const nextConfig = {
       return [];
     }
 
-    return [
+    return { fallback: [
       {
         source: "/api/:path*",
         destination: `${backendOrigin}/api/:path*`,
       },
-    ];
+    ] };
   },
 };
 

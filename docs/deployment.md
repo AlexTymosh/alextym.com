@@ -758,6 +758,16 @@ contact_email: configured | not_configured
  /contact
 ```
 
+For Portfolio Lab, deploy matching frontend and backend commits with
+`PORTFOLIO_LAB_ENABLED=true` on both hosts, the same Firebase project and
+Owner UID, and both project enable flags as needed. Lab-enabled demos use
+project grants. Test registration, zero-grant access, grant changes and direct
+backend denial in the isolated development services before production cutover.
+Facebook is displayed when `NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED=true` was
+set at build time and its Firebase provider has been configured.
+The generic `/api/*` backend rewrite is a fallback so the Fleet BFF route
+handles its session cookie before the remaining API requests reach Render.
+
 ### Functional checks
 
 - ask one AI/RAG chat question;

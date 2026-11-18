@@ -6,6 +6,8 @@ import { hasLabJsonContent, readLabJson } from "./request-json";
 import { hasWorkforceOrigin } from "./workforce-origin";
 import { workforceUpstreamPath } from "./workforce-transport";
 import { hasWorkbookContent, readWorkbookBytes, XLSX_CONTENT_TYPE } from "./workforce-workbooks";
+import { isLabEnabled, LAB_SESSION_COOKIE } from "./firebase-server";
+import { labProjectAccess } from "./project-access-server";
 
 function reply(status: number, body: object, headers = new Headers()) {
   headers.set("Cache-Control", "no-store");
@@ -17,13 +19,22 @@ export async function forwardWorkforceRequest(request: NextRequest, operation: s
   if (!path) return reply(404, { detail: "Not found" });
 
   if (!workforceEnabled()) return reply(404, { detail: "Not found" });
-  const sessionCookie = request.cookies.get(WORKFORCE_COOKIE)?.value;
+  const lab = isLabEnabled();
+  const sessionCookie = request.cookies.get(lab ? LAB_SESSION_COOKIE : WORKFORCE_COOKIE)?.value;
   if (!sessionCookie) return reply(401, { detail: "Password required" });
+  if (lab) {
+    try {
+      const access = await labProjectAccess(sessionCookie, "workforce_intelligence", request.method, path);
+      if (access.status !== 200) return reply(access.status, { detail: "Project access required" });
+    } catch {
+      return reply(503, { detail: "Project access unavailable" });
+    }
+  }
 
   const upload = path === "/api/workforce/import/validate";
   const download = path === "/api/workforce/export" || path === "/api/workforce/import/template" ||
     path.startsWith("/api/workforce/import/") && path.endsWith("/errors");
-  const headers = new Headers({ Authorization: `WorkforceDemo ${sessionCookie}`,
+  const headers = new Headers({ Authorization: `${lab ? "FirebaseSession" : "WorkforceDemo"} ${sessionCookie}`,
     Accept: download ? XLSX_CONTENT_TYPE : "application/json" });
   let body: string | ArrayBuffer | undefined;
   if (request.method !== "GET") {

@@ -40,12 +40,23 @@ Each registered demonstration remains responsible for its domain logic, UI,
 API and business persistence. Fleet keeps its current SQLite lifecycle and routes
 until its separate authentication migration in PR 5. `View` is read-only;
 `Test`/`Admin` may initiate real actions within Owner-configured quotas.
-New projects receive no automatic non-Owner grants. Legacy password login must
+New projects and newly registered users receive no automatic project grants. Legacy password login must
 not be accepted in parallel with the new authorization after cutover.
 
 This is logical domain and data isolation, not separate process/CPU isolation.
 The current Fleet-specific regression checks remain in place alongside new
 generic project-boundary checks.
+
+The self-registration branch adds the account approval flow. Firebase-verified
+first sign-in creates an identity record and a provider binding atomically.
+Owner edits at `/lab/admin` manage grants under the existing project IDs. The
+catalogue is generated from the Git registry during the frontend build.
+
+Fleet's public `configure_host_access` adapter lets FastAPI install the shared
+authorization dependency. The host also guards its metadata and login routes.
+Next.js forwards Fleet requests through a session-cookie BFF. Workforce uses
+the same project-grant policy through its existing BFF. Enable the Lab flag
+on both hosts together after verification and Owner review.
 
 ## Ownership
 

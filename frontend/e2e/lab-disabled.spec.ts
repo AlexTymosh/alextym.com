@@ -17,6 +17,8 @@ test.describe("Portfolio Lab feature gate", () => {
     expect(link.status()).toBe(404);
     const backendBridge = await request.get("/lab/api/identity");
     expect(backendBridge.status()).toBe(404);
+    expect((await page.goto("/lab/admin"))?.status()).toBe(404);
+    expect((await request.post("/lab/admin/grants", { data: {} })).status()).toBe(404);
     const passwordReset = await page.goto("/lab/password/reset");
     expect(passwordReset?.status()).toBe(404);
     const passwordAction = await request.post("/lab/password/reset/action", {

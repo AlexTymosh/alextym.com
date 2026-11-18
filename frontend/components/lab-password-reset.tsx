@@ -28,7 +28,7 @@ export function LabPasswordReset() {
       if (supplied && validResetUid(supplied.uid) && validResetCode(supplied.code)) {
         setLink({ uid: supplied.uid, code: supplied.code });
       } else {
-        setMessage("Invalid link. Request a new setup link from the Owner.");
+        setMessage("Invalid link. Contact support for a new setup link.");
       }
     });
   }, []);
@@ -53,13 +53,13 @@ export function LabPasswordReset() {
       setLink(null); setPassword(""); setConfirm(""); setDone(true);
       setMessage("Password updated. You can now sign in.");
     } catch {
-      setMessage("Reset could not be completed. Request a fresh link from the Owner.");
+      setMessage("Reset could not be completed. Contact support for a fresh link.");
     } finally { setBusy(false); }
   };
 
   return (
     <section style={{ maxWidth: 450, margin: "3rem auto", padding: "1rem" }}>
-      <h1>Set your Portfolio Lab password</h1>
+      <h1>Set your password</h1>
       <p>Use your private one-time link. Passwords must contain 12–128 characters.</p>
       {!done && link && (
         <form onSubmit={(event) => void submit(event)}>

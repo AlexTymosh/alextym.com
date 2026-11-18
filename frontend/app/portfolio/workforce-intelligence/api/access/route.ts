@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasWorkforceOrigin } from "../../../../../lib/portfolio-lab/workforce-origin";
 import { hasLabJsonContent, readLabJson } from "../../../../../lib/portfolio-lab/request-json";
+import { isLabEnabled, LAB_SESSION_COOKIE } from "../../../../../lib/portfolio-lab/firebase-server";
+import { labProjectAccess } from "../../../../../lib/portfolio-lab/project-access-server";
 import {
   WORKFORCE_COOKIE, WORKFORCE_COOKIE_PATH, WORKFORCE_SESSION_TTL,
   workforceBackendOrigin, workforceEnabled,
@@ -21,6 +23,14 @@ async function backend(path: string, init: RequestInit) {
 
 export async function GET(request: NextRequest) {
   if (!workforceEnabled()) return json({ detail: "Not found" }, 404);
+  if (isLabEnabled()) {
+    try {
+      const access = await labProjectAccess(request.cookies.get(LAB_SESSION_COOKIE)?.value, "workforce_intelligence", "GET", "/api/workforce/status");
+      return json({ authenticated: access.status === 200 }, access.status === 200 ? 200 : access.status);
+    } catch {
+      return json({ detail: "Access service unavailable" }, 503);
+    }
+  }
   const session = request.cookies.get(WORKFORCE_COOKIE)?.value;
   if (!session) return json({ authenticated: false });
   try {
@@ -37,6 +47,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!workforceEnabled()) return json({ detail: "Not found" }, 404);
+  if (isLabEnabled()) return json({ detail: "Not found" }, 404);
   if (!hasWorkforceOrigin(request)) return json({ detail: "Origin not allowed" }, 403);
   if (!hasLabJsonContent(request)) return json({ detail: "Send application/json" }, 415);
   const body = await readLabJson(request, 512);
@@ -78,6 +89,10 @@ export function DELETE(request: NextRequest) {
   if (!workforceEnabled()) return json({ detail: "Not found" }, 404);
   if (!hasWorkforceOrigin(request)) return json({ detail: "Origin not allowed" }, 403);
   const response = json({ ok: true });
+  if (isLabEnabled()) response.cookies.set(LAB_SESSION_COOKIE, "", {
+    httpOnly: true, secure: process.env.NODE_ENV === "production",
+    sameSite: "strict", path: "/", maxAge: 0,
+  });
   response.cookies.delete({ name: WORKFORCE_COOKIE, path: WORKFORCE_COOKIE_PATH });
   return response;
 }

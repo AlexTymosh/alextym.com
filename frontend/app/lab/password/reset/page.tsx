@@ -5,7 +5,7 @@ import { isLabEnabled } from "../../../../lib/portfolio-lab/firebase-server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Portfolio Lab password setup",
+  title: "Password setup",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

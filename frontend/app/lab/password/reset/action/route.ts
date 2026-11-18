@@ -167,6 +167,6 @@ export async function POST(request: NextRequest) {
   } catch {
     // A consumed code or interrupted confirmation leaves reset_pending.
     // Only an audited Owner operation can repair this fail-closed state.
-    return reply(503, "Unable to finish safely; contact the Owner for a new link");
+    return reply(503, "Unable to finish safely; contact support for a new link");
   }
 }

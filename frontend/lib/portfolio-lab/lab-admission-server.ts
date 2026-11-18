@@ -7,12 +7,30 @@ import { getLabAdminAuth, getOwnerUid } from "./firebase-server";
 import {
   isLabOAuthProvider,
   labAdmissionDecision,
+  labOAuthBindings,
+  labOAuthProviders,
   labOAuthSubject,
   labSignInProvider,
 } from "./admission-policy";
 
 export function getLabIdentityDocument(uid: string, app: App) {
   return getFirestore(app).collection("portfolio_lab_identities").doc(uid);
+}
+
+export async function getLabLinkedProviders(uid: string) {
+  const auth = await getLabAdminAuth();
+  const record = (await getLabIdentityDocument(uid, auth.app).get()).data();
+  if (record?.status !== "active" || record.uid !== uid) return [];
+
+  const bindings = labOAuthBindings(record);
+  const approved = labOAuthProviders.filter((provider) => bindings[provider]);
+  if (approved.length === 0) return [];
+
+  const user = await auth.getUser(uid);
+  if (user.disabled) return [];
+  return approved.filter((provider) => user.providerData.some((identity) =>
+    identity.providerId === provider && identity.uid === bindings[provider],
+  ));
 }
 
 export function decideLabAdmission(claims: DecodedIdToken, ownerUid: string, record: unknown) {

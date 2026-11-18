@@ -1,23 +1,37 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-14
+**Updated:** 2026-11-18
 
-**Status:** Foundation PR #243 merged. [PR #244](https://github.com/AlexTymosh/alextym.com/pull/244) is approved for merge as the email/password identity foundation. Production Portfolio Lab stays disabled.
-**Next priority:** Build the interview portfolio project. Project-specific access can be added when that project needs testers.
+PR #243, the [Firebase identity foundation in #244](https://github.com/AlexTymosh/alextym.com/pull/244)
+and the [Workforce grant foundation in #245](https://github.com/AlexTymosh/alextym.com/pull/245)
+are merged. The follow-up branch `codex/portfolio-lab-auth-resume` starts from
+`63bb534`. Provisioning, signed sessions and password recovery have prior
+test evidence. Live OAuth, passwordless email, invitation sending and central
+external-action controls are pending. [Identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
 
-Dev provisioning, signed HTTPS sessions, password reset, replay and interruption
-repair were exercised across Vercel Preview, Render Free and live Firebase.
-The test Owner signed in in a browser, and Vercel returned `429` above the
-test branch's auth rate limit.
-The Owner will provision the account, set the initial password, and send the
-credentials to the tester. The live Google, Microsoft, and GitHub checks and
-passwordless email-link sign-in are deferred. See the
-[identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
-for the evidence and what to verify before enabling those methods.
+The Owner has authorized preparing the Firebase changes for main. Implement
+and test on `codex/portfolio-lab-auth-resume`, with a commit per completed step.
+Stop before merging and provide a runnable preview for Owner review.
+
+The current slice adds first sign-in through any configured provider, email
+registration, an authenticated account with no project access, Owner-managed
+project grants, and the revised email-first login screen. Facebook uses the
+same flow when its provider is configured. All project access remains UID-based.
+The follow-up uses a paginated user table with confirmed linked accounts and
+per-project role dropdowns. Sign-in, account and password setup screens now use
+generic site-wide wording.
+
+PR #258 initially failed the `project` job at `824c0f0`: structural checks
+still expected Fleet routes without the authorization layout, an unguarded
+Fleet router mount, password-only Workforce access, and an array of proxy
+rewrites. The checks now enforce the Firebase host adapters, retain legacy
+password compatibility and require fallback proxy routing. Local `repo:check`,
+`config:check`, `wizard:check` and `deployment:check` passed. Check the latest
+PR CI before merging; production authentication activation remains separate.
 
 ## Authoritative documents
 
-- [Portfolio Lab technical requirements](docs/specifications/portfolio-lab-auth-access.md) — `PL-IDENTITY-ACCESS-TRS-001`, version 1.0; authoritative statement of product requirements, edge cases, and acceptance criteria.
+- [Portfolio Lab technical requirements](docs/specifications/portfolio-lab-auth-access.md) — `PL-IDENTITY-ACCESS-TRS-001`, version 1.2. It records product requirements, edge cases and acceptance criteria.
 - [Existing portfolio architecture](docs/architecture/portfolio.md) — current host/project ownership and compatibility invariants. **Add a link to the technical requirements and document the resulting identity/authorization boundaries during PR 1**, not as an unreviewed architecture change in this documentation handoff.
 - [Fleet VOR Hub project manifest](portfolio/fleet_hub/project.json) and [project registry](portfolio/catalog/registry.json) — stable project IDs and demo routes.
 - [Fleet VOR Hub README](portfolio/fleet_hub/README.md) — existing implementation and SQLite invariants.
@@ -27,10 +41,10 @@ for the evidence and what to verify before enabling those methods.
 
 ## 1. Agreed product decisions
 
-1. **Identity:** Firebase Authentication with Google, Microsoft, GitHub, and email/password.
-2. **Admission:** Owner provisions invitations/users; a successful external-provider login alone never grants access to private projects.
-3. **Account provisioning:** Owner can choose an initial password or issue/copy a link that lets the recipient set a password. Notifications are optional, never sent merely because a grant is saved.
-4. **Initial password:** Not one-time; an application-enforced validity of up to 90 days, independent of the grant and account lifetime. This is not a native Firebase password-expiry feature.
+1. **Identity:** Firebase Authentication with Google, Microsoft, GitHub, optional Facebook, email/password registration and passwordless email-link sign-in.
+2. **Admission:** Any supported first sign-in creates an authenticated Lab account. New accounts receive no project grants. Owner-provisioned accounts retain their credential policies and project grants.
+3. **Account provisioning.** The Owner can explicitly send either the recipient's email and a temporary password or the recipient's email and a password-setup link. The Owner can also copy setup links for private delivery.
+4. **Credential validity.** New initial passwords work for 1–30 days under the application policy. Application invitations have a maximum validity of 30 days. Firebase controls the lifetime of each action code. Account and project grant expiry are separate.
 5. **Email:** No separate mandatory email-verification step. Nevertheless, do not trust an unverified/attacker-controlled provider email as proof that an invitation belongs to its holder. Onboarding and account linking must prove ownership securely.
 6. **Account linking:** One person may link several providers with different email addresses to one trusted Firebase UID. Never automatically merge two existing Firebase users based on email text alone.
 7. **Roles:** `No Access`, `View`, `Test`, and `Admin` are assigned per project. `Owner` is a separate global authority pinned to a Firebase UID; project `Admin` cannot manage central grants or identity/security settings.
@@ -60,7 +74,7 @@ The six-PR target balances reviewability and integration risk; commit counts are
 | PR | Branch | Planned working commits | Risk | Release gate |
 |---|---|---:|---|---|
 | 1 — Foundation | `feat/portfolio-lab-foundation` | 2 | Low | Specification/ADR and baselines reviewed; `task ci` |
-| 2 — Firebase Identity | `feat/portfolio-firebase-identity` | 4 | High | Four sign-in methods, linking and sessions tested |
+| 2 — Firebase Identity | `feat/portfolio-firebase-identity` | 4 | High | All five sign-in methods, linking and sessions tested |
 | 3 — Authorization | `feat/portfolio-project-rbac` | 3 | High | Direct Render access and revocation fail closed |
 | 4 — Owner Console | `feat/portfolio-access-console` | 3 | Medium–high | Owner-only invitation/grant/policy UI verified |
 | 5 — Fleet Integration | `feat/fleet-firebase-authorization` | 3 | High | Fleet golden-path/SQLite regressions pass |
@@ -90,7 +104,7 @@ The six-PR target balances reviewability and integration risk; commit counts are
 **Scope**
 
 - Configure Firebase Auth providers Google, Microsoft, GitHub, email/password; use separate safe development/test config.
-- Owner-provisioned accounts and setup-link flows; application-enforced initial-password expiry (1–90 days) that does not expire a grant.
+- Owner-provisioned accounts, setup links and passwordless email-link sign-in. New initial passwords use the 1–30-day policy independently of grant expiry.
 - Secure UID-preserving provider linking, including different emails, conflict/recovery paths and untrusted provider email handling; no automatic UID merging.
 - Issue/validate secure server sessions; implement login/logout and CSRF/Origin rules. Prove identity continuity across Vercel and direct Render access without disrupting public `/api/*` and SSE.
 - Keep Portfolio Lab feature-disabled in production while backend authorization is incomplete.
@@ -237,16 +251,30 @@ Implement [narrow Portfolio Lab phase] without changing unrelated public functio
 
 Mark `- [x] task ci` only when that command actually passed. For squash merge, use the PR title as the single main-branch history entry. Do not claim PRs, tests, installations or deployments exist until confirmed.
 
-## 7. Immediate next actions / handoff checkpoint
+## 7. Current handoff
 
-1. Continue existing draft PR #243 on branch `feat/portfolio-lab-foundation`; do not create another foundation branch.
-2. Ensure `docs/specifications/portfolio-lab-auth-access.md` exists in the working tree and matches version 1.0; do not overwrite the Owner's saved copy.
-3. Add this `SESSION_NOTES.md` and a root README link to the technical requirements; review the diff. This documentation handoff should be the **first** planned docs commit of PR 1, not a seventh PR.
-4. During PR 1, add the requirements link to `docs/architecture/portfolio.md`, add ADR and security/contract baselines, and generalize project boundary checks.
-5. Verify ADR, generic import/ownership guards, Fleet legacy access tests; run `task ci`, confirm all five GitHub CI jobs and update PR #243 before marking it ready for review. Do not merge before verification.
+1. Review the self-registration branch before merging. It implements email-first
+   sign-in, public account registration, zero-grant pending accounts, optional
+   Facebook and Owner-managed grants for both registered projects. The access
+   table has one row per UID, displays its confirmed linked accounts and saves
+   the selected role separately for each project. All linked methods share grants.
+2. Prior baseline verification passed: backend:check (1006 passed, four external Redis
+   tests skipped), frontend build/lint/types, the full frontend suite (398
+   passed, 28 optional checks skipped), Docker build, and ten desktop/mobile
+   emulator scenarios for provider registration, Owner approval, project
+   isolation and immediate revocation.
+3. Current UI follow-up passed frontend build/lint/types and all 12 desktop/mobile
+   Firebase emulator scenarios. The table was used to grant and revoke the same
+   UID's access across email/password and linked Microsoft/Google accounts with
+   different email addresses. Desktop dark and mobile light layouts were inspected.
+4. Verify real Google/GitHub/Facebook configuration and the new Microsoft first
+   sign-in flow in development. Facebook needs a Meta App ID/Secret and an
+   enabled Firebase provider before its UI flag is set.
+5. Passwordless email-link sign-in, the two invitation email delivery options
+   and central external-action quotas remain later work from the overall plan.
+   Production cutover follows Owner review and a matching two-host deployment.
 
-**Next implementation branch after PR 1 is merged:** `feat/portfolio-firebase-identity`.
-## PR 2 active checkpoint — Firebase identity
+## Historical PR #244 checkpoints
 
 
 - Foundation PR #243 merged into `main` as `0389bf0e` on 2026-11-12.

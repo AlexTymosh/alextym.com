@@ -15,6 +15,54 @@ from fastapi import HTTPException, Request
 from app.security import firebase_identity
 
 WORKFORCE_PROJECT_ID = "workforce_intelligence"
+PROJECT_ROLES = ("View", "Test", "Admin")
+
+
+def project_grant_role(uid: str, project_id: str, record: Any, now_ms: int) -> str | None:
+    if not uid or "/" in uid or not project_id or "/" in project_id:
+        return None
+    if not isinstance(record, dict) or type(now_ms) is not int:
+        return None
+    if (
+        type(record.get("schema_version")) is not int
+        or record["schema_version"] != 1
+        or record.get("uid") != uid
+        or record.get("project_id") != project_id
+        or record.get("status") != "active"
+        or record.get("role") not in PROJECT_ROLES
+    ):
+        return None
+    if "expires_at_ms" in record:
+        expiry = record["expires_at_ms"]
+        if type(expiry) is not int or not 0 < expiry < 8_640_000_000_000_000 or now_ms >= expiry:
+            return None
+    return record["role"]
+
+
+def project_role_allows(role: str | None, method: str, path: str) -> bool:
+    if role not in PROJECT_ROLES:
+        return False
+    if role == "Admin":
+        return True
+    if path.endswith(("/demo/reset", "/demo/seed")) or "/workflows" in path:
+        return False
+    return method in {"GET", "HEAD"} or role == "Test"
+
+
+def require_project_access(request: Request, project_id: str) -> dict:
+    identity = firebase_identity.require_lab_identity(request)
+    if identity["uid"] == os.getenv("PORTFOLIO_LAB_OWNER_UID", "").strip():
+        role = "Admin"
+    else:
+        try:
+            record = load_project_grant(project_id, identity["uid"])
+        except Exception as exc:
+            raise HTTPException(503, "Project access unavailable") from exc
+        role = project_grant_role(identity["uid"], project_id, record, int(time.time() * 1000))
+    if not project_role_allows(role, request.method, request.url.path):
+        raise HTTPException(403, "Project access denied")
+    request.state.portfolio_lab_role = role
+    return identity
 
 
 def admin_grant_allows(uid: str, project_id: str, record: Any, now_ms: int) -> bool:
