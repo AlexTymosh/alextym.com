@@ -18,7 +18,7 @@ import {
 } from "../../lib/portfolio-lab/firebase-server";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Portfolio Lab", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Your account", robots: { index: false, follow: false } };
 
 export default async function LabPage() {
   if (!isLabEnabled()) notFound();
@@ -52,26 +52,26 @@ export default async function LabPage() {
   return (
     <section className={`${styles.panel} ${styles.accountPanel}`} aria-labelledby="lab-account-title">
       <header className={styles.header}>
-        <h1 id="lab-account-title">Portfolio Lab</h1>
+        <h1 id="lab-account-title">Your account</h1>
         <p>Signed in with <strong className={styles.signInMethod}>{signInMethod}</strong></p>
       </header>
       <section className={styles.accountActions} aria-labelledby="lab-projects">
-        <h2 id="lab-projects">Your projects</h2>
-        {projectAccess === null ? <p className={styles.notice} role="alert">Project access is temporarily unavailable. Reload to retry.</p> :
-          available.length === 0 ? <p className={styles.notice} role="status">Your account is ready. Project access is awaiting approval from the Owner.</p> :
+        <h2 id="lab-projects">Your access</h2>
+        {projectAccess === null ? <p className={styles.notice} role="alert">Access information is temporarily unavailable. Reload to retry.</p> :
+          available.length === 0 ? <p className={styles.notice} role="status">No access has been assigned to your account.</p> :
           <ul className={styles.providerList}>
             {available.map((project) => (
               <li key={project.id} className={styles.userCard}>
                 <h3 className={styles.providerLabel}>{project.title}</h3>
                 <p className={styles.hint}>{project.role} access</p>
-                <Link className={styles.secondaryButton} href={project.path}>Open project</Link>
+                <Link className={styles.secondaryButton} href={project.path}>Open</Link>
               </li>
             ))}
           </ul>
         }
         <Link className={styles.textAction} href="/lab">Refresh access</Link>
       </section>
-      {isOwner && <Link className={styles.primaryButton} href="/lab/admin">Manage portfolio access</Link>}
+      {isOwner && <Link className={styles.primaryButton} href="/lab/admin">Manage access</Link>}
       <LabAccountActions linkedProviders={linkedProviders} />
     </section>
   );

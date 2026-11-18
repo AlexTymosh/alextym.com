@@ -70,9 +70,9 @@ test.describe("Portfolio Lab self-service approval", () => {
     const signup = page.waitForResponse((response) => response.url().includes("accounts:signUp"));
     await page.getByRole("button", { name: "Create account with email", exact: true }).click();
     const { localId: uid } = await (await signup).json();
-    await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
-    await expect(page.getByRole("status")).toContainText("awaiting approval");
-    await expect(page.getByRole("link", { name: "Open project" })).toHaveCount(0);
+    await page.getByRole("heading", { name: "Your account", exact: true }).waitFor();
+    await expect(page.getByRole("status")).toContainText("No access has been assigned");
+    await expect(page.getByRole("link", { name: "Open" })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("pending-access.png"), fullPage: true, caret: "initial" });
     expect((await page.request.get("/lab/admin")).status()).toBe(404);
     expect((await page.request.post("/lab/admin/grants", {
@@ -113,7 +113,7 @@ test.describe("Portfolio Lab self-service approval", () => {
       expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
       expect((await page.request.get(backend + "/api/vor/bootstrap", { headers: auth })).status()).toBe(403);
       await page.reload();
-      await expect(page.getByRole("status")).toContainText("awaiting approval");
+      await expect(page.getByRole("status")).toContainText("No access has been assigned");
       const recruitment = await owner.post(site + "/lab/admin/grants", {
         headers: { Origin: site },
         data: { uid, projectId: "workforce_intelligence", role: "View", revision: 0 },
@@ -130,7 +130,7 @@ test.describe("Portfolio Lab self-service approval", () => {
     }
   });
 
-  test("one table row grants and revokes access for every linked sign-in method", async ({ page, browser }, testInfo) => {
+  test("one table row grants and revokes access for every linked sign-in method", async ({ page, browser }) => {
     test.setTimeout(120_000);
     const suffix = randomBytes(6).toString("hex");
     const email = `linked-user-${suffix}@example.test`;
@@ -143,7 +143,7 @@ test.describe("Portfolio Lab self-service approval", () => {
     const signup = page.waitForResponse((response) => response.url().includes("accounts:signUp"));
     await page.getByRole("button", { name: "Create account with email", exact: true }).click();
     const { localId: uid } = await (await signup).json();
-    await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
+    await page.getByRole("heading", { name: "Your account", exact: true }).waitFor();
     for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
       await page.getByRole("button", { name: "Link " + name, exact: true }).click();
       await mockProvider(page, "Open " + name, linkedEmail);
@@ -167,8 +167,6 @@ test.describe("Portfolio Lab self-service approval", () => {
       await role.selectOption("View");
       await role.locator("xpath=ancestor::form").getByRole("button", { name: "Save access" }).click();
       await expect(row.getByRole("status")).toHaveText("View access saved.");
-      await row.scrollIntoViewIfNeeded();
-      await admin.screenshot({ path: testInfo.outputPath("linked-user-access-table.png"), fullPage: false, caret: "initial" });
       expect(await admin.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 
       for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
@@ -207,10 +205,10 @@ test.describe("Portfolio Lab self-service approval", () => {
     test(`first ${name} sign-in remains logged in while awaiting project access`, async ({ page }) => {
       await page.goto("/lab/login");
       await mockProvider(page, "Continue with " + name, name.toLowerCase() + "-" + randomBytes(6).toString("hex") + "@example.test");
-      await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
+      await page.getByRole("heading", { name: "Your account", exact: true }).waitFor();
       await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
-      await expect(page.getByRole("status")).toContainText("awaiting approval");
-      await expect(page.getByRole("link", { name: "Open project" })).toHaveCount(0);
+      await expect(page.getByRole("status")).toContainText("No access has been assigned");
+      await expect(page.getByRole("link", { name: "Open" })).toHaveCount(0);
       expect((await page.request.get("/lab/session")).status()).toBe(200);
       expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
     });

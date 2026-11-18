@@ -106,6 +106,7 @@ and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identi
 
 | Scope | Result |
 | --- | --- |
+| Access table and site-wide auth wording (2026-11-18) | PASS: frontend build/lint/types and 12 desktop/mobile Firebase emulator scenarios. One UID with email/password and confirmed Microsoft/Google accounts at different email addresses appeared in one table row. Saving View allowed all three sign-in methods; revoking it denied all three. Workforce access remained separate. Desktop dark and mobile light layouts were inspected, including horizontal table scrolling without page overflow. Real provider configuration remains a separate gate. |
 | Baseline `c13e972` | GitHub Actions passed all five jobs and CodeQL. Vercel Preview reached READY. Local `task ci` passed. |
 | Render dev baseline | The `c13e972` deploy reached Live. Liveness returned HTTP 200, and the disabled Lab identity endpoint returned HTTP 404. |
 | Security candidate `1689cc2` | [GitHub Actions](https://github.com/AlexTymosh/alextym.com/actions/runs/43620062596) 5/5 and [CodeQL](https://github.com/AlexTymosh/alextym.com/runs/132523662280) passed. Vercel and Render deployed the same commit. Local `task frontend:check` passed (308 Playwright tests) with `require(esm)` disabled. The npm production dependency audit reported zero vulnerabilities. |

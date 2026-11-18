@@ -26,7 +26,7 @@ function linkIssue(error: unknown, provider: LabOAuthProvider) {
   const code = error instanceof FirebaseError ? error.code : undefined;
   if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use" ||
       code === "auth/account-exists-with-different-credential") {
-    return `This ${labProviderNames[provider]} account is already attached to a separate sign-in. Ask the Owner to resolve the conflict before linking it here.`;
+    return `This ${labProviderNames[provider]} account is already attached to a separate sign-in. Contact support to resolve the conflict before linking it here.`;
   }
   return labOAuthIssue(provider, code)
     ?? `Could not finish linking ${labProviderNames[provider]}. Sign in again and retry.`;
@@ -93,8 +93,8 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
       });
       if (!response.ok) {
         setNotice({ tone: "error", text: response.status >= 500
-          ? "Portfolio Lab could not check the link. Try confirming again."
-          : "Portfolio Lab could not confirm this link. Sign in again and choose the same account when you confirm." });
+          ? "Could not check the link. Try confirming again."
+          : "Could not confirm this link. Sign in again and choose the same account when you confirm." });
         return;
       }
 
@@ -131,7 +131,7 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
 
   return (
     <section className={styles.accountActions} aria-labelledby="lab-linked-identities">
-      <h2 id="lab-linked-identities">Linked identities</h2>
+      <h2 id="lab-linked-identities">Linked accounts</h2>
       <p className={styles.hint}>
         Link an account within {LAB_RECENT_LOGIN_SECONDS / 60} minutes of signing in. <Link href="/lab/login">Sign in again</Link> if you reload this page.
       </p>

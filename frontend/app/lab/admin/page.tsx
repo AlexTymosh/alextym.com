@@ -23,7 +23,7 @@ export default async function LabAdminPage({ searchParams }: { searchParams: Pro
     <section className={`${styles.panel} ${styles.ownerPanel}`}>
       <header className={styles.header}>
         <h1>Access management</h1>
-        <p>View allows reading. Test allows demo changes. Admin also manages project settings.</p>
+        <p>View allows reading. Test allows changes. Admin also manages settings.</p>
         <Link href="/lab" className={styles.textAction}>Back to your account</Link>
       </header>
       {!result && <p className={styles.notice} role="alert">Account access is temporarily unavailable. Reload to retry.</p>}

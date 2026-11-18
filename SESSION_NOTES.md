@@ -6,8 +6,8 @@ PR #243, the [Firebase identity foundation in #244](https://github.com/AlexTymos
 and the [Workforce grant foundation in #245](https://github.com/AlexTymosh/alextym.com/pull/245)
 are merged. The follow-up branch `codex/portfolio-lab-auth-resume` starts from
 `63bb534`. Provisioning, signed sessions and password recovery have prior
-test evidence. Live OAuth, passwordless email and the Owner console are
-pending. [Identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
+test evidence. Live OAuth, passwordless email, invitation sending and central
+external-action controls are pending. [Identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
 
 The Owner has authorized preparing the Firebase changes for main. Implement
 and test on `codex/portfolio-lab-auth-resume`, with a commit per completed step.
@@ -17,6 +17,9 @@ The current slice adds first sign-in through any configured provider, email
 registration, an authenticated account with no project access, Owner-managed
 project grants, and the revised email-first login screen. Facebook uses the
 same flow when its provider is configured. All project access remains UID-based.
+The follow-up uses a paginated user table with confirmed linked accounts and
+per-project role dropdowns. Sign-in, account and password setup screens now use
+generic site-wide wording.
 
 ## Authoritative documents
 
@@ -244,16 +247,22 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 
 1. Review the self-registration branch before merging. It implements email-first
    sign-in, public account registration, zero-grant pending accounts, optional
-   Facebook and Owner-managed grants for both registered projects.
-2. Local verification passed: backend:check (1006 passed, four external Redis
+   Facebook and Owner-managed grants for both registered projects. The access
+   table has one row per UID, displays its confirmed linked accounts and saves
+   the selected role separately for each project. All linked methods share grants.
+2. Prior baseline verification passed: backend:check (1006 passed, four external Redis
    tests skipped), frontend build/lint/types, the full frontend suite (398
    passed, 28 optional checks skipped), Docker build, and ten desktop/mobile
    emulator scenarios for provider registration, Owner approval, project
    isolation and immediate revocation.
-3. Verify real Google/GitHub/Facebook configuration and the new Microsoft first
+3. Current UI follow-up passed frontend build/lint/types and all 12 desktop/mobile
+   Firebase emulator scenarios. The table was used to grant and revoke the same
+   UID's access across email/password and linked Microsoft/Google accounts with
+   different email addresses. Desktop dark and mobile light layouts were inspected.
+4. Verify real Google/GitHub/Facebook configuration and the new Microsoft first
    sign-in flow in development. Facebook needs a Meta App ID/Secret and an
    enabled Firebase provider before its UI flag is set.
-4. Passwordless email-link sign-in, the two invitation email delivery options
+5. Passwordless email-link sign-in, the two invitation email delivery options
    and central external-action quotas remain later work from the overall plan.
    Production cutover follows Owner review and a matching two-host deployment.
 

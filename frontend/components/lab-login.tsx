@@ -14,7 +14,7 @@ import styles from "./lab-auth.module.css";
 type SignInMethod = "password" | LabOAuthProvider;
 
 function linkingInstructions(provider: LabOAuthProvider) {
-  return `Sign in with an existing method for your account, then choose Link ${labProviderNames[provider]} under Linked identities.`;
+  return `Sign in with an existing method for your account, then choose Link ${labProviderNames[provider]} under Linked accounts.`;
 }
 
 async function startLabSession(auth: Auth, user: User, method: SignInMethod): Promise<string | null> {
@@ -32,17 +32,17 @@ async function startLabSession(auth: Auth, user: User, method: SignInMethod): Pr
 
   const body = await response.json().catch(() => null);
   if (response.status === 403 && body?.code === "PASSWORD_EXPIRED") {
-    return "Your initial password has expired. Ask the Owner for a new password setup link.";
+    return "Your initial password has expired. Contact support for a new password setup link.";
   }
   if (response.status === 403 && body?.code === "ACCESS_DENIED") {
     return method === "password"
-      ? "Portfolio Lab access has not been granted. Contact the Owner for help with your invitation."
-      : "This sign-in method is unavailable for your account. Sign in with an existing method or contact the Owner.";
+      ? "Sign-in is unavailable for this account. Contact support for help."
+      : "This sign-in method is unavailable for your account. Sign in with an existing method or contact support.";
   }
   if (response.status >= 500) {
-    return "Portfolio Lab sign-in is temporarily unavailable. Try again shortly.";
+    return "Sign-in is temporarily unavailable. Try again shortly.";
   }
-  return "Portfolio Lab could not start a session. Try signing in again.";
+  return "Could not start a session. Try signing in again.";
 }
 
 function signInIssue(error: unknown, method: SignInMethod) {
@@ -51,7 +51,7 @@ function signInIssue(error: unknown, method: SignInMethod) {
     if (code === "auth/network-request-failed" || code === undefined) {
       return "Sign-in is temporarily unavailable. Try again shortly.";
     }
-    return "Sign-in failed. Check your email and password or ask the Owner for a setup link.";
+    return "Sign-in failed. Check your email and password or contact support for a setup link.";
   }
   if (code === "auth/account-exists-with-different-credential" || code === "auth/credential-already-in-use") {
     return linkingInstructions(method);
@@ -84,7 +84,7 @@ export function LabLogin() {
         user = (await signInWithEmailAndPassword(auth, email, password)).user;
       }
       const issue = await startLabSession(auth, user, method)
-        .catch(() => "Could not reach Portfolio Lab. Try signing in again.");
+        .catch(() => "Could not connect. Try signing in again.");
       if (issue) {
         await signOut(auth).catch(() => undefined);
         setMessage({ tone: "error", text: issue });
@@ -94,7 +94,7 @@ export function LabLogin() {
       router.refresh();
     } catch (error) {
       const text = register && method === "password"
-        ? "Could not create an account. Try signing in if you registered before, or contact the Owner."
+        ? "Could not create an account. Try signing in if you registered before, or contact support."
         : signInIssue(error, method);
       setMessage({ tone: "error", text });
     } finally {
@@ -114,8 +114,7 @@ export function LabLogin() {
   return (
     <section className={styles.panel} aria-labelledby="lab-login-title">
       <header className={styles.header}>
-        <h1 id="lab-login-title">{register ? "Create your account" : "Portfolio Lab sign in"}</h1>
-        <p>Sign in or create an account. Access to each portfolio project is approved by the Owner.</p>
+        <h1 id="lab-login-title">{register ? "Create your account" : "Sign in"}</h1>
       </header>
 
       {message && (
@@ -172,7 +171,7 @@ export function LabLogin() {
           type="button"
           className={styles.textAction}
           disabled={busy}
-          onClick={() => setMessage({ tone: "info", text: "Ask the Owner for a private password setup or reset link." })}
+          onClick={() => setMessage({ tone: "info", text: "Contact support for a password setup or reset link." })}
         >
           Password help
         </button>
