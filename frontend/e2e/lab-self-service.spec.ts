@@ -1,0 +1,133 @@
+import { randomBytes } from "node:crypto";
+import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
+
+const emulator = "http://127.0.0.1:19099";
+const site = "http://localhost:14300";
+const backend = "http://127.0.0.1:14800";
+const project = "demo-portfolio-lab";
+const password = "Synthetic-preview-password-123!";
+const enabled = process.env.LAB_EMULATOR_E2E === "true" &&
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === project &&
+  process.env.PLAYWRIGHT_BASE_URL === site;
+
+async function mockProvider(page: Page, action: string, email: string) {
+  const popupPromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: action, exact: true }).click();
+  const popup = await popupPromise;
+  await popup.waitForURL(emulator + "/**");
+  const account = popup.getByText(email, { exact: true });
+  const input = popup.locator("#email-input");
+  const add = popup.getByRole("button", { name: "Add new account" });
+  await account.or(input).or(add).filter({ visible: true }).first().waitFor();
+  const closed = popup.waitForEvent("close");
+  if (await account.isVisible()) {
+    await account.click();
+  } else {
+    if (await add.isVisible()) await add.click();
+    await input.fill(email);
+    await popup.locator("#sign-in").click();
+  }
+  await closed;
+}
+
+async function ownerSession(request: APIRequestContext) {
+  const login = await request.post(emulator + "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + project, {
+    data: { email: "lab-preview@example.test", password: "LocalLabPreview-123!", returnSecureToken: true },
+  });
+  expect(login.ok()).toBeTruthy();
+  const { idToken } = await login.json();
+  const session = await request.post(site + "/lab/session", { headers: { Origin: site }, data: { idToken } });
+  expect(session.status()).toBe(200);
+}
+
+test.describe("Portfolio Lab self-service approval", () => {
+  test.skip(!enabled, "Requires the isolated localhost Firebase emulator environment");
+  test.setTimeout(90_000);
+
+  test("email registration, Owner approval, project isolation and revocation", async ({ page, playwright }, testInfo) => {
+    const email = `new-user-${randomBytes(6).toString("hex")}@example.test`;
+    await page.goto("/lab/login");
+    const emailButton = await page.getByRole("button", { name: "Sign in with email", exact: true }).boundingBox();
+    const microsoft = await page.getByRole("button", { name: "Continue with Microsoft", exact: true }).boundingBox();
+    expect(emailButton!.y).toBeLessThan(microsoft!.y);
+    await page.screenshot({ path: testInfo.outputPath("email-first-login.png"), fullPage: true, caret: "initial" });
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    const signup = page.waitForResponse((response) => response.url().includes("accounts:signUp"));
+    await page.getByRole("button", { name: "Create account with email", exact: true }).click();
+    const { localId: uid } = await (await signup).json();
+    await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
+    await expect(page.getByRole("status")).toContainText("awaiting approval");
+    await expect(page.getByRole("link", { name: "Open project" })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath("pending-access.png"), fullPage: true, caret: "initial" });
+    expect((await page.request.get("/lab/admin")).status()).toBe(404);
+    expect((await page.request.post("/lab/admin/grants", {
+      headers: { Origin: site }, data: { uid, projectId: "fleet_hub", role: "Admin", revision: 0 },
+    })).status()).toBe(403);
+    expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
+    expect((await page.request.get("/portfolio/workforce-intelligence/api/status")).status()).toBe(403);
+
+    const owner = await playwright.request.newContext();
+    try {
+      await ownerSession(owner);
+      expect((await owner.get(site + "/lab/admin")).status()).toBe(200);
+      const change = { uid, projectId: "fleet_hub", role: "View", revision: 0 };
+      const attempts = await Promise.all([0, 1].map(() => owner.post(site + "/lab/admin/grants", {
+        headers: { Origin: site }, data: change,
+      })));
+      expect(attempts.map((response) => response.status()).sort()).toEqual([200, 409]);
+      expect((await owner.post(site + "/lab/admin/grants", {
+        headers: { Origin: "https://untrusted.example.test" }, data: change,
+      })).status()).toBe(403);
+
+      await page.reload();
+      await expect(page.getByText("Fleet VOR Hub", { exact: true })).toBeVisible();
+      await expect(page.getByText("View access", { exact: true })).toBeVisible();
+      await expect(page.getByText("Workforce & Recruitment Intelligence", { exact: true })).toHaveCount(0);
+      const cookie = (await page.context().cookies()).find((entry) => entry.name === "portfolio_lab_session")!;
+      const auth = { Authorization: "FirebaseSession " + cookie.value };
+      expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(200);
+      expect((await page.request.post("/api/vor/bookings", { headers: { Origin: site }, data: {} })).status()).toBe(403);
+      expect((await page.request.get(backend + "/api/vor/bootstrap", { headers: auth })).status()).toBe(200);
+      expect((await page.request.get(backend + "/api/workforce/status", { headers: auth })).status()).toBe(403);
+      expect((await page.request.post(backend + "/api/vor/bookings", { headers: auth, data: {} })).status()).toBe(403);
+
+      const revoke = await owner.post(site + "/lab/admin/grants", {
+        headers: { Origin: site }, data: { ...change, role: "No Access", revision: 1 },
+      });
+      expect(revoke.status()).toBe(200);
+      expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
+      expect((await page.request.get(backend + "/api/vor/bootstrap", { headers: auth })).status()).toBe(403);
+      await page.reload();
+      await expect(page.getByRole("status")).toContainText("awaiting approval");
+      const recruitment = await owner.post(site + "/lab/admin/grants", {
+        headers: { Origin: site },
+        data: { uid, projectId: "workforce_intelligence", role: "View", revision: 0 },
+      });
+      expect(recruitment.status()).toBe(200);
+      expect((await page.request.get("/portfolio/workforce-intelligence/api/status")).status()).toBe(200);
+      expect((await page.request.get(backend + "/api/workforce/status", { headers: auth })).status()).toBe(200);
+      expect((await page.request.post(backend + "/api/workforce/demo/reset", { headers: auth, data: {} })).status()).toBe(403);
+      await page.reload();
+      await expect(page.getByText("Workforce & Recruitment Intelligence", { exact: true })).toBeVisible();
+      await expect(page.getByText("Fleet VOR Hub", { exact: true })).toHaveCount(0);
+    } finally {
+      await owner.dispose();
+    }
+  });
+
+  for (const name of ["Google", "Microsoft", "GitHub", "Facebook"]) {
+    test(`first ${name} sign-in remains logged in while awaiting project access`, async ({ page }) => {
+      await page.goto("/lab/login");
+      await mockProvider(page, "Continue with " + name, name.toLowerCase() + "-" + randomBytes(6).toString("hex") + "@example.test");
+      await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
+      await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
+      await expect(page.getByRole("status")).toContainText("awaiting approval");
+      await expect(page.getByRole("link", { name: "Open project" })).toHaveCount(0);
+      expect((await page.request.get("/lab/session")).status()).toBe(200);
+      expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
+    });
+  }
+});

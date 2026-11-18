@@ -198,10 +198,10 @@ def run() -> None:
         auth.create_user(email=unknown_email, password=password, app=app)
         unknown_token = password_sign_in(unknown_email, password).json()["idToken"]
         check(
-            "valid but uninvited UID denied on both hosts",
+            "self-registration admits the account without project grants",
             (
-                exchange(unknown_token).status_code == 403
-                and direct(unknown_token).status_code == 403
+                exchange(unknown_token).status_code == 200
+                and direct(unknown_token).status_code == 200
             ),
         )
 

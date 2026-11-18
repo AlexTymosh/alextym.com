@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Document ID | `PL-IDENTITY-ACCESS-TRS-001` |
-| Version | `1.1` |
-| Date | 2026-11-16 |
+| Version | `1.2` |
+| Date | 2026-11-18 |
 | Status | **Identity foundation merged. Provider verification, invitations and rollout are pending.** |
 | Product | Portfolio Lab, integrated into the existing portfolio website |
 | Intended audience | Owner, maintainers, software engineers, QA, security reviewers, AI coding agents |
@@ -76,7 +76,7 @@ Repository source paths reviewed on the default branch:
 |---|---|---|
 | D-01 | Authentication provider | Firebase Authentication |
 | D-02 | Login methods | Google, Microsoft, GitHub, email/password and passwordless email-link sign-in |
-| D-03 | Access model | Pre-authorized users only; Owner controls admission |
+| D-03 | Access model | Open account registration; Owner grants access separately for each project |
 | D-04 | Project permissions | Independent `No Access`, `View`, `Test`, `Admin` per project |
 | D-05 | Global authority | `Owner` exclusively manages identities, grants and security policies |
 | D-06 | Demo data | Testers of **one project** share that project's demo environment |
@@ -573,7 +573,7 @@ These are **illustrative interface contracts**; final URL spelling must be recon
 | Fleet reset affects Recruitment | High | Project-owned storage and scoped reset checks |
 | Shared FastAPI worker overload | Medium | Resource-aware implementation; future service extraction if needed |
 | Corporate Microsoft tenant denies OAuth | Medium | Email/password remains a usable fallback |
-| Firebase Auth user created by uninvited OAuth login | Low | No application session or grant; optional audited cleanup |
+| New account signs in without project approval | Low | Authenticated account page; project APIs and UI require an explicit grant |
 
 ### 15.3 Privacy and consent
 

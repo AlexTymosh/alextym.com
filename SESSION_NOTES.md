@@ -20,7 +20,7 @@ same flow when its provider is configured. All project access remains UID-based.
 
 ## Authoritative documents
 
-- [Portfolio Lab technical requirements](docs/specifications/portfolio-lab-auth-access.md) — `PL-IDENTITY-ACCESS-TRS-001`, version 1.1. It records product requirements, edge cases and acceptance criteria.
+- [Portfolio Lab technical requirements](docs/specifications/portfolio-lab-auth-access.md) — `PL-IDENTITY-ACCESS-TRS-001`, version 1.2. It records product requirements, edge cases and acceptance criteria.
 - [Existing portfolio architecture](docs/architecture/portfolio.md) — current host/project ownership and compatibility invariants. **Add a link to the technical requirements and document the resulting identity/authorization boundaries during PR 1**, not as an unreviewed architecture change in this documentation handoff.
 - [Fleet VOR Hub project manifest](portfolio/fleet_hub/project.json) and [project registry](portfolio/catalog/registry.json) — stable project IDs and demo routes.
 - [Fleet VOR Hub README](portfolio/fleet_hub/README.md) — existing implementation and SQLite invariants.
@@ -242,17 +242,20 @@ Mark `- [x] task ci` only when that command actually passed. For squash merge, u
 
 ## 7. Current handoff
 
-1. Microsoft is enabled in the development Firebase project. A direct test
-   sign-in produced a Microsoft Auth record without a Lab identity. Resolve
-   that test account conflict, then complete the link and sign in again. Start
-   live Google and GitHub sign-in and account-linking checks once their test
-   providers are configured.
-2. Implement and verify email-link sign-in. Then wire shared project
-   authorization and the Owner console, including both explicit email delivery
-   options and invitation expiry.
-3. Verify both demos and direct Render authorization in the development
-   environment. Fleet is the first production cutover. Obtain separate Owner
-   authorization for merging and scheduling the release.
+1. Review the self-registration branch before merging. It implements email-first
+   sign-in, public account registration, zero-grant pending accounts, optional
+   Facebook and Owner-managed grants for both registered projects.
+2. Local verification passed: backend:check (1006 passed, four external Redis
+   tests skipped), frontend build/lint/types, the full frontend suite (398
+   passed, 28 optional checks skipped), Docker build, and ten desktop/mobile
+   emulator scenarios for provider registration, Owner approval, project
+   isolation and immediate revocation.
+3. Verify real Google/GitHub/Facebook configuration and the new Microsoft first
+   sign-in flow in development. Facebook needs a Meta App ID/Secret and an
+   enabled Firebase provider before its UI flag is set.
+4. Passwordless email-link sign-in, the two invitation email delivery options
+   and central external-action quotas remain later work from the overall plan.
+   Production cutover follows Owner review and a matching two-host deployment.
 
 ## Historical PR #244 checkpoints
 

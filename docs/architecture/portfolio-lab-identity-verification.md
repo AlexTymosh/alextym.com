@@ -1,5 +1,33 @@
 # Portfolio Lab identity verification
 
+## Self-registration review candidate — 18 November 2026
+
+The `codex/portfolio-lab-auth-resume` branch implements authenticated accounts
+awaiting per-project approval. First sign-in may use email registration or a
+configured social provider. Invited credentials retain their existing UID
+and grant records.
+
+- `task backend:check` passed with 1006 tests. Four external Redis tests were
+  skipped. The existing ignored test virtual environment was used because
+  Windows denied access to files in the default `.venv`.
+- Frontend lint, TypeScript and production build passed. Existing Fleet lint
+  warnings remain. The full frontend suite passed 398 tests with 28 optional
+  integration tests skipped.
+- Ten isolated emulator scenarios passed across desktop and mobile Chromium.
+  They covered email registration, all four social providers, zero-grant
+  sessions, Owner-only grant updates, concurrent edits, project isolation,
+  read-only restrictions and immediate revocation at both hosts.
+- `docker build -f backend/Dockerfile -t alextym-backend .` passed.
+- Local screenshots confirmed email-first login, light/dark styles and the
+  Owner access editor. The local preview uses disposable demo databases.
+
+Facebook is implemented and tested with Firebase emulators. Its real provider
+needs a Meta application and Firebase configuration. Real Google/GitHub and
+the revised Microsoft onboarding still need development-provider verification.
+This candidate is ready for Owner review before merging.
+
+## Prior identity foundation evidence
+
 [PR #244](https://github.com/AlexTymosh/alextym.com/pull/244) ships the verified
 email/password identity foundation with Portfolio Lab disabled in production.
 The Owner provisions accounts and shares the initial credentials privately.
