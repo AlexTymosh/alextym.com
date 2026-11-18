@@ -4,6 +4,7 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   browserPopupRedirectResolver,
   connectAuthEmulator,
+  FacebookAuthProvider,
   GithubAuthProvider,
   GoogleAuthProvider,
   inMemoryPersistence,
@@ -21,6 +22,7 @@ let credentialTimer: ReturnType<typeof setTimeout> | undefined;
 export function createLabOAuthProvider(provider: LabOAuthProvider) {
   if (provider === "google.com") return new GoogleAuthProvider();
   if (provider === "github.com") return new GithubAuthProvider();
+  if (provider === "facebook.com") return new FacebookAuthProvider();
   return new OAuthProvider(provider);
 }
 

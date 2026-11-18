@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-OAUTH_PROVIDERS = frozenset({"google.com", "github.com", "microsoft.com"})
+OAUTH_PROVIDERS = frozenset({"google.com", "github.com", "microsoft.com", "facebook.com"})
 
 
 def sign_in_provider(claims: dict[str, Any]) -> str:

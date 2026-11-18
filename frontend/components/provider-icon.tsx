@@ -10,6 +10,14 @@ export function GitHubIcon() {
 
 export function ProviderIcon({ provider }: { provider: LabOAuthProvider }) {
   if (provider === "github.com") return <GitHubIcon />;
+  if (provider === "facebook.com") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="12" fill="#0866ff" />
+        <path fill="#fff" d="M16.5 15.5l.5-3.5h-3.2V9.7c0-1 .5-1.9 1.9-1.9h1.4v-3s-1.3-.2-2.5-.2c-2.6 0-4.3 1.6-4.3 4.6V12H7.4v3.5h2.9v8.3h3.5v-8.3h2.7z" />
+      </svg>
+    );
+  }
   if (provider === "microsoft.com") {
     return (
       <svg viewBox="0 0 23 23" aria-hidden="true" focusable="false">

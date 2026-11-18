@@ -10,6 +10,7 @@ import { hasSameOrigin } from "../../../lib/portfolio-lab/session-origin";
 import { getLabAdmissionDecision } from "../../../lib/portfolio-lab/lab-admission-server";
 import { hasLabJsonContent, readLabJson } from "../../../lib/portfolio-lab/request-json";
 import { isRecentLabLogin } from "../../../lib/portfolio-lab/session-policy";
+import { registerLabIdentity } from "../../../lib/portfolio-lab/registration-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     }
     let admission;
     try {
+      await registerLabIdentity(decoded);
       admission = await getLabAdmissionDecision(decoded);
     } catch {
       return json({ error: "Admission service unavailable" }, 503);

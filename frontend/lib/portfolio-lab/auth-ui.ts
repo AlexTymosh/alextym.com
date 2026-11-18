@@ -4,9 +4,12 @@ export const labProviderNames = {
   "google.com": "Google",
   "microsoft.com": "Microsoft",
   "github.com": "GitHub",
+  "facebook.com": "Facebook",
 } as const satisfies Record<LabOAuthProvider, string>;
 
-export const labSignInProviders = Object.keys(labProviderNames) as LabOAuthProvider[];
+export const labSignInProviders = (Object.keys(labProviderNames) as LabOAuthProvider[])
+  .filter((provider) => provider !== "facebook.com" ||
+    process.env.NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED === "true");
 
 export function labOAuthIssue(provider: LabOAuthProvider, code: string | undefined): string | undefined {
   const name = labProviderNames[provider];

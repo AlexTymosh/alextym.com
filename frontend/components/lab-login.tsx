@@ -3,17 +3,18 @@
 import { useState, type FormEvent } from "react";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword, signInWithPopup, signOut, type Auth, type User } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut, type Auth, type User } from "firebase/auth";
 import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
 import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
 import { createLabOAuthProvider, getLabAuth, retainLabLinkCredential } from "../lib/portfolio-lab/firebase-client";
+import { validNewPassword } from "../lib/portfolio-lab/password-recovery-policy";
 import { ProviderIcon } from "./provider-icon";
 import styles from "./lab-auth.module.css";
 
 type SignInMethod = "password" | LabOAuthProvider;
 
 function linkingInstructions(provider: LabOAuthProvider) {
-  return `Sign in with your invitation email and password, then choose Link ${labProviderNames[provider]} under Linked identities.`;
+  return `Sign in with an existing method for your account, then choose Link ${labProviderNames[provider]} under Linked identities.`;
 }
 
 async function startLabSession(auth: Auth, user: User, method: SignInMethod): Promise<string | null> {
@@ -36,7 +37,7 @@ async function startLabSession(auth: Auth, user: User, method: SignInMethod): Pr
   if (response.status === 403 && body?.code === "ACCESS_DENIED") {
     return method === "password"
       ? "Portfolio Lab access has not been granted. Contact the Owner for help with your invitation."
-      : `Portfolio Lab could not grant access to this ${labProviderNames[method]} account. ${linkingInstructions(method)}`;
+      : "This sign-in method is unavailable for your account. Sign in with an existing method or contact the Owner.";
   }
   if (response.status >= 500) {
     return "Portfolio Lab sign-in is temporarily unavailable. Try again shortly.";
@@ -63,6 +64,8 @@ export function LabLogin() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [register, setRegister] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
   const [pending, setPending] = useState<SignInMethod | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
   const busy = pending !== null;
@@ -72,9 +75,14 @@ export function LabLogin() {
     setMessage(null);
     try {
       const auth = getLabAuth();
-      const { user } = method === "password"
-        ? await signInWithEmailAndPassword(auth, email, password)
-        : await signInWithPopup(auth, createLabOAuthProvider(method));
+      let user: User;
+      if (method !== "password") {
+        user = (await signInWithPopup(auth, createLabOAuthProvider(method))).user;
+      } else if (register) {
+        user = (await createUserWithEmailAndPassword(auth, email, password)).user;
+      } else {
+        user = (await signInWithEmailAndPassword(auth, email, password)).user;
+      }
       const issue = await startLabSession(auth, user, method)
         .catch(() => "Could not reach Portfolio Lab. Try signing in again.");
       if (issue) {
@@ -85,7 +93,10 @@ export function LabLogin() {
       router.replace("/lab");
       router.refresh();
     } catch (error) {
-      setMessage({ tone: "error", text: signInIssue(error, method) });
+      const text = register && method === "password"
+        ? "Could not create an account. Try signing in if you registered before, or contact the Owner."
+        : signInIssue(error, method);
+      setMessage({ tone: "error", text });
     } finally {
       setPending(null);
     }
@@ -93,14 +104,18 @@ export function LabLogin() {
 
   const emailSignIn = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (register && (!validNewPassword(password) || password !== confirmation)) {
+      setMessage({ tone: "error", text: "Choose a password of 12–128 characters and enter it again to confirm." });
+      return;
+    }
     void signIn("password");
   };
 
   return (
     <section className={styles.panel} aria-labelledby="lab-login-title">
       <header className={styles.header}>
-        <h1 id="lab-login-title">Portfolio Lab sign in</h1>
-        <p>For your first visit, use the email and password from your invitation. You can link another account after signing in.</p>
+        <h1 id="lab-login-title">{register ? "Create your account" : "Portfolio Lab sign in"}</h1>
+        <p>Sign in or create an account. Access to each portfolio project is approved by the Owner.</p>
       </header>
 
       {message && (
@@ -112,22 +127,12 @@ export function LabLogin() {
         </p>
       )}
 
-      <div className={styles.stack} role="group" aria-label="Sign in with a linked account">
-        {labSignInProviders.map((provider) => (
-          <button
-            key={provider}
-            type="button"
-            className={styles.providerButton}
-            disabled={busy}
-            onClick={() => void signIn(provider)}
-          >
-            <ProviderIcon provider={provider} />
-            <span>{pending === provider ? `Signing in with ${labProviderNames[provider]}…` : `Continue with ${labProviderNames[provider]}`}</span>
-          </button>
-        ))}
+      <div className={styles.modeSwitch} role="group" aria-label="Account access">
+        <button type="button" disabled={busy} aria-pressed={!register}
+          onClick={() => { setRegister(false); setMessage(null); setConfirmation(""); }}>Sign in</button>
+        <button type="button" disabled={busy} aria-pressed={register}
+          onClick={() => { setRegister(true); setMessage(null); setConfirmation(""); }}>Create account</button>
       </div>
-
-      <p className={styles.divider}>or sign in with email</p>
       <form className={styles.form} onSubmit={emailSignIn}>
         <div className={styles.field}>
           <label htmlFor="lab-email">Email</label>
@@ -145,14 +150,23 @@ export function LabLogin() {
           <input
             id="lab-password"
             type="password"
-            autoComplete="current-password"
+            autoComplete={register ? "new-password" : "current-password"}
+            minLength={register ? 12 : undefined}
+            maxLength={register ? 128 : undefined}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
           />
         </div>
+        {register && (
+          <div className={styles.field}>
+            <label htmlFor="lab-password-confirm">Confirm password</label>
+            <input id="lab-password-confirm" type="password" autoComplete="new-password"
+              value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
+          </div>
+        )}
         <button type="submit" className={styles.primaryButton} disabled={busy}>
-          {pending === "password" ? "Signing in…" : "Sign in with email"}
+          {pending === "password" ? "Please wait…" : register ? "Create account with email" : "Sign in with email"}
         </button>
         <button
           type="button"
@@ -163,6 +177,16 @@ export function LabLogin() {
           Password help
         </button>
       </form>
+      <p className={styles.divider}>or continue with</p>
+      <div className={styles.stack} role="group" aria-label="Continue with a provider">
+        {labSignInProviders.map((provider) => (
+          <button key={provider} type="button" className={styles.providerButton} disabled={busy}
+            onClick={() => void signIn(provider)}>
+            <ProviderIcon provider={provider} />
+            <span>{pending === provider ? `Signing in with ${labProviderNames[provider]}…` : `Continue with ${labProviderNames[provider]}`}</span>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }
