@@ -21,6 +21,14 @@ The follow-up uses a paginated user table with confirmed linked accounts and
 per-project role dropdowns. Sign-in, account and password setup screens now use
 generic site-wide wording.
 
+PR #258 initially failed the `project` job at `824c0f0`: structural checks
+still expected Fleet routes without the authorization layout, an unguarded
+Fleet router mount, password-only Workforce access, and an array of proxy
+rewrites. The checks now enforce the Firebase host adapters, retain legacy
+password compatibility and require fallback proxy routing. Local `repo:check`,
+`config:check`, `wizard:check` and `deployment:check` passed. Check the latest
+PR CI before merging; production authentication activation remains separate.
+
 ## Authoritative documents
 
 - [Portfolio Lab technical requirements](docs/specifications/portfolio-lab-auth-access.md) — `PL-IDENTITY-ACCESS-TRS-001`, version 1.2. It records product requirements, edge cases and acceptance criteria.
