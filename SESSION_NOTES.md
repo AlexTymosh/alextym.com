@@ -1,6 +1,6 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-16
+**Updated:** 2026-11-18
 
 PR #243, the [Firebase identity foundation in #244](https://github.com/AlexTymosh/alextym.com/pull/244)
 and the [Workforce grant foundation in #245](https://github.com/AlexTymosh/alextym.com/pull/245)
@@ -9,11 +9,14 @@ are merged. The follow-up branch `codex/portfolio-lab-auth-resume` starts from
 test evidence. Live OAuth, passwordless email and the Owner console are
 pending. [Identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
 
-Workforce's current production password and links are in use by interview
-reviewers. Keep that sign-in available until 25 November 2026. Develop in a
-feature branch and use separate development services for hosted tests. Any
-Firebase merge or production cutover requires explicit Owner authorization.
-The rollout order is Fleet VOR Hub, followed by Workforce.
+The Owner has authorized preparing the Firebase changes for main. Implement
+and test on `codex/portfolio-lab-auth-resume`, with a commit per completed step.
+Stop before merging and provide a runnable preview for Owner review.
+
+The current slice adds first sign-in through any configured provider, email
+registration, an authenticated account with no project access, Owner-managed
+project grants, and the revised email-first login screen. Facebook uses the
+same flow when its provider is configured. All project access remains UID-based.
 
 ## Authoritative documents
 
@@ -27,8 +30,8 @@ The rollout order is Fleet VOR Hub, followed by Workforce.
 
 ## 1. Agreed product decisions
 
-1. **Identity:** Firebase Authentication with Google, Microsoft, GitHub, email/password and passwordless email-link sign-in.
-2. **Admission:** Owner provisions invitations/users; a successful external-provider login alone never grants access to private projects.
+1. **Identity:** Firebase Authentication with Google, Microsoft, GitHub, optional Facebook, email/password registration and passwordless email-link sign-in.
+2. **Admission:** Any supported first sign-in creates an authenticated Lab account. New accounts receive no project grants. Owner-provisioned accounts retain their credential policies and project grants.
 3. **Account provisioning.** The Owner can explicitly send either the recipient's email and a temporary password or the recipient's email and a password-setup link. The Owner can also copy setup links for private delivery.
 4. **Credential validity.** New initial passwords work for 1–30 days under the application policy. Application invitations have a maximum validity of 30 days. Firebase controls the lifetime of each action code. Account and project grant expiry are separate.
 5. **Email:** No separate mandatory email-verification step. Nevertheless, do not trust an unverified/attacker-controlled provider email as proof that an invitation belongs to its holder. Onboarding and account linking must prove ownership securely.

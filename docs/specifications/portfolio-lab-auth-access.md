@@ -250,15 +250,22 @@ A change or revocation must affect server-side protected operations promptly, in
 - Google OAuth via Firebase.
 - Microsoft OAuth via Firebase. Personal Microsoft accounts and organization accounts require correctly configured Microsoft OAuth applications/tenant policy; an external organization may block authorization.
 - GitHub OAuth via Firebase.
+- Facebook OAuth via Firebase when its Meta application is configured.
 - Firebase email/password.
 
 Configure Firebase to create separate accounts for different identity providers when the email matches. Firebase's one-account-per-email mode can attach or replace a provider by email under its trusted-provider policy. Portfolio Lab requires explicit provider linking and checks the confirmed provider subject under the same UID. Handle account-collision errors explicitly and safely. Provider configuration requires exact callback URLs and authorized development domains. Store OAuth provider secrets in Firebase Authentication.
 
 ### 8.2 Admission versus Firebase account creation
 
-Only Owner-provisioned users may enter protected Portfolio Lab content. **This is application admission control, not a promise that Firebase will never create an unauthorized Auth user record.** Standard social login can create an Firebase Authentication record before the application rejects an uninvited user. On the free-tier architecture, do not assume identity blocking functions are available or enabled.
+First sign-in may use any configured social provider or email/password registration.
+After Firebase verifies the credential, the server atomically registers an active
+Lab identity and its initial provider binding. That identity can hold a Lab
+session, manage its linked accounts and see an access-pending state.
 
-The admission check must happen at session issuance and on protected resource access; unauthorized Firebase users receive no active application session and no grants. The Owner can periodically inspect/clean orphaned Auth records through an auditable administrative procedure.
+Project access requires a separate Owner-assigned grant for the exact Firebase
+UID and project ID. Self-registration creates no grants. Existing invited,
+disabled and password-expired records retain their credential restrictions.
+Retrying registration must preserve existing records and revoked grants.
 
 ### 8.3 One person, multiple emails and providers
 
@@ -276,7 +283,10 @@ Required cases:
 - Unlinking the last functioning sign-in method must be prohibited.
 - Unlinking/relinking must not permit entitlement resurrection after revocation.
 
-**Important UX constraint:** a newly provisioned account cannot be guaranteed to log in *seamlessly on its first visit* with every OAuth provider before those credentials are linked. The interface shall guide a first-time user through password/setup-link login and provider linking where Firebase requires it. This exception is documented rather than hidden.
+First-time visitors may register using any supported method. A visitor using a
+different, unlinked identity gets a separate Lab account with no project grants.
+Users with Owner-issued credentials sign in with those credentials to retain
+their assigned projects, then explicitly link additional identities.
 
 ### 8.4 Email verification policy
 
@@ -573,7 +583,9 @@ The Owner shall display a concise privacy notice describing stored email, accoun
 
 ### 16.1 Login
 
-- Clearly present Google, Microsoft, GitHub and email/password.
+- Present email/password sign-in and registration above the social provider buttons.
+- Present Google, Microsoft, GitHub and configured Facebook with branded buttons.
+- Show an authenticated pending-access state until the Owner assigns project rights.
 - Support passwords supplied by Owner and self-set passwords.
 - Preserve a safe return path from protected project deep links.
 - Handle OAuth popup blocked, provider disabled, enterprise tenant restriction, wrong password, account collision, already linked provider, expired setup link and unavailable Firebase.
