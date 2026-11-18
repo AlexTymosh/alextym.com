@@ -244,3 +244,47 @@
   justify-self: start;
   margin-top: 4px;
 }
+
+.ownerPanel {
+  width: min(100%, 760px);
+}
+
+.userCard {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.accountId {
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.grantForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+}
+
+.grantForm label {
+  flex: 1;
+  min-width: min(100%, 210px);
+  font-size: 0.8125rem;
+}
+
+.grantForm select {
+  min-height: 44px;
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+}
+
+.grantForm p {
+  flex-basis: 100%;
+}

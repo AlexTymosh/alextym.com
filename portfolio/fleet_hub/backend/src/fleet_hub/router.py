@@ -1,6 +1,7 @@
 """Single public API entrypoint for the embedded Fleet VOR Hub project."""
 
 from fastapi import APIRouter
+from fleet_hub.api.dependencies import required as require_demo_access
 
 from fleet_hub.api import (
     vor,
@@ -25,3 +26,8 @@ for module in (
     vor_intake,
 ):
     router.include_router(module.router)
+
+
+def configure_host_access(app, dependency) -> None:
+    """Allow the host to supply its shared identity/project authorization."""
+    app.dependency_overrides[require_demo_access] = dependency

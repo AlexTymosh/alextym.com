@@ -8,11 +8,12 @@ The [requirements specification](../specifications/portfolio-lab-auth-access.md)
 
 ## Identity and session architecture
 
-- Next.js sign-in is implemented at `/lab/login` with Firebase client Auth providers: Google, Microsoft (`microsoft.com`), GitHub, and email/password.
+- Next.js `/lab/login` supports email/password registration and first sign-in through Google, Microsoft, GitHub and configured Facebook.
 - The browser exchanges a *recently authenticated* Firebase ID token for a five-day, HttpOnly, Secure-in-production, SameSite=Strict session cookie via `/lab/session`. This route lives outside `/api/*` so it is **not** forwarded to Render by the existing Next rewrite.
 - Next.js server-rendered `/lab` requires a valid, non-revoked Firebase session and current UID admission.
 - FastAPI independently verifies `Authorization: Bearer` ID tokens or `Authorization: FirebaseSession` session cookies at `/api/lab/identity` and applies the current UID admission policy.
-- Both paths are disabled by default, and neither grants access to Fleet VOR Hub or any other project.
+- First sign-in creates an active Lab identity with no project grants. The signed-in page shows pending approval until the Owner assigns access.
+- With `PORTFOLIO_LAB_ENABLED=true` on both hosts, Fleet and Workforce require UID-based project grants on their pages and direct backend routes. Their password gates apply when the Lab is disabled.
 - Linking starts from a recent admitted session. Firebase authenticates the additional provider, then the server records its verified subject under the same UID.
 - The signed-in Lab page identifies the active sign-in method from the verified session. It marks a provider as linked when the approved Firestore subject matches the current Firebase Auth user.
 
@@ -29,6 +30,7 @@ NEXT_PUBLIC_FIREBASE_API_KEY=<web-api-key>
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<project-id>.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=<project-id>
 NEXT_PUBLIC_FIREBASE_APP_ID=<web-app-id>
+NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED=false
 FIREBASE_PROJECT_ID=<project-id>
 # Choose ONE server credential route, not both:
 FIREBASE_SERVICE_ACCOUNT_JSON=<service-account-json-secret>
@@ -55,7 +57,13 @@ All `NEXT_PUBLIC_*` values are public client application identifiers; **never** 
 5. Configure trusted service-account credentials only in local ignored `.env` files or Vercel/Render secrets. Use one Firebase project per environment where practical. Rotate exposed secrets immediately.
 6. Keep `PORTFOLIO_LAB_ENABLED=false` in production. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
 
-Sign in with the invited account before testing a new provider. Under **Linked identities**, select **Link**, **Open**, and **Confirm** for that provider. Once its row shows **Linked**, sign out and use the provider on the login page. The signed-in page shows the provider used for the new session.
+New visitors can register using any configured sign-in method. Existing invited users sign in with their issued credentials to use the same UID and grants. Under **Linked identities**, select **Link**, **Open**, and **Confirm** to add another provider. A provider already attached to another UID requires Owner-assisted recovery.
+
+The pinned Owner uses `/lab/admin` to assign or revoke `View`, `Test` or `Admin` separately for each project. The list is paginated. Each change requires a recent Owner session, checks the document revision and writes a grant and audit event in the same Firestore transaction. Existing future expiries are retained. Renewed expired grants remain active until revoked.
+
+The frontend catalogue is generated from `portfolio/catalog/registry.json` and the registered `project.json` files during `sync:project-config`. Adding a registered project makes it available in the access editor without duplicating its metadata in Firestore.
+
+For Facebook, configure a Meta application, set the exact Firebase handler URL and enter its App ID and App Secret in Firebase Authentication. Set `NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED=true` only after the provider is ready. Firebase social authentication is included in Spark. Meta may require app publication or review for users outside the app's test roles. [Firebase setup](https://firebase.google.com/docs/auth/web/facebook-login)
 
 `POST /lab/session` returns HTTP 403 with `code: "ACCESS_DENIED"` when a verified Firebase identity lacks Lab admission, or `code: "PASSWORD_EXPIRED"` for an expired initial password. The login page uses these codes for recovery instructions and presents Firebase popup failures separately.
 

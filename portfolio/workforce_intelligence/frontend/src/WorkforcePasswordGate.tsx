@@ -9,7 +9,7 @@ const ACCESS = "/portfolio/workforce-intelligence/api/access";
 
 type State = "loading" | "locked" | "unlocked" | "error";
 
-export function WorkforcePasswordGate() {
+export function WorkforcePasswordGate({ loginPath }: { loginPath?: string } = {}) {
   const [state, setState] = useState<State>("loading");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -55,6 +55,10 @@ export function WorkforcePasswordGate() {
     try {
       const response = await fetch(ACCESS, { method: "DELETE", credentials: "same-origin" });
       if (!response.ok) throw new Error("Sign-out unavailable. Retry.");
+      if (loginPath) {
+        window.location.assign(loginPath);
+        return;
+      }
       setState("locked");
       setMessage("");
     } catch {

@@ -69,6 +69,18 @@ Next.js `/lab/session`, `/lab/session/link`, `/lab/api/identity` and
 `/lab/password/reset/action` use the contracts in the
 [identity setup runbook](architecture/portfolio-lab-identity-setup.md).
 
+`POST /lab/session` atomically registers a previously unknown verified UID
+before issuing its Lab session. Registration creates no project grants.
+`POST /lab/admin/grants` accepts `uid`, `projectId`, `role` and `revision`.
+It requires a recent pinned-Owner session and same-origin JSON. It returns
+200 on an audited update, 409 for a concurrent revision or unavailable account,
+and 401/403 for missing or insufficient authentication.
+
+When Lab authentication is enabled, `/api/vor/*` passes through the Next.js
+Fleet BFF. Both demos independently enforce current project grants in FastAPI.
+`View` permits read methods, `Test` permits ordinary mutations and `Admin`
+also permits project configuration and reset operations.
+
 The protected Workforce data core is mounted under `/api/workforce` and uses
 the same-origin Workforce BFF for browser requests. See the
 [project-owned API contract](../portfolio/workforce_intelligence/docs/api.md)
