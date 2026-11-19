@@ -1,108 +1,185 @@
 "use client";
 
 import { useState } from "react";
+import { FirebaseError } from "firebase/app";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  GithubAuthProvider,
-  GoogleAuthProvider,
-  OAuthProvider,
-  linkWithPopup,
-  reauthenticateWithPopup,
-  signOut,
-} from "firebase/auth";
+import { linkWithPopup, reauthenticateWithPopup, signOut } from "firebase/auth";
+import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
+import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
+import { createLabOAuthProvider, getLabAuth } from "../lib/portfolio-lab/firebase-client";
 import { LAB_RECENT_LOGIN_SECONDS } from "../lib/portfolio-lab/session-policy";
-import { getLabAuth } from "../lib/portfolio-lab/firebase-client";
+import { ProviderIcon } from "./provider-icon";
+import styles from "./lab-auth.module.css";
 
-const kinds = ["google", "microsoft", "github"] as const;
-type ProviderKind = (typeof kinds)[number];
+type PendingLink = { provider: LabOAuthProvider; step: "open" | "confirm" };
+type LinkNotice = { tone: "info" | "error" | "success"; text: string };
 
-function oauthProvider(kind: ProviderKind) {
-  if (kind === "google") return new GoogleAuthProvider();
-  if (kind === "github") return new GithubAuthProvider();
-  return new OAuthProvider("microsoft.com");
+function confirmNotice(provider: LabOAuthProvider): LinkNotice {
+  return {
+    tone: "info",
+    text: `Select Confirm ${labProviderNames[provider]}, then choose the same account to finish linking.`,
+  };
 }
 
-export function LabAccountActions() {
+function linkIssue(error: unknown, provider: LabOAuthProvider) {
+  const code = error instanceof FirebaseError ? error.code : undefined;
+  if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use" ||
+      code === "auth/account-exists-with-different-credential") {
+    return `This ${labProviderNames[provider]} account is already attached to a separate sign-in. Contact support to resolve the conflict before linking it here.`;
+  }
+  return labOAuthIssue(provider, code)
+    ?? `Could not finish linking ${labProviderNames[provider]}. Sign in again and retry.`;
+}
+
+export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAuthProvider[] | null }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<LinkNotice | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<{ kind: ProviderKind; step: "link" | "confirm" } | null>(null);
-  const prepare = async (kind: ProviderKind) => {
-    setBusy(true); setMessage("");
+  const [pending, setPending] = useState<PendingLink | null>(null);
+  const [confirmed, setConfirmed] = useState<LabOAuthProvider[]>([]);
+
+  const prepare = async (provider: LabOAuthProvider) => {
+    setBusy(true);
+    setNotice(null);
     setPending(null);
     try {
       const auth = getLabAuth();
       await auth.authStateReady();
-      const user = auth.currentUser;
-      const session = await fetch("/lab/session", { credentials: "same-origin", cache: "no-store" });
-      const status = session.ok ? await session.json() : null;
-      if (!user || status?.canLink !== true) {
-        setMessage(`Sign in again to link a provider within ${LAB_RECENT_LOGIN_SECONDS / 60} minutes.`);
+      const response = await fetch("/lab/session", { credentials: "same-origin", cache: "no-store" });
+      const session = response.ok ? await response.json() : null;
+      if (!auth.currentUser || session?.canLink !== true) {
+        setNotice({ tone: "error", text: "Sign in again before linking an account." });
         return;
       }
-      const provider = oauthProvider(kind);
-      const alreadyLinked = user.providerData.some((item) => item.providerId === provider.providerId);
-      setPending({ kind, step: alreadyLinked ? "confirm" : "link" });
-      setMessage(alreadyLinked ? "Confirm the provider to finish linking." : "Open the provider to sign in.");
+
+      const alreadyLinked = auth.currentUser.providerData.some((item) => item.providerId === provider);
+      setPending({ provider, step: alreadyLinked ? "confirm" : "open" });
+      setNotice(alreadyLinked ? confirmNotice(provider) : {
+        tone: "info",
+        text: `Select Open ${labProviderNames[provider]} and sign in to the account you want to link.`,
+      });
     } catch {
-      setMessage("Could not check your session. Sign in again before linking.");
-    } finally { setBusy(false); }
+      setNotice({ tone: "error", text: "Could not check your session. Sign in again before linking." });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const confirm = async (kind: ProviderKind) => {
+  const link = async ({ provider, step }: PendingLink) => {
     setBusy(true);
-    setMessage("");
+    setNotice(null);
     try {
       const user = getLabAuth().currentUser;
-      if (!user) throw new Error("Sign in again before linking");
-      const provider = oauthProvider(kind);
-      if (pending?.step === "link") {
-        await linkWithPopup(user, provider);
-        setPending({ kind, step: "confirm" });
-        setMessage("Confirm the provider to finish linking.");
+      if (!user) {
+        setPending(null);
+        setNotice({ tone: "error", text: "Sign in again before linking an account." });
         return;
       }
-      const proof = await reauthenticateWithPopup(user, provider);
+      const oauthProvider = createLabOAuthProvider(provider);
+      if (step === "open") {
+        await linkWithPopup(user, oauthProvider);
+        setPending({ provider, step: "confirm" });
+        setNotice(confirmNotice(provider));
+        return;
+      }
+
+      const proof = await reauthenticateWithPopup(user, oauthProvider);
       const response = await fetch("/lab/session/link", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: provider.providerId, idToken: await proof.user.getIdToken() }),
+        body: JSON.stringify({ provider, idToken: await proof.user.getIdToken() }),
       });
-      if (!response.ok) throw new Error("Provider proof was not accepted");
+      if (!response.ok) {
+        setNotice({ tone: "error", text: response.status >= 500
+          ? "Could not check the link. Try confirming again."
+          : "Could not confirm this link. Sign in again and choose the same account when you confirm." });
+        return;
+      }
+
       setPending(null);
-      setMessage("Provider linked to the existing account.");
-    } catch {
-      setMessage("Linking could not be confirmed. Sign in with your established method and try again. Contact the Owner if the provider belongs to another account.");
-    } finally { setBusy(false); }
+      setConfirmed((providers) => [...providers, provider]);
+      setNotice({ tone: "success", text: `${labProviderNames[provider]} is linked. You can use it the next time you sign in.` });
+    } catch (error) {
+      if (step === "open" && error instanceof FirebaseError && error.code === "auth/provider-already-linked") {
+        setPending({ provider, step: "confirm" });
+        setNotice(confirmNotice(provider));
+        return;
+      }
+      setNotice({ tone: "error", text: linkIssue(error, provider) });
+    } finally {
+      setBusy(false);
+    }
   };
+
   const logout = async () => {
     setBusy(true);
+    setNotice(null);
     try {
       const response = await fetch("/lab/session", { method: "DELETE", credentials: "same-origin" });
       if (!response.ok) throw new Error("Logout failed");
       await signOut(getLabAuth());
       router.replace("/lab/login");
       router.refresh();
-    } catch { setMessage("Unable to sign out. Retry, or clear site cookies."); }
-    finally { setBusy(false); }
+    } catch {
+      setNotice({ tone: "error", text: "Unable to sign out. Try again." });
+    } finally {
+      setBusy(false);
+    }
   };
+
   return (
-    <div>
-      <h2>Linked identities</h2>
-      <p>Link a provider within five minutes of signing in. <Link href="/lab/login">Sign in again</Link> if you reload this page.</p>
-      {kinds.map((kind) => (
-        <p key={kind}>
-          {pending?.kind === kind
-            ? <button disabled={busy} onClick={() => void confirm(kind)}>
-                {pending.step === "link" ? "Open" : "Confirm"} {kind}
-              </button>
-            : <button disabled={busy} onClick={() => void prepare(kind)}>Link {kind}</button>}
+    <section className={styles.accountActions} aria-labelledby="lab-linked-identities">
+      <h2 id="lab-linked-identities">Linked accounts</h2>
+      <p className={styles.hint}>
+        Link an account within {LAB_RECENT_LOGIN_SECONDS / 60} minutes of signing in. <Link href="/lab/login">Sign in again</Link> if you reload this page.
+      </p>
+      {notice && (
+        <p
+          className={`${styles.notice} ${notice.tone === "info" ? "" : styles[notice.tone]}`}
+          role={notice.tone === "error" ? "alert" : "status"}
+        >
+          {notice.text}
         </p>
-      ))}
-      <p><button disabled={busy} onClick={() => void logout()}>Sign out</button></p>
-      {message && <p role="status">{message}</p>}
-    </div>
+      )}
+      <ul className={styles.providerList}>
+        {labSignInProviders.map((provider) => {
+          const name = labProviderNames[provider];
+          const isLinked = linkedProviders?.includes(provider) || confirmed.includes(provider);
+          const providerStep = pending?.provider === provider ? pending : null;
+          let status = linkedProviders ? "Not linked" : "Status unavailable";
+          if (providerStep?.step === "confirm") status = "Awaiting confirmation";
+          if (isLinked) status = "Linked";
+
+          return (
+            <li key={provider} className={styles.providerRow}>
+              <div className={styles.providerIdentity}>
+                <ProviderIcon provider={provider} />
+                <div>
+                  <p className={styles.providerLabel}>{name}</p>
+                  <p className={`${styles.providerState} ${isLinked ? styles.linked : ""}`}>
+                    {status}
+                  </p>
+                </div>
+              </div>
+              {!isLinked && (
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  disabled={busy}
+                  onClick={() => void (providerStep ? link(providerStep) : prepare(provider))}
+                >
+                  {providerStep ? (providerStep.step === "open" ? "Open" : "Confirm") : "Link"} {name}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <button type="button" className={`${styles.secondaryButton} ${styles.signOut}`} disabled={busy} onClick={() => void logout()}>
+        Sign out
+      </button>
+    </section>
   );
 }

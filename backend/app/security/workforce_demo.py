@@ -89,6 +89,12 @@ def valid_session(authorization: str | None) -> bool:
 def require_workforce_member(request: Request) -> None:
     if not enabled():
         raise HTTPException(404, "Demo disabled")
+    if os.getenv("PORTFOLIO_LAB_ENABLED") == "true":
+        from app.security.project_grants import WORKFORCE_PROJECT_ID, require_project_access
+
+        identity = require_project_access(request, WORKFORCE_PROJECT_ID)
+        request.state.workforce_uid = identity["uid"]
+        return
     if not valid_session(request.headers.get("authorization")):
         raise HTTPException(401, "Password required")
     request.state.workforce_uid = "demo-member"
@@ -99,6 +105,8 @@ def login(body: Login, request: Request, response: Response) -> dict[str, str | 
     response.headers["Cache-Control"] = "no-store"
     if not enabled():
         raise HTTPException(404, "Demo disabled")
+    if os.getenv("PORTFOLIO_LAB_ENABLED") == "true":
+        raise HTTPException(404, "Not found")
     configured = os.getenv("VOR_DEMO_PASSWORD", "")
     if not configured:
         raise HTTPException(503, "Demo password is not configured")
@@ -125,4 +133,7 @@ def session(request: Request, response: Response) -> dict[str, bool]:
     response.headers["Cache-Control"] = "no-store"
     if not enabled():
         raise HTTPException(404, "Demo disabled")
+    if os.getenv("PORTFOLIO_LAB_ENABLED") == "true":
+        require_workforce_member(request)
+        return {"authenticated": True}
     return {"authenticated": valid_session(request.headers.get("authorization"))}

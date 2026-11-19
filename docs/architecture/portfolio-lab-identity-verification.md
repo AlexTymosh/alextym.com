@@ -1,5 +1,33 @@
 # Portfolio Lab identity verification
 
+## Self-registration review candidate — 18 November 2026
+
+The `codex/portfolio-lab-auth-resume` branch implements authenticated accounts
+awaiting per-project approval. First sign-in may use email registration or a
+configured social provider. Invited credentials retain their existing UID
+and grant records.
+
+- `task backend:check` passed with 1006 tests. Four external Redis tests were
+  skipped. The existing ignored test virtual environment was used because
+  Windows denied access to files in the default `.venv`.
+- Frontend lint, TypeScript and production build passed. Existing Fleet lint
+  warnings remain. The full frontend suite passed 398 tests with 28 optional
+  integration tests skipped.
+- Ten isolated emulator scenarios passed across desktop and mobile Chromium.
+  They covered email registration, all four social providers, zero-grant
+  sessions, Owner-only grant updates, concurrent edits, project isolation,
+  read-only restrictions and immediate revocation at both hosts.
+- `docker build -f backend/Dockerfile -t alextym-backend .` passed.
+- Local screenshots confirmed email-first login, light/dark styles and the
+  Owner access editor. The local preview uses disposable demo databases.
+
+Facebook is implemented and tested with Firebase emulators. Its real provider
+needs a Meta application and Firebase configuration. Real Google/GitHub and
+the revised Microsoft onboarding still need development-provider verification.
+This candidate is ready for Owner review before merging.
+
+## Prior identity foundation evidence
+
 [PR #244](https://github.com/AlexTymosh/alextym.com/pull/244) ships the verified
 email/password identity foundation with Portfolio Lab disabled in production.
 The Owner provisions accounts and shares the initial credentials privately.
@@ -51,8 +79,10 @@ has granted the designated support account only the project's OAuth Config
 Editor role; switch to that account in a separate browser profile before
 configuring Branding. Keep the OAuth audience in Testing. GitHub registration
 requires access to the account's developer settings. The Microsoft account
-available during verification could not access an Entra tenant with app
-registration rights. Use an existing eligible tenant within the free tier.
+now has a Microsoft OAuth app registration and the provider is enabled in
+`portfolio-lab-dev`. The OAuth request opens Microsoft with the expected
+return URL. Complete linking from an admitted test account before checking
+standalone Microsoft sign-in.
 See the [GitHub app registration guide](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app),
 [Google branding requirements](https://support.google.com/cloud/answer/15544987?hl=en)
 and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
@@ -76,6 +106,7 @@ and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identi
 
 | Scope | Result |
 | --- | --- |
+| Access table and site-wide auth wording (2026-11-18) | PASS: frontend build/lint/types and 12 desktop/mobile Firebase emulator scenarios. One UID with email/password and confirmed Microsoft/Google accounts at different email addresses appeared in one table row. Saving View allowed all three sign-in methods; revoking it denied all three. Workforce access remained separate. Desktop dark and mobile light layouts were inspected, including horizontal table scrolling without page overflow. Real provider configuration remains a separate gate. |
 | Baseline `c13e972` | GitHub Actions passed all five jobs and CodeQL. Vercel Preview reached READY. Local `task ci` passed. |
 | Render dev baseline | The `c13e972` deploy reached Live. Liveness returned HTTP 200, and the disabled Lab identity endpoint returned HTTP 404. |
 | Security candidate `1689cc2` | [GitHub Actions](https://github.com/AlexTymosh/alextym.com/actions/runs/43620062596) 5/5 and [CodeQL](https://github.com/AlexTymosh/alextym.com/runs/132523662280) passed. Vercel and Render deployed the same commit. Local `task frontend:check` passed (308 Playwright tests) with `require(esm)` disabled. The npm production dependency audit reported zero vulnerabilities. |
@@ -84,7 +115,8 @@ and [Microsoft app prerequisites](https://learn.microsoft.com/en-us/entra/identi
 | Live Firebase, IAM and rules | PASS: Render role read Auth and Firestore, and Firestore write was denied. Vercel role issued a session and could not generate setup links. Unauthenticated and authenticated client reads and client writes were denied by Firestore. Wrong password and unknown email returned the same `INVALID_LOGIN_CREDENTIALS`. |
 | Local hosts with Firebase Emulator Suite | PASS: pinned Owner password and session, independent FastAPI credentials, cookie transport, unknown UID, initial-password setup and expiry, emulated OAuth binding and conflict, private link and replay, concurrent resets, disabled account, repair and reissue, and deny-all rules. The simulated interruption was injected as a Firestore state. |
 | Browser credential storage, Firebase emulators | PASS: the Owner signed in via Chromium. Firebase credentials were absent from local storage, session storage and IndexedDB. The app cookie was HttpOnly. Client navigation retained the ability to start linking; reload retained only the app session and required a new sign-in to link; logout cleared the app session. |
-| Live OAuth | Deferred. Google Branding requires the designated support account. GitHub OAuth application registration was blocked by browser access approval; the Microsoft account had no suitable Entra tenant. Verify real sign-in, linking across different emails, and collisions before offering these providers. |
+| Live OAuth | Microsoft granted Firebase authentication during a direct sign-in, which produced a separate test Auth user with no Lab identity record. A complete Microsoft test still requires linking an admitted test account and signing in again. Google Branding requires the designated support account. GitHub OAuth application registration remains pending. |
+| Updated auth screens | PASS with Firebase emulators. Desktop dark mode and mobile light mode showed the sign-in buttons. An independent Microsoft identity received recovery instructions and no Lab session. The screen reported a provider conflict. A confirmed link survived page reload, and a fresh Microsoft sign-in displayed the verified method. |
 | Hosted Firebase sessions (`c394e90`, `1689cc2`) | PASS: the pinned test Owner signed in to the protected preview. Vercel issued an invitee a five-day cookie with `Secure`, `HttpOnly`, `SameSite=Strict`, and host-only scope. Render accepted a valid bearer token and the forwarded cookie. Both hosts denied a valid but unknown UID and a forged credential. Vercel denied missing or hostile Origin and rejected a mutation on the alternate deployment hostname. Both hosts denied an expired five-minute test session. Vercel rejected an otherwise valid ID token when authentication was older than five minutes. |
 | Hosted recovery (`1689cc2`) | PASS after enabling the WAF and lowering the Firebase quota: two concurrent reset requests returned 200 and 400. Replay, stale link and wrong UID were denied. The new password worked; the old token and session were rejected. An injected `reset_pending` blocked password access on both hosts; repair and reissue restored access. A disabled Firebase user was denied on both hosts. No email was sent. |
 | Serverless interruption and abuse | Hosted recovery from an injected interruption passed; the test did not kill a real invocation. PASS: 27 empty POST requests produced 20 application responses and seven WAF `429` responses; a control GET retained its normal `401`. WAF analytics attributed all seven blocks to the dev rule. The fixed window is per Vercel region. |

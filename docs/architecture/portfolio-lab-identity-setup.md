@@ -8,12 +8,14 @@ The [requirements specification](../specifications/portfolio-lab-auth-access.md)
 
 ## Identity and session architecture
 
-- Next.js sign-in is implemented at `/lab/login` with Firebase client Auth providers: Google, Microsoft (`microsoft.com`), GitHub, and email/password.
+- Next.js `/lab/login` supports email/password registration and first sign-in through Google, Microsoft, GitHub and configured Facebook.
 - The browser exchanges a *recently authenticated* Firebase ID token for a five-day, HttpOnly, Secure-in-production, SameSite=Strict session cookie via `/lab/session`. This route lives outside `/api/*` so it is **not** forwarded to Render by the existing Next rewrite.
 - Next.js server-rendered `/lab` requires a valid, non-revoked Firebase session and current UID admission.
 - FastAPI independently verifies `Authorization: Bearer` ID tokens or `Authorization: FirebaseSession` session cookies at `/api/lab/identity` and applies the current UID admission policy.
-- Both paths are disabled by default, and neither grants access to Fleet VOR Hub or any other project.
+- First sign-in creates an active identity with no project grants. The signed-in page shows that no access has been assigned until the Owner assigns access. Authentication screens use the generic titles Sign in, Your account and Password setup for site-wide use.
+- With `PORTFOLIO_LAB_ENABLED=true` on both hosts, Fleet and Workforce require UID-based project grants on their pages and direct backend routes. Their password gates apply when the Lab is disabled.
 - Linking starts from a recent admitted session. Firebase authenticates the additional provider, then the server records its verified subject under the same UID.
+- The signed-in Lab page identifies the active sign-in method from the verified session. It marks a provider as linked when the approved Firestore subject matches the current Firebase Auth user.
 
 ## Environment variables
 
@@ -28,6 +30,7 @@ NEXT_PUBLIC_FIREBASE_API_KEY=<web-api-key>
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<project-id>.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=<project-id>
 NEXT_PUBLIC_FIREBASE_APP_ID=<web-app-id>
+NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED=false
 FIREBASE_PROJECT_ID=<project-id>
 # Choose ONE server credential route, not both:
 FIREBASE_SERVICE_ACCOUNT_JSON=<service-account-json-secret>
@@ -53,6 +56,16 @@ All `NEXT_PUBLIC_*` values are public client application identifiers; **never** 
 4. Under Authentication settings, select **Create multiple accounts for each identity provider** and keep email enumeration protection enabled. Create a fictional Email/Password Owner and pin that Firebase UID in both runtimes. Bootstrap the Owner's OAuth bindings from a recent password sign-in.
 5. Configure trusted service-account credentials only in local ignored `.env` files or Vercel/Render secrets. Use one Firebase project per environment where practical. Rotate exposed secrets immediately.
 6. Keep `PORTFOLIO_LAB_ENABLED=false` in production. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
+
+New visitors can register using any configured sign-in method. Existing invited users sign in with their issued credentials to use the same UID and grants. Under **Linked accounts**, select **Link**, **Open**, and **Confirm** to add another provider. A provider already attached to another UID requires Owner-assisted recovery.
+
+The pinned Owner uses `/lab/admin` to assign or revoke `View`, `Test` or `Admin` separately for each project. The paginated table has one row per Firebase UID, shows its confirmed linked accounts, and provides a role dropdown and Save access button for each project. Grants apply to the UID, so email/password and every confirmed linked provider share the same access and revocation. Separate Firebase users are never combined by matching email alone. Each change requires a recent Owner session, checks the document revision and writes a grant and audit event in the same Firestore transaction. Existing future expiries are retained. Renewed expired grants remain active until revoked.
+
+The frontend catalogue is generated from `portfolio/catalog/registry.json` and the registered `project.json` files during `sync:project-config`. Adding a registered project makes it available in the access editor without duplicating its metadata in Firestore.
+
+For Facebook, configure a Meta application, set the exact Firebase handler URL and enter its App ID and App Secret in Firebase Authentication. Set `NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED=true` only after the provider is ready. Firebase social authentication is included in Spark. Meta may require app publication or review for users outside the app's test roles. [Firebase setup](https://firebase.google.com/docs/auth/web/facebook-login)
+
+`POST /lab/session` returns HTTP 403 with `code: "ACCESS_DENIED"` when a verified Firebase identity lacks Lab admission, or `code: "PASSWORD_EXPIRED"` for an expired initial password. The login page uses these codes for recovery instructions and presents Firebase popup failures separately.
 
 ## Dependencies and local test commands
 
@@ -122,7 +135,7 @@ cross-origin smoke. Keep the Lab feature flag off in production.
 This is **not** an admission/RBAC release. Before PR 2 is ready for merge, implement and test the remaining identity requirements:
 
 - Secure invitation and identity-claim process for users other than Owner, not simply trusting a matching email.
-- Initial password validity from 1 to 90 days, with server enforcement that cannot be bypassed by immediately exchanging a password-derived ID token for a long-lived session. The credential type and password age must be verified against trusted metadata; no native Firebase expiry is assumed.
+- Initial password validity from 1 to 30 days for new credentials. Both servers check the credential type and the stored expiry, including when a password-derived ID token is exchanged for a longer session.
 - Password-setup links and recovery with non-Owner users; no separate email-verification step, but proof of mailbox ownership through setup link where needed.
 - Real-provider tests for Microsoft, Google, GitHub, linking accounts with different emails, existing-credential collisions and corporate tenant restrictions.
 - Session revocation, token expiry, CSRF/Origin checks, backend direct-origin verification, and sign-out behavior.
@@ -182,7 +195,7 @@ least-privilege IAM.
 Development-only command: [Owner provisioning runbook](portfolio-lab-provisioning.md).
 Creates a **new** disabled Firebase UID, commits an `invited` identity and an audit
 record, enables Firebase Auth, then atomically activates the identity with a
-second audit event. Initial credential expiry is 1–90 days and admission remains
+second audit event. Initial credential expiry is 1–30 days and admission remains
 separate from project grants. Provisioning runs from the Owner CLI and records
 an audit event. Activation rechecks the invited state in a Firestore transaction.
 
@@ -258,8 +271,9 @@ Remove-Item Env:\PORTFOLIO_LAB_PROVISIONING_ENABLED
 
 For **existing** accounts, omit `--create-user`. This is a privileged command,
 not an HTTP endpoint. It prints the one-time link once; no email is sent.
-Change/reset code lifetime is controlled by Firebase, **not** by the 90-day
-initial-password rule. To recover an expired/consumed link, issue a new one.
+Firebase controls the lifetime of setup and reset codes. The 30-day policy
+applies to issuance of initial passwords and to application invitations.
+To recover an expired or consumed Firebase link, issue a new one.
 
 ### Partial-failure and security limitations
 

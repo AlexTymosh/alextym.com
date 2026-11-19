@@ -13,7 +13,7 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 MILLIS_PER_DAY = 24 * 60 * 60 * 1000
-MAX_INITIAL_PASSWORD_DAYS = 90
+MAX_INITIAL_PASSWORD_DAYS = 30
 
 
 class ProvisioningError(RuntimeError):
@@ -48,7 +48,7 @@ def normalize_invitee_email(email: str) -> str:
 
 def validate_initial_password(password: str, days: int) -> None:
     if type(days) is not int or not 1 <= days <= MAX_INITIAL_PASSWORD_DAYS:
-        raise ValueError("Initial password validity must be 1–90 days")
+        raise ValueError(f"Initial password validity must be 1–{MAX_INITIAL_PASSWORD_DAYS} days")
     if not isinstance(password, str) or not 12 <= len(password) <= 128:
         raise ValueError("Initial password must have 12–128 characters")
     if any(ord(c) < 32 or ord(c) == 127 for c in password):

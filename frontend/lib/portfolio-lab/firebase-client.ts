@@ -4,15 +4,27 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   browserPopupRedirectResolver,
   connectAuthEmulator,
+  FacebookAuthProvider,
+  GithubAuthProvider,
+  GoogleAuthProvider,
   inMemoryPersistence,
   initializeAuth,
+  OAuthProvider,
   signOut,
   type Auth,
   type User,
 } from "firebase/auth";
+import type { LabOAuthProvider } from "./admission-policy";
 import { LAB_RECENT_LOGIN_SECONDS } from "./session-policy";
 
 let credentialTimer: ReturnType<typeof setTimeout> | undefined;
+
+export function createLabOAuthProvider(provider: LabOAuthProvider) {
+  if (provider === "google.com") return new GoogleAuthProvider();
+  if (provider === "github.com") return new GithubAuthProvider();
+  if (provider === "facebook.com") return new FacebookAuthProvider();
+  return new OAuthProvider(provider);
+}
 
 export function retainLabLinkCredential(auth: Auth, user: User, authTime: number): void {
   clearTimeout(credentialTimer);

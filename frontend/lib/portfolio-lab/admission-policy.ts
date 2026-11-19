@@ -1,7 +1,7 @@
 /** Admission is identity-level only. No project role or capability is granted here. */
 export type LabAdmissionDecision = "allowed" | "denied" | "password_expired";
 
-export const labOAuthProviders = ["google.com", "github.com", "microsoft.com"] as const;
+export const labOAuthProviders = ["google.com", "github.com", "microsoft.com", "facebook.com"] as const;
 export type LabOAuthProvider = (typeof labOAuthProviders)[number];
 
 type LabClaims = {

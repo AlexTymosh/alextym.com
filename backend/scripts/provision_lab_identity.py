@@ -13,6 +13,7 @@ import time
 from getpass import getpass
 
 from app.security.lab_provisioning import (
+    MAX_INITIAL_PASSWORD_DAYS,
     FirestoreIdentityStore,
     ProvisioningError,
     normalize_invitee_email,
@@ -24,7 +25,12 @@ from app.security.lab_provisioning import (
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Provision a new Portfolio Lab identity")
     parser.add_argument("--email", required=True, help="New email; existing users are rejected")
-    parser.add_argument("--days", type=int, default=90, help="Initial password validity: 1–90")
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=MAX_INITIAL_PASSWORD_DAYS,
+        help=f"Initial password validity in days (1–{MAX_INITIAL_PASSWORD_DAYS})",
+    )
     parser.add_argument("--project-id", required=True, help="Explicit Firebase target project ID")
     parser.add_argument("--apply", action="store_true", help="Perform remote writes")
     return parser

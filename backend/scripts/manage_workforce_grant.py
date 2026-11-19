@@ -13,6 +13,7 @@ import sys
 import time
 
 from app.security.firebase_identity import _firebase_app
+from app.security.lab_provisioning import MAX_INITIAL_PASSWORD_DAYS, MILLIS_PER_DAY
 from app.security.project_grants import WORKFORCE_PROJECT_ID, grant_document
 
 
@@ -83,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         batch = db.batch()
         if args.action == "admit-and-grant":
             # The Owner has independently created and checked the Auth account.
-            # Enforce the existing 90-day initial-password admission window.
+            # Apply the shared initial-password validity limit.
             batch.create(
                 admission_ref,
                 {
@@ -91,7 +92,8 @@ def main(argv: list[str] | None = None) -> int:
                     "uid": uid,
                     "status": "active",
                     "password_state": "initial",
-                    "initial_password_expires_at_ms": now + 90 * 24 * 60 * 60 * 1000,
+                    "initial_password_expires_at_ms": now
+                    + MAX_INITIAL_PASSWORD_DAYS * MILLIS_PER_DAY,
                 },
             )
         batch.set(ref, record)

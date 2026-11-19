@@ -21,11 +21,20 @@ function gather(dir, rel = "") {
 assert.ok(existsSync(projectSource), "Missing Fleet Hub frontend implementation");
 const siteFiles = gather(siteRoute).sort();
 assert.deepEqual(siteFiles, [
+  "layout.tsx",
   "new-defect/page.tsx",
   "page.tsx",
   "process/page.tsx",
   "register/page.tsx",
-], "Next.js route folder should only contain public adapters/redirects");
+], "Next.js route folder should only contain public adapters, redirects and the host authorization layout");
+
+const layout = readFileSync(join(siteRoute, "layout.tsx"), "utf8");
+assert.match(layout, /from ["']\.\.\/\.\.\/lib\/portfolio-lab\/project-access-server["']/);
+assert.match(layout, /export const dynamic = ["']force-dynamic["']/);
+assert.match(layout, /await requireLabProjectPage\(["']fleet_hub["']\)/);
+assert.match(layout, /return children;/);
+assert.doesNotMatch(layout, /@fleet-hub|firebase-admin|fetch\s*\(|["']use client["']/,
+  "Fleet authorization layout must delegate access checks and leave domain UI in its project");
 
 const appFiles = gather(projectSource);
 assert.ok(appFiles.filter((x) => x.endsWith(".tsx")).length >= 12, "Fleet components not moved");
@@ -72,4 +81,4 @@ const manifest = JSON.parse(readFileSync(join(root, "portfolio/fleet_hub/project
 assert.equal(manifest.catalog.visible, false);
 assert.equal(manifest.demo.path, "/fleet-vor-hub");
 assert.ok(existsSync(join(root, "portfolio/fleet_hub/backend/src/fleet_hub/services/vor_seed.sqlite3")), "Fleet seed must be owned by portfolio");
-console.log(`Fleet frontend boundary check passed (${appFiles.length} project-owned source/assets, four host routes).`);
+console.log(`Fleet frontend boundary check passed (${appFiles.length} project-owned source/assets, four host routes and authorization layout).`);

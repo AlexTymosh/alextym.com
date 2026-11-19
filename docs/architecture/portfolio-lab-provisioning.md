@@ -4,7 +4,7 @@
 
 ## Why this exists
 
-The admission gate requires a durable Firebase UID-bound identity document. Creating Firebase accounts from email alone would not grant project access and must not automatically join an existing account. This command provisions **new** email/password users with an initial credential and an expiry of 1–90 days, backed by Firestore identity metadata.
+The admission gate requires a durable Firebase UID-bound identity document. Creating Firebase accounts from email alone would not grant project access and must not automatically join an existing account. This command provisions **new** email/password users with an initial credential and an expiry of 1–30 days, backed by Firestore identity metadata.
 
 ## Security boundaries
 
