@@ -21,10 +21,7 @@ def test_reset_code_transferred_into_fragment_not_http_query() -> None:
         "https://preview.example.test",
         "firebase-uid",
     )
-    assert (
-        link
-        == "https://preview.example.test/auth/action#uid=firebase-uid&oobCode=abcDEF123_-1"
-    )
+    assert link == "https://preview.example.test/auth/action#uid=firebase-uid&oobCode=abcDEF123_-1"
     assert "?" not in link
 
 

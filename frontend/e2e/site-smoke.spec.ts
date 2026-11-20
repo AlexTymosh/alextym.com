@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
+import { labProjects } from "../lib/portfolio-lab/project-catalog";
 import { chatShellCopy } from "../content/chat";
 import {
   chatConfig,
@@ -9,6 +10,16 @@ import {
 
 test.beforeEach(async ({ page }) => {
   await mockWarmup(page);
+});
+
+test("public portfolio links to every registered project without signing in", async ({ page }) => {
+  await gotoAndExpectOk(page, "/portfolio");
+  for (const project of labProjects) {
+    const card = page.getByRole("link").filter({
+      has: page.getByRole("heading", { name: project.title, exact: true }),
+    });
+    await expect(card).toHaveAttribute("href", project.path);
+  }
 });
 
 test("renders key public pages", async ({ page }) => {

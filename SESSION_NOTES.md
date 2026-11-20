@@ -26,6 +26,14 @@ requires the user's interactive consent and remains a production check.
 Another 122 checks passed against the production build for disabled routes,
 admission and recovery policies, public pages, navigation and light/dark themes.
 
+PR #260 CI follow-up: the Workforce scaffold checker now follows the shared
+project cards and `/sign-in` route. A desktop/mobile browser regression checks
+the public catalogue links for every registered project. The recovery-link
+test was reformatted to satisfy Ruff. Local repository checks, frontend lint
+for the new test, TypeScript and both browser scenarios passed. The full backend
+suite passed 1006 tests with four optional Redis tests skipped; backend lint,
+formatting, import boundaries and compilation also passed.
+
 - **19 November, `c809f23`.** A disposable user registered through the site,
   received a session, signed out and signed back in with a password. Both the
   site and the direct Render API denied access to both projects for that
