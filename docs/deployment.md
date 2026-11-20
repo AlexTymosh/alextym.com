@@ -172,11 +172,13 @@ sign-in page is [alextym.com/lab/login](https://alextym.com/lab/login).
 
 The Owner table queries Firestore identities by document ID. The Vercel role
 needs both `datastore.entities.get` and `datastore.entities.list` for that
-query. If the table is unavailable, use the project's IAM principals page to
-identify the custom role assigned to the Vercel service account. In **Roles →
-Custom**, open that role, choose **Edit role → Add permissions**, add the
-missing permission and click **Update**. Reload the Owner table once IAM has
-applied the change. [Firestore permissions](https://firebase.google.com/docs/firestore/security/iam)
+query. In this project the custom role is **Portfolio Lab Vercel Runtime**
+(`PortfolioLabVercelRuntime`). If the query returns `PermissionDenied`, check
+this role under **IAM & Admin → Roles → Custom**. To add a missing permission,
+open **Edit role → Add permissions**, use the filter above the permissions
+table, select the permission and click **Add**, then **Update**. Reload the
+Owner table once IAM has applied the change.
+[Firestore permissions](https://firebase.google.com/docs/firestore/security/iam)
 and [editing custom roles](https://docs.cloud.google.com/iam/docs/creating-custom-roles).
 
 To enable the existing GitHub button, register a GitHub OAuth App with homepage

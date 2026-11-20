@@ -14,11 +14,12 @@ Both production hosts use `portfolio-lab-dev` and the same pinned Owner UID.
 - **20 November, `e5b3968`.** Both production hosts serve this commit. The
   sign-in page opened, both demos and the Owner panel redirected guests to it,
   and both project APIs returned 401 to guests on the site and on Render.
-- **Owner access table.** The Vercel service account can read individual
-  identity documents. Its user-list query returned `PermissionDenied`, and IAM
-  confirmed that `datastore.entities.list` is missing. Add this permission to
-  its existing custom role, then verify a grant and revocation for one project
-  using a separate visitor account. [Production access setup](docs/deployment.md#production-firebase-access)
+- **Owner access table.** On 20 November the Owner added
+  `datastore.entities.list` to the Vercel runtime role. Calling the site's
+  `listLabUsers` function with the Vercel credential against production
+  Firebase returned accounts and grant settings for both projects. The remaining browser
+  check is to grant and revoke one project for a separate visitor from a
+  personal Owner session. [Production access setup](docs/deployment.md#production-firebase-access)
 - **Sign-in providers.** Google and Microsoft returned their sign-in URLs.
   Complete an interactive sign-in to verify each. GitHub returned
   `OPERATION_NOT_ALLOWED` and requires provider configuration. Facebook is
