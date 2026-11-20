@@ -125,7 +125,7 @@ For development smoke tests with `PORTFOLIO_LAB_ENABLED=true`, configure a local
 - With a valid Owner cookie and a reachable backend: returns 200.
 - A revoked/wrong-owner cookie or direct unauthenticated request to Render:
   returns 401/403 as appropriate.
-- Backend offline: the probe returns 502; `/lab` login and dashboard do not
+- Backend offline: the probe returns 502; `/sign-in` and `/settings` do not
   depend on Render availability.
 
 At this PR 2 checkpoint, the remaining gates covered invited-user admission,

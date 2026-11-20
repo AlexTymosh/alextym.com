@@ -58,8 +58,7 @@ Settings has separate project, profile, sign-in method and Owner access views.
 The project cards are shared with the public `/portfolio` catalogue, with
 current per-project grants determining the signed-in user's available cards.
 Generic `/auth/*` routes handle sessions, linking, profiles and recovery.
-The original `/lab` pages redirect to these routes, while existing session
-cookies and backend authorization remain compatible.
+The site uses these account routes directly.
 
 Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the

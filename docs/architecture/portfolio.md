@@ -49,7 +49,7 @@ generic project-boundary checks.
 
 The self-registration branch adds the account approval flow. Firebase-verified
 first sign-in creates an identity record and a provider binding atomically.
-Owner edits at `/lab/admin` manage grants under the existing project IDs. The
+Owner edits at `/settings/access` manage grants under the existing project IDs. The
 catalogue is generated from the Git registry during the frontend build.
 
 Fleet's public `configure_host_access` adapter lets FastAPI install the shared

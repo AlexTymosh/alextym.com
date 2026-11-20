@@ -25,6 +25,19 @@ test.describe("Site account settings", () => {
   test.skip(!enabled, "Requires the isolated local Firebase emulators");
   test.setTimeout(90_000);
 
+  test("old account URLs return 404 without a redirect", async ({ request }) => {
+    for (const path of ["/lab", "/lab/login", "/lab/admin", "/lab/password/reset", "/lab/session", "/lab/session/link", "/lab/api/identity", "/lab/admin/grants", "/lab/password/reset/action"]) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status(), path).toBe(404);
+      expect(response.headers()).not.toHaveProperty("location");
+    }
+    for (const path of ["/lab/session", "/lab/session/link", "/lab/admin/grants", "/lab/password/reset/action"]) {
+      const response = await request.post(path, { data: {}, maxRedirects: 0 });
+      expect(response.status(), path).toBe(404);
+      expect(response.headers()).not.toHaveProperty("location");
+    }
+  });
+
   test("profile, avatar, project grants and navigation stay bound to the signed-in user", async ({ page, playwright }, info) => {
     const email = await register(page);
     await expect(page).toHaveURL(site + "/settings");

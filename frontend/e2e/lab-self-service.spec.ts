@@ -99,7 +99,8 @@ test.describe("Portfolio Lab self-service approval", () => {
       await expect(page.getByText("Fleet VOR Hub", { exact: true })).toBeVisible();
       await expect(page.getByText("View access", { exact: true })).toBeVisible();
       await expect(page.getByText("Workforce & Recruitment Intelligence", { exact: true })).toHaveCount(0);
-      const cookie = (await page.context().cookies()).find((entry) => entry.name === "portfolio_lab_session")!;
+      const cookie = (await page.context().cookies()).find((entry) =>
+        entry.name === "__Host-portfolio_lab_session" || entry.name === "portfolio_lab_session")!;
       const auth = { Authorization: "FirebaseSession " + cookie.value };
       expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(200);
       expect((await page.request.post("/api/vor/bookings", { headers: { Origin: site }, data: {} })).status()).toBe(403);

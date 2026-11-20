@@ -84,14 +84,14 @@ def run() -> None:
 
         def exchange(token: str, origin: str = SITE) -> httpx.Response:
             return http.post(
-                f"{SITE}/lab/session", headers={"Origin": origin}, json={"idToken": token}
+                f"{SITE}/auth/session", headers={"Origin": origin}, json={"idToken": token}
             )
 
         def direct(token: str | None = None, scheme: str = "Bearer") -> httpx.Response:
             headers = {"Authorization": f"{scheme} {token}"} if token else {}
             return http.get(f"{BACKEND}/api/lab/identity", headers=headers)
 
-        def browser_session(cookie: str, path: str = "/lab/session") -> httpx.Response:
+        def browser_session(cookie: str, path: str = "/auth/session") -> httpx.Response:
             return http.get(f"{SITE}{path}", headers={"Cookie": f"{COOKIE}={cookie}"})
 
         def make_link(email: str, *, create: bool = False) -> tuple[str, str]:
@@ -109,7 +109,7 @@ def run() -> None:
 
         def redeem(uid: str, code: str, new_password: str) -> httpx.Response:
             return http.post(
-                f"{SITE}/lab/password/reset/action",
+                f"{SITE}/auth/password/reset",
                 headers={"Origin": SITE},
                 json={"uid": uid, "oobCode": code, "newPassword": new_password},
             )
@@ -158,7 +158,7 @@ def run() -> None:
         )
         check(
             "valid session through Next.js and FastAPI",
-            browser_session(owner_cookie, "/lab/api/identity").status_code == 200,
+            browser_session(owner_cookie, "/auth/identity").status_code == 200,
         )
         check("direct valid ID token", direct(owner_token).status_code == 200)
         check(
@@ -178,18 +178,18 @@ def run() -> None:
             (
                 browser_session("malformed").status_code == 401
                 and exchange(owner_token, "https://cross-origin.example.test").status_code == 403
-                and http.delete(f"{SITE}/lab/session", headers={"Origin": "null"}).status_code
+                and http.delete(f"{SITE}/auth/session", headers={"Origin": "null"}).status_code
                 == 403
             ),
         )
         foreign = http.post(
-            f"{SITE}/lab/session/link", headers={"Origin": "https://cross-origin.example.test"}
+            f"{SITE}/auth/session/link", headers={"Origin": "https://cross-origin.example.test"}
         )
         check("cross-origin provider binding rejected", foreign.status_code == 403)
         check(
             "streamed oversized JSON rejected",
             http.post(
-                f"{SITE}/lab/session",
+                f"{SITE}/auth/session",
                 headers={"Origin": SITE, "Content-Type": "application/json"},
                 content=iter([b'{"idToken":"', b"a" * 11_000, b'"}']),
             ).status_code
@@ -242,7 +242,7 @@ def run() -> None:
             exchange(proof["idToken"]).status_code == 403,
         )
         recorded = http.post(
-            f"{SITE}/lab/session/link",
+            f"{SITE}/auth/session/link",
             headers={
                 "Origin": SITE,
                 "Cookie": f"{COOKIE}={user_cookie}",
@@ -286,7 +286,7 @@ def run() -> None:
             (exchange(github_token).status_code == 403 and direct(github_token).status_code == 403),
         )
         rejected = http.post(
-            f"{SITE}/lab/session/link",
+            f"{SITE}/auth/session/link",
             headers={
                 "Origin": SITE,
                 "Cookie": f"{COOKIE}={user_cookie}",

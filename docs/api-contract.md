@@ -86,9 +86,7 @@ The resulting image is limited to 100 KB. Each write rechecks admission and
 the profile revision in a Firestore transaction. Concurrent changes return 409.
 Profiles return `Cache-Control: no-store`.
 
-The former `/lab` pages redirect to `/settings`, `/sign-in` and
-`/settings/access`. Existing `/lab` API routes remain available for clients
-using an older deployment. Private password setup links use
+Private password setup links use
 `/auth/action#uid=…&oobCode=…`. The same page handles Firebase email reset
 links through Firebase's single-use action code protocol.
 

@@ -206,8 +206,7 @@ Account settings live at `/settings`. Its profile and sign-in methods
 sections use `/settings/profile` and `/settings/connections`. The public
 `/portfolio` page lists projects for visitors. Protected project pages and
 APIs continue to check the session and project grant independently.
-Old account URLs redirect to the new pages. Existing OAuth provider callbacks
-continue to use Firebase's `/__/auth/handler` endpoint.
+OAuth provider callbacks use Firebase's `/__/auth/handler` endpoint.
 
 ### Reusing the template
 
