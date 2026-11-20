@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { LabLogin } from "../../../components/lab-login";
+import { notFound, redirect } from "next/navigation";
 import { isLabEnabled } from "../../../lib/portfolio-lab/firebase-server";
 
-export const metadata: Metadata = { title: "Sign in", robots: { index: false, follow: false } };
+export const dynamic = "force-dynamic";
+export const metadata = { robots: { index: false, follow: false } };
 
-export default function LabLoginPage() {
+export default async function LegacyAccountPage() {
   if (!isLabEnabled()) notFound();
-  return <LabLogin />;
+  redirect("/sign-in");
 }

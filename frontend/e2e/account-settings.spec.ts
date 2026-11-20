@@ -1,0 +1,121 @@
+import { randomBytes } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
+import sharp from "sharp";
+
+const site = "http://localhost:14300";
+const emulator = "http://127.0.0.1:19099";
+const project = "demo-portfolio-lab";
+const password = "Synthetic-account-password-123!";
+const enabled = process.env.LAB_EMULATOR_E2E === "true" &&
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === project && process.env.PLAYWRIGHT_BASE_URL === site;
+
+async function register(page: Page) {
+  const email = "account-" + randomBytes(8).toString("hex") + "@example.test";
+  await page.goto("/sign-in");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Confirm password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Create account with email", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  return email;
+}
+
+test.describe("Site account settings", () => {
+  test.skip(!enabled, "Requires the isolated local Firebase emulators");
+  test.setTimeout(90_000);
+
+  test("profile, avatar, project grants and navigation stay bound to the signed-in user", async ({ page, playwright }, info) => {
+    const email = await register(page);
+    await expect(page).toHaveURL(site + "/settings");
+    await expect(page.getByRole("status")).toContainText("No access has been assigned");
+    const tabs = page.getByRole("navigation", { name: "Settings sections" });
+    await tabs.getByRole("link", { name: "Profile", exact: true }).click();
+    await page.getByLabel("First name", { exact: true }).fill("Taylor");
+    await page.getByLabel("Last name", { exact: true }).fill("Example");
+    const png = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#ff3e00" } }).png().toBuffer();
+    await page.getByLabel("Profile photo", { exact: true }).setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: png });
+    await page.getByRole("button", { name: "Save profile", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText("Profile saved.");
+    await expect(page.locator(".nav-account")).toContainText("Taylor Example");
+    const profile = await (await page.request.get("/auth/profile")).json();
+    expect(profile.avatarUrl).toMatch(/^data:image\/webp;base64,/);
+    expect(profile.email).toBe(email);
+    expect(profile).not.toHaveProperty("password");
+    await page.reload();
+    await expect(page.getByLabel("First name", { exact: true })).toHaveValue("Taylor");
+    await expect(page.getByLabel("Last name", { exact: true })).toHaveValue("Example");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: info.outputPath("settings-profile.png"), fullPage: true });
+
+    const change = { firstName: "Updated", lastName: "Example", avatarSource: "none", revision: profile.revision };
+    const concurrent = await Promise.all([0, 1].map(() => page.request.post("/auth/profile", {
+      headers: { Origin: site }, data: change,
+    })));
+    expect(concurrent.map((response) => response.status()).sort()).toEqual([200, 409]);
+    expect((await page.request.post("/auth/profile", {
+      headers: { Origin: "https://untrusted.example.test" }, data: { ...change, revision: profile.revision + 1 },
+    })).status()).toBe(403);
+    expect((await page.request.post("/auth/profile", {
+      headers: { Origin: site }, data: { ...change, revision: profile.revision + 1, avatarSource: "upload",
+        avatarData: "data:image/png;base64," + Buffer.from("<svg onload='alert(1)'/>").toString("base64") },
+    })).status()).toBe(400);
+    expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
+    expect((await page.request.get("/portfolio/workforce-intelligence/api/status")).status()).toBe(403);
+
+    const guest = await playwright.request.newContext({ baseURL: site });
+    try {
+      expect((await guest.get("/auth/profile")).status()).toBe(401);
+      expect((await guest.post("/auth/profile", { headers: { Origin: site }, data: change })).status()).toBe(401);
+      const publicCatalogue = await guest.get("/portfolio");
+      expect(publicCatalogue.status()).toBe(200);
+      expect(await publicCatalogue.text()).toContain("Fleet VOR Hub");
+    } finally { await guest.dispose(); }
+
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page).toHaveURL(site + "/sign-in");
+    await register(page);
+    const other = await (await page.request.get("/auth/profile")).json();
+    expect(other.firstName).toBe("");
+    expect(other.avatarUrl).toBeNull();
+    expect(other.email).not.toBe(email);
+  });
+
+  test("Firebase reset links show the brand, confirm passwords and reject reuse", async ({ page }) => {
+    const email = await register(page);
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByRole("button", { name: "Password help", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Check your inbox");
+    const codes = await (await page.request.get(emulator + "/emulator/v1/projects/" + project + "/oobCodes")).json();
+    const code = codes.oobCodes.filter((entry: { email: string; requestType: string }) =>
+      entry.email === email && entry.requestType === "PASSWORD_RESET").at(-1).oobCode;
+    const link = "/auth/action?mode=resetPassword&oobCode=" + encodeURIComponent(code);
+    await page.goto(link);
+    await expect(page.getByLabel("New password", { exact: true })).toBeVisible();
+    await expect(page.locator('img[src*="icon.png"]')).toBeVisible();
+    await expect(page).toHaveURL(site + "/auth/action");
+    await page.getByLabel("New password", { exact: true }).fill(password + "-new");
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Set password", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("do not match");
+    await page.getByLabel("Confirm password", { exact: true }).fill(password + "-new");
+    await page.getByRole("button", { name: "Show password", exact: true }).first().click();
+    await expect(page.getByLabel("New password", { exact: true })).toHaveAttribute("type", "text");
+    await page.getByRole("button", { name: "Hide password", exact: true }).click();
+    await page.getByRole("button", { name: "Set password", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Password updated", exact: true })).toBeVisible();
+    await page.goto(link);
+    await expect(page.getByRole("status")).toContainText("already been used");
+    const old = await page.request.post(emulator + "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + project, {
+      data: { email, password, returnSecureToken: true },
+    });
+    expect(old.ok()).toBeFalsy();
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password + "-new");
+    await page.getByRole("button", { name: "Sign in with email", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  });
+});

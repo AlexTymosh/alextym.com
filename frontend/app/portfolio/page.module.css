@@ -14,5 +14,6 @@
 .logo { width: 4rem; height: 4rem; display: grid; place-items: center; object-fit: contain; border-radius: .8rem; }
 span.logo { background: #164e64; color: #fff; }
 .cta { margin-top: auto; font-weight: 650; text-underline-offset: .2em; }
+.access { color: var(--muted); font-size: .8125rem; }
 .card:hover .cta { text-decoration: underline; }
 @media (max-width: 610px) { .projects { grid-template-columns: 1fr; } }

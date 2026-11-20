@@ -3,13 +3,14 @@
 import { useState, type FormEvent } from "react";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut, type Auth, type User } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, type Auth, type User } from "firebase/auth";
 import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
 import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
 import { createLabOAuthProvider, getLabAuth, retainLabLinkCredential } from "../lib/portfolio-lab/firebase-client";
 import { validNewPassword } from "../lib/portfolio-lab/password-recovery-policy";
 import { ProviderIcon } from "./provider-icon";
 import { PasswordInput } from "./password-input";
+import { useClientReady } from "../lib/use-client-ready";
 import styles from "./lab-auth.module.css";
 
 type SignInMethod = "password" | LabOAuthProvider;
@@ -63,13 +64,14 @@ function signInIssue(error: unknown, method: SignInMethod) {
 
 export function LabLogin() {
   const router = useRouter();
+  const ready = useClientReady();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [register, setRegister] = useState(false);
   const [confirmation, setConfirmation] = useState("");
-  const [pending, setPending] = useState<SignInMethod | null>(null);
+  const [pending, setPending] = useState<SignInMethod | "recovery" | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
-  const busy = pending !== null;
+  const busy = !ready || pending !== null;
 
   const signIn = async (method: SignInMethod) => {
     setPending(method);
@@ -112,6 +114,23 @@ export function LabLogin() {
     void signIn("password");
   };
 
+  const passwordHelp = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setMessage({ tone: "info", text: "Enter your email address, then choose Password help." });
+      return;
+    }
+    setPending("recovery");
+    setMessage(null);
+    try {
+      await sendPasswordResetEmail(getLabAuth(), email);
+      setMessage({ tone: "info", text: "If an account uses that email, a password reset link has been sent. Check your inbox." });
+    } catch {
+      setMessage({ tone: "error", text: "Unable to request a reset link. Try again shortly." });
+    } finally {
+      setPending(null);
+    }
+  };
+
   return (
     <section className={styles.panel} aria-labelledby="lab-login-title">
       <header className={styles.header}>
@@ -141,6 +160,7 @@ export function LabLogin() {
             type="email"
             autoComplete="username"
             value={email}
+            disabled={busy}
             onChange={(event) => setEmail(event.target.value)}
             required
           />
@@ -153,6 +173,7 @@ export function LabLogin() {
             minLength={register ? 12 : undefined}
             maxLength={register ? 128 : undefined}
             value={password}
+            disabled={busy}
             onChange={(event) => setPassword(event.target.value)}
             required
           />
@@ -161,7 +182,7 @@ export function LabLogin() {
           <div className={styles.field}>
             <label htmlFor="lab-password-confirm">Confirm password</label>
             <PasswordInput id="lab-password-confirm" autoComplete="new-password"
-              value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
+              value={confirmation} disabled={busy} onChange={(event) => setConfirmation(event.target.value)} required />
           </div>
         )}
         <button type="submit" className={styles.primaryButton} disabled={busy}>
@@ -171,7 +192,7 @@ export function LabLogin() {
           type="button"
           className={styles.textAction}
           disabled={busy}
-          onClick={() => setMessage({ tone: "info", text: "Contact support for a password setup or reset link." })}
+          onClick={() => void passwordHelp()}
         >
           Password help
         </button>

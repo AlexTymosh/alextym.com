@@ -4,13 +4,14 @@ import { useState } from "react";
 import { FirebaseError } from "firebase/app";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { linkWithPopup, reauthenticateWithPopup, signOut } from "firebase/auth";
+import { linkWithPopup, reauthenticateWithPopup } from "firebase/auth";
 import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
 import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
 import { createLabOAuthProvider, getLabAuth } from "../lib/portfolio-lab/firebase-client";
 import { LAB_RECENT_LOGIN_SECONDS } from "../lib/portfolio-lab/session-policy";
 import { ProviderIcon } from "./provider-icon";
 import styles from "./lab-auth.module.css";
+import { useClientReady } from "../lib/use-client-ready";
 
 type LinkNotice = { tone: "info" | "error" | "success"; text: string };
 
@@ -33,6 +34,7 @@ function linkIssue(error: unknown, provider: LabOAuthProvider) {
 
 export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAuthProvider[] | null }) {
   const router = useRouter();
+  const ready = useClientReady();
   const [notice, setNotice] = useState<LinkNotice | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<LabOAuthProvider | null>(null);
@@ -74,6 +76,7 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
       setPending(null);
       setConfirmed((providers) => [...providers, provider]);
       setNotice({ tone: "success", text: `${labProviderNames[provider]} is linked. You can use it the next time you sign in.` });
+      router.refresh();
     } catch (error) {
       if (error instanceof FirebaseError && error.code === "auth/provider-already-linked") {
         setPending(provider);
@@ -81,22 +84,6 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
         return;
       }
       setNotice({ tone: "error", text: linkIssue(error, provider) });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const logout = async () => {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const response = await fetch("/auth/session", { method: "DELETE", credentials: "same-origin" });
-      if (!response.ok) throw new Error("Logout failed");
-      await signOut(getLabAuth());
-      router.replace("/sign-in");
-      router.refresh();
-    } catch {
-      setNotice({ tone: "error", text: "Unable to sign out. Try again." });
     } finally {
       setBusy(false);
     }
@@ -139,7 +126,7 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
                 <button
                   type="button"
                   className={styles.secondaryButton}
-                  disabled={busy}
+                  disabled={!ready || busy}
                   onClick={() => void link(provider)}
                 >
                   {pending === provider ? "Confirm" : "Link"} {name}
@@ -149,9 +136,6 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
           );
         })}
       </ul>
-      <button type="button" className={`${styles.secondaryButton} ${styles.signOut}`} disabled={busy} onClick={() => void logout()}>
-        Sign out
-      </button>
     </section>
   );
 }

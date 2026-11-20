@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
@@ -17,9 +18,9 @@ export async function labSession(cookie?: string): Promise<DecodedIdToken | null
   return await getLabAdmissionDecision(claims) === "allowed" ? claims : null;
 }
 
-export async function currentLabSession() {
+export const currentLabSession = cache(async () => {
   return labSession((await cookies()).get(LAB_SESSION_COOKIE)?.value);
-}
+});
 
 export async function labProjectRole(uid: string, projectId: string): Promise<ProjectRole | null> {
   if (!labProjects.some((project) => project.id === projectId)) return null;

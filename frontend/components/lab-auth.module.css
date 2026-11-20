@@ -285,6 +285,12 @@
   width: min(100%, var(--page-width));
 }
 
+.embeddedPanel {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
 .userCard {
   display: grid;
   gap: 12px;
