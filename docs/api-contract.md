@@ -71,6 +71,13 @@ Next.js `/auth/session`, `/auth/session/link`, `/auth/identity` and
 
 `POST /auth/session` atomically registers a previously unknown verified UID
 before issuing its Lab session. Registration creates no project grants.
+`GET /auth/session` reports `canLink: true` for every valid admitted session,
+regardless of the elapsed time since sign-in. `POST /auth/session/reauthenticate`
+requires same-origin JSON, an existing admitted cookie and a recent `idToken`
+for the same UID from an already admitted sign-in method. It returns 200 with
+`authTime` and a refreshed cookie, 400/413 for invalid input, 401 for missing or
+invalid credentials, 403 for identity/admission/origin failure and 503 when
+admission is unavailable. It never creates users or grants.
 `POST /auth/access/grants` accepts `uid`, `projectId`, `role` and `revision`.
 It requires a recent pinned-Owner session and same-origin JSON. It returns
 200 on an audited update, 409 for a concurrent revision or unavailable account,

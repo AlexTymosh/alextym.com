@@ -92,9 +92,11 @@ task ci
 ## Cross-host identity transport (second PR 2 increment)
 
 A five-day website cookie does **not** automatically reach the Render domain.
-The Firebase client keeps credentials in memory for at most five minutes
-to support explicit provider linking. Reloading the page clears client
-credentials while the website cookie remains valid. An explicit **same-origin
+The Firebase client keeps credentials in page memory to support explicit
+provider linking, without a timer after sign-in. Reloading clears client
+credentials while the website cookie remains valid. In Settings, the user can
+confirm an existing sign-in method and continue linking without signing out.
+An explicit **same-origin
 BFF** carries the website session for server-side protected requests:
 
 1. `GET /auth/identity` runs in Next.js (it is not covered by `/api/*` rewrites).
@@ -205,11 +207,20 @@ an audit event. Activation rechecks the invited state in a Firestore transaction
 
 Each protected host checks the Firebase UID, the Firebase-signed provider
 subject, the current Firebase provider data and the subject approved in
-`oauth_provider_subjects`. The UI starts with a recent admitted session and uses
+`oauth_provider_subjects`. Linking is available at any age of a valid admitted
+website session. The UI uses
 Firebase linking followed by reauthentication of the additional provider.
 `POST /auth/session/link` requires the existing session cookie, a fresh Firebase
 proof for the same UID and provider, and the exact configured Origin. Its
 transaction rechecks admission and writes the binding and its audit event.
+
+When the page no longer has its in-memory Firebase credential,
+`POST /auth/session/reauthenticate` validates the existing cookie and a recent
+proof from an already admitted sign-in method for exactly the same UID. It
+rotates the website cookie without creating users or grants. A different UID,
+an unconfirmed provider, a revoked session or an untrusted Origin is rejected.
+Recent-proof checks during session creation and Owner grant changes are
+independent of account linking; there is no linking deadline after sign-in.
 
 Confirmed OAuth credentials can be used after an initial password expires or
 during a pending password reset for an active UID. A fresh but unconfirmed Firebase

@@ -78,6 +78,13 @@ for confirmed linked identities. Microsoft photo import requests the signed-in
 user's photo from the fixed Microsoft Graph endpoint in the browser. Its OAuth
 token stays in memory.
 
+Provider linking has no time limit after website sign-in. The existing admitted
+cookie, the additional provider proof and the current Firebase provider data
+must identify the same UID. Browser credentials stay in page memory without
+local/session storage. After a reload, in-page reauthentication accepts only
+an already admitted credential for the cookie's UID before rotating the cookie;
+it cannot approve an unconfirmed provider or switch to another user.
+
 The custom `/auth/action` page removes the reset code from the visible URL,
 uses no-referrer metadata and is excluded from the page analytics allowlist.
 Firebase email resets use Firebase's code verification and confirmation APIs.

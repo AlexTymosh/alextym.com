@@ -8,6 +8,14 @@ export const LAB_SESSION_COOKIE =
     ? "__Host-portfolio_lab_session"
     : "portfolio_lab_session";
 
+export const LAB_SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: "/",
+  maxAge: LAB_SESSION_MAX_AGE_MS / 1000,
+};
+
 export function isLabEnabled(): boolean {
   return process.env.PORTFOLIO_LAB_ENABLED === "true";
 }

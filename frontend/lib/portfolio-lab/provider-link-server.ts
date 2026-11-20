@@ -12,7 +12,6 @@ import { getLabAdminAuth } from "./firebase-server";
 import {
   decideLabAdmission, getLabIdentityDocument, hasCurrentLabOAuthSubject,
 } from "./lab-admission-server";
-import { isRecentLabLogin } from "./session-policy";
 
 export function linkProofSubject(
   session: DecodedIdToken,
@@ -20,7 +19,6 @@ export function linkProofSubject(
   provider: LabOAuthProvider,
 ): string | undefined {
   if (proof.uid !== session.uid || labSignInProvider(proof) !== provider ||
-      !isRecentLabLogin(session.auth_time) || !isRecentLabLogin(proof.auth_time) ||
       proof.auth_time < session.auth_time) return;
   return labOAuthSubject(proof, provider);
 }
@@ -47,8 +45,7 @@ export async function confirmLabProviderLink(
   const event = db.collection("portfolio_lab_invitation_events").doc();
   return db.runTransaction(async (transaction) => {
     const record = (await transaction.get(identity)).data();
-    if (!isRecentLabLogin(session.auth_time) || !isRecentLabLogin(proof.auth_time) ||
-        decideLabAdmission(session, ownerUid, record) !== "allowed") return false;
+    if (decideLabAdmission(session, ownerUid, record) !== "allowed") return false;
     if (record && record.status !== "active") return false;
 
     const bindings = labOAuthBindings(record ?? {});

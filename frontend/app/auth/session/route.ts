@@ -5,6 +5,7 @@ import {
   isLabEnabled,
   LAB_SESSION_COOKIE,
   LAB_SESSION_MAX_AGE_MS,
+  LAB_SESSION_COOKIE_OPTIONS as cookieOptions,
 } from "../../../lib/portfolio-lab/firebase-server";
 import { hasSameOrigin } from "../../../lib/portfolio-lab/session-origin";
 import { getLabAdmissionDecision } from "../../../lib/portfolio-lab/lab-admission-server";
@@ -17,14 +18,6 @@ export const dynamic = "force-dynamic";
 
 const json = (data: object, status: number) =>
   NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
-  path: "/",
-  maxAge: LAB_SESSION_MAX_AGE_MS / 1000,
-};
 
 export async function POST(request: NextRequest) {
   if (!isLabEnabled()) return json({ error: "Not found" }, 404);
@@ -86,7 +79,7 @@ export async function GET(request: NextRequest) {
   } catch {
     return json({ authenticated: false }, 503);
   }
-  return json({ authenticated: true, canLink: isRecentLabLogin(decoded.auth_time) }, 200);
+  return json({ authenticated: true, canLink: true }, 200);
 }
 
 export async function DELETE(request: NextRequest) {

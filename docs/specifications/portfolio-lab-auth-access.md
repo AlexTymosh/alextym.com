@@ -298,7 +298,7 @@ This design respects the requested no-extra-verification UX without treating arb
 
 ### 8.5 Logout and session policy
 
-**Proposed:** a five-day Firebase server session cookie, configurable within Firebase's documented range, using `HttpOnly`, `Secure`, appropriate `SameSite`, restrictive `Path`, and host-only cookie scope. Session exchange must require recent login and CSRF protection. Do not persist client Firebase credentials in browser storage. Keep them in page memory only during the five-minute linking window, then sign the client SDK out. Logout clears the cookie and can revoke server sessions where warranted. Administrative disable/revoke operations must not rely on the browser voluntarily logging out.
+**Current decision:** a five-day Firebase server session cookie, configurable within Firebase's documented range, using `HttpOnly`, `Secure`, appropriate `SameSite`, restrictive `Path`, and host-only cookie scope. Session exchange requires recent login and CSRF protection. Do not persist client Firebase credentials in browser storage. Keep them in page memory without a timer after login; account linking is available throughout a valid admitted website session. If page reload clears the client credential, allow in-page confirmation with an existing sign-in method for the same UID. Logout clears the cookie and page memory. Administrative disable/revoke operations must not rely on the browser voluntarily logging out.
 
 Auth failures should show clear, non-enumerating responses; never leak whether an email was invited on public endpoints.
 
