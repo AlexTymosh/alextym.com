@@ -40,6 +40,7 @@ test.describe("Site account settings", () => {
 
   test("profile, avatar, project grants and navigation stay bound to the signed-in user", async ({ page, playwright }, info) => {
     const email = await register(page);
+    await expect(page.locator(".nav-account")).toContainText(email);
     await expect(page).toHaveURL(site + "/settings");
     await expect(page.getByRole("status")).toContainText("No access has been assigned");
     const tabs = page.getByRole("navigation", { name: "Settings sections" });
@@ -91,6 +92,7 @@ test.describe("Site account settings", () => {
     await register(page);
     const other = await (await page.request.get("/auth/profile")).json();
     expect(other.firstName).toBe("");
+    expect(other.displayName).toBe(other.email);
     expect(other.avatarUrl).toBeNull();
     expect(other.email).not.toBe(email);
   });

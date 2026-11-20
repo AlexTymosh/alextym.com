@@ -112,7 +112,7 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
   return <form className={styles.profileForm} onSubmit={(event) => void save(event)}>
     <div><h2>Profile</h2><p className={styles.description}>Your name and photo appear in your account menu.</p></div>
     <div className={styles.photo}>
-      <AccountAvatar name={[firstName, lastName].join(" ") || "Your account"} url={preview} size={84} />
+      <AccountAvatar name={[firstName, lastName].join(" ").trim() || profile.email || "Account"} url={preview} size={84} />
       <div className={styles.photoActions}>
         <label htmlFor="account-photo">Profile photo</label>
         <input id="account-photo" className={styles.fileInput} type="file"
