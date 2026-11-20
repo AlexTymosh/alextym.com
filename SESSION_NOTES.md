@@ -1,33 +1,29 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-18
+**Updated:** 2026-11-20
 
-PR #243, the [Firebase identity foundation in #244](https://github.com/AlexTymosh/alextym.com/pull/244)
-and the [Workforce grant foundation in #245](https://github.com/AlexTymosh/alextym.com/pull/245)
-are merged. The follow-up branch `codex/portfolio-lab-auth-resume` starts from
-`63bb534`. Provisioning, signed sessions and password recovery have prior
-test evidence. Live OAuth, passwordless email, invitation sending and central
-external-action controls are pending. [Identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
+[PR #258](https://github.com/AlexTymosh/alextym.com/pull/258) is merged. Firebase
+sign-in is enabled for Fleet VOR Hub and Workforce Intelligence on alextym.com.
+Both production hosts use `portfolio-lab-dev` and the same pinned Owner UID.
 
-The Owner has authorized preparing the Firebase changes for main. Implement
-and test on `codex/portfolio-lab-auth-resume`, with a commit per completed step.
-Stop before merging and provide a runnable preview for Owner review.
-
-The current slice adds first sign-in through any configured provider, email
-registration, an authenticated account with no project access, Owner-managed
-project grants, and the revised email-first login screen. Facebook uses the
-same flow when its provider is configured. All project access remains UID-based.
-The follow-up uses a paginated user table with confirmed linked accounts and
-per-project role dropdowns. Sign-in, account and password setup screens now use
-generic site-wide wording.
-
-PR #258 initially failed the `project` job at `824c0f0`: structural checks
-still expected Fleet routes without the authorization layout, an unguarded
-Fleet router mount, password-only Workforce access, and an array of proxy
-rewrites. The checks now enforce the Firebase host adapters, retain legacy
-password compatibility and require fallback proxy routing. Local `repo:check`,
-`config:check`, `wizard:check` and `deployment:check` passed. Check the latest
-PR CI before merging; production authentication activation remains separate.
+- **19 November, `c809f23`.** A disposable user registered through the site,
+  received a session, signed out and signed back in with a password. Both the
+  site and the direct Render API denied access to both projects for that
+  account, which had no grants.
+  The legacy project password endpoints returned 404.
+- **20 November, `e5b3968`.** Both production hosts serve this commit. The
+  sign-in page opened, both demos and the Owner panel redirected guests to it,
+  and both project APIs returned 401 to guests on the site and on Render.
+- **Owner access table.** The Vercel service account can read individual
+  identity documents. Its user-list query returned `PermissionDenied`, and IAM
+  confirmed that `datastore.entities.list` is missing. Add this permission to
+  its existing custom role, then verify a grant and revocation for one project
+  using a separate visitor account. [Production access setup](docs/deployment.md#production-firebase-access)
+- **Sign-in providers.** Google and Microsoft returned their sign-in URLs.
+  Complete an interactive sign-in to verify each. GitHub returned
+  `OPERATION_NOT_ALLOWED` and requires provider configuration. Facebook is
+  deferred. Passwordless email sign-in, automated invitation delivery and
+  central external-action controls remain outstanding application work.
 
 ## Authoritative documents
 
