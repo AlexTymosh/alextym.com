@@ -18,7 +18,7 @@ export function LabGrantEditor({ uid, projectId, title, role, revision, disabled
     setBusy(true);
     setNotice("");
     try {
-      const response = await fetch("/lab/admin/grants", {
+      const response = await fetch("/auth/access/grants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid, projectId, role: value, revision: version }),

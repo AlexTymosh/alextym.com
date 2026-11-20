@@ -12,7 +12,6 @@ import { LAB_RECENT_LOGIN_SECONDS } from "../lib/portfolio-lab/session-policy";
 import { ProviderIcon } from "./provider-icon";
 import styles from "./lab-auth.module.css";
 
-type PendingLink = { provider: LabOAuthProvider; step: "open" | "confirm" };
 type LinkNotice = { tone: "info" | "error" | "success"; text: string };
 
 function confirmNotice(provider: LabOAuthProvider): LinkNotice {
@@ -36,37 +35,10 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
   const router = useRouter();
   const [notice, setNotice] = useState<LinkNotice | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<PendingLink | null>(null);
+  const [pending, setPending] = useState<LabOAuthProvider | null>(null);
   const [confirmed, setConfirmed] = useState<LabOAuthProvider[]>([]);
 
-  const prepare = async (provider: LabOAuthProvider) => {
-    setBusy(true);
-    setNotice(null);
-    setPending(null);
-    try {
-      const auth = getLabAuth();
-      await auth.authStateReady();
-      const response = await fetch("/lab/session", { credentials: "same-origin", cache: "no-store" });
-      const session = response.ok ? await response.json() : null;
-      if (!auth.currentUser || session?.canLink !== true) {
-        setNotice({ tone: "error", text: "Sign in again before linking an account." });
-        return;
-      }
-
-      const alreadyLinked = auth.currentUser.providerData.some((item) => item.providerId === provider);
-      setPending({ provider, step: alreadyLinked ? "confirm" : "open" });
-      setNotice(alreadyLinked ? confirmNotice(provider) : {
-        tone: "info",
-        text: `Select Open ${labProviderNames[provider]} and sign in to the account you want to link.`,
-      });
-    } catch {
-      setNotice({ tone: "error", text: "Could not check your session. Sign in again before linking." });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const link = async ({ provider, step }: PendingLink) => {
+  const link = async (provider: LabOAuthProvider) => {
     setBusy(true);
     setNotice(null);
     try {
@@ -77,15 +49,16 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
         return;
       }
       const oauthProvider = createLabOAuthProvider(provider);
-      if (step === "open") {
+      if (pending !== provider && !user.providerData.some((item) => item.providerId === provider)) {
+        // Open during this click, before a network request can consume the user gesture.
         await linkWithPopup(user, oauthProvider);
-        setPending({ provider, step: "confirm" });
+        setPending(provider);
         setNotice(confirmNotice(provider));
         return;
       }
 
       const proof = await reauthenticateWithPopup(user, oauthProvider);
-      const response = await fetch("/lab/session/link", {
+      const response = await fetch("/auth/session/link", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -102,8 +75,8 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
       setConfirmed((providers) => [...providers, provider]);
       setNotice({ tone: "success", text: `${labProviderNames[provider]} is linked. You can use it the next time you sign in.` });
     } catch (error) {
-      if (step === "open" && error instanceof FirebaseError && error.code === "auth/provider-already-linked") {
-        setPending({ provider, step: "confirm" });
+      if (error instanceof FirebaseError && error.code === "auth/provider-already-linked") {
+        setPending(provider);
         setNotice(confirmNotice(provider));
         return;
       }
@@ -117,10 +90,10 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch("/lab/session", { method: "DELETE", credentials: "same-origin" });
+      const response = await fetch("/auth/session", { method: "DELETE", credentials: "same-origin" });
       if (!response.ok) throw new Error("Logout failed");
       await signOut(getLabAuth());
-      router.replace("/lab/login");
+      router.replace("/sign-in");
       router.refresh();
     } catch {
       setNotice({ tone: "error", text: "Unable to sign out. Try again." });
@@ -133,7 +106,7 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
     <section className={styles.accountActions} aria-labelledby="lab-linked-identities">
       <h2 id="lab-linked-identities">Linked accounts</h2>
       <p className={styles.hint}>
-        Link an account within {LAB_RECENT_LOGIN_SECONDS / 60} minutes of signing in. <Link href="/lab/login">Sign in again</Link> if you reload this page.
+        Link an account within {LAB_RECENT_LOGIN_SECONDS / 60} minutes of signing in. <Link href="/sign-in">Sign in again</Link> if you reload this page.
       </p>
       {notice && (
         <p
@@ -147,9 +120,8 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
         {labSignInProviders.map((provider) => {
           const name = labProviderNames[provider];
           const isLinked = linkedProviders?.includes(provider) || confirmed.includes(provider);
-          const providerStep = pending?.provider === provider ? pending : null;
           let status = linkedProviders ? "Not linked" : "Status unavailable";
-          if (providerStep?.step === "confirm") status = "Awaiting confirmation";
+          if (pending === provider) status = "Awaiting confirmation";
           if (isLinked) status = "Linked";
 
           return (
@@ -168,9 +140,9 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
                   type="button"
                   className={styles.secondaryButton}
                   disabled={busy}
-                  onClick={() => void (providerStep ? link(providerStep) : prepare(provider))}
+                  onClick={() => void link(provider)}
                 >
-                  {providerStep ? (providerStep.step === "open" ? "Open" : "Confirm") : "Link"} {name}
+                  {pending === provider ? "Confirm" : "Link"} {name}
                 </button>
               )}
             </li>

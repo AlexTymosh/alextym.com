@@ -9,6 +9,7 @@ import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/port
 import { createLabOAuthProvider, getLabAuth, retainLabLinkCredential } from "../lib/portfolio-lab/firebase-client";
 import { validNewPassword } from "../lib/portfolio-lab/password-recovery-policy";
 import { ProviderIcon } from "./provider-icon";
+import { PasswordInput } from "./password-input";
 import styles from "./lab-auth.module.css";
 
 type SignInMethod = "password" | LabOAuthProvider;
@@ -19,7 +20,7 @@ function linkingInstructions(provider: LabOAuthProvider) {
 
 async function startLabSession(auth: Auth, user: User, method: SignInMethod): Promise<string | null> {
   const token = await user.getIdTokenResult();
-  const response = await fetch("/lab/session", {
+  const response = await fetch("/auth/session", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
@@ -90,7 +91,7 @@ export function LabLogin() {
         setMessage({ tone: "error", text: issue });
         return;
       }
-      router.replace("/lab");
+      router.replace("/settings");
       router.refresh();
     } catch (error) {
       const text = register && method === "password"
@@ -146,9 +147,8 @@ export function LabLogin() {
         </div>
         <div className={styles.field}>
           <label htmlFor="lab-password">Password</label>
-          <input
+          <PasswordInput
             id="lab-password"
-            type="password"
             autoComplete={register ? "new-password" : "current-password"}
             minLength={register ? 12 : undefined}
             maxLength={register ? 128 : undefined}
@@ -160,7 +160,7 @@ export function LabLogin() {
         {register && (
           <div className={styles.field}>
             <label htmlFor="lab-password-confirm">Confirm password</label>
-            <input id="lab-password-confirm" type="password" autoComplete="new-password"
+            <PasswordInput id="lab-password-confirm" autoComplete="new-password"
               value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
           </div>
         )}

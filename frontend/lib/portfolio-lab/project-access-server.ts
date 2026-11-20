@@ -40,7 +40,7 @@ export async function labProjectAccess(cookie: string | undefined, projectId: st
 export async function requireLabProjectPage(projectId: string) {
   if (!isLabEnabled()) return;
   const session = await currentLabSession().catch(() => null);
-  if (!session) redirect("/lab/login");
+  if (!session) redirect("/sign-in");
   const role = await labProjectRole(session.uid, projectId).catch(() => null);
-  if (!role) redirect("/lab");
+  if (!role) redirect("/settings");
 }

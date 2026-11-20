@@ -23,14 +23,14 @@ export const metadata: Metadata = { title: "Your account", robots: { index: fals
 export default async function LabPage() {
   if (!isLabEnabled()) notFound();
   const cookie = (await cookies()).get(LAB_SESSION_COOKIE)?.value;
-  if (!cookie) redirect("/lab/login");
+  if (!cookie) redirect("/sign-in");
   if (!getOwnerUid()) notFound();
   let verifiedClaims: DecodedIdToken;
   try {
     const admin = await getLabAdminAuth();
     verifiedClaims = await admin.verifySessionCookie(cookie, true);
   } catch {
-    redirect("/lab/login");
+    redirect("/sign-in");
   }
   let admission;
   try {
@@ -39,7 +39,7 @@ export default async function LabPage() {
     // Never fall back to a privileged cached identity on Firestore failure.
     notFound();
   }
-  if (admission !== "allowed") redirect("/lab/login");
+  if (admission !== "allowed") redirect("/sign-in");
   const provider = labSignInProvider(verifiedClaims);
   const signInMethod = isLabOAuthProvider(provider) ? labProviderNames[provider] : "email and password";
   const linkedProviders = await getLabLinkedProviders(verifiedClaims.uid).catch(() => null);
@@ -69,9 +69,9 @@ export default async function LabPage() {
             ))}
           </ul>
         }
-        <Link className={styles.textAction} href="/lab">Refresh access</Link>
+        <Link className={styles.textAction} href="/settings">Refresh access</Link>
       </section>
-      {isOwner && <Link className={styles.primaryButton} href="/lab/admin">Manage access</Link>}
+      {isOwner && <Link className={styles.primaryButton} href="/settings/access">Manage access</Link>}
       <LabAccountActions linkedProviders={linkedProviders} />
     </section>
   );
