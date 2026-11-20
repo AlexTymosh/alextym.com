@@ -86,7 +86,7 @@ def build_private_action_link(
     ):
         raise ProvisioningError("Firebase did not return a valid password reset action code")
     return (
-        f"{origin.rstrip('/')}/lab/password/reset"
+        f"{origin.rstrip('/')}/auth/action"
         f"#uid={quote(uid, safe='')}&oobCode={quote(code[0], safe='')}"
     )
 

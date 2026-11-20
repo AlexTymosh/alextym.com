@@ -13,18 +13,17 @@ export const metadata = { title: "Access management", robots: { index: false, fo
 export default async function LabAdminPage({ searchParams }: { searchParams: Promise<{ after?: string }> }) {
   if (!isLabEnabled()) notFound();
   const claims = await currentLabSession().catch(() => null);
-  if (!claims) redirect("/lab/login");
+  if (!claims) redirect("/sign-in");
   if (claims.uid !== getOwnerUid()) notFound();
   const { after } = await searchParams;
   if (after && (after.length > 128 || after.includes("/") || after === "." || after === "..")) notFound();
   const result = await listLabUsers(after).catch(() => null);
 
   return (
-    <section className={`${styles.panel} ${styles.ownerPanel}`}>
+    <section className={styles.embeddedPanel}>
       <header className={styles.header}>
-        <h1>Access management</h1>
+        <h2>Access management</h2>
         <p>View allows reading. Test allows changes. Admin also manages settings.</p>
-        <Link href="/lab" className={styles.textAction}>Back to your account</Link>
       </header>
       {!result && <p className={styles.notice} role="alert">Account access is temporarily unavailable. Reload to retry.</p>}
       {result?.users.length === 0 && <p className={styles.hint}>Registered accounts will appear here.</p>}
@@ -73,8 +72,8 @@ export default async function LabAdminPage({ searchParams }: { searchParams: Pro
           </table>
         </div>
       )}
-      {result?.next && <Link className={styles.secondaryButton} href={`/lab/admin?after=${encodeURIComponent(result.next)}`}>Next accounts</Link>}
-      {after && <Link className={styles.textAction} href="/lab/admin">First page</Link>}
+      {result?.next && <Link className={styles.secondaryButton} href={`/settings/access?after=${encodeURIComponent(result.next)}`}>Next accounts</Link>}
+      {after && <Link className={styles.textAction} href="/settings/access">First page</Link>}
     </section>
   );
 }

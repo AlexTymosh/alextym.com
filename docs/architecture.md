@@ -53,6 +53,13 @@ The canonical public routes are also used by `sitemap.xml`:
 
 ## Frontend application
 
+Site account pages use `/sign-in` and authenticated `/settings` routes.
+Settings has separate project, profile, sign-in method and Owner access views.
+The project cards are shared with the public `/portfolio` catalogue, with
+current per-project grants determining the signed-in user's available cards.
+Generic `/auth/*` routes handle sessions, linking, profiles and recovery.
+The site uses these account routes directly.
+
 Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the
 document and global CSS, while the Workforce route renders its own navigation

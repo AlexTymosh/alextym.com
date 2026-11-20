@@ -149,8 +149,8 @@ BACKEND_ORIGIN=https://alextym-backend.onrender.com/api/health/live
 
 ### Portfolio Lab development preview
 
-Keep `PORTFOLIO_LAB_ENABLED` off in Production. For PR #244, scope the
-Vercel variables to Preview and the `feat/portfolio-firebase-identity` branch.
+For the original PR #244 development setup, scope the Vercel variables to
+Preview and the `feat/portfolio-firebase-identity` branch.
 Point `BACKEND_ORIGIN` to the separate Render Free service and set
 `PORTFOLIO_LAB_ORIGIN` to the exact HTTPS preview alias. Keep Vercel
 Authentication enabled. Both hosts must use the same Firebase dev project
@@ -162,6 +162,53 @@ on this Preview branch and redeploy. See
 
 See the [identity verification record](architecture/portfolio-lab-identity-verification.md)
 for free-tier limits, service account roles, and remaining test gates.
+
+### Production Firebase access
+
+Fleet VOR Hub and Workforce Intelligence use `PORTFOLIO_LAB_ENABLED=true`
+on Vercel and Render. Both hosts use Firebase project `portfolio-lab-dev` and
+the same pinned Owner UID. Each host has its own server credential. The public
+sign-in page is [alextym.com/sign-in](https://alextym.com/sign-in).
+
+The Owner table queries Firestore identities by document ID. The Vercel role
+needs both `datastore.entities.get` and `datastore.entities.list` for that
+query. In this project the custom role is **Portfolio Lab Vercel Runtime**
+(`PortfolioLabVercelRuntime`). If the query returns `PermissionDenied`, check
+this role under **IAM & Admin → Roles → Custom**. To add a missing permission,
+open **Edit role → Add permissions**, use the filter above the permissions
+table, select the permission and click **Add**, then **Update**. Reload the
+Owner table once IAM has applied the change.
+[Firestore permissions](https://firebase.google.com/docs/firestore/security/iam)
+and [editing custom roles](https://docs.cloud.google.com/iam/docs/creating-custom-roles).
+
+To enable the existing GitHub button, register a GitHub OAuth App with homepage
+`https://alextym.com` and callback
+`https://portfolio-lab-dev.firebaseapp.com/__/auth/handler`. In Firebase
+**Authentication → Sign-in method → GitHub**, enable the provider, enter the
+app's Client ID and Client Secret, then save.
+[Firebase GitHub sign-in](https://firebase.google.com/docs/auth/web/github-auth)
+
+To verify project grants, register a visitor in a separate browser profile.
+Sign in as the Owner and open [Access management](https://alextym.com/settings/access).
+Set one project to **View** and click **Save access**. On the visitor's account
+page, click **Refresh access** and open that project. Check that the other
+project still denies access. Select **No Access** and save to verify revocation.
+
+After deploying the account settings update, set Firebase's password reset
+email action URL to `https://alextym.com/auth/action`. In Firebase Console,
+open **Authentication → Templates → Password reset**, edit the template,
+choose **Customize action URL**, enter the URL and save. Request a fresh reset
+email and verify its complete flow on the site. This enables the branded reset
+page with password confirmation for new emails.
+[Custom Firebase email actions](https://firebase.google.com/docs/auth/custom-email-handler)
+
+Account settings live at `/settings`. Its profile and sign-in methods
+sections use `/settings/profile` and `/settings/connections`. The public
+`/portfolio` page lists projects for visitors. Protected project pages and
+APIs continue to check the session and project grant independently.
+OAuth provider callbacks use Firebase's `/__/auth/handler` endpoint.
+
+### Reusing the template
 
 Before deploying a reused template, update public project settings locally:
 

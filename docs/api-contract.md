@@ -65,16 +65,30 @@ the verified UID and `Cache-Control: no-store`.
 | 404 | Feature disabled |
 | 503 | Admission or configuration unavailable |
 
-Next.js `/lab/session`, `/lab/session/link`, `/lab/api/identity` and
-`/lab/password/reset/action` use the contracts in the
+Next.js `/auth/session`, `/auth/session/link`, `/auth/identity` and
+`/auth/password/reset` use the contracts in the
 [identity setup runbook](architecture/portfolio-lab-identity-setup.md).
 
-`POST /lab/session` atomically registers a previously unknown verified UID
+`POST /auth/session` atomically registers a previously unknown verified UID
 before issuing its Lab session. Registration creates no project grants.
-`POST /lab/admin/grants` accepts `uid`, `projectId`, `role` and `revision`.
+`POST /auth/access/grants` accepts `uid`, `projectId`, `role` and `revision`.
 It requires a recent pinned-Owner session and same-origin JSON. It returns
 200 on an audited update, 409 for a concurrent revision or unavailable account,
 and 401/403 for missing or insufficient authentication.
+
+`GET /auth/profile` returns the signed-in user's profile and available photos
+from confirmed linked providers. `POST /auth/profile` accepts `firstName`,
+`lastName`, `avatarSource`, `revision` and optional `avatarData`. It requires
+a valid current session and same-origin JSON. The server selects the UID from
+the session. Names are limited to 80 characters each. Uploaded PNG, JPEG and
+WebP images are decoded, stripped of metadata and resized to a 256-pixel WebP.
+The resulting image is limited to 100 KB. Each write rechecks admission and
+the profile revision in a Firestore transaction. Concurrent changes return 409.
+Profiles return `Cache-Control: no-store`.
+
+Private password setup links use
+`/auth/action#uid=…&oobCode=…`. The same page handles Firebase email reset
+links through Firebase's single-use action code protocol.
 
 When Lab authentication is enabled, `/api/vor/*` passes through the Next.js
 Fleet BFF. Both demos independently enforce current project grants in FastAPI.

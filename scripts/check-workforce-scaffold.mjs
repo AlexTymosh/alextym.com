@@ -22,14 +22,20 @@ for (const source of [portfolio, page]) {
   assert.match(source, /robots:\s*\{\s*index:\s*false,\s*follow:\s*false/);
 }
 assert.doesNotMatch(portfolio, /firebase|getWorkforceAccess|LAB_SESSION_COOKIE/);
-assert.match(portfolio, /href="\/fleet-vor-hub"/);
-assert.match(portfolio, /href="\/portfolio\/workforce-intelligence"/);
+assert.match(portfolio, /<ProjectCards\s+projects=\{labProjects\}/,
+  "The public catalogue must render the registered projects through the shared cards");
+const catalogue = read("frontend/lib/portfolio-lab/project-catalog.ts");
+assert.match(catalogue, /\.generated\/portfolio-projects\.json/,
+  "The catalogue must use the generated project registry");
+const cards = read("frontend/components/project-cards.tsx");
+assert.match(cards, /href=\{project\.path\}/,
+  "Project cards must link to the registered demo path");
 assert.doesNotMatch(portfolio, /workforceEnabled\(|notFound\(/);
 assert.match(page, /workforceEnabled\(/);
 assert.match(page, /notFound\(\)/);
 assert.match(page, /<WorkforcePasswordGate/);
 assert.match(page, /await requireLabProjectPage\("workforce_intelligence"\)/);
-assert.match(page, /loginPath=\{isLabEnabled\(\) \? "\/lab\/login" : undefined\}/);
+assert.match(page, /loginPath=\{isLabEnabled\(\) \? "\/sign-in" : undefined\}/);
 const gate = read("portfolio/workforce_intelligence/frontend/src/WorkforcePasswordGate.tsx");
 assert.match(gate, /workforce-simulation-logo\.png/);
 assert.match(gate, /Demo password/);

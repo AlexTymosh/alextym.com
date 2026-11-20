@@ -1,16 +1,18 @@
 # Portfolio Lab — Firebase identity integration checkpoint (PR 2)
 
-**Status:** PR #244 implements Firebase identity and UID admission. See the
-[verification record](portfolio-lab-identity-verification.md) for the deployed
-configuration, test results and remaining merge gates.
+PR #244 introduced Firebase identity and UID admission. This document records
+the development setup and checks for that release. For the current live
+configuration, see [production Firebase access](../deployment.md#production-firebase-access).
+See the [verification record](portfolio-lab-identity-verification.md) for the
+development test results.
 
 The [requirements specification](../specifications/portfolio-lab-auth-access.md) and [ADR-0001](../adr/0001-portfolio-lab-identity-access.md) remain authoritative.
 
 ## Identity and session architecture
 
-- Next.js `/lab/login` supports email/password registration and first sign-in through Google, Microsoft, GitHub and configured Facebook.
-- The browser exchanges a *recently authenticated* Firebase ID token for a five-day, HttpOnly, Secure-in-production, SameSite=Strict session cookie via `/lab/session`. This route lives outside `/api/*` so it is **not** forwarded to Render by the existing Next rewrite.
-- Next.js server-rendered `/lab` requires a valid, non-revoked Firebase session and current UID admission.
+- Next.js `/sign-in` supports email/password registration and first sign-in through Google, Microsoft, GitHub and configured Facebook.
+- The browser exchanges a *recently authenticated* Firebase ID token for a five-day, HttpOnly, Secure-in-production, SameSite=Strict session cookie via `/auth/session`. This route lives outside `/api/*` so it is **not** forwarded to Render by the existing Next rewrite.
+- Next.js server-rendered `/settings` requires a valid, non-revoked Firebase session and current UID admission.
 - FastAPI independently verifies `Authorization: Bearer` ID tokens or `Authorization: FirebaseSession` session cookies at `/api/lab/identity` and applies the current UID admission policy.
 - First sign-in creates an active identity with no project grants. The signed-in page shows that no access has been assigned until the Owner assigns access. Authentication screens use the generic titles Sign in, Your account and Password setup for site-wide use.
 - With `PORTFOLIO_LAB_ENABLED=true` on both hosts, Fleet and Workforce require UID-based project grants on their pages and direct backend routes. Their password gates apply when the Lab is disabled.
@@ -55,17 +57,17 @@ All `NEXT_PUBLIC_*` values are public client application identifiers; **never** 
 3. Under Firebase Authentication → Settings → Authorized domains, register the local test domain and the approved preview/production hostnames as appropriate. Do not add wildcard or arbitrary domains.
 4. Under Authentication settings, select **Create multiple accounts for each identity provider** and keep email enumeration protection enabled. Create a fictional Email/Password Owner and pin that Firebase UID in both runtimes. Bootstrap the Owner's OAuth bindings from a recent password sign-in.
 5. Configure trusted service-account credentials only in local ignored `.env` files or Vercel/Render secrets. Use one Firebase project per environment where practical. Rotate exposed secrets immediately.
-6. Keep `PORTFOLIO_LAB_ENABLED=false` in production. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
+6. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
 
-New visitors can register using any configured sign-in method. Existing invited users sign in with their issued credentials to use the same UID and grants. Under **Linked accounts**, select **Link**, **Open**, and **Confirm** to add another provider. A provider already attached to another UID requires Owner-assisted recovery.
+New visitors can register using any configured sign-in method. Existing invited users sign in with their issued credentials to use the same UID and grants. Under **Linked accounts**, select **Link** to open the provider window, then **Confirm** to add another provider. A provider already attached to another UID requires Owner-assisted recovery.
 
-The pinned Owner uses `/lab/admin` to assign or revoke `View`, `Test` or `Admin` separately for each project. The paginated table has one row per Firebase UID, shows its confirmed linked accounts, and provides a role dropdown and Save access button for each project. Grants apply to the UID, so email/password and every confirmed linked provider share the same access and revocation. Separate Firebase users are never combined by matching email alone. Each change requires a recent Owner session, checks the document revision and writes a grant and audit event in the same Firestore transaction. Existing future expiries are retained. Renewed expired grants remain active until revoked.
+The pinned Owner uses `/settings/access` to assign or revoke `View`, `Test` or `Admin` separately for each project. The paginated table has one row per Firebase UID, shows its confirmed linked accounts, and provides a role dropdown and Save access button for each project. Grants apply to the UID, so email/password and every confirmed linked provider share the same access and revocation. Separate Firebase users are never combined by matching email alone. Each change requires a recent Owner session, checks the document revision and writes a grant and audit event in the same Firestore transaction. Existing future expiries are retained. Renewed expired grants remain active until revoked.
 
 The frontend catalogue is generated from `portfolio/catalog/registry.json` and the registered `project.json` files during `sync:project-config`. Adding a registered project makes it available in the access editor without duplicating its metadata in Firestore.
 
 For Facebook, configure a Meta application, set the exact Firebase handler URL and enter its App ID and App Secret in Firebase Authentication. Set `NEXT_PUBLIC_FIREBASE_FACEBOOK_ENABLED=true` only after the provider is ready. Firebase social authentication is included in Spark. Meta may require app publication or review for users outside the app's test roles. [Firebase setup](https://firebase.google.com/docs/auth/web/facebook-login)
 
-`POST /lab/session` returns HTTP 403 with `code: "ACCESS_DENIED"` when a verified Firebase identity lacks Lab admission, or `code: "PASSWORD_EXPIRED"` for an expired initial password. The login page uses these codes for recovery instructions and presents Firebase popup failures separately.
+`POST /auth/session` returns HTTP 403 with `code: "ACCESS_DENIED"` when a verified Firebase identity lacks Lab admission, or `code: "PASSWORD_EXPIRED"` for an expired initial password. The login page uses these codes for recovery instructions and presents Firebase popup failures separately.
 
 ## Dependencies and local test commands
 
@@ -95,7 +97,7 @@ to support explicit provider linking. Reloading the page clears client
 credentials while the website cookie remains valid. An explicit **same-origin
 BFF** carries the website session for server-side protected requests:
 
-1. `GET /lab/api/identity` runs in Next.js (it is not covered by `/api/*` rewrites).
+1. `GET /auth/identity` runs in Next.js (it is not covered by `/api/*` rewrites).
 2. Next.js verifies its own HttpOnly Firebase session cookie with revocation
    checking and checks the configured Owner UID. It does not send the cookie
    back to JavaScript or accept a user-controlled backend URL.
@@ -119,16 +121,16 @@ must use an explicit same-origin BFF or a fresh ID token validated by Render.
 For development smoke tests with `PORTFOLIO_LAB_ENABLED=true`, configure a local
 `BACKEND_ORIGIN` for Next.js and enable the Owner UID in both environments:
 
-- Without a cookie: `GET /lab/api/identity` returns 401.
+- Without a cookie: `GET /auth/identity` returns 401.
 - With a valid Owner cookie and a reachable backend: returns 200.
 - A revoked/wrong-owner cookie or direct unauthenticated request to Render:
   returns 401/403 as appropriate.
-- Backend offline: the probe returns 502; `/lab` login and dashboard do not
+- Backend offline: the probe returns 502; `/sign-in` and `/settings` do not
   depend on Render availability.
 
-**Still blocking PR 2 release:** invited-user admission, initial-password
-expiry/change reconciliation, full provider/linking/recovery tests, and live
-cross-origin smoke. Keep the Lab feature flag off in production.
+At this PR 2 checkpoint, the remaining gates covered invited-user admission,
+initial-password expiry and change reconciliation, provider linking, recovery
+tests and live cross-origin verification.
 
 ## Security integration gates still outstanding
 
@@ -182,8 +184,8 @@ Schema version `1` (exact fields used by both runtimes):
   deterministic allow/deny cases tested by Next.js and FastAPI. These tests do
   not exercise real Firebase or Firestore connectivity.
 
-**Deployment:** Keep `PORTFOLIO_LAB_ENABLED=false` in production. Use a dedicated
-development Firebase project for provisioning and recovery smoke tests.
+Use a dedicated development Firebase project for provisioning and recovery
+smoke tests. The live site uses the project named `portfolio-lab-dev`.
 
 Recommended rules are checked in at `infra/firebase/firestore.rules`; publish
 them to the **development Firebase project** in Firebase Console before
@@ -205,7 +207,7 @@ Each protected host checks the Firebase UID, the Firebase-signed provider
 subject, the current Firebase provider data and the subject approved in
 `oauth_provider_subjects`. The UI starts with a recent admitted session and uses
 Firebase linking followed by reauthentication of the additional provider.
-`POST /lab/session/link` requires the existing session cookie, a fresh Firebase
+`POST /auth/session/link` requires the existing session cookie, a fresh Firebase
 proof for the same UID and provider, and the exact configured Origin. Its
 transaction rechecks admission and writes the binding and its audit event.
 
@@ -232,7 +234,7 @@ No password reset link is delivered automatically, and no project grant is creat
   Firebase Auth user. Never adopt an arbitrary Auth account by matching email.
 - The Admin SDK generates a provider password-reset action code. The CLI moves
   that code from Firebase's generated URL query into a private
-  `/lab/password/reset#uid=...&oobCode=...` link at an explicitly approved HTTPS origin.
+  `/auth/action#uid=...&oobCode=...` link at an explicitly approved HTTPS origin.
   The CLI atomically records only a tag for the latest code. It uses the
   Firebase-generated action code as the HMAC-SHA-256 key with the UID and
   a fixed purpose as the message. The CLI writes the tag for that UID

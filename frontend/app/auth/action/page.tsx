@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { LabPasswordReset } from "../../../../components/lab-password-reset";
-import { isLabEnabled } from "../../../../lib/portfolio-lab/firebase-server";
+import { LabPasswordReset } from "../../../components/lab-password-reset";
+import { isLabEnabled } from "../../../lib/portfolio-lab/firebase-server";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {

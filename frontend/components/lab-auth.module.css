@@ -155,6 +155,42 @@
   color: var(--text);
 }
 
+.passwordInput {
+  position: relative;
+}
+
+.passwordInput input {
+  padding-right: 48px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--muted);
+  border-radius: 6px;
+}
+
+.passwordToggle svg {
+  width: 21px;
+  height: 21px;
+}
+
+.authBrand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 650;
+}
+
+.authBrand img {
+  border-radius: 12px;
+}
+
 .panel :is(button, input, select, a):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -247,6 +283,12 @@
 
 .ownerPanel {
   width: min(100%, var(--page-width));
+}
+
+.embeddedPanel {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
 }
 
 .userCard {

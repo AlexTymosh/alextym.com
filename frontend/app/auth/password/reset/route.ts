@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { getLabAdminAuth, getOwnerUid, isLabEnabled } from "../../../../../lib/portfolio-lab/firebase-server";
-import { hasSameOrigin } from "../../../../../lib/portfolio-lab/session-origin";
-import { hasLabJsonContent, readLabJson } from "../../../../../lib/portfolio-lab/request-json";
+import { getLabAdminAuth, getOwnerUid, isLabEnabled } from "../../../../lib/portfolio-lab/firebase-server";
+import { hasSameOrigin } from "../../../../lib/portfolio-lab/session-origin";
+import { hasLabJsonContent, readLabJson } from "../../../../lib/portfolio-lab/request-json";
 import {
   completePasswordReset,
   eligibleForPasswordRecovery,
@@ -12,7 +12,7 @@ import {
   validNewPassword,
   validResetCode,
   validResetUid,
-} from "../../../../../lib/portfolio-lab/password-recovery-policy";
+} from "../../../../lib/portfolio-lab/password-recovery-policy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

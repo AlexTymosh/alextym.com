@@ -29,7 +29,7 @@ test("local Workforce preview supports offline navigation without API requests",
     const path = new URL(request.url()).pathname;
     if (path.startsWith("/api/workforce/") ||
         path.startsWith("/portfolio/workforce-intelligence/api/") ||
-        path.startsWith("/lab/")) protectedRequests.push(path);
+        path.startsWith("/auth/")) protectedRequests.push(path);
   });
 
   const response = await page.goto(previewPath);

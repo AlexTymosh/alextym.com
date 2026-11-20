@@ -15,5 +15,5 @@ export const metadata: Metadata = {
 export default async function WorkforceIntelligencePage() {
   if (!workforceEnabled()) notFound();
   await requireLabProjectPage("workforce_intelligence");
-  return <WorkforcePasswordGate loginPath={isLabEnabled() ? "/lab/login" : undefined} />;
+  return <WorkforcePasswordGate loginPath={isLabEnabled() ? "/sign-in" : undefined} />;
 }

@@ -1,33 +1,66 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-18
+**Updated:** 2026-11-20
 
-PR #243, the [Firebase identity foundation in #244](https://github.com/AlexTymosh/alextym.com/pull/244)
-and the [Workforce grant foundation in #245](https://github.com/AlexTymosh/alextym.com/pull/245)
-are merged. The follow-up branch `codex/portfolio-lab-auth-resume` starts from
-`63bb534`. Provisioning, signed sessions and password recovery have prior
-test evidence. Live OAuth, passwordless email, invitation sending and central
-external-action controls are pending. [Identity verification record](docs/architecture/portfolio-lab-identity-verification.md)
+[PR #258](https://github.com/AlexTymosh/alextym.com/pull/258) is merged. Firebase
+sign-in is enabled for Fleet VOR Hub and Workforce Intelligence on alextym.com.
+Both production hosts use `portfolio-lab-dev` and the same pinned Owner UID.
 
-The Owner has authorized preparing the Firebase changes for main. Implement
-and test on `codex/portfolio-lab-auth-resume`, with a commit per completed step.
-Stop before merging and provide a runnable preview for Owner review.
+The current branch `codex/account-settings` prepares site-wide account
+settings. It adds `/sign-in`, `/settings`, a profile with names and avatars,
+shared project cards, one-click linking popups, password visibility controls
+and branded Firebase email reset handling. The public account routes use
+`/sign-in`, `/settings` and `/auth/*`. The old frontend `/lab` routes were
+removed at the Owner's request. The Owner will review this branch before merging. After
+deployment, configure Firebase's Password reset template action URL as
+`https://alextym.com/auth/action`. [Deployment steps](docs/deployment.md#production-firebase-access)
 
-The current slice adds first sign-in through any configured provider, email
-registration, an authenticated account with no project access, Owner-managed
-project grants, and the revised email-first login screen. Facebook uses the
-same flow when its provider is configured. All project access remains UID-based.
-The follow-up uses a paginated user table with confirmed linked accounts and
-per-project role dropdowns. Sign-in, account and password setup screens now use
-generic site-wide wording.
+Local verification for this branch passed 18 desktop/mobile Chromium scenarios
+against isolated Firebase emulators, including provider linking, cross-project
+denial, grant revocation, private profiles, image validation, concurrent updates
+and reset-code reuse rejection. Removed frontend routes return 404 without
+redirecting. The backend link and recovery checks passed
+42 tests. TypeScript, frontend lint and the production build passed. The Fleet
+module retains its seven existing lint warnings. Real Microsoft photo import
+requires the user's interactive consent and remains a production check.
+Another 122 checks passed against the production build for disabled routes,
+admission and recovery policies, public pages, navigation and light/dark themes.
 
-PR #258 initially failed the `project` job at `824c0f0`: structural checks
-still expected Fleet routes without the authorization layout, an unguarded
-Fleet router mount, password-only Workforce access, and an array of proxy
-rewrites. The checks now enforce the Firebase host adapters, retain legacy
-password compatibility and require fallback proxy routing. Local `repo:check`,
-`config:check`, `wizard:check` and `deployment:check` passed. Check the latest
-PR CI before merging; production authentication activation remains separate.
+PR #260 CI follow-up: the Workforce scaffold checker now follows the shared
+project cards and `/sign-in` route. A desktop/mobile browser regression checks
+the public catalogue links for every registered project. The recovery-link
+test was reformatted to satisfy Ruff. Local repository checks, frontend lint
+for the new test, TypeScript and both browser scenarios passed. The full backend
+suite passed 1006 tests with four optional Redis tests skipped; backend lint,
+formatting, import boundaries and compilation also passed.
+
+The CodeQL follow-up uses explicit equality for the linked Microsoft provider
+ID in the profile form. The provider list contains Firebase IDs; the photo
+request continues to use the fixed Microsoft Graph endpoint. Four desktop/mobile
+emulator scenarios passed for profiles, linked accounts and project access,
+including the Microsoft photo option before and after account linking. Targeted
+ESLint and TypeScript passed. PR verification must inspect the full commit
+check-run list, including the separate GitHub Advanced Security CodeQL result.
+
+- **19 November, `c809f23`.** A disposable user registered through the site,
+  received a session, signed out and signed back in with a password. Both the
+  site and the direct Render API denied access to both projects for that
+  account, which had no grants.
+  The legacy project password endpoints returned 404.
+- **20 November, `e5b3968`.** Both production hosts serve this commit. The
+  sign-in page opened, both demos and the Owner panel redirected guests to it,
+  and both project APIs returned 401 to guests on the site and on Render.
+- **Owner access table.** On 20 November the Owner added
+  `datastore.entities.list` to the Vercel runtime role. Calling the site's
+  `listLabUsers` function with the Vercel credential against production
+  Firebase returned accounts and grant settings for both projects. The remaining browser
+  check is to grant and revoke one project for a separate visitor from a
+  personal Owner session. [Production access setup](docs/deployment.md#production-firebase-access)
+- **Sign-in providers.** Google and Microsoft returned their sign-in URLs.
+  Complete an interactive sign-in to verify each. GitHub returned
+  `OPERATION_NOT_ALLOWED` and requires provider configuration. Facebook is
+  deferred. Passwordless email sign-in, automated invitation delivery and
+  central external-action controls remain outstanding application work.
 
 ## Authoritative documents
 

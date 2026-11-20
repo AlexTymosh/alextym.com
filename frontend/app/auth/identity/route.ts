@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { DecodedIdToken } from "firebase-admin/auth";
-import { getLabAdmissionDecision } from "../../../../lib/portfolio-lab/lab-admission-server";
+import { getLabAdmissionDecision } from "../../../lib/portfolio-lab/lab-admission-server";
 import {
   getLabAdminAuth,
   getOwnerUid,
   isLabEnabled,
   LAB_SESSION_COOKIE,
-} from "../../../../lib/portfolio-lab/firebase-server";
+} from "../../../lib/portfolio-lab/firebase-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
