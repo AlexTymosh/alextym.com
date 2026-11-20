@@ -18,7 +18,9 @@ The admission gate requires a durable Firebase UID-bound identity document. Crea
 
 ## Local test workflow
 
-Run from the backend directory against an isolated **development** Firebase project. Keep production `PORTFOLIO_LAB_ENABLED=false`.
+Run from the backend directory against an isolated **development** Firebase project.
+The project named `portfolio-lab-dev` serves the live site.
+[Production Firebase access](../deployment.md#production-firebase-access)
 
 ```powershell
 $env:FIREBASE_PROJECT_ID = "<development-project-id>"

@@ -1,8 +1,10 @@
 # Portfolio Lab — Firebase identity integration checkpoint (PR 2)
 
-**Status:** PR #244 implements Firebase identity and UID admission. See the
-[verification record](portfolio-lab-identity-verification.md) for the deployed
-configuration, test results and remaining merge gates.
+PR #244 introduced Firebase identity and UID admission. This document records
+the development setup and checks for that release. For the current live
+configuration, see [production Firebase access](../deployment.md#production-firebase-access).
+See the [verification record](portfolio-lab-identity-verification.md) for the
+development test results.
 
 The [requirements specification](../specifications/portfolio-lab-auth-access.md) and [ADR-0001](../adr/0001-portfolio-lab-identity-access.md) remain authoritative.
 
@@ -55,7 +57,7 @@ All `NEXT_PUBLIC_*` values are public client application identifiers; **never** 
 3. Under Firebase Authentication → Settings → Authorized domains, register the local test domain and the approved preview/production hostnames as appropriate. Do not add wildcard or arbitrary domains.
 4. Under Authentication settings, select **Create multiple accounts for each identity provider** and keep email enumeration protection enabled. Create a fictional Email/Password Owner and pin that Firebase UID in both runtimes. Bootstrap the Owner's OAuth bindings from a recent password sign-in.
 5. Configure trusted service-account credentials only in local ignored `.env` files or Vercel/Render secrets. Use one Firebase project per environment where practical. Rotate exposed secrets immediately.
-6. Keep `PORTFOLIO_LAB_ENABLED=false` in production. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
+6. Assign preview variables to the PR branch only, and keep its Vercel authentication enabled. Set `PORTFOLIO_LAB_ORIGIN` to that branch's exact HTTPS origin and point `BACKEND_ORIGIN` to the isolated Render service. Verify both hosts before inviting testers.
 
 New visitors can register using any configured sign-in method. Existing invited users sign in with their issued credentials to use the same UID and grants. Under **Linked accounts**, select **Link**, **Open**, and **Confirm** to add another provider. A provider already attached to another UID requires Owner-assisted recovery.
 
@@ -126,9 +128,9 @@ For development smoke tests with `PORTFOLIO_LAB_ENABLED=true`, configure a local
 - Backend offline: the probe returns 502; `/lab` login and dashboard do not
   depend on Render availability.
 
-**Still blocking PR 2 release:** invited-user admission, initial-password
-expiry/change reconciliation, full provider/linking/recovery tests, and live
-cross-origin smoke. Keep the Lab feature flag off in production.
+At this PR 2 checkpoint, the remaining gates covered invited-user admission,
+initial-password expiry and change reconciliation, provider linking, recovery
+tests and live cross-origin verification.
 
 ## Security integration gates still outstanding
 
@@ -182,8 +184,8 @@ Schema version `1` (exact fields used by both runtimes):
   deterministic allow/deny cases tested by Next.js and FastAPI. These tests do
   not exercise real Firebase or Firestore connectivity.
 
-**Deployment:** Keep `PORTFOLIO_LAB_ENABLED=false` in production. Use a dedicated
-development Firebase project for provisioning and recovery smoke tests.
+Use a dedicated development Firebase project for provisioning and recovery
+smoke tests. The live site uses the project named `portfolio-lab-dev`.
 
 Recommended rules are checked in at `infra/firebase/firestore.rules`; publish
 them to the **development Firebase project** in Firebase Console before
