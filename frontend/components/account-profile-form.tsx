@@ -127,7 +127,7 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
         aria-pressed={source === photo.provider} onClick={() => { ++imageSelection.current; setReading(false); setSource(photo.provider); setImage(null); }}>
         Use {labProviderNames[photo.provider]} photo
       </button>)}
-      {profile.linkedProviders.includes("microsoft.com") &&
+      {profile.linkedProviders.some((provider) => provider === "microsoft.com") &&
         !profile.providerPhotos.some((photo) => photo.provider === "microsoft.com") &&
         <button className={authStyles.secondaryButton} type="button" disabled={!ready || busy}
           onClick={() => void importMicrosoftPhoto()}>Use Microsoft photo</button>}

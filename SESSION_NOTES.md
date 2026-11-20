@@ -34,6 +34,14 @@ for the new test, TypeScript and both browser scenarios passed. The full backend
 suite passed 1006 tests with four optional Redis tests skipped; backend lint,
 formatting, import boundaries and compilation also passed.
 
+The CodeQL follow-up uses explicit equality for the linked Microsoft provider
+ID in the profile form. The provider list contains Firebase IDs; the photo
+request continues to use the fixed Microsoft Graph endpoint. Four desktop/mobile
+emulator scenarios passed for profiles, linked accounts and project access,
+including the Microsoft photo option before and after account linking. Targeted
+ESLint and TypeScript passed. PR verification must inspect the full commit
+check-run list, including the separate GitHub Advanced Security CodeQL result.
+
 - **19 November, `c809f23`.** A disposable user registered through the site,
   received a session, signed out and signed back in with a password. Both the
   site and the direct Render API denied access to both projects for that

@@ -146,12 +146,17 @@ test.describe("Portfolio Lab self-service approval", () => {
     await page.getByRole("button", { name: "Create account with email", exact: true }).click();
     const { localId: uid } = await (await signup).json();
     await page.getByRole("heading", { name: "Settings", exact: true }).waitFor();
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Profile", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Use Microsoft photo", exact: true })).toHaveCount(0);
     await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
     for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
       await mockProvider(page, "Link " + name, linkedEmail);
       await mockProvider(page, "Confirm " + name, linkedEmail);
       await expect(page.getByRole("status").filter({ hasText: name + " is linked" })).toBeVisible();
     }
+
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Profile", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Use Microsoft photo", exact: true })).toBeVisible();
 
     const owner = await browser.newContext({ baseURL: site, viewport: page.viewportSize() });
     try {
