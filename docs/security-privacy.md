@@ -68,6 +68,22 @@ service-account files in request logs or release evidence. The
 [identity setup runbook](architecture/portfolio-lab-identity-setup.md) documents
 the admission bindings and password-reset transaction.
 
+Account names and avatars are private, UID-bound profile documents in
+`portfolio_lab_profiles`. The website validates the current session on
+every profile request. Client-supplied UIDs and external avatar URLs cannot
+select another profile or a server download target. Uploads accept bounded
+PNG, JPEG and WebP data, are decoded and re-encoded on the server, and retain
+no original filename or image metadata. Provider photos are offered only
+for confirmed linked identities. Microsoft photo import requests the signed-in
+user's photo from the fixed Microsoft Graph endpoint in the browser. Its OAuth
+token stays in memory.
+
+The custom `/auth/action` page removes the reset code from the visible URL,
+uses no-referrer metadata and is excluded from the page analytics allowlist.
+Firebase email resets use Firebase's code verification and confirmation APIs.
+Private invitation setup links retain the existing UID-bound, audited server
+transaction and reset-pending admission policy.
+
 The internal Redis probe uses a dedicated `REDIS_PROBE_TOKEN`, stored only in
 backend environment variables and the cron-job.org Authorization header. Keep it
 out of URLs, source control, and logs. Authorization is checked before any Redis

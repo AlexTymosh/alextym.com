@@ -32,6 +32,7 @@ async function avatarImage(value: unknown): Promise<string> {
     throw new Error("Invalid image");
   }
   const input = Buffer.from(value.slice(value.indexOf(",") + 1), "base64");
+  if (input.byteLength > 2_000_000) throw new Error("Image too large");
   const image = sharp(input, { limitInputPixels: 16_000_000, animated: false });
   const metadata = await image.metadata();
   if (!["png", "jpeg", "webp"].includes(metadata.format || "")) throw new Error("Unsupported image");

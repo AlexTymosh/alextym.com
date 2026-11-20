@@ -6,6 +6,24 @@
 sign-in is enabled for Fleet VOR Hub and Workforce Intelligence on alextym.com.
 Both production hosts use `portfolio-lab-dev` and the same pinned Owner UID.
 
+The current branch `codex/account-settings` prepares site-wide account
+settings. It adds `/sign-in`, `/settings`, a profile with names and avatars,
+shared project cards, one-click linking popups, password visibility controls
+and branded Firebase email reset handling. Prior `/lab` pages redirect to
+the new routes. The Owner will review this branch before merging. After
+deployment, configure Firebase's Password reset template action URL as
+`https://alextym.com/auth/action`. [Deployment steps](docs/deployment.md#production-firebase-access)
+
+Local verification for this branch passed 16 desktop/mobile Chromium scenarios
+against isolated Firebase emulators, including provider linking, cross-project
+denial, grant revocation, private profiles, image validation, concurrent updates
+and reset-code reuse rejection. The backend link and recovery checks passed
+42 tests. TypeScript, frontend lint and the production build passed. The Fleet
+module retains its seven existing lint warnings. Real Microsoft photo import
+requires the user's interactive consent and remains a production check.
+Another 122 checks passed against the production build for disabled routes,
+admission and recovery policies, public pages, navigation and light/dark themes.
+
 - **19 November, `c809f23`.** A disposable user registered through the site,
   received a session, signed out and signed back in with a password. Both the
   site and the direct Render API denied access to both projects for that

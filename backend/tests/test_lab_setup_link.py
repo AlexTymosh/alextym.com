@@ -23,7 +23,7 @@ def test_reset_code_transferred_into_fragment_not_http_query() -> None:
     )
     assert (
         link
-        == "https://preview.example.test/lab/password/reset#uid=firebase-uid&oobCode=abcDEF123_-1"
+        == "https://preview.example.test/auth/action#uid=firebase-uid&oobCode=abcDEF123_-1"
     )
     assert "?" not in link
 
@@ -54,7 +54,7 @@ def test_local_http_only_when_explicitly_allowed() -> None:
         build_private_action_link(src, "http://localhost:3000", "firebase-uid")
     assert build_private_action_link(
         src, "http://localhost:3000", "firebase-uid", allow_http_local=True
-    ).startswith("http://localhost:3000/lab/password/reset#")
+    ).startswith("http://localhost:3000/auth/action#")
     with pytest.raises(ValueError):
         build_private_action_link(src, "http://evil.test", "firebase-uid", allow_http_local=True)
 

@@ -168,7 +168,7 @@ for free-tier limits, service account roles, and remaining test gates.
 Fleet VOR Hub and Workforce Intelligence use `PORTFOLIO_LAB_ENABLED=true`
 on Vercel and Render. Both hosts use Firebase project `portfolio-lab-dev` and
 the same pinned Owner UID. Each host has its own server credential. The public
-sign-in page is [alextym.com/lab/login](https://alextym.com/lab/login).
+sign-in page is [alextym.com/sign-in](https://alextym.com/sign-in).
 
 The Owner table queries Firestore identities by document ID. The Vercel role
 needs both `datastore.entities.get` and `datastore.entities.list` for that
@@ -189,10 +189,25 @@ app's Client ID and Client Secret, then save.
 [Firebase GitHub sign-in](https://firebase.google.com/docs/auth/web/github-auth)
 
 To verify project grants, register a visitor in a separate browser profile.
-Sign in as the Owner and open [Access management](https://alextym.com/lab/admin).
+Sign in as the Owner and open [Access management](https://alextym.com/settings/access).
 Set one project to **View** and click **Save access**. On the visitor's account
 page, click **Refresh access** and open that project. Check that the other
 project still denies access. Select **No Access** and save to verify revocation.
+
+After deploying the account settings update, set Firebase's password reset
+email action URL to `https://alextym.com/auth/action`. In Firebase Console,
+open **Authentication → Templates → Password reset**, edit the template,
+choose **Customize action URL**, enter the URL and save. Request a fresh reset
+email and verify its complete flow on the site. This enables the branded reset
+page with password confirmation for new emails.
+[Custom Firebase email actions](https://firebase.google.com/docs/auth/custom-email-handler)
+
+Account settings live at `/settings`. Its profile and sign-in methods
+sections use `/settings/profile` and `/settings/connections`. The public
+`/portfolio` page lists projects for visitors. Protected project pages and
+APIs continue to check the session and project grant independently.
+Old account URLs redirect to the new pages. Existing OAuth provider callbacks
+continue to use Firebase's `/__/auth/handler` endpoint.
 
 ### Reusing the template
 
