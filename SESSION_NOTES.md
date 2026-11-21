@@ -2,27 +2,33 @@
 
 **Updated:** 2026-11-21
 
-## Current local change — Fleet route migration
+## Current local change — Portfolio navigation
 
 The Owner requested three separate changes: move Fleet under `/portfolio`, add
 Portfolio navigation, then expand the public project descriptions. **Stop after
 each logical change for the Owner to commit and push. Continue only after the
 Owner explicitly permits it.**
 
-Step 1 is prepared locally: `/portfolio/fleet-vor-hub` is canonical, with its
-existing project authorization layout; the four old URLs permanently redirect
-there. The manifest, Fleet links, boundary checks and route documentation follow
-the new path. Menu and catalogue presentation changes are pending.
+Step 1 was committed and pushed by the Owner as `e63e816`: Fleet is canonical at
+`/portfolio/fleet-vor-hub`, with its existing project authorization layout and
+permanent redirects from the four old URLs. The avatar work was committed and
+pushed separately as `f098115`.
 
-Verification: production build, frontend lint (seven existing Fleet warnings),
-TypeScript and portfolio boundary checks passed. Desktop/mobile Chromium passed
-26 route/workspace/catalogue scenarios plus two Firebase-mode guest-denial
-checks. The initial full CI passed backend (1006 tests; four optional skips),
-RAG and Docker; its frontend type check encountered stale generated dev routes.
-Those generated types were cleared and the final frontend checks passed.
-Build and Chromium verification required execution outside the Windows sandbox.
-Production verification and the Owner's commit/push are pending. Preserve the
-pre-existing uncommitted account/profile work separately.
+Step 2 is prepared locally: Portfolio links to `/portfolio` between Resume and
+Chat, and stays highlighted on nested project pages using the website shell.
+The responsive header accommodates the extra link and long account labels.
+The boundary guard and architecture documentation reflect the approved menu.
+
+Verification: production build including TypeScript, frontend lint (seven
+existing Fleet warnings), portfolio boundaries and whitespace checks passed.
+Eight desktop/mobile Chromium scenarios passed for navigation, the public
+catalogue, nested Fleet highlighting and theme switching. Navigation was also
+checked at 360, 640, 900 and 1280 pixels with a synthetic long account name.
+Build and Chromium verification ran outside the Windows sandbox.
+
+Stop for the Owner to commit and push step 2. Step 3 (richer public project
+cards) is pending and must wait for explicit permission to continue.
+Production verification remains pending.
 
 ## Account experience checkpoint
 

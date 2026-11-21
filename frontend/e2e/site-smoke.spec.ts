@@ -59,17 +59,37 @@ test("renders key public pages", async ({ page }) => {
 test("navigates between primary pages from the main navigation", async ({
   page,
 }) => {
+  await page.route("**/auth/profile", async (route) => {
+    await fulfillJson(route, { displayName: "Synthetic portfolio reviewer with a long display name", avatarUrl: null });
+  });
   await gotoAndExpectOk(page, "/");
 
   const navigation = page.getByRole("navigation", {
     name: "Main navigation",
   });
 
+  await expect(navigation.locator(".nav-account")).toContainText("Synthetic portfolio reviewer");
+  for (const width of [360, 640, 900, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await navigation.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth &&
+        element.scrollWidth <= element.clientWidth;
+    }), `Navigation should fit at ${width}px`).toBeTruthy();
+  }
+
+  const portfolio = navigation.getByRole("link", { name: "Portfolio", exact: true });
+  await portfolio.click();
+  await expect(page).toHaveURL(/\/portfolio$/);
+  await expect(page.getByRole("heading", { name: "Portfolio demonstrations", exact: true })).toBeVisible();
+  await expect(portfolio).toHaveAttribute("aria-current", "page");
+
   await navigation.getByRole("link", { name: "Resume" }).click();
   await expect(page).toHaveURL(/\/resume$/);
   await expect(
     page.getByRole("heading", { name: resumeConfig.pageHeading }),
   ).toBeVisible();
+  await expect(portfolio).not.toHaveAttribute("aria-current", /.+/);
 
   await navigation.getByRole("link", { name: "Chat" }).click();
   await expect(page).toHaveURL(/\/chat$/);

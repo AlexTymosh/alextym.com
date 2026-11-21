@@ -27,6 +27,7 @@ Implemented public routes:
 ```text
 /          -> home page / product overview
 /resume    -> interactive resume + dynamic CV download
+/portfolio -> public project catalogue
 /chat      -> AI/RAG chat + human handoff
 /contact   -> contact form
 ```
@@ -36,6 +37,7 @@ Main navigation currently includes:
 ```text
 Home
 Resume
+Portfolio
 Chat
 Contact
 ```
@@ -62,6 +64,11 @@ The site uses these account routes directly.
 Account labels fall back to the user's email when no name is available.
 The profile editor offers proportional avatar cropping and fit-to-frame before
 the existing server validation and image encoding.
+
+The main navigation links to the public `/portfolio` catalogue. Portfolio stays
+highlighted on nested project pages that use the website shell. Responsive
+navigation wraps before the account label can overflow the header. The project
+access guards are independent of catalogue navigation.
 
 Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the

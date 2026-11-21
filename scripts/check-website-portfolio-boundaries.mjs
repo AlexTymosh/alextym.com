@@ -125,5 +125,5 @@ for (const subroute of ["register", "new-defect", "process"]) {
   assert.match(readFileSync(file, "utf8"), /permanentRedirect\(["']\/portfolio\/fleet-vor-hub["']\)/, `${subroute}: canonical redirect changed`);
 }
 const siteConfig = readFileSync(join(repo, "frontend/lib/site-config.ts"), "utf8");
-assert.doesNotMatch(siteConfig, /href:\s*["']\/portfolio["']/, "Unpublished portfolio navigation was exposed");
+assert.match(siteConfig, /href:\s*["']\/portfolio["']/, "The approved Portfolio menu link must remain available");
 console.log(`Website/Portfolio boundaries: PASS (${projectSources.length} project sources, ${stylesheets.length} scoped CSS Modules, four preserved host routes)`);

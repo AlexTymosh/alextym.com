@@ -49,9 +49,14 @@ test("Fleet demo remains noindex and website navigation survives returning home"
 
   // The shared host shell remains mounted; Fleet visually owns the workspace.
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(1);
+  const portfolio = page.getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "Portfolio", exact: true });
+  await expect(portfolio).toHaveAttribute("href", "/portfolio");
+  await expect(portfolio).toHaveAttribute("aria-current", "location");
   await page.goto("/");
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expect(portfolio).not.toHaveAttribute("aria-current", /.+/);
 });
 
 test("the canonical Fleet route retains its server-side project access gate", async ({ request }) => {

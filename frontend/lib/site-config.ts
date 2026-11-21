@@ -10,6 +10,7 @@ export const publicRoutes = ["/", "/resume", "/chat", "/contact", "/disclaimer"]
 export const siteNavigation = [
   { href: "/", label: "Home" },
   { href: "/resume", label: "Resume" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/chat", label: "Chat" },
   { href: "/contact", label: "Contact" },
 ] as const;
