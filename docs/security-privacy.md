@@ -73,7 +73,10 @@ Account names and avatars are private, UID-bound profile documents in
 every profile request. Client-supplied UIDs and external avatar URLs cannot
 select another profile or a server download target. Uploads accept bounded
 PNG, JPEG and WebP data, are decoded and re-encoded on the server, and retain
-no original filename or image metadata. Provider photos are offered only
+no original filename or image metadata. Avatar cropping happens in browser memory;
+the server receives and revalidates only the applied image. Fit and crop
+modes preserve source proportions; no original image is stored in the profile.
+Provider photos are offered only
 for confirmed linked identities. Microsoft photo import requests the signed-in
 user's photo from the fixed Microsoft Graph endpoint in the browser. Its OAuth
 token stays in memory.

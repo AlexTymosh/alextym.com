@@ -49,6 +49,7 @@ test.describe("Site account settings", () => {
     await page.getByLabel("Last name", { exact: true }).fill("Example");
     const png = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#ff3e00" } }).png().toBuffer();
     await page.getByLabel("Profile photo", { exact: true }).setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: png });
+    await page.getByRole("button", { name: "Use photo", exact: true }).click();
     await page.getByRole("button", { name: "Save profile", exact: true }).click();
     await expect(page.getByRole("status")).toHaveText("Profile saved.");
     await expect(page.locator(".nav-account")).toContainText("Taylor Example");
@@ -95,6 +96,74 @@ test.describe("Site account settings", () => {
     expect(other.displayName).toBe(other.email);
     expect(other.avatarUrl).toBeNull();
     expect(other.email).not.toBe(email);
+  });
+
+  test("avatar cropping preserves proportions, respects framing and can be cancelled", async ({ page }, info) => {
+    await register(page);
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Profile", exact: true }).click();
+    const png = await sharp({ create: { width: 600, height: 200, channels: 3, background: "#0000ff" } }).composite([
+      { input: Buffer.from('<svg width="600" height="200"><rect x="200" width="200" height="200" fill="red"/><rect x="400" width="200" height="200" fill="#00aa00"/><circle cx="500" cy="100" r="50" fill="white"/></svg>') },
+    ]).png().toBuffer();
+    const file = { name: "landscape.png", mimeType: "image/png", buffer: png };
+    await page.getByLabel("Profile photo", { exact: true }).setInputFiles(file);
+    await expect(page.getByRole("button", { name: "Save profile", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Cancel crop", exact: true }).click();
+    expect((await (await page.request.get("/auth/profile")).json()).avatarUrl).toBeNull();
+    await page.getByLabel("Profile photo", { exact: true }).setInputFiles(file);
+    const zoom = page.getByRole("slider", { name: "Photo zoom", exact: true });
+    await zoom.focus(); await zoom.press("End"); await expect(zoom).toHaveValue("4");
+    await zoom.press("Home"); await expect(zoom).toHaveValue("1");
+    const horizontal = page.getByRole("slider", { name: "Horizontal position", exact: true });
+    const previewImage = page.getByRole("img", { name: "Avatar crop preview", exact: true });
+    await previewImage.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+    const preview = await previewImage.boundingBox();
+    const point = { x: preview!.x + preview!.width / 2, y: preview!.y + preview!.height / 2 };
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, point)).toBe("CANVAS");
+    if (info.project.name === "mobile-chrome") {
+      const touch = await page.context().newCDPSession(page);
+      await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+      await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...point, x: point.x - 40 }] });
+      await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await touch.detach();
+    } else {
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.mouse.move(point.x - 40, point.y, { steps: 4 });
+      await page.mouse.up();
+    }
+    await expect.poll(async () => Number(await horizontal.inputValue())).toBeGreaterThan(50);
+    await horizontal.focus(); await horizontal.press("End");
+    await expect(horizontal).toHaveValue("100");
+    await expect(page.getByRole("button", { name: "Use photo", exact: true })).toBeEnabled();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    await page.screenshot({ path: info.outputPath("avatar-cropper.png"), fullPage: true });
+    await page.getByRole("button", { name: "Use photo", exact: true }).click();
+    await page.getByRole("button", { name: "Save profile", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText("Profile saved.");
+    const cropped = (await (await page.request.get("/auth/profile")).json()).avatarUrl;
+    const { data, info: pixels } = await sharp(Buffer.from(cropped.split(",")[1], "base64")).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    expect([pixels.width, pixels.height]).toEqual([256, 256]);
+    const color = (x: number, y: number) => Array.from(data.subarray((y * pixels.width + x) * 4, (y * pixels.width + x) * 4 + 3));
+    expect(color(16, 128)[1]).toBeGreaterThan(120);
+    expect(color(16, 128)[0]).toBeLessThan(30);
+    const white = (x: number, y: number) => color(x, y).every((channel) => channel > 220);
+    const across = Array.from({ length: 256 }, (_, x) => white(x, 128)).filter(Boolean).length;
+    const down = Array.from({ length: 256 }, (_, y) => white(128, y)).filter(Boolean).length;
+    expect(across).toBeGreaterThan(120);
+    expect(Math.abs(across - down)).toBeLessThanOrEqual(3);
+
+    await page.getByRole("button", { name: "Adjust crop", exact: true }).click();
+    await page.getByRole("button", { name: "Fit whole photo", exact: true }).click();
+    await expect(page.getByRole("slider", { name: "Photo zoom", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Use photo", exact: true }).click();
+    await page.getByRole("button", { name: "Save profile", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText("Profile saved.");
+    const fitted = (await (await page.request.get("/auth/profile")).json()).avatarUrl;
+    // Inspect the encoded result after trimming transparent margins.
+    const fittedBounds = await sharp(Buffer.from(fitted.split(",")[1], "base64"))
+      .trim({ background: "#00000000" }).toBuffer({ resolveWithObject: true });
+    expect(fittedBounds.info.width / fittedBounds.info.height).toBeGreaterThan(2.9);
+    expect(fittedBounds.info.width / fittedBounds.info.height).toBeLessThan(3.1);
   });
 
   test("Firebase reset links show the brand, confirm passwords and reject reuse", async ({ page }) => {

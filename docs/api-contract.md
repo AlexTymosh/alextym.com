@@ -92,6 +92,9 @@ WebP images are decoded, stripped of metadata and resized to a 256-pixel WebP.
 The resulting image is limited to 100 KB. Each write rechecks admission and
 the profile revision in a Firestore transaction. Concurrent changes return 409.
 Profiles return `Cache-Control: no-store`.
+The profile's `displayName` uses the available name or falls back to email.
+The browser's avatar editor preserves image proportions, supports cropping and
+fitting the complete photo, and sends only the applied image as `avatarData`.
 
 Private password setup links use
 `/auth/action#uid=…&oobCode=…`. The same page handles Firebase email reset

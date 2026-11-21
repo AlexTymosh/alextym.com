@@ -59,6 +59,9 @@ The project cards are shared with the public `/portfolio` catalogue, with
 current per-project grants determining the signed-in user's available cards.
 Generic `/auth/*` routes handle sessions, linking, profiles and recovery.
 The site uses these account routes directly.
+Account labels fall back to the user's email when no name is available.
+The profile editor offers proportional avatar cropping and fit-to-frame before
+the existing server validation and image encoding.
 
 Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the
