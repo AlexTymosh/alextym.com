@@ -8,6 +8,14 @@ remains one Next.js host on Vercel and one FastAPI host on Render.
 
 ## Target
 
+**Fleet route migration (2026-11-21):** The canonical Fleet UI is
+`/portfolio/fleet-vor-hub`. Its host-owned authorization layout moved with the
+page. `/fleet-vor-hub` and its `register`, `new-defect` and `process` aliases
+return permanent redirects to the canonical page. Equivalent aliases beneath
+the new route also redirect there. The project ID, grants, `/api/vor/*`,
+cookies and Fleet persistence are unchanged. Portfolio navigation and richer
+public project descriptions are a separate, pending change.
+
 `alextym.com` is a single monorepo with one Next.js host (Vercel) and one FastAPI host (Render). Each embedded demonstration application owns its implementation under `portfolio/<project_id>/`. These projects will never need standalone repositories, websites or dedicated services.
 
 ```text
@@ -63,7 +71,7 @@ on both hosts together after verification and Owner review.
 | Layer | Owned by | Allowed responsibility |
 | --- | --- | --- |
 | `/`, Resume, Chat, Contact, global navigation | Website | Personal portfolio, chat and generic site identity |
-| `/fleet-vor-hub` route adapter | Website | Import/render Fleet public frontend entry |
+| `/portfolio/fleet-vor-hub` route adapter | Website | Import/render Fleet public frontend entry and enforce project access |
 | `/api/vor/*` router adapter | Website | Register Fleet public router (no ticket logic) |
 | Fleet UI, CSS, local images | Fleet | Fleet application implementation |
 | Fleet API and domain services | Fleet | Business rules, auth/session for the demo, operations |
@@ -87,7 +95,7 @@ No generic shared package or plugin discovery framework is required yet. If an a
 ## Invariants for every PR
 
 - `task ci` passes locally and GitHub CI jobs pass (project/backend/frontend/RAG/docker).
-- `/fleet-vor-hub`, redirects and `/api/vor/*` remain compatible.
+- `/portfolio/fleet-vor-hub` is canonical; legacy Fleet redirects and `/api/vor/*` remain compatible.
 - `/fleet-vor-hub-01` and `/api/vor-01` remain retired.
 - No change to the Fleet SQLite seed bytes, accepted data model or existing live environment settings.
 - No behavior change in Resume, Chat, Contact, RAG, Telegram or unrelated case studies.

@@ -24,7 +24,7 @@ test("the public portfolio has working links to both demos", async ({ page }) =>
   await expect(page.locator(".site-footer")).toBeVisible();
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { name: "Portfolio demonstrations" })).toBeVisible();
-  await expect(main.getByRole("link", { name: /Fleet VOR Hub/ })).toHaveAttribute("href", "/fleet-vor-hub");
+  await expect(main.getByRole("link", { name: /Fleet VOR Hub/ })).toHaveAttribute("href", "/portfolio/fleet-vor-hub");
   await expect(main.getByRole("link", { name: /Workforce & Recruitment Intelligence/ }))
     .toHaveAttribute("href", "/portfolio/workforce-intelligence");
 });

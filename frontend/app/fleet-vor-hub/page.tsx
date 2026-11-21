@@ -1,5 +1,5 @@
-import type {Metadata} from "next";
-import { FleetHubApp } from "@fleet-hub";
+import { permanentRedirect } from "next/navigation";
 
-export const metadata:Metadata={title:"Fleet VOR Hub · Demo",description:"Synthetic fleet operations workspace",robots:{index:false,follow:false}};
-export default function FleetVorDemoPage(){return <FleetHubApp/>;}
+export default function LegacyFleetPage() {
+  permanentRedirect("/portfolio/fleet-vor-hub");
+}

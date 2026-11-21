@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const siteRoute = join(root, "frontend/app/fleet-vor-hub");
+const siteRoute = join(root, "frontend/app/portfolio/fleet-vor-hub");
 const projectSource = join(root, "portfolio/fleet_hub/frontend/src");
 
 function gather(dir, rel = "") {
@@ -29,7 +29,7 @@ assert.deepEqual(siteFiles, [
 ], "Next.js route folder should only contain public adapters, redirects and the host authorization layout");
 
 const layout = readFileSync(join(siteRoute, "layout.tsx"), "utf8");
-assert.match(layout, /from ["']\.\.\/\.\.\/lib\/portfolio-lab\/project-access-server["']/);
+assert.match(layout, /from ["']\.\.\/\.\.\/\.\.\/lib\/portfolio-lab\/project-access-server["']/);
 assert.match(layout, /export const dynamic = ["']force-dynamic["']/);
 assert.match(layout, /await requireLabProjectPage\(["']fleet_hub["']\)/);
 assert.match(layout, /return children;/);
@@ -79,6 +79,12 @@ assert.match(linkScript, /realpathSync\(link\) !== realpathSync\(target\)/);
 assert.doesNotMatch(linkScript, /const link = join\(repoRoot, "node_modules"\)/);
 const manifest = JSON.parse(readFileSync(join(root, "portfolio/fleet_hub/project.json"), "utf8"));
 assert.equal(manifest.catalog.visible, false);
-assert.equal(manifest.demo.path, "/fleet-vor-hub");
+assert.equal(manifest.demo.path, "/portfolio/fleet-vor-hub");
+const legacyRoute = join(root, "frontend/app/fleet-vor-hub");
+assert.ok(!existsSync(join(legacyRoute, "layout.tsx")), "Legacy redirects must run before the protected project layout");
+for (const rel of ["page.tsx", "register/page.tsx", "new-defect/page.tsx", "process/page.tsx"]) {
+  assert.match(readFileSync(join(legacyRoute, rel), "utf8"), /permanentRedirect\(["']\/portfolio\/fleet-vor-hub["']\)/,
+    `${rel}: legacy Fleet URLs must redirect permanently to the protected canonical route`);
+}
 assert.ok(existsSync(join(root, "portfolio/fleet_hub/backend/src/fleet_hub/services/vor_seed.sqlite3")), "Fleet seed must be owned by portfolio");
 console.log(`Fleet frontend boundary check passed (${appFiles.length} project-owned source/assets, four host routes and authorization layout).`);

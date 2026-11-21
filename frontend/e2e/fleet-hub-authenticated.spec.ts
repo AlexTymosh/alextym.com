@@ -119,7 +119,7 @@ async function mockAuthenticatedFleet(page: Page) {
 
 test("authenticated Fleet workspace retains project-owned navigation", async ({ page }) => {
   const { requests, unexpected } = await mockAuthenticatedFleet(page);
-  const response = await page.goto("/fleet-vor-hub");
+  const response = await page.goto("/portfolio/fleet-vor-hub");
   expect(response?.status()).toBe(200);
 
   await expect(page.getByRole("heading", { name: "Issue Hub", exact: true })).toBeVisible();
@@ -140,7 +140,7 @@ test("authenticated Fleet workspace retains project-owned navigation", async ({ 
 
 test("sign-out returns to access screen and removes authenticated navigation", async ({ page }) => {
   const { requests, unexpected } = await mockAuthenticatedFleet(page);
-  await page.goto("/fleet-vor-hub");
+  await page.goto("/portfolio/fleet-vor-hub");
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
 

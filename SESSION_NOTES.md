@@ -1,6 +1,30 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-20
+**Updated:** 2026-11-21
+
+## Current local change — Fleet route migration
+
+The Owner requested three separate changes: move Fleet under `/portfolio`, add
+Portfolio navigation, then expand the public project descriptions. **Stop after
+each logical change for the Owner to commit and push. Continue only after the
+Owner explicitly permits it.**
+
+Step 1 is prepared locally: `/portfolio/fleet-vor-hub` is canonical, with its
+existing project authorization layout; the four old URLs permanently redirect
+there. The manifest, Fleet links, boundary checks and route documentation follow
+the new path. Menu and catalogue presentation changes are pending.
+
+Verification: production build, frontend lint (seven existing Fleet warnings),
+TypeScript and portfolio boundary checks passed. Desktop/mobile Chromium passed
+26 route/workspace/catalogue scenarios plus two Firebase-mode guest-denial
+checks. The initial full CI passed backend (1006 tests; four optional skips),
+RAG and Docker; its frontend type check encountered stale generated dev routes.
+Those generated types were cleared and the final frontend checks passed.
+Build and Chromium verification required execution outside the Windows sandbox.
+Production verification and the Owner's commit/push are pending. Preserve the
+pre-existing uncommitted account/profile work separately.
+
+## Account experience checkpoint
 
 [PR #258](https://github.com/AlexTymosh/alextym.com/pull/258) is merged. Firebase
 sign-in is enabled for Fleet VOR Hub and Workforce Intelligence on alextym.com.

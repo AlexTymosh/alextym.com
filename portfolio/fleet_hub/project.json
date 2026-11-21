@@ -15,7 +15,7 @@
   ],
   "mode": "embedded",
   "demo": {
-    "path": "/fleet-vor-hub",
+    "path": "/portfolio/fleet-vor-hub",
     "apiPrefix": "/api/vor"
   },
   "catalog": {

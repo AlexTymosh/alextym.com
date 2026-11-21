@@ -6,7 +6,8 @@ Next.js website and FastAPI backend. It is not a separate deployed service.
 ## Current implementation
 
 ```text
-frontend/app/fleet-vor-hub/                  Next.js route adapters / redirects
+frontend/app/portfolio/fleet-vor-hub/        Next.js route adapters / authorization / redirects
+frontend/app/fleet-vor-hub/                  Legacy permanent redirects
 portfolio/fleet_hub/frontend/src/           Fleet UI and CSS Modules
 portfolio/fleet_hub/frontend/src/index.ts   Public frontend entry
 backend/app/main.py                         FastAPI host; mounts Fleet router and calls startup hook
@@ -28,10 +29,14 @@ inside the website's `frontend/` or `backend/app/` modules.
 
 ## Stable public contracts
 
-- Demo page: `/fleet-vor-hub`.
+- Demo page: `/portfolio/fleet-vor-hub`.
 - Fleet HTTP API: `/api/vor/*`.
-- Legacy redirects: `/fleet-vor-hub/register`, `/fleet-vor-hub/new-defect`,
-  `/fleet-vor-hub/process` redirect to `/fleet-vor-hub`.
+- Legacy `/fleet-vor-hub` and its `register`, `new-defect` and `process`
+  child routes permanently redirect to `/portfolio/fleet-vor-hub`.
+- The same three child routes beneath `/portfolio/fleet-vor-hub` also
+  redirect to the canonical demo page.
+- The host authorization layout continues to require the `fleet_hub` grant
+  when Firebase access is enabled. The URL move does not change API access.
 - Keep authentication, cookies, Origin handling, API behavior and existing
   website Chat/RAG/SSE behavior unchanged during persistence refactors.
 

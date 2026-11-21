@@ -31,7 +31,7 @@ No independent site, repository, deployment or database service is planned for p
 
 ## Publication
 
-A `project.json` or registry entry **does not automatically publish** a project. Publication and site navigation are separate product decisions. The existing Fleet Hub demo remains at `/fleet-vor-hub`.
+A `project.json` or registry entry **does not automatically publish** a project. Publication and site navigation are separate product decisions. The Fleet Hub demo lives at `/portfolio/fleet-vor-hub`; `/fleet-vor-hub` permanently redirects there.
 
 ## Validate
 

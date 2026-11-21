@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 export default function LegacyProcessDesign(){
-  redirect("/fleet-vor-hub");
+  permanentRedirect("/portfolio/fleet-vor-hub");
 }
