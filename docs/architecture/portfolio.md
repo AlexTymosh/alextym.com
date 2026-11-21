@@ -14,7 +14,10 @@ page. `/fleet-vor-hub` and its `register`, `new-defect` and `process` aliases
 return permanent redirects to the canonical page. Equivalent aliases beneath
 the new route also redirect there. The project ID, grants, `/api/vor/*`,
 cookies and Fleet persistence are unchanged. The website menu links to the public
-`/portfolio` catalogue; richer project descriptions are a separate, pending change.
+`/portfolio` catalogue, with public project descriptions and synthetic screenshots.
+Only manifests marked `catalog.visible=true` appear there. Shared account
+Settings still derive available projects from current grants across the full
+registry, independently of public catalogue visibility.
 
 `alextym.com` is a single monorepo with one Next.js host (Vercel) and one FastAPI host (Render). Each embedded demonstration application owns its implementation under `portfolio/<project_id>/`. These projects will never need standalone repositories, websites or dedicated services.
 

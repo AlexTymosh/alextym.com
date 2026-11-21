@@ -16,6 +16,11 @@ const pageMetadataCases = [
     description: getSeoPage("resume").description,
   },
   {
+    path: "/portfolio",
+    title: formatPageTitle("Portfolio"),
+    description: "Working concepts for operational workflows, system integration and AI-assisted workforce analytics.",
+  },
+  {
     path: "/chat",
     title: formatPageTitle(getSeoPage("chat").title),
     description: getSeoPage("chat").description,
@@ -39,6 +44,10 @@ test.describe("SEO metadata", () => {
         "content",
         metadataCase.description,
       );
+      if (metadataCase.path === "/portfolio") {
+        await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `${siteUrl}/portfolio`);
+        await expect(page.locator('meta[name="robots"]')).not.toHaveAttribute("content", /noindex/);
+      }
     });
   }
 
@@ -94,6 +103,9 @@ test.describe("SEO metadata", () => {
       await expect(page.locator("body")).toContainText(
         `<loc>${absoluteSiteUrl(route)}</loc>`,
       );
+    }
+    for (const route of ["/fleet-vor-hub", "/portfolio/fleet-vor-hub", "/portfolio/workforce-intelligence"]) {
+      await expect(page.locator("body")).not.toContainText(`<loc>${absoluteSiteUrl(route)}</loc>`);
     }
   });
 });

@@ -97,6 +97,9 @@ for (const id of expectedIds) {
       !metadata.technologies.every(item => typeof item === "string" && item.trim())) {
     fail(`${prefix}/project.json: technologies must contain nonempty strings`);
   }
+  if (typeof metadata.catalog?.visible !== "boolean" || typeof metadata.catalog?.featured !== "boolean") {
+    fail(`${prefix}/project.json: catalog visibility and featured flags must be booleans`);
+  }
   const demoPath = metadata.demo?.path;
   const apiPrefix = metadata.demo?.apiPrefix;
   if (!validLocalRoute(demoPath)) {

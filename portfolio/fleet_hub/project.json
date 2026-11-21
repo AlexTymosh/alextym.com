@@ -3,7 +3,7 @@
   "id": "fleet_hub",
   "slug": "fleet-hub",
   "title": "Fleet VOR Hub",
-  "summary": "Synthetic fleet defect tracking, workflows, operational controls and reconciliation.",
+  "summary": "A vehicle-centred concept connecting defect tickets, fleet records and partner communication.",
   "category": "Operations Automation",
   "technologies": [
     "Next.js",
@@ -19,7 +19,7 @@
     "apiPrefix": "/api/vor"
   },
   "catalog": {
-    "visible": false,
+    "visible": true,
     "featured": false
   }
 }

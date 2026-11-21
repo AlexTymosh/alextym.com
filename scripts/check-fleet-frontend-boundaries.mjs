@@ -78,7 +78,7 @@ assert.match(linkScript, /if \(!existing\.isSymbolicLink\(\)\)/);
 assert.match(linkScript, /realpathSync\(link\) !== realpathSync\(target\)/);
 assert.doesNotMatch(linkScript, /const link = join\(repoRoot, "node_modules"\)/);
 const manifest = JSON.parse(readFileSync(join(root, "portfolio/fleet_hub/project.json"), "utf8"));
-assert.equal(manifest.catalog.visible, false);
+assert.equal(manifest.catalog.visible, true);
 assert.equal(manifest.demo.path, "/portfolio/fleet-vor-hub");
 const legacyRoute = join(root, "frontend/app/fleet-vor-hub");
 assert.ok(!existsSync(join(legacyRoute, "layout.tsx")), "Legacy redirects must run before the protected project layout");

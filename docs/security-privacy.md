@@ -28,6 +28,14 @@ Security and privacy are part of the product scope, especially because the syste
 9. Keep frontend free of backend/provider secrets.
 10. Keep the system simple enough to audit.
 
+Public portfolio descriptions and static application screenshots contain
+synthetic demonstration records. Screenshot provenance is recorded in
+`frontend/public/images/portfolio/README.md`. Do not capture private profiles,
+credentials or live operational data for public previews. The public catalogue
+does not request protected project data; publishing a project description or
+image does not grant access to its pages or APIs. Each demo retains its own
+server-side identity and project-permission checks.
+
 ---
 
 ## Secrets
