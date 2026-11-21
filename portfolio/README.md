@@ -31,7 +31,13 @@ No independent site, repository, deployment or database service is planned for p
 
 ## Publication
 
-A `project.json` or registry entry **does not automatically publish** a project. Publication and site navigation are separate product decisions. The existing Fleet Hub demo remains at `/fleet-vor-hub`.
+A registry entry alone does not publish a project. An approved project's
+`catalog.visible=true` flag includes its description in the public `/portfolio`
+catalogue. The host supplies public narrative copy and static synthetic
+screenshots; category, technology and route metadata come from the project
+manifest. Catalogue visibility does not grant access to a project or its API.
+The Fleet Hub demo lives at `/portfolio/fleet-vor-hub`; `/fleet-vor-hub`
+permanently redirects there.
 
 ## Validate
 

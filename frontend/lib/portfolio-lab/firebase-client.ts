@@ -10,28 +10,15 @@ import {
   inMemoryPersistence,
   initializeAuth,
   OAuthProvider,
-  signOut,
   type Auth,
-  type User,
 } from "firebase/auth";
 import type { LabOAuthProvider } from "./admission-policy";
-import { LAB_RECENT_LOGIN_SECONDS } from "./session-policy";
-
-let credentialTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function createLabOAuthProvider(provider: LabOAuthProvider) {
   if (provider === "google.com") return new GoogleAuthProvider();
   if (provider === "github.com") return new GithubAuthProvider();
   if (provider === "facebook.com") return new FacebookAuthProvider();
   return new OAuthProvider(provider);
-}
-
-export function retainLabLinkCredential(auth: Auth, user: User, authTime: number): void {
-  clearTimeout(credentialTimer);
-  const remaining = Math.max(0, (authTime + LAB_RECENT_LOGIN_SECONDS) * 1000 - Date.now());
-  credentialTimer = setTimeout(() => {
-    if (auth.currentUser === user) void signOut(auth).catch(() => undefined);
-  }, Math.min(remaining, LAB_RECENT_LOGIN_SECONDS * 1000));
 }
 
 /** Public client configuration only. Never put service-account secrets here. */
@@ -49,7 +36,7 @@ export function getLabAuth(): Auth {
     ? getApp("portfolio-lab")
     : initializeApp(config, "portfolio-lab");
   // The HttpOnly cookie carries the website session. Keep the client SDK
-  // credential in this page's memory for the short provider-linking window.
+  // credential in memory; reloads use explicit same-account reauthentication.
   const auth = initializeAuth(app, {
     persistence: inMemoryPersistence,
     popupRedirectResolver: browserPopupRedirectResolver,

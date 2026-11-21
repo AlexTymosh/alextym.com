@@ -57,6 +57,69 @@ test.describe("Portfolio Lab self-service approval", () => {
   test.skip(!enabled, "Requires the isolated localhost Firebase emulator environment");
   test.setTimeout(90_000);
 
+  test("linking after an old session and reload confirms the same account without signing out", async ({ page }) => {
+    const email = `reauth-${randomBytes(6).toString("hex")}@example.test`;
+    await page.goto("/sign-in");
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Confirm password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Create account with email", exact: true }).click();
+    await page.getByRole("heading", { name: "Settings", exact: true }).waitFor();
+    const cookie = (await page.context().cookies()).find((item) => item.name.endsWith("portfolio_lab_session"))!;
+    // Unsigned emulator tokens let this isolated fixture age the website session.
+    const parts = cookie.value.split(".");
+    const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+    claims.auth_time -= 3600;
+    const agedUser = await page.request.post(emulator + "/identitytoolkit.googleapis.com/v1/projects/" + project + "/accounts:update", {
+      headers: { Authorization: "Bearer owner" },
+      data: { localId: claims.sub, validSince: String(claims.auth_time - 1) },
+    });
+    expect(agedUser.status()).toBe(200);
+    parts[1] = Buffer.from(JSON.stringify(claims)).toString("base64url");
+    await page.context().addCookies([{ ...cookie, value: parts.join(".") }]);
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
+    expect(await (await page.request.get("/auth/session")).json()).toMatchObject({
+      authenticated: true, canLink: true,
+    });
+    const wrong = await page.request.post(emulator + "/identitytoolkit.googleapis.com/v1/accounts:signUp?key=" + project, {
+      data: { email: "other-" + email, password, returnSecureToken: true },
+    });
+    const wrongToken = (await wrong.json()).idToken;
+    expect((await page.request.post("/auth/session/reauthenticate", {
+      headers: { Origin: site }, data: { idToken: wrongToken },
+    })).status()).toBe(403);
+    const login = await page.request.post(emulator + "/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + project, {
+      data: { email, password, returnSecureToken: true },
+    });
+    const ownToken = (await login.json()).idToken;
+    const unapproved = ownToken.split(".");
+    const unapprovedClaims = JSON.parse(Buffer.from(unapproved[1], "base64url").toString());
+    unapprovedClaims.firebase = { sign_in_provider: "google.com", identities: { "google.com": ["unapproved-subject"] } };
+    unapproved[1] = Buffer.from(JSON.stringify(unapprovedClaims)).toString("base64url");
+    expect((await page.request.post("/auth/session/reauthenticate", {
+      headers: { Origin: site }, data: { idToken: unapproved.join(".") },
+    })).status()).toBe(403);
+    expect((await page.request.post("/auth/session/reauthenticate", {
+      headers: { Origin: "https://untrusted.example.test" }, data: { idToken: ownToken },
+    })).status()).toBe(403);
+    for (const name of ["Google", "GitHub", "Facebook"]) {
+      await mockProvider(page, "Link " + name, name.toLowerCase() + "-" + email);
+      await mockProvider(page, "Confirm " + name, name.toLowerCase() + "-" + email);
+      await expect(page.getByRole("status")).toContainText(name + " is linked");
+    }
+    await page.reload();
+    await page.getByRole("button", { name: "Link Microsoft", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Confirm your identity", exact: true })).toBeVisible();
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Confirm identity", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Identity confirmed");
+    await mockProvider(page, "Link Microsoft", "linked-" + email);
+    await mockProvider(page, "Confirm Microsoft", "linked-" + email);
+    await expect(page.getByRole("status")).toContainText("Microsoft is linked");
+    expect((await (await page.request.get("/auth/profile")).json()).email).toBe(email);
+  });
+
   test("email registration, Owner approval, project isolation and revocation", async ({ page, playwright }, testInfo) => {
     const email = `new-user-${randomBytes(6).toString("hex")}@example.test`;
     await page.goto("/sign-in");

@@ -11,7 +11,7 @@ const repo = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const sourceRoot = join(repo, "portfolio/fleet_hub/frontend/src");
 const websiteApp = join(repo, "frontend/app");
 const entry = join(sourceRoot, "index.ts");
-const hostAdapter = join(websiteApp, "fleet-vor-hub/page.tsx");
+const hostAdapter = join(websiteApp, "portfolio/fleet-vor-hub/page.tsx");
 const supportedSource = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs"]);
 const allowedDependencies = /^(?:react(?:\/.+)?|next(?:\/.+)?)$/;
 
@@ -119,11 +119,11 @@ assert.match(siteFrame, /className="site-main"/, "Existing website shell must re
 assert.match(rootLayout, /className="site-footer site-footer--with-disclaimer"/, "Footer contract changed");
 const globalCss = readFileSync(join(websiteApp, "globals.css"), "utf8");
 assert.doesNotMatch(globalCss, /\.(?:fleet[-_]?hub|vor[-_]?hub)(?:\b|[_-])/i, "Website stylesheet must not target Fleet domain classes");
-const hostRoute = join(websiteApp, "fleet-vor-hub");
+const hostRoute = join(websiteApp, "portfolio/fleet-vor-hub");
 for (const subroute of ["register", "new-defect", "process"]) {
   const file = join(hostRoute, subroute, "page.tsx");
-  assert.match(readFileSync(file, "utf8"), /redirect\(["']\/fleet-vor-hub["']\)/, `${subroute}: public redirect changed`);
+  assert.match(readFileSync(file, "utf8"), /permanentRedirect\(["']\/portfolio\/fleet-vor-hub["']\)/, `${subroute}: canonical redirect changed`);
 }
 const siteConfig = readFileSync(join(repo, "frontend/lib/site-config.ts"), "utf8");
-assert.doesNotMatch(siteConfig, /href:\s*["']\/portfolio["']/, "Unpublished portfolio navigation was exposed");
+assert.match(siteConfig, /href:\s*["']\/portfolio["']/, "The approved Portfolio menu link must remain available");
 console.log(`Website/Portfolio boundaries: PASS (${projectSources.length} project sources, ${stylesheets.length} scoped CSS Modules, four preserved host routes)`);

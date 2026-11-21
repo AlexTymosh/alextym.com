@@ -28,6 +28,14 @@ Security and privacy are part of the product scope, especially because the syste
 9. Keep frontend free of backend/provider secrets.
 10. Keep the system simple enough to audit.
 
+Public portfolio descriptions and static application screenshots contain
+synthetic demonstration records. Screenshot provenance is recorded in
+`frontend/public/images/portfolio/README.md`. Do not capture private profiles,
+credentials or live operational data for public previews. The public catalogue
+does not request protected project data; publishing a project description or
+image does not grant access to its pages or APIs. Each demo retains its own
+server-side identity and project-permission checks.
+
 ---
 
 ## Secrets
@@ -73,10 +81,20 @@ Account names and avatars are private, UID-bound profile documents in
 every profile request. Client-supplied UIDs and external avatar URLs cannot
 select another profile or a server download target. Uploads accept bounded
 PNG, JPEG and WebP data, are decoded and re-encoded on the server, and retain
-no original filename or image metadata. Provider photos are offered only
+no original filename or image metadata. Avatar cropping happens in browser memory;
+the server receives and revalidates only the applied image. Fit and crop
+modes preserve source proportions; no original image is stored in the profile.
+Provider photos are offered only
 for confirmed linked identities. Microsoft photo import requests the signed-in
 user's photo from the fixed Microsoft Graph endpoint in the browser. Its OAuth
 token stays in memory.
+
+Provider linking has no time limit after website sign-in. The existing admitted
+cookie, the additional provider proof and the current Firebase provider data
+must identify the same UID. Browser credentials stay in page memory without
+local/session storage. After a reload, in-page reauthentication accepts only
+an already admitted credential for the cookie's UID before rotating the cookie;
+it cannot approve an unconfirmed provider or switch to another user.
 
 The custom `/auth/action` page removes the reset code from the visible URL,
 uses no-referrer metadata and is excluded from the page analytics allowlist.

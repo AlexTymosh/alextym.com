@@ -19,7 +19,8 @@ const projects = registry.projectIds.map((id) => {
   if (manifest.id !== id || !manifest.demo.path.startsWith("/") || manifest.demo.path.startsWith("//")) {
     throw new Error("Invalid portfolio project manifest");
   }
-  return { id, title: manifest.title, summary: manifest.summary, path: manifest.demo.path };
+  return { id, title: manifest.title, summary: manifest.summary, path: manifest.demo.path,
+    category: manifest.category, technologies: manifest.technologies, catalogVisible: manifest.catalog.visible };
 });
 writeFileSync(resolve(targetDir, "portfolio-projects.json"), JSON.stringify(projects, null, 2) + "\n");
 

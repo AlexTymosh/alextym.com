@@ -1,10 +1,10 @@
-"""Verify project identity and isolated routes before enabling its UI."""
+"""Verify public catalogue metadata and isolated project routes."""
 
 import json
 from pathlib import Path
 
 
-def test_project_manifest_is_registered_private_and_isolated() -> None:
+def test_project_manifest_is_registered_published_and_isolated() -> None:
     root = Path(__file__).resolve().parents[3]
     registry = json.loads((root / "portfolio/catalog/registry.json").read_text(encoding="utf8"))
     manifest = json.loads(
@@ -17,5 +17,5 @@ def test_project_manifest_is_registered_private_and_isolated() -> None:
         "path": "/portfolio/workforce-intelligence",
         "apiPrefix": "/api/workforce",
     }
-    assert manifest["catalog"] == {"visible": False, "featured": False}
+    assert manifest["catalog"] == {"visible": True, "featured": False}
     assert (root / "portfolio/fleet_hub/project.json").exists()

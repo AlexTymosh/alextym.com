@@ -13,7 +13,7 @@ test.describe("Portfolio Lab feature gate", () => {
     for (const path of ["/auth/session", "/auth/identity", "/auth/profile"]) {
       expect((await request.get(path)).status(), path).toBe(404);
     }
-    for (const path of ["/auth/session", "/auth/session/link", "/auth/access/grants", "/auth/password/reset", "/auth/profile"]) {
+    for (const path of ["/auth/session", "/auth/session/link", "/auth/session/reauthenticate", "/auth/access/grants", "/auth/password/reset", "/auth/profile"]) {
       expect((await request.post(path, { data: {} })).status(), path).toBe(404);
     }
   });

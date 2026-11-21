@@ -3,9 +3,10 @@
 This directory owns the frontend implementation of Fleet VOR Hub.
 
 - Entry point: `src/index.ts` exports `FleetHubApp`.
-- Next.js host adapter: `frontend/app/fleet-vor-hub/page.tsx`.
+- Next.js host adapter: `frontend/app/portfolio/fleet-vor-hub/page.tsx`.
 - The three child routes under that host folder remain redirects.
-- Public route and API paths remain `/fleet-vor-hub` and `/api/vor/*`.
+- Canonical UI route: `/portfolio/fleet-vor-hub`; API paths remain `/api/vor/*`.
+- The old `/fleet-vor-hub` page and its three child routes are permanent redirects.
 - React, Next.js and TypeScript dependencies are installed ONCE under `frontend/`.
   `frontend/scripts/link-portfolio-deps.mjs` creates an ignored `node_modules`
   directory link inside `portfolio/fleet_hub/frontend/`, pointing to the host's

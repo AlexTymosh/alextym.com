@@ -9,10 +9,14 @@ data into GitHub issues, logs or CI artefacts.
 
 1. `https://alextym.com/` returns HTTP 200 and renders the website Home.
 2. `/resume`, `/chat`, `/contact` still render; site navigation works.
-3. `/fleet-vor-hub` returns 200, contains `noindex`, and displays the access
-   screen when tested without cookies. Its three child paths redirect back to it.
-4. A clean request to `/api/vor/session` reports enabled state and
-   `authenticated: false`, or explicitly reports disabled when the demo is off.
+3. `/fleet-vor-hub` and its `register`, `new-defect` and `process` child paths
+   return 308 with `Location: /portfolio/fleet-vor-hub`. With Firebase access
+   enabled, the canonical page redirects guests to `/sign-in`; an authorized
+   project user sees the workspace with `noindex`. In legacy password mode,
+   the canonical page returns 200 with the existing access screen.
+4. A clean request to `/api/vor/session` returns 401 in Firebase access mode.
+   Legacy password mode reports enabled state and `authenticated: false`, or
+   explicitly reports disabled when the demo is off.
 5. A clean request to `/api/vor/bootstrap` cannot return fleet data without a
    valid session (expected 401 when demo enabled; 403 when disabled, according
    to the server's actual configuration). **Do not loosen access checks.**
@@ -21,8 +25,8 @@ data into GitHub issues, logs or CI artefacts.
 7. If the demo is enabled, manually log in using the existing authorized
    credential through the browser, view a vehicle and log out. Never include
    that credential in scripts or screenshots.
-8. Verify the hidden catalogue is still unpublished and the site sitemap does
-   not list `/fleet-vor-hub` or `/portfolio` unintentionally.
+8. Verify the site sitemap does not list `/portfolio/fleet-vor-hub` or the old
+   `/fleet-vor-hub` redirects. Public catalogue navigation is a separate step.
 9. Review relevant Vercel / Render logs for new errors, without exposing secrets.
 
 ## Safety / non-goals

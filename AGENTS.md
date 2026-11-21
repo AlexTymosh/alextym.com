@@ -13,7 +13,8 @@ For detailed guidance, read only the relevant file from `docs/`.
 ## Project summary
 
 This is a reusable AI portfolio website for an Owner, with public routes
-`/`, `/resume`, `/chat`, `/contact`, plus the embedded `/fleet-vor-hub` demo.
+`/`, `/resume`, `/portfolio`, `/chat`, `/contact`, plus the embedded `/portfolio/fleet-vor-hub`
+demo (`/fleet-vor-hub` permanently redirects there).
 Use the configured public project identity rather than hard-coded personal names.
 
 ## Current deployed architecture

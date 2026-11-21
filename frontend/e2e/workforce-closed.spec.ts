@@ -9,7 +9,7 @@ test.describe("Workforce project default-off gate", () => {
   test("the catalogue stays public while the Workforce app and API are disabled", async ({ page, request }) => {
     const catalogue = await page.goto("/portfolio");
     expect(catalogue?.status()).toBe(200);
-    await expect(page.getByRole("link", { name: /Workforce & Recruitment Intelligence/ }))
+    await expect(page.getByRole("link", { name: "Open Workforce & Recruitment Intelligence demo", exact: true }))
       .toHaveAttribute("href", "/portfolio/workforce-intelligence");
     const project = await page.goto("/portfolio/workforce-intelligence");
     expect(project?.status()).toBe(404);

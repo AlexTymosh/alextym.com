@@ -1,4 +1,4 @@
-import { requireLabProjectPage } from "../../lib/portfolio-lab/project-access-server";
+import { requireLabProjectPage } from "../../../lib/portfolio-lab/project-access-server";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,44 @@
-.portfolio { width: min(100% - 2rem, 62rem); margin: 0 auto; padding: clamp(2.5rem, 8vw, 6rem) 0; }
-.portfolio > h1 { margin: 0 0 .4rem; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.15; }
-.portfolio > p { opacity: .8; }
+.portfolio { width: 100%; padding: clamp(1rem, 4vw, 3rem) 0; }
+.intro { max-width: 49rem; }
+.eyebrow { color: var(--accent); font-size: .875rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.intro h1 { margin: .6rem 0 1rem; font-size: clamp(2.5rem, 6vw, 4rem); line-height: 1.08; letter-spacing: -.04em; }
+.intro p { line-height: 1.7; }
+.intro .lead { margin-bottom: .5rem; font-size: clamp(1.2rem, 2.5vw, 1.5rem); }
+.intro > p:last-child { color: var(--muted); }
+.accessNotice { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem 1.5rem; margin: 2rem 0; padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--surface); font-size: .875rem; line-height: 1.65; }
+.accessNotice > span { flex: 1 1 25rem; color: var(--muted); }
+.accessNotice a { font-weight: 600; text-decoration: underline; text-underline-offset: .25em; }
+.accessNotice a:hover { color: var(--accent); }
+.caseStudies { display: grid; gap: 2rem; list-style: none; margin: 0; padding: 0; }
+.caseStudies > li { min-width: 0; }
+.caseStudy { padding: clamp(1.25rem, 3.5vw, 2.5rem); border: 1px solid var(--border-strong); border-radius: 1rem; background: var(--surface); }
+.caseHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.5rem; }
+.category { color: var(--accent); font-size: .875rem; font-weight: 600; }
+.accessBadge { padding: .35rem .7rem; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .875rem; }
+.caseStudy h2 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.25; letter-spacing: -.025em; }
+.focus { margin: .75rem 0 2rem; color: var(--muted); font-size: 1.125rem; line-height: 1.6; }
+.caseBody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3rem); }
+.caseBody > div { min-width: 0; }
+.caseBody h3 { margin: 0 0 .65rem; font-size: .875rem; font-weight: 650; }
+.caseBody p { margin: 0; color: var(--muted); line-height: 1.75; }
+.preview { margin: 0 0 1.5rem; }
+.previewLink { display: block; overflow: hidden; border: 1px solid var(--border-strong); border-radius: .65rem; }
+.previewLink:hover { border-color: var(--accent); }
+.previewImage { display: block; width: 100%; height: auto; }
+.preview figcaption { margin-top: .65rem; color: var(--muted); font-size: .875rem; line-height: 1.5; }
+.explore { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.explore ul { margin: 0; padding-left: 1.15rem; list-style: disc; }
+.explore li { padding-left: .2rem; margin-top: .8rem; color: var(--muted); line-height: 1.65; }
+.explore li::marker { color: var(--accent); }
+.technologies { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 1.5rem 0; }
+.technologies li { padding: .35rem .65rem; border: 1px solid var(--border); border-radius: .4rem; color: var(--muted); font-size: .875rem; }
+.caseFooter { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.caseFooter > span { color: var(--muted); font-size: .875rem; }
+.demoLink { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .65rem 1.25rem; border: 1px solid var(--border-strong); border-radius: .5rem; background: var(--surface-strong); font-weight: 600; }
+.demoLink:hover { border-color: var(--accent); }
+.demoLink:focus-visible, .accessNotice a:focus-visible, .previewLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 760px) { .caseBody { grid-template-columns: 1fr; gap: 1.5rem; } }
+@media (max-width: 500px) { .demoLink { width: 100%; } }
 .projects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 2rem 0 0; }
 .card {
   display: flex; min-width: 0; height: 100%; flex-direction: column; align-items: flex-start; gap: .65rem;

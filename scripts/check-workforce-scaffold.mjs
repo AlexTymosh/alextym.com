@@ -14,16 +14,15 @@ assert.ok(registry.projectIds.includes("workforce_intelligence"));
 assert.equal(manifest.id, "workforce_intelligence");
 assert.equal(manifest.demo.path, "/portfolio/workforce-intelligence");
 assert.equal(manifest.demo.apiPrefix, "/api/workforce");
-assert.deepEqual(manifest.catalog, { visible: false, featured: false });
+assert.deepEqual(manifest.catalog, { visible: true, featured: false });
 
 const portfolio = read("frontend/app/portfolio/page.tsx");
 const page = read("frontend/app/portfolio/workforce-intelligence/page.tsx");
-for (const source of [portfolio, page]) {
-  assert.match(source, /robots:\s*\{\s*index:\s*false,\s*follow:\s*false/);
-}
+assert.match(page, /robots:\s*\{\s*index:\s*false,\s*follow:\s*false/);
+assert.match(portfolio, /canonical:\s*"\/portfolio"/);
 assert.doesNotMatch(portfolio, /firebase|getWorkforceAccess|LAB_SESSION_COOKIE/);
-assert.match(portfolio, /<ProjectCards\s+projects=\{labProjects\}/,
-  "The public catalogue must render the registered projects through the shared cards");
+assert.match(portfolio, /<ProjectCards\s+projects=\{publicProjects\}/,
+  "The public catalogue must render published projects through the shared cards");
 const catalogue = read("frontend/lib/portfolio-lab/project-catalog.ts");
 assert.match(catalogue, /\.generated\/portfolio-projects\.json/,
   "The catalogue must use the generated project registry");

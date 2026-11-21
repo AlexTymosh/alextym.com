@@ -3,16 +3,16 @@
   "id": "workforce_intelligence",
   "slug": "workforce-intelligence",
   "title": "Workforce & Recruitment Intelligence",
-  "summary": "Protected synthetic workforce and recruitment analytics interview demonstration.",
+  "summary": "AI-assisted staff feedback analysis supported by deterministic analytics, workforce records and recruitment planning.",
   "category": "Data & Analytics",
-  "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "SQLite"],
+  "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "SQLite", "OpenAI"],
   "mode": "embedded",
   "demo": {
     "path": "/portfolio/workforce-intelligence",
     "apiPrefix": "/api/workforce"
   },
   "catalog": {
-    "visible": false,
+    "visible": true,
     "featured": false
   }
 }

@@ -8,6 +8,17 @@ remains one Next.js host on Vercel and one FastAPI host on Render.
 
 ## Target
 
+**Fleet route migration (2026-11-21):** The canonical Fleet UI is
+`/portfolio/fleet-vor-hub`. Its host-owned authorization layout moved with the
+page. `/fleet-vor-hub` and its `register`, `new-defect` and `process` aliases
+return permanent redirects to the canonical page. Equivalent aliases beneath
+the new route also redirect there. The project ID, grants, `/api/vor/*`,
+cookies and Fleet persistence are unchanged. The website menu links to the public
+`/portfolio` catalogue, with public project descriptions and synthetic screenshots.
+Only manifests marked `catalog.visible=true` appear there. Shared account
+Settings still derive available projects from current grants across the full
+registry, independently of public catalogue visibility.
+
 `alextym.com` is a single monorepo with one Next.js host (Vercel) and one FastAPI host (Render). Each embedded demonstration application owns its implementation under `portfolio/<project_id>/`. These projects will never need standalone repositories, websites or dedicated services.
 
 ```text
@@ -63,7 +74,7 @@ on both hosts together after verification and Owner review.
 | Layer | Owned by | Allowed responsibility |
 | --- | --- | --- |
 | `/`, Resume, Chat, Contact, global navigation | Website | Personal portfolio, chat and generic site identity |
-| `/fleet-vor-hub` route adapter | Website | Import/render Fleet public frontend entry |
+| `/portfolio/fleet-vor-hub` route adapter | Website | Import/render Fleet public frontend entry and enforce project access |
 | `/api/vor/*` router adapter | Website | Register Fleet public router (no ticket logic) |
 | Fleet UI, CSS, local images | Fleet | Fleet application implementation |
 | Fleet API and domain services | Fleet | Business rules, auth/session for the demo, operations |
@@ -82,12 +93,12 @@ No generic shared package or plugin discovery framework is required yet. If an a
 5. Data: approved seed has immutable SHA-256 `db67e2a8e121f38efddd54215edae0e28c855524920fdefab78d2d656b466532`; use SQLite integrity/foreign-key checks and test read/write behavior against disposable runtime copies. Never change the user's working DB as part of file moves.
 6. Build: Vercel must include `portfolio/` source outside `frontend/`; Docker must copy/install the backend project package. Keep existing deploy services.
 7. Tests: no removal of security, exports, import, reconciliation, or workflow coverage. After relocation, tests must run in GitHub CI, not only locally.
-8. Portfolio publication: `project.json` and registry do not publish a catalogue. Keep `catalog.visible=false` and no `/portfolio` route/menu item until separately approved.
+8. Portfolio publication: the Owner approved the public `/portfolio` menu entry. Project overviews and navigation must remain independent of project authorization; catalogue visibility never grants access to a demo or API.
 
 ## Invariants for every PR
 
 - `task ci` passes locally and GitHub CI jobs pass (project/backend/frontend/RAG/docker).
-- `/fleet-vor-hub`, redirects and `/api/vor/*` remain compatible.
+- `/portfolio/fleet-vor-hub` is canonical; legacy Fleet redirects and `/api/vor/*` remain compatible.
 - `/fleet-vor-hub-01` and `/api/vor-01` remain retired.
 - No change to the Fleet SQLite seed bytes, accepted data model or existing live environment settings.
 - No behavior change in Resume, Chat, Contact, RAG, Telegram or unrelated case studies.
@@ -133,7 +144,7 @@ See `SESSION_NOTES.md` for the current checkpoint.
 
 ## Implementation status — PR 4 (frontend isolation audit)
 
-The website retains its root layout, navigation, footer and shared browser-level resets. Fleet UI and assets live under `portfolio/fleet_hub/frontend/src/` with locally scoped CSS Modules. `scripts/check-website-portfolio-boundaries.mjs` rejects project-side global CSS, cross-boundary imports, direct website imports of Fleet internals, route changes and accidental publication of a portfolio menu. See `portfolio/fleet_hub/docs/css-boundary-audit.md` for evidence, limitations and acceptance criteria.
+The website retains its root layout, navigation, footer and shared browser-level resets. Fleet UI and assets live under `portfolio/fleet_hub/frontend/src/` with locally scoped CSS Modules. `scripts/check-website-portfolio-boundaries.mjs` rejects project-side global CSS, cross-boundary imports, direct website imports of Fleet internals and route changes, and preserves the approved Portfolio menu entry. See `portfolio/fleet_hub/docs/css-boundary-audit.md` for evidence, limitations and acceptance criteria.
 
 Route groups were reviewed and deferred because they would change layout lifecycle without a verified need. Full browser-level isolation is not claimed: the single Next.js host necessarily shares document-wide CSS baseline and metadata. Existing Playwright regression tests guard the user-visible contract.
 
