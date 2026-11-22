@@ -19,7 +19,7 @@ export async function GET() {
   if (!isLabEnabled()) return reply({ error: "Not found" }, 404);
   try {
     const session = await currentLabSession();
-    if (!session) return reply({ error: "Sign in required" }, 401);
+    if (!session) return reply({ error: "Log In required" }, 401);
     return reply(await getAccountProfile(session.uid));
   } catch {
     return reply({ error: "Profile unavailable" }, 503);
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   if (!hasSameOrigin(request) || !hasLabJsonContent(request)) return reply({ error: "Invalid request" }, 403);
   try {
     const session = await currentLabSession();
-    if (!session) return reply({ error: "Sign in required" }, 401);
+    if (!session) return reply({ error: "Log In required" }, 401);
     const body = await readLabJson(request, 3_000_000);
     if (body === "too_large") return reply({ error: "Image must be smaller than 2 MB" }, 413);
     if (!body || !validProfileName(body.firstName) || !validProfileName(body.lastName) ||
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       return 200;
     });
     return status === 200 ? reply({ ok: true, revision: (body.revision as number) + 1 })
-      : reply({ error: status === 409 ? "Profile changed. Reload before saving again." : "Sign in again to update your profile." }, status);
+      : reply({ error: status === 409 ? "Profile changed. Reload before saving again." : "Log In again to update your profile." }, status);
   } catch {
     return reply({ error: "Unable to save your profile. Try again." }, 503);
   }

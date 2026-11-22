@@ -68,6 +68,11 @@ demo URLs also come from those manifests. Public narrative copy lives in
 or require Firebase/Render availability.
 Generic `/auth/*` routes handle sessions, linking, profiles and recovery.
 The site uses these account routes directly.
+The navigation and public Portfolio access notice share client-side account
+state from the private, uncached `/auth/profile` response. Logged-in visitors
+see their available-project link; public project descriptions stay public.
+`/setting` redirects to canonical `/settings`, whose existing guest guard
+opens `/sign-in`. Visible account controls use Log In and Log Out.
 Account labels fall back to the user's email when no name is available.
 The profile editor offers proportional avatar cropping and fit-to-frame before
 the existing server validation and image encoding.
@@ -84,6 +89,11 @@ Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the
 document and global CSS, while the Workforce route renders its own navigation
 and content landmark. The public catalogue and site pages use the site frame.
+The host frame supplies the same black demo bar on Workforce and Fleet routes,
+with a link back to `/portfolio` and a short synthetic-data label. The bar uses
+`--portfolio-demo-bar-height` to reserve space in Fleet's fixed containers and
+Workforce's viewport/sticky navigation. Project styles fall back to zero inset
+outside the website host. Returning to the catalogue does not log the user out.
 
 Frontend stack:
 

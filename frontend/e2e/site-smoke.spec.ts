@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await mockWarmup(page);
 });
 
-test("public portfolio links to every published project without signing in", async ({ page }, info) => {
+test("public portfolio links to every published project without logging in", async ({ page }, info) => {
   await gotoAndExpectOk(page, "/portfolio");
   await expect(page.getByRole("main")).toHaveCount(1);
   await expect(page.getByRole("complementary", { name: "Demo access" })).toContainText("permission for each project");

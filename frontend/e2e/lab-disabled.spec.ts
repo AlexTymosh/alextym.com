@@ -7,7 +7,7 @@ test.describe("Portfolio Lab feature gate", () => {
   );
 
   test("does not expose protected UI or session when not enabled", async ({ page, request }) => {
-    for (const path of ["/sign-in", "/settings", "/settings/profile", "/settings/connections", "/settings/access", "/auth/action"]) {
+    for (const path of ["/sign-in", "/setting", "/settings", "/settings/profile", "/settings/connections", "/settings/access", "/auth/action"]) {
       expect((await page.goto(path))?.status(), path).toBe(404);
     }
     for (const path of ["/auth/session", "/auth/identity", "/auth/profile"]) {

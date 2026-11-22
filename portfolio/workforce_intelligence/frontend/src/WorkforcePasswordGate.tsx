@@ -40,12 +40,12 @@ export function WorkforcePasswordGate({ loginPath }: { loginPath?: string } = {}
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null) as { detail?: string } | null;
-        throw new Error(data?.detail ?? "Unable to sign in.");
+        throw new Error(data?.detail ?? "Unable to log in.");
       }
       setPassword("");
       setState("unlocked");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to sign in.");
+      setMessage(error instanceof Error ? error.message : "Unable to log in.");
     } finally {
       setBusy(false);
     }
@@ -54,7 +54,7 @@ export function WorkforcePasswordGate({ loginPath }: { loginPath?: string } = {}
   const signOut = async () => {
     try {
       const response = await fetch(ACCESS, { method: "DELETE", credentials: "same-origin" });
-      if (!response.ok) throw new Error("Sign-out unavailable. Retry.");
+      if (!response.ok) throw new Error("Logout unavailable. Retry.");
       if (loginPath) {
         window.location.assign(loginPath);
         return;
@@ -63,7 +63,7 @@ export function WorkforcePasswordGate({ loginPath }: { loginPath?: string } = {}
       setMessage("");
     } catch {
       setState("error");
-      setMessage("Sign-out could not be confirmed. Retry or close the browser.");
+      setMessage("Logout could not be confirmed. Retry or close the browser.");
     }
   };
 

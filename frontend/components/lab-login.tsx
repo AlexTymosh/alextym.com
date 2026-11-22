@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmail
 import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
 import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
 import { createLabOAuthProvider, getLabAuth } from "../lib/portfolio-lab/firebase-client";
-import { validNewPassword } from "../lib/portfolio-lab/password-recovery-policy";
+import { ACCOUNT_PASSWORD_MIN_LENGTH, ACCOUNT_PASSWORD_MAX_LENGTH, validNewPassword } from "../lib/portfolio-lab/password-recovery-policy";
 import { ProviderIcon } from "./provider-icon";
 import { PasswordInput } from "./password-input";
 import { useClientReady } from "../lib/use-client-ready";
@@ -16,7 +16,7 @@ import styles from "./lab-auth.module.css";
 type SignInMethod = "password" | LabOAuthProvider;
 
 function linkingInstructions(provider: LabOAuthProvider) {
-  return `Sign in with an existing method for your account, then choose Link ${labProviderNames[provider]} under Linked accounts.`;
+  return `Log In with an existing method for your account, then choose Link ${labProviderNames[provider]} under Linked accounts.`;
 }
 
 async function startLabSession(user: User, method: SignInMethod): Promise<string | null> {
@@ -35,28 +35,28 @@ async function startLabSession(user: User, method: SignInMethod): Promise<string
   }
   if (response.status === 403 && body?.code === "ACCESS_DENIED") {
     return method === "password"
-      ? "Sign-in is unavailable for this account. Contact support for help."
-      : "This sign-in method is unavailable for your account. Sign in with an existing method or contact support.";
+      ? "Login is unavailable for this account. Contact support for help."
+      : "This login method is unavailable for your account. Log In with an existing method or contact support.";
   }
   if (response.status >= 500) {
-    return "Sign-in is temporarily unavailable. Try again shortly.";
+    return "Login is temporarily unavailable. Try again shortly.";
   }
-  return "Could not start a session. Try signing in again.";
+  return "Could not start a session. Try logging in again.";
 }
 
 function signInIssue(error: unknown, method: SignInMethod) {
   const code = error instanceof FirebaseError ? error.code : undefined;
   if (method === "password") {
     if (code === "auth/network-request-failed" || code === undefined) {
-      return "Sign-in is temporarily unavailable. Try again shortly.";
+      return "Login is temporarily unavailable. Try again shortly.";
     }
-    return "Sign-in failed. Check your email and password or contact support for a setup link.";
+    return "Login failed. Check your email and password or contact support for a setup link.";
   }
   if (code === "auth/account-exists-with-different-credential" || code === "auth/credential-already-in-use") {
     return linkingInstructions(method);
   }
   return labOAuthIssue(method, code)
-    ?? `Could not sign in with ${labProviderNames[method]}. Try again or sign in with email.`;
+    ?? `Could not log in with ${labProviderNames[method]}. Try again or log in with email.`;
 }
 
 export function LabLogin() {
@@ -84,7 +84,7 @@ export function LabLogin() {
         user = (await signInWithEmailAndPassword(auth, email, password)).user;
       }
       const issue = await startLabSession(user, method)
-        .catch(() => "Could not connect. Try signing in again.");
+        .catch(() => "Could not connect. Try logging in again.");
       if (issue) {
         await signOut(auth).catch(() => undefined);
         setMessage({ tone: "error", text: issue });
@@ -94,7 +94,7 @@ export function LabLogin() {
       router.refresh();
     } catch (error) {
       const text = register && method === "password"
-        ? "Could not create an account. Try signing in if you registered before, or contact support."
+        ? "Could not create an account. Try logging in if you registered before, or contact support."
         : signInIssue(error, method);
       setMessage({ tone: "error", text });
     } finally {
@@ -105,7 +105,7 @@ export function LabLogin() {
   const emailSignIn = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (register && (!validNewPassword(password) || password !== confirmation)) {
-      setMessage({ tone: "error", text: "Choose a password of 12–128 characters and enter it again to confirm." });
+      setMessage({ tone: "error", text: "Choose a password of 8–128 characters and enter it again to confirm." });
       return;
     }
     void signIn("password");
@@ -131,7 +131,7 @@ export function LabLogin() {
   return (
     <section className={styles.panel} aria-labelledby="lab-login-title">
       <header className={styles.header}>
-        <h1 id="lab-login-title">{register ? "Create your account" : "Sign in"}</h1>
+        <h1 id="lab-login-title">{register ? "Create your account" : "Log In"}</h1>
       </header>
 
       {message && (
@@ -145,7 +145,7 @@ export function LabLogin() {
 
       <div className={styles.modeSwitch} role="group" aria-label="Account access">
         <button type="button" disabled={busy} aria-pressed={!register}
-          onClick={() => { setRegister(false); setMessage(null); setConfirmation(""); }}>Sign in</button>
+          onClick={() => { setRegister(false); setMessage(null); setConfirmation(""); }}>Log In</button>
         <button type="button" disabled={busy} aria-pressed={register}
           onClick={() => { setRegister(true); setMessage(null); setConfirmation(""); }}>Create account</button>
       </div>
@@ -167,8 +167,8 @@ export function LabLogin() {
           <PasswordInput
             id="lab-password"
             autoComplete={register ? "new-password" : "current-password"}
-            minLength={register ? 12 : undefined}
-            maxLength={register ? 128 : undefined}
+            minLength={register ? ACCOUNT_PASSWORD_MIN_LENGTH : undefined}
+            maxLength={register ? ACCOUNT_PASSWORD_MAX_LENGTH : undefined}
             value={password}
             disabled={busy}
             onChange={(event) => setPassword(event.target.value)}
@@ -183,7 +183,7 @@ export function LabLogin() {
           </div>
         )}
         <button type="submit" className={styles.primaryButton} disabled={busy}>
-          {pending === "password" ? "Please wait…" : register ? "Create account with email" : "Sign in with email"}
+          {pending === "password" ? "Please wait…" : register ? "Create account with email" : "Log In with email"}
         </button>
         <button
           type="button"
@@ -200,7 +200,7 @@ export function LabLogin() {
           <button key={provider} type="button" className={styles.providerButton} disabled={busy}
             onClick={() => void signIn(provider)}>
             <ProviderIcon provider={provider} />
-            <span>{pending === provider ? `Signing in with ${labProviderNames[provider]}…` : `Continue with ${labProviderNames[provider]}`}</span>
+            <span>{pending === provider ? `Logging in with ${labProviderNames[provider]}…` : `Continue with ${labProviderNames[provider]}`}</span>
           </button>
         ))}
       </div>

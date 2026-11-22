@@ -15,11 +15,12 @@ export const projectOverviews: Readonly<Partial<Record<string, ProjectOverview>>
       "Connect vehicle records, defect tickets and repair events in one operational view.",
       "Keep partner communication and internal updates in a shared issue history.",
       "Explore repair workflows, operational controls and record reconciliation.",
+      "Import your own vehicle records, process them through operational workflows and export fleet data to Excel.",
     ],
     preview: {
-      src: "/images/portfolio/fleet-vor-hub.png",
+      src: "/images/portfolio/fleet-vor-hub-demo.png",
       alt: "Fleet Issue Hub with a synthetic vehicle, linked ticket, shared communication history and repair workflow.",
-      caption: "Issue Hub · Synthetic demonstration",
+      caption: "Issue Hub · Example vehicle and repair workflow",
     },
   },
   workforce_intelligence: {
@@ -30,11 +31,12 @@ export const projectOverviews: Readonly<Partial<Record<string, ProjectOverview>>
       "Compare weighted and unweighted feedback, with small-sample suppression.",
       "Review AI findings and evidence, then record decisions, recommended actions and outcomes.",
       "Explore an ERP-style workforce simulation: staffing records, recruitment funnels, conversion rates, forecasts and what-if scenarios.",
+      "Import your own workforce dataset, validate and analyse it, then export Excel reports.",
     ],
     preview: {
-      src: "/images/portfolio/workforce-intelligence.png",
-      alt: "People Voice showing a reviewed synthetic staff-feedback finding, theme frequency and supporting evidence.",
-      caption: "People Voice · Seeded demonstration findings",
+      src: "/images/portfolio/workforce-intelligence-light.png",
+      alt: "People Voice in light theme showing a reviewed synthetic staff-feedback finding, theme frequency and supporting evidence.",
+      caption: "People Voice · Light theme · Seeded demonstration findings",
     },
   },
 };

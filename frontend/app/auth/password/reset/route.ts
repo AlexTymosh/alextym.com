@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       },
     }, uid, oobCode, newPassword, ownerUid);
     if (result === "invalid") return reply(400, "Link invalid or expired; request a new one");
-    return reply(200, "Password updated. Sign in using your new password.");
+    return reply(200, "Password updated. Log In using your new password.");
   } catch {
     // A consumed code or interrupted confirmation leaves reset_pending.
     // Only an audited Owner operation can repair this fail-closed state.

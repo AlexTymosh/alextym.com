@@ -15,7 +15,7 @@ export default async function ConnectionsPage() {
   const linked = await getLabLinkedProviders(session.uid);
   const user = await (await getLabAdminAuth()).getUser(session.uid);
   return <div className={styles.providerSection}>
-    <div><h2>Sign-in methods</h2><p className={styles.description}>Signed in with {name}</p></div>
+    <div><h2>Login methods</h2><p className={styles.description}>Logged in with {name}</p></div>
     <LabAccountActions linkedProviders={linked} identity={{ uid: session.uid,
       email: user.email || "",
       passwordEnabled: user.providerData.some((item) => item.providerId === "password") }} />

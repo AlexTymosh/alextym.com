@@ -7,8 +7,8 @@ import styles from "../app/portfolio/page.module.css";
 
 type ProjectCard = LabProject & { role?: ProjectRole | null };
 const descriptions: Record<string, string> = {
-  fleet_hub: "Log vehicle defects, track repairs and see which vehicles are ready to return to service.",
-  workforce_intelligence: "Explore staffing, recruitment and staff feedback in a synthetic workforce dashboard.",
+  fleet_hub: "Log vehicle defects, track repairs and see which vehicles are ready to return to service. Import your own vehicle records and export fleet data to Excel.",
+  workforce_intelligence: "Explore staffing, recruitment and staff feedback. Start with synthetic data, or import, process and export your own datasets.",
 };
 
 export function ProjectCards({ projects, detailed = false }: { projects: readonly ProjectCard[]; detailed?: boolean }) {
@@ -74,7 +74,7 @@ function ProjectCaseStudy({ project }: { project: ProjectCard }) {
       {project.technologies.map((technology) => <li key={technology}>{technology}</li>)}
     </ul>
     <div className={styles.caseFooter}>
-      <span>Concept prototype · Synthetic data</span>
+      <span>Concept prototype · Synthetic data, with support for importing, processing and exporting your own datasets.</span>
       <Link className={styles.demoLink} href={project.path} aria-label={`Open ${project.title} demo`}>
         Open demo
       </Link>

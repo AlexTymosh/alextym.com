@@ -1,46 +1,83 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-21
+**Updated:** 2026-11-22
 
-## Current local change — Detailed portfolio cards
+## Current local change — Login UX and demo presentation
 
-The Owner requested three separate changes: move Fleet under `/portfolio`, add
-Portfolio navigation, then expand the public project descriptions. **Stop after
-each logical change for the Owner to commit and push. Continue only after the
-Owner explicitly permits it.**
+PR #262 is merged in `main` at `38e88ba`. It includes the account experience,
+Fleet route move, Portfolio navigation and detailed project cards from the
+previous checkpoint. Work now uses `codex/site-auth-demo-polish` from that main.
+**Stop after each logical stage for the Owner to commit and push. Continue only
+after the Owner explicitly permits it. Do not commit, push or merge for them.**
 
-Step 1 was committed and pushed by the Owner as `e63e816`: Fleet is canonical at
-`/portfolio/fleet-vor-hub`, with its existing project authorization layout and
-permanent redirects from the four old URLs. The avatar work was committed and
-pushed separately as `f098115`.
+Stage 1 was committed and pushed by the Owner as `b5f63df`
+(request items 1, 2, 5, 6 and 7):
 
-Step 2 was committed and pushed by the Owner as `839a8d5`: Portfolio links to
-`/portfolio` between Resume and Chat, stays highlighted on nested project pages
-using the website shell, and fits narrow screens with long account labels.
+- Public Portfolio and the header share private account state. Members see
+  **View your projects**; guests see **Log In**. The catalogue remains public
+  and statically rendered, and project permissions are unchanged.
+- Visible controls/messages use **Log In**, **Log Out** and **Login methods**.
+  The `/sign-in` route, SDK method names and Firebase provider IDs stay stable.
+- `/setting` redirects to `/settings`; its guest guard opens the login page.
+- Registration, recovery and Owner provisioning accept 8–128 characters.
+- GitHub login/link controls default to hidden. Backend identity support stays
+  available. Set `NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED=true` after configuring
+  the provider to enable the UI in a future frontend build.
 
-Step 3 is prepared locally. The public catalogue shows detailed Fleet and
-Workforce case studies with challenge, approach, demo capabilities, technology
-tags and expandable static screenshots. Public copy lives in
-`frontend/content/portfolio.ts`. Both previews contain synthetic fixtures;
-their provenance is recorded beside the PNGs. No production session or live
-provider call was used for screenshots.
+Stage 2 was committed and pushed by the Owner as `d8d9de0`: the host supplies
+one shared black demo bar on both Workforce and Fleet routes. The left **Back to portfolio** link returns
+to `/portfolio` without logging out; the right label is
+**Demo v1.0 · Synthetic data only**. The Workforce interview disclosure and
+the conflicting Fleet `DEMO v2` badge are removed. Fixed Fleet screens and
+Workforce sticky navigation reserve the bar's desktop/mobile height.
 
-Manifest `catalog.visible` flags now select public cards. Settings still uses
-the full registry and current grants, with its existing compact cards. The
-catalogue has a canonical URL and sitemap entry; protected project pages retain
-their access guards and noindex metadata.
+Stage 3 is prepared locally: the public Workforce catalogue image now shows
+People Voice in light theme. The Fleet image was also refreshed to show the
+current black demo bar and **Log Out**, with the old `DEMO v2` badge removed.
+Both 1440 by 900 captures use local synthetic fixtures; their provenance is
+recorded in `frontend/public/images/portfolio/README.md`. New image filenames
+avoid reusing the old screenshots' image-cache URLs.
+The public introduction, project highlights, compact Settings cards and data
+captions describe importing, processing and exporting users' own supported
+datasets. Detailed-card footer text wraps alongside the demo button. The Owner
+confirmed the black demo bars should keep their short wording.
 
-Verification: production build including TypeScript, frontend lint (seven
-existing Fleet warnings), portfolio boundaries and whitespace checks passed.
-Fourteen desktop/mobile Chromium scenarios passed for public cards and images,
-light/dark themes, navigation, metadata, default-off behavior and guest denial
-for both project pages/APIs. The two catalogue scenarios were rerun after visual
-QA adjustments. The updated Python manifest test and its Ruff checks passed.
-Desktop dark and mobile light renders were visually inspected; copies are in
-`.tmp/portfolio-card-assets/`. Build and Chromium ran outside the Windows sandbox.
+Stage 1 verification: the default production build, TypeScript, frontend lint
+(seven existing Fleet warnings), module boundaries and whitespace checks passed.
+The backend provisioning policy and its Ruff checks passed 24 tests. Desktop
+and mobile emulator checks cover eight-character registration/reset, settings
+aliases, GitHub UI visibility, linked accounts and unchanged grant isolation.
+Public Portfolio checks also cover a logged-in session, guest and unavailable
+account responses. GitHub-only UI scenarios are intentionally skipped while
+its UI flag is disabled; provider admission policy tests retain GitHub coverage.
+Another 32 desktop/mobile checks passed against the production build for public
+pages, Portfolio/account state, navigation, themes, default-off access and all
+retained registration providers.
 
-Stop for the Owner to commit and push step 3. Production verification remains
-pending; local catalogue checks do not constitute backend/RAG release sign-off.
+Stage 2 emulator verification passed eight desktop/mobile scenarios for both
+bars, keyboard focus, controls below the bar, the Workforce light theme,
+offline preview, retained guest denial and authenticated return to Portfolio.
+Two production-only preview checks were skipped in this explicit dev run.
+Desktop and mobile bar captures were visually inspected.
+The default Turbopack production build, subsequent standalone TypeScript check,
+frontend lint (seven existing Fleet warnings), module boundaries and whitespace
+checks passed. The production-build browser suite also passed for Fleet access,
+authenticated navigation/logout, legacy route handling, public site navigation,
+default-off Workforce access and production preview denial. Environment-specific
+scenarios were skipped when their required mode was not enabled.
+
+Stage 3 verification: the default Turbopack production build, standalone
+TypeScript check, frontend lint (the same seven Fleet warnings), registry/module
+boundaries, scaffold guards, raw Cyrillic and whitespace checks passed. All 18
+desktop/mobile production-build browser checks passed for public pages,
+catalogue links, image responses, both site themes, navigation and account
+states (authenticated, guest and unavailable). Both new demo images and the
+desktop/mobile catalogue captures were visually inspected. No backend logic,
+project access gates or live Firebase configuration changed in this stage.
+
+Stop for the Owner to commit and push stage 3. Hosted CI, CodeQL and production
+verification follow the Owner's PR/deployment; local checks are not a backend,
+RAG or security release sign-off. No production Firebase configuration changed.
 
 ## Account experience checkpoint
 
@@ -48,12 +85,12 @@ pending; local catalogue checks do not constitute backend/RAG release sign-off.
 sign-in is enabled for Fleet VOR Hub and Workforce Intelligence on alextym.com.
 Both production hosts use `portfolio-lab-dev` and the same pinned Owner UID.
 
-The current branch `codex/account-settings` prepares site-wide account
-settings. It adds `/sign-in`, `/settings`, a profile with names and avatars,
+PR #260 (`codex/account-settings`) was merged and added site-wide account
+settings: `/sign-in`, `/settings`, a profile with names and avatars,
 shared project cards, one-click linking popups, password visibility controls
 and branded Firebase email reset handling. The public account routes use
 `/sign-in`, `/settings` and `/auth/*`. The old frontend `/lab` routes were
-removed at the Owner's request. The Owner will review this branch before merging. After
+removed at the Owner's request. After
 deployment, configure Firebase's Password reset template action URL as
 `https://alextym.com/auth/action`. [Deployment steps](docs/deployment.md#production-firebase-access)
 

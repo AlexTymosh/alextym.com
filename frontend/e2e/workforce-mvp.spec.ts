@@ -303,7 +303,7 @@ test("sign-out clears the Workforce cookie and rejects BFF and direct Render dat
   expect(cookie?.httpOnly).toBe(true);
   expect((await page.request.get(direct)).status()).toBe(401);
   expect((await page.request.get(bff)).status()).toBe(200);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Log Out" }).click();
   await expect(page.getByLabel("Demo password")).toBeVisible();
   expect((await page.request.get(bff)).status()).toBe(401);
 });

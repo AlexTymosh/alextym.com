@@ -14,7 +14,7 @@ export function SettingsShell({ children, name, avatarUrl, owner }: {
   const items = [
     { href: "/settings", label: "Available projects" },
     { href: "/settings/profile", label: "Profile" },
-    { href: "/settings/connections", label: "Sign-in methods" },
+    { href: "/settings/connections", label: "Login methods" },
     ...(owner ? [{ href: "/settings/access", label: "Access management" }] : []),
   ];
   function links() {

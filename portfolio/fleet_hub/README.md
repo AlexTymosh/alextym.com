@@ -37,6 +37,9 @@ inside the website's `frontend/` or `backend/app/` modules.
   redirect to the canonical demo page.
 - The host authorization layout continues to require the `fleet_hub` grant
   when Firebase access is enabled. The URL move does not change API access.
+- The website supplies the demo-navigation bar and its Portfolio return link.
+  Fleet's fixed containers reserve `--portfolio-demo-bar-height` when provided
+  by the host, with a zero inset fallback for standalone consumers.
 - Keep authentication, cookies, Origin handling, API behavior and existing
   website Chat/RAG/SSE behavior unchanged during persistence refactors.
 

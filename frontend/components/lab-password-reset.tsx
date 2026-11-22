@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
-import { validNewPassword, validResetCode, validResetUid } from "../lib/portfolio-lab/password-recovery-policy";
+import { ACCOUNT_PASSWORD_MIN_LENGTH, ACCOUNT_PASSWORD_MAX_LENGTH, validNewPassword, validResetCode, validResetUid } from "../lib/portfolio-lab/password-recovery-policy";
 import { getLabAuth } from "../lib/portfolio-lab/firebase-client";
 import { siteConfig } from "../lib/site-config";
 import { PasswordInput } from "./password-input";
@@ -56,7 +56,7 @@ export function LabPasswordReset() {
     event.preventDefault();
     if (!link || !validResetCode(link.code)) return;
     if (!validNewPassword(password)) {
-      setMessage("Use 12–128 characters for your new password.");
+      setMessage("Use 8–128 characters for your new password.");
       return;
     }
     if (password !== confirm) {
@@ -77,7 +77,7 @@ export function LabPasswordReset() {
         await confirmPasswordReset(getLabAuth(), link.code, password);
       }
       setLink(null); setPassword(""); setConfirm(""); setDone(true);
-      setMessage("Password updated. You can now sign in.");
+      setMessage("Password updated. You can now log in.");
     } catch {
       setMessage("The password could not be updated. Request a fresh link and try again.");
     } finally { setBusy(false); }
@@ -91,25 +91,25 @@ export function LabPasswordReset() {
       </Link>
       <header className={styles.header}>
         <h1 id="password-reset-title">{done ? "Password updated" : "Set your password"}</h1>
-        {!done && <p>Choose a password with 12–128 characters.</p>}
+        {!done && <p>Choose a password with 8–128 characters.</p>}
       </header>
       {!done && link && (
         <form className={styles.form} onSubmit={(event) => void submit(event)}>
           <div className={styles.field}>
             <label htmlFor="new-password">New password</label>
-            <PasswordInput id="new-password" autoComplete="new-password" required minLength={12} maxLength={128}
+            <PasswordInput id="new-password" autoComplete="new-password" required minLength={ACCOUNT_PASSWORD_MIN_LENGTH} maxLength={ACCOUNT_PASSWORD_MAX_LENGTH}
               disabled={busy} value={password} onChange={(event) => setPassword(event.target.value)} />
           </div>
           <div className={styles.field}>
             <label htmlFor="confirm-password">Confirm password</label>
-            <PasswordInput id="confirm-password" autoComplete="new-password" required minLength={12} maxLength={128}
+            <PasswordInput id="confirm-password" autoComplete="new-password" required minLength={ACCOUNT_PASSWORD_MIN_LENGTH} maxLength={ACCOUNT_PASSWORD_MAX_LENGTH}
               disabled={busy} value={confirm} onChange={(event) => setConfirm(event.target.value)} />
           </div>
           <button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Updating password…" : "Set password"}</button>
         </form>
       )}
       {message && <p className={styles.notice} role="status">{message}</p>}
-      <Link className={done ? styles.primaryButton : styles.textAction} href="/sign-in">Go to sign in</Link>
+      <Link className={done ? styles.primaryButton : styles.textAction} href="/sign-in">Back to Log In</Link>
     </section>
   );
 }

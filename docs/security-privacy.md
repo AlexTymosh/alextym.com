@@ -96,6 +96,12 @@ local/session storage. After a reload, in-page reauthentication accepts only
 an already admitted credential for the cookie's UID before rotating the cookie;
 it cannot approve an unconfirmed provider or switch to another user.
 
+Account registration, password recovery and Owner-provisioned initial passwords
+accept 8–128 characters and reject control characters. This does not change
+UID admission, project grants, initial credential expiry or session revocation.
+GitHub remains supported by the identity policy, while its frontend login and
+linking controls are hidden unless explicitly enabled after provider setup.
+
 The custom `/auth/action` page removes the reset code from the visible URL,
 uses no-referrer metadata and is excluded from the page analytics allowlist.
 Firebase email resets use Firebase's code verification and confirmation APIs.

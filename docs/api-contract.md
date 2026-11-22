@@ -71,6 +71,8 @@ Next.js `/auth/session`, `/auth/session/link`, `/auth/identity` and
 
 `POST /auth/session` atomically registers a previously unknown verified UID
 before issuing its Lab session. Registration creates no project grants.
+Application registration and password-reset validation accept 8–128 characters
+without control characters, matching Owner-provisioned initial passwords.
 `GET /auth/session` reports `canLink: true` for every valid admitted session,
 regardless of the elapsed time since sign-in. `POST /auth/session/reauthenticate`
 requires same-origin JSON, an existing admitted cookie and a recent `idToken`

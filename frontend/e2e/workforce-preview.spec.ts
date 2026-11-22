@@ -34,6 +34,10 @@ test("local Workforce preview supports offline navigation without API requests",
 
   const response = await page.goto(previewPath);
   expect(response?.status()).toBe(200);
+  const bar = page.getByRole("navigation", { name: "Demo navigation", exact: true });
+  await expect(bar.getByRole("link", { name: "Back to portfolio" })).toHaveAttribute("href", "/portfolio");
+  await expect(bar).toContainText("Demo v1.0 · Synthetic data only");
+  await expect(page.getByText("Prepared for an SCAS interview", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Local UI preview — no Firebase or API calls")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Workforce Intelligence", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry check" })).toHaveCount(0);

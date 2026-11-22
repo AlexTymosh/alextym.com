@@ -151,7 +151,6 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
 
   return (
     <section className={styles.root} data-theme={theme} aria-label="Workforce Intelligence demo">
-      <p className={styles.disclosure}>Demo v1.0 · Prepared for an SCAS interview · Synthetic data only</p>
       <header className={styles.header}>
         <div className={styles.brand}>
           <Image className={styles.brandLogo} src="/workforce-simulation-logo.png" width={56} height={56}
@@ -177,7 +176,7 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             {theme === "dark" ? "Light theme" : "Dark theme"}
           </button>
           {!previewMode && onSignOut ? <button className={styles.secondaryButton} type="button"
-            onClick={onSignOut}>Sign out</button> : null}
+            onClick={onSignOut}>Log Out</button> : null}
         </div>
       </header>
       <nav aria-label="Workforce sections" className={styles.navigation}>
@@ -228,13 +227,13 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
             </div>
             {!restricted && notice ? <p className={styles.notice} role="status">{notice}</p> : null}
             {guide ? interviewControls : null}
-            {previewMode ? <p className={styles.message}>Sign in to the protected app to view and change the synthetic dataset.</p> : null}
+            {previewMode ? <p className={styles.message}>Log In to the protected app to view and change the synthetic dataset.</p> : null}
             {error ? <div className={styles.panel} role="alert">
               <h2>{restricted ? "Workspace access unavailable" : "Unable to load this view"}</h2>
-              <p>{error.status === 401 ? "Your sign-in session has expired." : error.status === 403 ?
+              <p>{error.status === 401 ? "Your login session has expired." : error.status === 403 ?
                 "This session cannot access Workforce data." : error.status === 404 ?
                   "This workspace is currently disabled." : error.message}</p>
-              {error.status === 401 ? <a href="/portfolio/workforce-intelligence">Return to demo sign in</a> :
+              {error.status === 401 ? <a href="/portfolio/workforce-intelligence">Return to demo log in</a> :
                 <button type="button" className={styles.secondaryButton}
                   onClick={() => { if (error.status === 422) setFilters(DEFAULT_FILTERS); refresh(); }}>
                   {error.status === 422 ? "Restore default dates" : "Retry"}

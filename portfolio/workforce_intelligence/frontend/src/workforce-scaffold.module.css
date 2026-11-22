@@ -13,7 +13,7 @@
   --wi-error: #ffb8aa;
   min-width: 0;
   width: 100%;
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--portfolio-demo-bar-height, 0px));
   display: flex;
   flex-direction: column;
   overflow: clip;
@@ -44,16 +44,6 @@
   outline-offset: 3px;
 }
 
-.disclosure {
-  margin: 0;
-  padding: 9px 22px;
-  border-bottom: 1px solid var(--wi-border);
-  background: var(--wi-accent-soft);
-  color: var(--wi-ink);
-  font-size: .72rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
 .header, .brand, .headerActions { display: flex; align-items: center; gap: 12px; }
 .headerActions { flex-wrap: wrap; }
 .header {
@@ -147,7 +137,7 @@
   border-right: 1px solid var(--wi-border);
   background: var(--wi-surface);
 }
-.screenMenu { display: grid; gap: 13px; position: sticky; top: 12px; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.screenMenu { display: grid; gap: 13px; position: sticky; top: calc(12px + var(--portfolio-demo-bar-height, 0px)); max-height: calc(100dvh - 24px - var(--portfolio-demo-bar-height, 0px)); overflow-y: auto; }
 .screenMenu > div { display: grid; gap: 2px; }
 .screenGroup { margin: 0 0 3px; padding-inline: 9px; color: var(--wi-muted); font-size: .7rem; font-weight: 650; }
 .screenMenu a { padding: 6px 9px; font-size: .78rem; line-height: 1.4; color: var(--wi-muted); border-radius: 6px; text-decoration: none; }
@@ -437,7 +427,7 @@
 .guide {
   position: sticky;
   z-index: 1;
-  top: 10px;
+  top: calc(10px + var(--portfolio-demo-bar-height, 0px));
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -478,7 +468,7 @@
   .mobileSections select { flex: 1; min-width: 0; }
   .metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .navigation { gap: 0 18px; padding-inline: 16px; }
-  .disclosure, .header { padding-inline: 16px; }
+  .header { padding-inline: 16px; }
 }
 @media (max-width: 380px) {
   .metricGrid { grid-template-columns: 1fr; }

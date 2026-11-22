@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PortfolioAccessNotice } from "../../components/portfolio-access-notice";
 import { ProjectCards } from "../../components/project-cards";
 import { publicProjects } from "../../lib/portfolio-lab/project-catalog";
 import styles from "./page.module.css";
@@ -18,13 +18,10 @@ export default function PortfolioCataloguePage() {
         <h1>Portfolio</h1>
         <p className={styles.lead}>Business problems, explored through working software.</p>
         <p>A quick look at each project&apos;s purpose, approach and workflows.
-          These concept prototypes use synthetic data.</p>
+          These concept prototypes use synthetic data and support importing, processing
+          and exporting your own datasets.</p>
       </header>
-      <aside className={styles.accessNotice} aria-label="Demo access">
-        <span>Interactive demos require sign-in and permission for each project.</span>
-        <Link href="/sign-in">Sign in</Link>
-        <Link href="/contact">Request access</Link>
-      </aside>
+      <PortfolioAccessNotice />
       <ProjectCards projects={publicProjects} detailed />
     </div>
   );
