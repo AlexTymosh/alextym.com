@@ -19,6 +19,13 @@ Only manifests marked `catalog.visible=true` appear there. Shared account
 Settings still derive available projects from current grants across the full
 registry, independently of public catalogue visibility.
 
+The website owns a shared black demo-navigation bar for both project routes.
+Its link returns to `/portfolio` without changing the account session. Project
+styles reserve the optional host-provided `--portfolio-demo-bar-height`; the
+fallback is zero for standalone consumers. Project modules do not import host
+navigation components. Existing route, authorization and API contracts remain
+independent of this presentation.
+
 `alextym.com` is a single monorepo with one Next.js host (Vercel) and one FastAPI host (Render). Each embedded demonstration application owns its implementation under `portfolio/<project_id>/`. These projects will never need standalone repositories, websites or dedicated services.
 
 ```text

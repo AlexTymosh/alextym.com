@@ -151,7 +151,6 @@ export function WorkforceScaffold({ previewMode = false, onSignOut }: { previewM
 
   return (
     <section className={styles.root} data-theme={theme} aria-label="Workforce Intelligence demo">
-      <p className={styles.disclosure}>Demo v1.0 · Prepared for an SCAS interview · Synthetic data only</p>
       <header className={styles.header}>
         <div className={styles.brand}>
           <Image className={styles.brandLogo} src="/workforce-simulation-logo.png" width={56} height={56}

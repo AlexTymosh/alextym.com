@@ -77,7 +77,6 @@ export default function FleetApp(){
     <header className={styles.topbar}>
       <div className={styles.brand}><span className={styles.brandIcon}>F</span><div><strong>Fleet VOR Hub</strong><small>Fleet Operations · synthetic demonstration</small></div></div>
       <div className={styles.topbarActions}>
-        <span className={styles.demoFlag}>DEMO v2</span>
         <a href="/api/vor/export.xlsx" download="fleet-vor-demo.xlsx" className={styles.exportButton}>↓ Export Excel</a>
         {/* PR14 TOPBAR IDENTITY */}<span className={styles.headerBrandMark} title="Fleet VOR Hub">F</span><Image src={fleetAvatar} alt="Alex Tym profile" width={32} height={32} className={styles.headerAvatar}/><button type="button" className={styles.signOut} onClick={()=>void logout()}>Log Out</button>
       </div>

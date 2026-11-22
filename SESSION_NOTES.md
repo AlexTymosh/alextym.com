@@ -10,7 +10,8 @@ previous checkpoint. Work now uses `codex/site-auth-demo-polish` from that main.
 **Stop after each logical stage for the Owner to commit and push. Continue only
 after the Owner explicitly permits it. Do not commit, push or merge for them.**
 
-Stage 1 is prepared locally (request items 1, 2, 5, 6 and 7):
+Stage 1 was committed and pushed by the Owner as `b5f63df`
+(request items 1, 2, 5, 6 and 7):
 
 - Public Portfolio and the header share private account state. Members see
   **View your projects**; guests see **Log In**. The catalogue remains public
@@ -23,9 +24,12 @@ Stage 1 is prepared locally (request items 1, 2, 5, 6 and 7):
   available. Set `NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED=true` after configuring
   the provider to enable the UI in a future frontend build.
 
-Stage 2 (not started): replace the Workforce interview disclosure with a black
-bar and add the equivalent bar to Fleet. The Owner confirmed the left link
-returns to `/portfolio`; the right label is **Demo v1.0 · Synthetic data only**.
+Stage 2 is prepared locally: the host supplies one shared black demo bar on
+both Workforce and Fleet routes. The left **Back to portfolio** link returns
+to `/portfolio` without logging out; the right label is
+**Demo v1.0 · Synthetic data only**. The Workforce interview disclosure and
+the conflicting Fleet `DEMO v2` badge are removed. Fixed Fleet screens and
+Workforce sticky navigation reserve the bar's desktop/mobile height.
 
 Stage 3 (not started): replace the Workforce catalogue screenshot with a light
 theme capture using synthetic fixtures. Extend project descriptions/data copy
@@ -44,7 +48,19 @@ Another 32 desktop/mobile checks passed against the production build for public
 pages, Portfolio/account state, navigation, themes, default-off access and all
 retained registration providers.
 
-Stop for the Owner to commit and push stage 1. Hosted CI, CodeQL and production
+Stage 2 emulator verification passed eight desktop/mobile scenarios for both
+bars, keyboard focus, controls below the bar, the Workforce light theme,
+offline preview, retained guest denial and authenticated return to Portfolio.
+Two production-only preview checks were skipped in this explicit dev run.
+Desktop and mobile bar captures were visually inspected.
+The default Turbopack production build, subsequent standalone TypeScript check,
+frontend lint (seven existing Fleet warnings), module boundaries and whitespace
+checks passed. The production-build browser suite also passed for Fleet access,
+authenticated navigation/logout, legacy route handling, public site navigation,
+default-off Workforce access and production preview denial. Environment-specific
+scenarios were skipped when their required mode was not enabled.
+
+Stop for the Owner to commit and push stage 2. Hosted CI, CodeQL and production
 verification follow the Owner's PR/deployment; local checks are not a backend,
 RAG or security release sign-off. No production Firebase configuration changed.
 

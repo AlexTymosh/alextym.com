@@ -27,6 +27,9 @@ test("embedded Fleet Hub renders its access screen without a live API", async ({
   expect(response?.status()).toBe(200);
   await expect(page.getByRole("heading", { name: "Fleet VOR Hub" })).toBeVisible();
   await expect(page.getByLabel("Demo password")).toBeVisible();
+  const bar = page.getByRole("navigation", { name: "Demo navigation", exact: true });
+  await expect(bar).toContainText("Demo v1.0 · Synthetic data only");
+  await expect(bar.getByRole("link", { name: "Back to portfolio" })).toHaveAttribute("href", "/portfolio");
 });
 
 for (const oldRoute of routes) {

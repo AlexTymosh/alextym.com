@@ -89,6 +89,11 @@ Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the
 document and global CSS, while the Workforce route renders its own navigation
 and content landmark. The public catalogue and site pages use the site frame.
+The host frame supplies the same black demo bar on Workforce and Fleet routes,
+with a link back to `/portfolio` and a short synthetic-data label. The bar uses
+`--portfolio-demo-bar-height` to reserve space in Fleet's fixed containers and
+Workforce's viewport/sticky navigation. Project styles fall back to zero inset
+outside the website host. Returning to the catalogue does not log the user out.
 
 Frontend stack:
 
