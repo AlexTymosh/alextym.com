@@ -57,7 +57,7 @@ test.describe("Portfolio Lab self-service approval", () => {
   test.skip(!enabled, "Requires the isolated localhost Firebase emulator environment");
   test.setTimeout(90_000);
 
-  test("linking after an old session and reload confirms the same account without signing out", async ({ page }) => {
+  test("linking after an old session and reload confirms the same account without logging out", async ({ page }) => {
     const email = `reauth-${randomBytes(6).toString("hex")}@example.test`;
     await page.goto("/sign-in");
     await page.getByRole("button", { name: "Create account", exact: true }).click();
@@ -78,7 +78,7 @@ test.describe("Portfolio Lab self-service approval", () => {
     expect(agedUser.status()).toBe(200);
     parts[1] = Buffer.from(JSON.stringify(claims)).toString("base64url");
     await page.context().addCookies([{ ...cookie, value: parts.join(".") }]);
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Login methods", exact: true }).click();
     expect(await (await page.request.get("/auth/session")).json()).toMatchObject({
       authenticated: true, canLink: true,
     });
@@ -103,7 +103,8 @@ test.describe("Portfolio Lab self-service approval", () => {
     expect((await page.request.post("/auth/session/reauthenticate", {
       headers: { Origin: "https://untrusted.example.test" }, data: { idToken: ownToken },
     })).status()).toBe(403);
-    for (const name of ["Google", "GitHub", "Facebook"]) {
+    for (const name of ["Google", "GitHub", "Facebook"].filter((name) =>
+      name !== "GitHub" || process.env.NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED === "true")) {
       await mockProvider(page, "Link " + name, name.toLowerCase() + "-" + email);
       await mockProvider(page, "Confirm " + name, name.toLowerCase() + "-" + email);
       await expect(page.getByRole("status")).toContainText(name + " is linked");
@@ -123,7 +124,7 @@ test.describe("Portfolio Lab self-service approval", () => {
   test("email registration, Owner approval, project isolation and revocation", async ({ page, playwright }, testInfo) => {
     const email = `new-user-${randomBytes(6).toString("hex")}@example.test`;
     await page.goto("/sign-in");
-    const emailButton = await page.getByRole("button", { name: "Sign in with email", exact: true }).boundingBox();
+    const emailButton = await page.getByRole("button", { name: "Log In with email", exact: true }).boundingBox();
     const microsoft = await page.getByRole("button", { name: "Continue with Microsoft", exact: true }).boundingBox();
     expect(emailButton!.y).toBeLessThan(microsoft!.y);
     await page.screenshot({ path: testInfo.outputPath("email-first-login.png"), fullPage: true, caret: "initial" });
@@ -195,7 +196,7 @@ test.describe("Portfolio Lab self-service approval", () => {
     }
   });
 
-  test("one table row grants and revokes access for every linked sign-in method", async ({ page, browser }) => {
+  test("one table row grants and revokes access for every linked login method", async ({ page, browser }) => {
     test.setTimeout(120_000);
     const suffix = randomBytes(6).toString("hex");
     const email = `linked-user-${suffix}@example.test`;
@@ -211,7 +212,7 @@ test.describe("Portfolio Lab self-service approval", () => {
     await page.getByRole("heading", { name: "Settings", exact: true }).waitFor();
     await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Profile", exact: true }).click();
     await expect(page.getByRole("button", { name: "Use Microsoft photo", exact: true })).toHaveCount(0);
-    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Login methods", exact: true }).click();
     for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
       await mockProvider(page, "Link " + name, linkedEmail);
       await mockProvider(page, "Confirm " + name, linkedEmail);
@@ -242,21 +243,21 @@ test.describe("Portfolio Lab self-service approval", () => {
       for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
         const signedOut = page.waitForResponse((response) =>
           response.url().endsWith("/auth/session") && response.request().method() === "DELETE", { timeout: 15_000 });
-        await page.getByRole("button", { name: "Sign out", exact: true }).click();
+        await page.getByRole("button", { name: "Log Out", exact: true }).click();
         expect((await signedOut).status()).toBe(200);
         await page.getByRole("button", { name: "Continue with " + name, exact: true }).waitFor();
         await mockProvider(page, "Continue with " + name, linkedEmail);
-        await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
-        await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
+        await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Login methods", exact: true }).click();
+        await expect(page.getByText("Logged in with " + name, { exact: true })).toBeVisible();
         await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Available projects", exact: true }).click();
         await expect(page.getByText("View access", { exact: true })).toBeVisible();
         expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(200);
         expect((await page.request.get("/portfolio/workforce-intelligence/api/status")).status()).toBe(403);
       }
-      await page.getByRole("button", { name: "Sign out", exact: true }).click();
+      await page.getByRole("button", { name: "Log Out", exact: true }).click();
       await page.getByLabel("Email", { exact: true }).fill(email);
       await page.getByLabel("Password", { exact: true }).fill(password);
-      await page.getByRole("button", { name: "Sign in with email", exact: true }).click();
+      await page.getByRole("button", { name: "Log In with email", exact: true }).click();
       await expect(page.getByText("View access", { exact: true })).toBeVisible();
       expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(200);
 
@@ -265,11 +266,11 @@ test.describe("Portfolio Lab self-service approval", () => {
       await expect(row.getByRole("status")).toHaveText("Access revoked.");
       expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
       for (const [name, linkedEmail] of Object.entries(linkedEmails)) {
-        await page.getByRole("button", { name: "Sign out", exact: true }).click();
+        await page.getByRole("button", { name: "Log Out", exact: true }).click();
         await page.getByRole("button", { name: "Continue with " + name, exact: true }).waitFor();
         await mockProvider(page, "Continue with " + name, linkedEmail);
-        await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
-        await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
+        await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Login methods", exact: true }).click();
+        await expect(page.getByText("Logged in with " + name, { exact: true })).toBeVisible();
         await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Available projects", exact: true }).click();
         expect((await page.request.get("/api/vor/bootstrap")).status()).toBe(403);
       }
@@ -280,11 +281,13 @@ test.describe("Portfolio Lab self-service approval", () => {
 
   for (const name of ["Google", "Microsoft", "GitHub", "Facebook"]) {
     test(`first ${name} sign-in remains logged in while awaiting project access`, async ({ page }) => {
+      test.skip(name === "GitHub" && process.env.NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED !== "true",
+        "GitHub controls are disabled until the provider is configured");
       await page.goto("/sign-in");
       await mockProvider(page, "Continue with " + name, name.toLowerCase() + "-" + randomBytes(6).toString("hex") + "@example.test");
       await page.getByRole("heading", { name: "Settings", exact: true }).waitFor();
-      await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Sign-in methods", exact: true }).click();
-      await expect(page.getByText("Signed in with " + name, { exact: true })).toBeVisible();
+      await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Login methods", exact: true }).click();
+      await expect(page.getByText("Logged in with " + name, { exact: true })).toBeVisible();
       await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Available projects", exact: true }).click();
       await expect(page.getByRole("status")).toContainText("No access has been assigned");
       await expect(page.getByRole("link", { name: "Open" })).toHaveCount(0);

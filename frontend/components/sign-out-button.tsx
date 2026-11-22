@@ -23,8 +23,8 @@ export function SignOutButton({ className }: { className?: string }) {
   }
   return <div>
     <button type="button" className={className} disabled={!ready || busy} onClick={() => void leave()}>
-      {busy ? "Signing out…" : "Sign out"}
+      {busy ? "Logging out…" : "Log Out"}
     </button>
-    {failed && <p role="alert">Unable to sign out. Try again.</p>}
+    {failed && <p role="alert">Unable to log out. Try again.</p>}
   </div>;
 }

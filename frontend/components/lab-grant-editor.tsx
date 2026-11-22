@@ -26,7 +26,7 @@ export function LabGrantEditor({ uid, projectId, title, role, revision, disabled
       const result = await response.json().catch(() => null);
       if (!response.ok) {
         setFailed(true);
-        setNotice(result?.code === "RECENT_LOGIN_REQUIRED" ? "Sign in again before changing access."
+        setNotice(result?.code === "RECENT_LOGIN_REQUIRED" ? "Log In again before changing access."
           : response.status === 409 ? "This account or grant changed. Reload the page before saving."
           : "Could not save access. Try again.");
         return;

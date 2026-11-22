@@ -5,7 +5,7 @@ import sharp from "sharp";
 const site = "http://localhost:14300";
 const emulator = "http://127.0.0.1:19099";
 const project = "demo-portfolio-lab";
-const password = "Synthetic-account-password-123!";
+const password = "Demo123!";
 const enabled = process.env.LAB_EMULATOR_E2E === "true" &&
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === project && process.env.PLAYWRIGHT_BASE_URL === site;
 
@@ -24,6 +24,27 @@ async function register(page: Page) {
 test.describe("Site account settings", () => {
   test.skip(!enabled, "Requires the isolated local Firebase emulators");
   test.setTimeout(90_000);
+
+  test("settings aliases open login for guests and configured login methods for members", async ({ page }, info) => {
+    for (const path of ["/setting", "/settings"]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(site + "/sign-in");
+      await expect(page.getByRole("heading", { name: "Log In", exact: true })).toBeVisible();
+    }
+    const githubEnabled = process.env.NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED === "true";
+    await expect(page.getByRole("button", { name: "Continue with GitHub", exact: true })).toHaveCount(githubEnabled ? 1 : 0);
+    await register(page);
+    await page.goto("/setting");
+    await expect(page).toHaveURL(site + "/settings");
+    await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Portfolio", exact: true }).click();
+    const access = page.getByRole("complementary", { name: "Demo access" });
+    await expect(access.getByRole("link", { name: "Log In", exact: true })).toHaveCount(0);
+    await expect(access.getByRole("link", { name: "View your projects", exact: true })).toBeVisible();
+    await access.screenshot({ path: info.outputPath("portfolio-authenticated.png") });
+    await access.getByRole("link", { name: "View your projects", exact: true }).click();
+    await page.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Login methods", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Link GitHub", exact: true })).toHaveCount(githubEnabled ? 1 : 0);
+  });
 
   test("old account URLs return 404 without a redirect", async ({ request }) => {
     for (const path of ["/lab", "/lab/login", "/lab/admin", "/lab/password/reset", "/lab/session", "/lab/session/link", "/lab/api/identity", "/lab/admin/grants", "/lab/password/reset/action"]) {
@@ -88,7 +109,7 @@ test.describe("Site account settings", () => {
       expect(await publicCatalogue.text()).toContain("Fleet VOR Hub");
     } finally { await guest.dispose(); }
 
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.getByRole("button", { name: "Log Out", exact: true }).click();
     await expect(page).toHaveURL(site + "/sign-in");
     await register(page);
     const other = await (await page.request.get("/auth/profile")).json();
@@ -167,8 +188,9 @@ test.describe("Site account settings", () => {
   });
 
   test("Firebase reset links show the brand, confirm passwords and reject reuse", async ({ page }) => {
+    const replacementPassword = "Reset12!";
     const email = await register(page);
-    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.getByRole("button", { name: "Log Out", exact: true }).click();
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: "Password help", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Check your inbox");
@@ -180,11 +202,11 @@ test.describe("Site account settings", () => {
     await expect(page.getByLabel("New password", { exact: true })).toBeVisible();
     await expect(page.locator('img[src*="icon.png"]')).toBeVisible();
     await expect(page).toHaveURL(site + "/auth/action");
-    await page.getByLabel("New password", { exact: true }).fill(password + "-new");
+    await page.getByLabel("New password", { exact: true }).fill(replacementPassword);
     await page.getByLabel("Confirm password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Set password", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("do not match");
-    await page.getByLabel("Confirm password", { exact: true }).fill(password + "-new");
+    await page.getByLabel("Confirm password", { exact: true }).fill(replacementPassword);
     await page.getByRole("button", { name: "Show password", exact: true }).first().click();
     await expect(page.getByLabel("New password", { exact: true })).toHaveAttribute("type", "text");
     await page.getByRole("button", { name: "Hide password", exact: true }).click();
@@ -198,8 +220,8 @@ test.describe("Site account settings", () => {
     expect(old.ok()).toBeFalsy();
     await page.goto("/sign-in");
     await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByLabel("Password", { exact: true }).fill(password + "-new");
-    await page.getByRole("button", { name: "Sign in with email", exact: true }).click();
+    await page.getByLabel("Password", { exact: true }).fill(replacementPassword);
+    await page.getByRole("button", { name: "Log In with email", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   });
 });

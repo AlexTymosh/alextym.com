@@ -125,10 +125,15 @@ def test_initial_validity_must_be_integer_from_one_to_thirty(days) -> None:
         validate_initial_password("secure-secret-password", days)
 
 
-@pytest.mark.parametrize("password", ["short", "", "x" * 129, "abc\n" + "x" * 20])
+@pytest.mark.parametrize("password", ["short", "1234567", "", "x" * 129, "abc\n" + "x" * 20])
 def test_invalid_initial_password_rejected_before_provisioning(password) -> None:
     with pytest.raises(ValueError):
         validate_initial_password(password, 30)
+
+
+@pytest.mark.parametrize("password", ["12345678", "x" * 128])
+def test_initial_password_accepts_eight_to_128_characters(password: str) -> None:
+    validate_initial_password(password, 30)
 
 
 def test_email_is_normalized_and_invalid_values_rejected() -> None:

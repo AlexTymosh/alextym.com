@@ -123,7 +123,7 @@ test("authenticated Fleet workspace retains project-owned navigation", async ({ 
   expect(response?.status()).toBe(200);
 
   await expect(page.getByRole("heading", { name: "Issue Hub", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log Out" })).toBeVisible();
   await expect(page.getByLabel("Fleet VOR Hub navigation")).toBeVisible();
   await expect(page.getByRole("heading", { name: "GX24 KLM" })).toBeVisible();
 
@@ -141,12 +141,12 @@ test("authenticated Fleet workspace retains project-owned navigation", async ({ 
 test("sign-out returns to access screen and removes authenticated navigation", async ({ page }) => {
   const { requests, unexpected } = await mockAuthenticatedFleet(page);
   await page.goto("/portfolio/fleet-vor-hub");
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: "Log Out" })).toBeVisible();
+  await page.getByRole("button", { name: "Log Out" }).click();
 
   await expect(page.getByLabel("Demo password")).toBeVisible();
   await expect(page.getByLabel("Fleet VOR Hub navigation")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Log Out" })).toHaveCount(0);
   expect(requests.filter((x) => x === "POST /api/vor/logout")).toHaveLength(1);
   expect(unexpected).toEqual([]);
 });

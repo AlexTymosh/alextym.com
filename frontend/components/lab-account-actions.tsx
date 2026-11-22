@@ -25,10 +25,10 @@ function linkIssue(error: unknown, provider: LabOAuthProvider) {
   const code = error instanceof FirebaseError ? error.code : undefined;
   if (code === "auth/credential-already-in-use" || code === "auth/email-already-in-use" ||
       code === "auth/account-exists-with-different-credential") {
-    return `This ${labProviderNames[provider]} account is already attached to a separate sign-in. Contact support to resolve the conflict before linking it here.`;
+    return `This ${labProviderNames[provider]} account is already attached to a separate login. Contact support to resolve the conflict before linking it here.`;
   }
   return labOAuthIssue(provider, code)
-    ?? `Could not finish linking ${labProviderNames[provider]}. Sign in again and retry.`;
+    ?? `Could not finish linking ${labProviderNames[provider]}. Log In again and retry.`;
 }
 
 export function LabAccountActions({ linkedProviders, identity }: {
@@ -72,13 +72,13 @@ export function LabAccountActions({ linkedProviders, identity }: {
       if (!response.ok) {
         setNotice({ tone: "error", text: response.status >= 500
           ? "Could not check the link. Try confirming again."
-          : "Could not confirm this link. Sign in again and choose the same account when you confirm." });
+          : "Could not confirm this link. Log In again and choose the same account when you confirm." });
         return;
       }
 
       setPending(null);
       setConfirmed((providers) => [...providers, provider]);
-      setNotice({ tone: "success", text: `${labProviderNames[provider]} is linked. You can use it the next time you sign in.` });
+      setNotice({ tone: "success", text: `${labProviderNames[provider]} is linked. You can use it the next time you log in.` });
       router.refresh();
     } catch (error) {
       if (error instanceof FirebaseError && error.code === "auth/provider-already-linked") {
@@ -96,7 +96,7 @@ export function LabAccountActions({ linkedProviders, identity }: {
     <section className={styles.accountActions} aria-labelledby="lab-linked-identities">
       <h2 id="lab-linked-identities">Linked accounts</h2>
       <p className={styles.hint}>
-        Add another sign-in method whenever you need it. We may ask you to confirm your identity.
+        Add another login method whenever you need it. We may ask you to confirm your identity.
       </p>
       {verifyTarget && <AccountReauthentication uid={identity.uid} email={identity.email}
         providers={linkedProviders || []} passwordEnabled={identity.passwordEnabled}

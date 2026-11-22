@@ -1,4 +1,6 @@
 /** Pure, testable policy. A reset code is a credential, never a grant. */
+export const ACCOUNT_PASSWORD_MIN_LENGTH = 8;
+export const ACCOUNT_PASSWORD_MAX_LENGTH = 128;
 export type ResetUser = { uid: string; email: string; disabled: boolean };
 export type ResetCodeCheck = { email: string; requestType: string };
 export type PasswordResetEffects = {
@@ -23,7 +25,8 @@ export function validResetUid(value: unknown): value is string {
 
 export function validNewPassword(value: unknown): value is string {
   return typeof value === "string" &&
-    value.length >= 12 && value.length <= 128 && !Array.from(value).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127);
+    value.length >= ACCOUNT_PASSWORD_MIN_LENGTH && value.length <= ACCOUNT_PASSWORD_MAX_LENGTH &&
+    !Array.from(value).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127);
 }
 
 export function eligibleForPasswordRecovery(uid: string, ownerUid: string, record: unknown): boolean {

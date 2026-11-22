@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { AccountSessionProvider } from "./account-session";
 
 const workforcePath = "/portfolio/workforce-intelligence";
 
@@ -16,10 +17,10 @@ export function SiteFrame({ children, navigation, footer }: Readonly<{
   }
 
   return (
-    <div className="app-shell">
+    <AccountSessionProvider><div className="app-shell">
       {navigation}
       <main className="site-main">{children}</main>
       {footer}
-    </div>
+    </div></AccountSessionProvider>
   );
 }

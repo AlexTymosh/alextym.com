@@ -88,7 +88,7 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
     const selection = ++imageSelection.current;
     try {
       const user = getLabAuth().currentUser;
-      if (!user) throw new Error("Sign in again, then choose Use Microsoft photo.");
+      if (!user) throw new Error("Log In again, then choose Use Microsoft photo.");
       const provider = new OAuthProvider("microsoft.com");
       provider.addScope("User.Read");
       const proof = await reauthenticateWithPopup(user, provider);

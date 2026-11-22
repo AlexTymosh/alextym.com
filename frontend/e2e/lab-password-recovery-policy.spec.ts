@@ -37,7 +37,9 @@ test.describe("Portfolio Lab password recovery contract", () => {
 
   test("enforces the application password length and control rules", () => {
     expect(validNewPassword(password)).toBe(true);
-    for (const value of [null, "short", "a".repeat(129), "12-valid-characters\n"]) {
+    expect(validNewPassword("12345678")).toBe(true);
+    expect(validNewPassword("a".repeat(128))).toBe(true);
+    for (const value of [null, "short", "1234567", "a".repeat(129), "12-valid-characters\n"]) {
       expect(validNewPassword(value)).toBe(false);
     }
   });

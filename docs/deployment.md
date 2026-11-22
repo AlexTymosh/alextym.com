@@ -181,11 +181,13 @@ Owner table once IAM has applied the change.
 [Firestore permissions](https://firebase.google.com/docs/firestore/security/iam)
 and [editing custom roles](https://docs.cloud.google.com/iam/docs/creating-custom-roles).
 
-To enable the existing GitHub button, register a GitHub OAuth App with homepage
+GitHub controls are hidden by default. To enable them later, register a GitHub OAuth App with homepage
 `https://alextym.com` and callback
 `https://portfolio-lab-dev.firebaseapp.com/__/auth/handler`. In Firebase
 **Authentication → Sign-in method → GitHub**, enable the provider, enter the
-app's Client ID and Client Secret, then save.
+app's Client ID and Client Secret, then save. Set frontend
+`NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED=true` and redeploy after provider setup.
+The backend identity policy retains GitHub support independently of this UI flag.
 [Firebase GitHub sign-in](https://firebase.google.com/docs/auth/web/github-auth)
 
 To verify project grants, register a visitor in a separate browser profile.
@@ -207,6 +209,12 @@ sections use `/settings/profile` and `/settings/connections`. The public
 `/portfolio` page lists projects for visitors. Protected project pages and
 APIs continue to check the session and project grant independently.
 OAuth provider callbacks use Firebase's `/__/auth/handler` endpoint.
+
+The `/setting` alias redirects to `/settings`; guests are sent to `/sign-in`.
+Visible controls use **Log In** and **Log Out** while the login URL stays
+`/sign-in`. The application accepts passwords of 8–128 characters. Keep the
+Firebase Authentication password policy minimum at eight characters when
+rolling out this policy so that Firebase and application validation agree.
 
 ### Reusing the template
 
