@@ -16,8 +16,8 @@ Reviewed against `main` commit `dd7b7b730e4be4c9d056398b4b69ba5e72784575` (PR #2
 
 1. Fleet project source can import other Fleet files, React and Next.js only. Relative imports cannot escape the module source root; unexpected bare dependencies are rejected.
 2. Fleet stylesheets must be `.module.css`; `:global` escapes, document-global selectors and CSS `@import` are forbidden.
-3. The Next.js host can import Fleet through the **single public `@fleet-hub` entry** only in `/fleet-vor-hub/page.tsx`.
-4. The established website shell and all three Fleet redirect adapters must remain intact; the Fleet page stays `noindex`/`nofollow` and the hidden portfolio catalogue stays unpublished.
+3. The Next.js host can import Fleet through the **single public `@fleet-hub` entry** only in `frontend/app/portfolio/fleet-vor-hub/page.tsx`.
+4. The established website shell and Fleet redirect adapters must remain intact; the canonical Fleet page stays `noindex`/`nofollow`. Legacy URLs permanently redirect to it. Portfolio navigation is a separate publication step.
 5. Browser E2E checks that the demo is `noindex` and website navigation remains available after returning to the home page.
 
 ## Accepted limitations

@@ -5,11 +5,12 @@ const DEFAULT_LANGUAGE = "en";
 const DEFAULT_OG_IMAGE_WIDTH = 1200;
 const DEFAULT_OG_IMAGE_HEIGHT = 630;
 
-export const publicRoutes = ["/", "/resume", "/chat", "/contact", "/disclaimer"];
+export const publicRoutes = ["/", "/resume", "/portfolio", "/chat", "/contact", "/disclaimer"];
 
 export const siteNavigation = [
   { href: "/", label: "Home" },
   { href: "/resume", label: "Resume" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/chat", label: "Chat" },
   { href: "/contact", label: "Contact" },
 ] as const;

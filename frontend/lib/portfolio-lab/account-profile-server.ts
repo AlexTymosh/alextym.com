@@ -31,7 +31,7 @@ export const getAccountProfile = cache(async (uid: string): Promise<AccountProfi
     : providerPhotos.find((photo) => photo.provider === avatarSource)?.url
       || providerPhotos[0]?.url || null;
   return {
-    firstName, lastName, displayName: [firstName, lastName].filter(Boolean).join(" ") || "Your account",
+    firstName, lastName, displayName: [firstName, lastName].map((part) => part.trim()).filter(Boolean).join(" ") || user.email || "Account",
     email: user.email || "", avatarUrl, avatarSource,
     revision: Number.isSafeInteger(stored?.revision) ? stored!.revision : 0,
     providerPhotos, linkedProviders: approved,

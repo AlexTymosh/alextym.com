@@ -3,10 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, type Auth, type User } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from "firebase/auth";
 import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
 import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
-import { createLabOAuthProvider, getLabAuth, retainLabLinkCredential } from "../lib/portfolio-lab/firebase-client";
+import { createLabOAuthProvider, getLabAuth } from "../lib/portfolio-lab/firebase-client";
 import { validNewPassword } from "../lib/portfolio-lab/password-recovery-policy";
 import { ProviderIcon } from "./provider-icon";
 import { PasswordInput } from "./password-input";
@@ -19,7 +19,7 @@ function linkingInstructions(provider: LabOAuthProvider) {
   return `Sign in with an existing method for your account, then choose Link ${labProviderNames[provider]} under Linked accounts.`;
 }
 
-async function startLabSession(auth: Auth, user: User, method: SignInMethod): Promise<string | null> {
+async function startLabSession(user: User, method: SignInMethod): Promise<string | null> {
   const token = await user.getIdTokenResult();
   const response = await fetch("/auth/session", {
     method: "POST",
@@ -27,10 +27,7 @@ async function startLabSession(auth: Auth, user: User, method: SignInMethod): Pr
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken: token.token }),
   });
-  if (response.ok) {
-    retainLabLinkCredential(auth, user, Date.parse(token.authTime) / 1000);
-    return null;
-  }
+  if (response.ok) return null;
 
   const body = await response.json().catch(() => null);
   if (response.status === 403 && body?.code === "PASSWORD_EXPIRED") {
@@ -86,7 +83,7 @@ export function LabLogin() {
       } else {
         user = (await signInWithEmailAndPassword(auth, email, password)).user;
       }
-      const issue = await startLabSession(auth, user, method)
+      const issue = await startLabSession(user, method)
         .catch(() => "Could not connect. Try signing in again.");
       if (issue) {
         await signOut(auth).catch(() => undefined);

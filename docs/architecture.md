@@ -27,6 +27,7 @@ Implemented public routes:
 ```text
 /          -> home page / product overview
 /resume    -> interactive resume + dynamic CV download
+/portfolio -> public project catalogue
 /chat      -> AI/RAG chat + human handoff
 /contact   -> contact form
 ```
@@ -36,6 +37,7 @@ Main navigation currently includes:
 ```text
 Home
 Resume
+Portfolio
 Chat
 Contact
 ```
@@ -45,6 +47,7 @@ The canonical public routes are also used by `sitemap.xml`:
 ```text
 /
  /resume
+ /portfolio
  /chat
  /contact
 ```
@@ -55,10 +58,27 @@ The canonical public routes are also used by `sitemap.xml`:
 
 Site account pages use `/sign-in` and authenticated `/settings` routes.
 Settings has separate project, profile, sign-in method and Owner access views.
-The project cards are shared with the public `/portfolio` catalogue, with
-current per-project grants determining the signed-in user's available cards.
+The project cards have a detailed public variant on `/portfolio` and a compact
+variant in Settings. Current per-project grants determine the signed-in user's
+available Settings cards. The public catalogue filters the build-generated
+registry by each manifest's `catalog.visible` flag; category, technologies and
+demo URLs also come from those manifests. Public narrative copy lives in
+`frontend/content/portfolio.ts`, with static synthetic screenshots in
+`frontend/public/images/portfolio/`. The catalogue does not fetch project data
+or require Firebase/Render availability.
 Generic `/auth/*` routes handle sessions, linking, profiles and recovery.
 The site uses these account routes directly.
+Account labels fall back to the user's email when no name is available.
+The profile editor offers proportional avatar cropping and fit-to-frame before
+the existing server validation and image encoding.
+
+The main navigation links to the public `/portfolio` catalogue. Portfolio stays
+highlighted on nested project pages that use the website shell. Responsive
+navigation wraps before the account label can overflow the header. The project
+access guards are independent of catalogue navigation.
+The public catalogue has its own canonical URL and sitemap entry, while the
+interactive project pages remain protected and `noindex`. Public screenshot
+links open static images; they do not open a project session.
 
 Workforce Intelligence uses its own full-page frame at
 `/portfolio/workforce-intelligence`. The shared Next.js layout supplies the

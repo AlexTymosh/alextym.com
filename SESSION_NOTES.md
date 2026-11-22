@@ -1,6 +1,48 @@
 # Current project handoff — Portfolio Lab identity and access
 
-**Updated:** 2026-11-20
+**Updated:** 2026-11-21
+
+## Current local change — Detailed portfolio cards
+
+The Owner requested three separate changes: move Fleet under `/portfolio`, add
+Portfolio navigation, then expand the public project descriptions. **Stop after
+each logical change for the Owner to commit and push. Continue only after the
+Owner explicitly permits it.**
+
+Step 1 was committed and pushed by the Owner as `e63e816`: Fleet is canonical at
+`/portfolio/fleet-vor-hub`, with its existing project authorization layout and
+permanent redirects from the four old URLs. The avatar work was committed and
+pushed separately as `f098115`.
+
+Step 2 was committed and pushed by the Owner as `839a8d5`: Portfolio links to
+`/portfolio` between Resume and Chat, stays highlighted on nested project pages
+using the website shell, and fits narrow screens with long account labels.
+
+Step 3 is prepared locally. The public catalogue shows detailed Fleet and
+Workforce case studies with challenge, approach, demo capabilities, technology
+tags and expandable static screenshots. Public copy lives in
+`frontend/content/portfolio.ts`. Both previews contain synthetic fixtures;
+their provenance is recorded beside the PNGs. No production session or live
+provider call was used for screenshots.
+
+Manifest `catalog.visible` flags now select public cards. Settings still uses
+the full registry and current grants, with its existing compact cards. The
+catalogue has a canonical URL and sitemap entry; protected project pages retain
+their access guards and noindex metadata.
+
+Verification: production build including TypeScript, frontend lint (seven
+existing Fleet warnings), portfolio boundaries and whitespace checks passed.
+Fourteen desktop/mobile Chromium scenarios passed for public cards and images,
+light/dark themes, navigation, metadata, default-off behavior and guest denial
+for both project pages/APIs. The two catalogue scenarios were rerun after visual
+QA adjustments. The updated Python manifest test and its Ruff checks passed.
+Desktop dark and mobile light renders were visually inspected; copies are in
+`.tmp/portfolio-card-assets/`. Build and Chromium ran outside the Windows sandbox.
+
+Stop for the Owner to commit and push step 3. Production verification remains
+pending; local catalogue checks do not constitute backend/RAG release sign-off.
+
+## Account experience checkpoint
 
 [PR #258](https://github.com/AlexTymosh/alextym.com/pull/258) is merged. Firebase
 sign-in is enabled for Fleet VOR Hub and Workforce Intelligence on alextym.com.

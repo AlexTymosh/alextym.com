@@ -5,6 +5,7 @@ import { currentLabSession } from "../../../lib/portfolio-lab/project-access-ser
 import { isLabOAuthProvider, labSignInProvider } from "../../../lib/portfolio-lab/admission-policy";
 import { labProviderNames } from "../../../lib/portfolio-lab/auth-ui";
 import styles from "../../../components/settings.module.css";
+import { getLabAdminAuth } from "../../../lib/portfolio-lab/firebase-server";
 
 export default async function ConnectionsPage() {
   const session = await currentLabSession();
@@ -12,8 +13,11 @@ export default async function ConnectionsPage() {
   const provider = labSignInProvider(session);
   const name = isLabOAuthProvider(provider) ? labProviderNames[provider] : "email and password";
   const linked = await getLabLinkedProviders(session.uid);
+  const user = await (await getLabAdminAuth()).getUser(session.uid);
   return <div className={styles.providerSection}>
     <div><h2>Sign-in methods</h2><p className={styles.description}>Signed in with {name}</p></div>
-    <LabAccountActions linkedProviders={linked} />
+    <LabAccountActions linkedProviders={linked} identity={{ uid: session.uid,
+      email: user.email || "",
+      passwordEnabled: user.providerData.some((item) => item.providerId === "password") }} />
   </div>;
 }

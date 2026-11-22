@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { FirebaseError } from "firebase/app";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { linkWithPopup, reauthenticateWithPopup } from "firebase/auth";
 import type { LabOAuthProvider } from "../lib/portfolio-lab/admission-policy";
 import { labOAuthIssue, labProviderNames, labSignInProviders } from "../lib/portfolio-lab/auth-ui";
 import { createLabOAuthProvider, getLabAuth } from "../lib/portfolio-lab/firebase-client";
-import { LAB_RECENT_LOGIN_SECONDS } from "../lib/portfolio-lab/session-policy";
+import { AccountReauthentication } from "./account-reauthentication";
 import { ProviderIcon } from "./provider-icon";
 import styles from "./lab-auth.module.css";
 import { useClientReady } from "../lib/use-client-ready";
@@ -32,22 +31,26 @@ function linkIssue(error: unknown, provider: LabOAuthProvider) {
     ?? `Could not finish linking ${labProviderNames[provider]}. Sign in again and retry.`;
 }
 
-export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAuthProvider[] | null }) {
+export function LabAccountActions({ linkedProviders, identity }: {
+  linkedProviders: LabOAuthProvider[] | null;
+  identity: { uid: string; email: string; passwordEnabled: boolean };
+}) {
   const router = useRouter();
   const ready = useClientReady();
   const [notice, setNotice] = useState<LinkNotice | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<LabOAuthProvider | null>(null);
   const [confirmed, setConfirmed] = useState<LabOAuthProvider[]>([]);
+  const [verifyTarget, setVerifyTarget] = useState<LabOAuthProvider | null>(null);
 
   const link = async (provider: LabOAuthProvider) => {
     setBusy(true);
     setNotice(null);
     try {
       const user = getLabAuth().currentUser;
-      if (!user) {
+      if (!user || user.uid !== identity.uid) {
         setPending(null);
-        setNotice({ tone: "error", text: "Sign in again before linking an account." });
+        setVerifyTarget(provider);
         return;
       }
       const oauthProvider = createLabOAuthProvider(provider);
@@ -93,8 +96,15 @@ export function LabAccountActions({ linkedProviders }: { linkedProviders: LabOAu
     <section className={styles.accountActions} aria-labelledby="lab-linked-identities">
       <h2 id="lab-linked-identities">Linked accounts</h2>
       <p className={styles.hint}>
-        Link an account within {LAB_RECENT_LOGIN_SECONDS / 60} minutes of signing in. <Link href="/sign-in">Sign in again</Link> if you reload this page.
+        Add another sign-in method whenever you need it. We may ask you to confirm your identity.
       </p>
+      {verifyTarget && <AccountReauthentication uid={identity.uid} email={identity.email}
+        providers={linkedProviders || []} passwordEnabled={identity.passwordEnabled}
+        onCancel={() => setVerifyTarget(null)} onVerified={() => {
+          setVerifyTarget(null);
+          setNotice({ tone: "info", text: `Identity confirmed. Select ${pending === verifyTarget ? "Confirm" : "Link"} ${labProviderNames[verifyTarget]} to continue.` });
+          router.refresh();
+        }} />}
       {notice && (
         <p
           className={`${styles.notice} ${notice.tone === "info" ? "" : styles[notice.tone]}`}

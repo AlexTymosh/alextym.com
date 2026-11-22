@@ -19,14 +19,16 @@ export function SiteNavigation() {
         </Link>
         <nav className="nav-pill" aria-label="Main navigation">
           {siteConfig.navigation.map((item) => {
-            const isActive = pathname === item.href;
+            const isCurrentPage = pathname === item.href;
+            const isActive = isCurrentPage ||
+              (item.href === "/portfolio" && pathname.startsWith(`${item.href}/`));
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={isActive ? "nav-pill__link nav-pill__link--active" : "nav-pill__link"}
-                aria-current={isActive ? "page" : undefined}
+                aria-current={isCurrentPage ? "page" : isActive ? "location" : undefined}
               >
                 {item.label}
               </Link>

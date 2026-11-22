@@ -1,15 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
+import { projectOverviews } from "../content/portfolio";
+import type { LabProject } from "../lib/portfolio-lab/project-catalog";
 import type { ProjectRole } from "../lib/portfolio-lab/project-grants";
 import styles from "../app/portfolio/page.module.css";
 
-type ProjectCard = { id: string; title: string; summary: string; path: string; role?: ProjectRole | null };
+type ProjectCard = LabProject & { role?: ProjectRole | null };
 const descriptions: Record<string, string> = {
   fleet_hub: "Log vehicle defects, track repairs and see which vehicles are ready to return to service.",
   workforce_intelligence: "Explore staffing, recruitment and staff feedback in a synthetic workforce dashboard.",
 };
 
-export function ProjectCards({ projects }: { projects: readonly ProjectCard[] }) {
+export function ProjectCards({ projects, detailed = false }: { projects: readonly ProjectCard[]; detailed?: boolean }) {
+  if (detailed) {
+    return <ul className={styles.caseStudies}>
+      {projects.map((project) => <li key={project.id}><ProjectCaseStudy project={project} /></li>)}
+    </ul>;
+  }
+
   return <ul className={styles.projects}>
     {projects.map((project) => <li key={project.id}>
       <Link className={styles.card} href={project.path}>
@@ -29,4 +37,47 @@ export function ProjectCards({ projects }: { projects: readonly ProjectCard[] })
       </Link>
     </li>)}
   </ul>;
+}
+
+function ProjectCaseStudy({ project }: { project: ProjectCard }) {
+  const overview = projectOverviews[project.id];
+  return <article className={styles.caseStudy} aria-labelledby={`${project.id}-title`}>
+    <div className={styles.caseHeader}>
+      <span className={styles.category}>{project.category}</span>
+      <span className={styles.accessBadge}>Access by permission</span>
+    </div>
+    <h2 id={`${project.id}-title`}>{project.title}</h2>
+    <p className={styles.focus}>{overview?.focus || project.summary}</p>
+    <div className={styles.caseBody}>
+      <div>
+        {overview && <figure className={styles.preview}>
+          <a className={styles.previewLink} href={overview.preview.src} target="_blank" rel="noopener noreferrer"
+            aria-label={`View ${project.title} screenshot (opens in a new tab)`}>
+            <Image className={styles.previewImage} src={overview.preview.src} alt={overview.preview.alt}
+              width={1440} height={900} sizes="(max-width: 760px) calc(100vw - 5rem), (max-width: 1100px) 45vw, 480px" />
+          </a>
+          <figcaption>{overview.preview.caption} · Select to enlarge</figcaption>
+        </figure>}
+        {overview && <h3>The challenge</h3>}
+        <p>{overview?.challenge || project.summary}</p>
+      </div>
+      {overview && <div>
+        <h3>The approach</h3>
+        <p>{overview.approach}</p>
+        <div className={styles.explore}>
+          <h3>Inside the demo</h3>
+          <ul>{overview.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>
+        </div>
+      </div>}
+    </div>
+    <ul className={styles.technologies} aria-label={`${project.title} technologies`}>
+      {project.technologies.map((technology) => <li key={technology}>{technology}</li>)}
+    </ul>
+    <div className={styles.caseFooter}>
+      <span>Concept prototype · Synthetic data</span>
+      <Link className={styles.demoLink} href={project.path} aria-label={`Open ${project.title} demo`}>
+        Open demo
+      </Link>
+    </div>
+  </article>;
 }

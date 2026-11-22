@@ -8,6 +8,7 @@ import { labProviderNames } from "../lib/portfolio-lab/auth-ui";
 import { getLabAuth } from "../lib/portfolio-lab/firebase-client";
 import { useClientReady } from "../lib/use-client-ready";
 import { AccountAvatar } from "./account-avatar";
+import { AvatarCropper } from "./avatar-cropper";
 import authStyles from "./lab-auth.module.css";
 import styles from "./settings.module.css";
 
@@ -18,6 +19,8 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
   const [lastName, setLastName] = useState(profile.lastName);
   const [source, setSource] = useState(profile.avatarSource);
   const [image, setImage] = useState<string | null>(null);
+  const [cropInput, setCropInput] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [revision, setRevision] = useState(profile.revision);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
@@ -31,6 +34,7 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
   async function choosePhoto(file?: File) {
     const selection = ++imageSelection.current;
     setNotice("");
+    setReading(false);
     if (!file) return;
     if (file.size > 2_000_000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       setFailed(true);
@@ -51,8 +55,7 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
       setNotice("This image could not be read. Choose another file.");
       return;
     }
-    setImage(data);
-    setSource("upload");
+    setCropInput(data);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -112,16 +115,28 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
   return <form className={styles.profileForm} onSubmit={(event) => void save(event)}>
     <div><h2>Profile</h2><p className={styles.description}>Your name and photo appear in your account menu.</p></div>
     <div className={styles.photo}>
-      <AccountAvatar name={[firstName, lastName].join(" ") || "Your account"} url={preview} size={84} />
+      <AccountAvatar name={[firstName, lastName].join(" ").trim() || profile.email || "Account"} url={preview} size={84} />
       <div className={styles.photoActions}>
         <label htmlFor="account-photo">Profile photo</label>
         <input id="account-photo" className={styles.fileInput} type="file"
           accept="image/png,image/jpeg,image/webp" disabled={!ready || busy}
-          onChange={(event) => void choosePhoto(event.target.files?.[0])} />
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.currentTarget.value = "";
+            void choosePhoto(file);
+          }} />
         <p className={authStyles.hint}>PNG, JPEG or WebP, up to 2 MB.</p>
       </div>
     </div>
+    {cropInput && <AvatarCropper key={cropInput} source={cropInput}
+      onCancel={() => setCropInput(null)} onApply={(cropped) => {
+        ++imageSelection.current;
+        setOriginalImage(cropInput); setImage(cropped); setSource("upload"); setCropInput(null);
+      }} />}
     <div className={styles.photoChoices}>
+      {source === "upload" && originalImage && !cropInput && <button type="button"
+        className={authStyles.secondaryButton} disabled={!ready || busy}
+        onClick={() => setCropInput(originalImage)}>Adjust crop</button>}
       {profile.providerPhotos.map((photo) => <button key={photo.provider}
         className={authStyles.secondaryButton} type="button" disabled={!ready || busy}
         aria-pressed={source === photo.provider} onClick={() => { ++imageSelection.current; setReading(false); setSource(photo.provider); setImage(null); }}>
@@ -147,7 +162,7 @@ export function AccountProfileForm({ profile }: { profile: AccountProfile }) {
       </div>
     </div>
     <div><p className={authStyles.hint}>Email</p><p className={styles.email}>{profile.email}</p></div>
-    <button className={authStyles.primaryButton} type="submit" disabled={!ready || busy || reading}>{busy ? "Saving…" : "Save profile"}</button>
+    <button className={authStyles.primaryButton} type="submit" disabled={!ready || busy || reading || Boolean(cropInput)}>{busy ? "Saving…" : "Save profile"}</button>
     {notice && <p className={authStyles.notice} role={failed ? "alert" : "status"}>{notice}</p>}
   </form>;
 }
