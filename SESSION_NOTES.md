@@ -24,17 +24,23 @@ Stage 1 was committed and pushed by the Owner as `b5f63df`
   available. Set `NEXT_PUBLIC_FIREBASE_GITHUB_ENABLED=true` after configuring
   the provider to enable the UI in a future frontend build.
 
-Stage 2 is prepared locally: the host supplies one shared black demo bar on
-both Workforce and Fleet routes. The left **Back to portfolio** link returns
+Stage 2 was committed and pushed by the Owner as `d8d9de0`: the host supplies
+one shared black demo bar on both Workforce and Fleet routes. The left **Back to portfolio** link returns
 to `/portfolio` without logging out; the right label is
 **Demo v1.0 · Synthetic data only**. The Workforce interview disclosure and
 the conflicting Fleet `DEMO v2` badge are removed. Fixed Fleet screens and
 Workforce sticky navigation reserve the bar's desktop/mobile height.
 
-Stage 3 (not started): replace the Workforce catalogue screenshot with a light
-theme capture using synthetic fixtures. Extend project descriptions/data copy
-to explain support for importing, processing and exporting users' own datasets.
-The Owner confirmed the black demo bars should keep their short wording.
+Stage 3 is prepared locally: the public Workforce catalogue image now shows
+People Voice in light theme. The Fleet image was also refreshed to show the
+current black demo bar and **Log Out**, with the old `DEMO v2` badge removed.
+Both 1440 by 900 captures use local synthetic fixtures; their provenance is
+recorded in `frontend/public/images/portfolio/README.md`. New image filenames
+avoid reusing the old screenshots' image-cache URLs.
+The public introduction, project highlights, compact Settings cards and data
+captions describe importing, processing and exporting users' own supported
+datasets. Detailed-card footer text wraps alongside the demo button. The Owner
+confirmed the black demo bars should keep their short wording.
 
 Stage 1 verification: the default production build, TypeScript, frontend lint
 (seven existing Fleet warnings), module boundaries and whitespace checks passed.
@@ -60,7 +66,16 @@ authenticated navigation/logout, legacy route handling, public site navigation,
 default-off Workforce access and production preview denial. Environment-specific
 scenarios were skipped when their required mode was not enabled.
 
-Stop for the Owner to commit and push stage 2. Hosted CI, CodeQL and production
+Stage 3 verification: the default Turbopack production build, standalone
+TypeScript check, frontend lint (the same seven Fleet warnings), registry/module
+boundaries, scaffold guards, raw Cyrillic and whitespace checks passed. All 18
+desktop/mobile production-build browser checks passed for public pages,
+catalogue links, image responses, both site themes, navigation and account
+states (authenticated, guest and unavailable). Both new demo images and the
+desktop/mobile catalogue captures were visually inspected. No backend logic,
+project access gates or live Firebase configuration changed in this stage.
+
+Stop for the Owner to commit and push stage 3. Hosted CI, CodeQL and production
 verification follow the Owner's PR/deployment; local checks are not a backend,
 RAG or security release sign-off. No production Firebase configuration changed.
 

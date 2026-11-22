@@ -18,7 +18,8 @@ export default function PortfolioCataloguePage() {
         <h1>Portfolio</h1>
         <p className={styles.lead}>Business problems, explored through working software.</p>
         <p>A quick look at each project&apos;s purpose, approach and workflows.
-          These concept prototypes use synthetic data.</p>
+          These concept prototypes use synthetic data and support importing, processing
+          and exporting your own datasets.</p>
       </header>
       <PortfolioAccessNotice />
       <ProjectCards projects={publicProjects} detailed />

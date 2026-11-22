@@ -33,7 +33,7 @@
 .technologies { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 1.5rem 0; }
 .technologies li { padding: .35rem .65rem; border: 1px solid var(--border); border-radius: .4rem; color: var(--muted); font-size: .875rem; }
 .caseFooter { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
-.caseFooter > span { color: var(--muted); font-size: .875rem; }
+.caseFooter > span { flex: 1 1 24rem; color: var(--muted); font-size: .875rem; line-height: 1.6; }
 .demoLink { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .65rem 1.25rem; border: 1px solid var(--border-strong); border-radius: .5rem; background: var(--surface-strong); font-weight: 600; }
 .demoLink:hover { border-color: var(--accent); }
 .demoLink:focus-visible, .accessNotice a:focus-visible, .previewLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
