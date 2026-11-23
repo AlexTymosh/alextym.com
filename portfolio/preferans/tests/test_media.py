@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
 
-from preferans.online.media import MediaRooms, SIGNAL_LIFETIME_MS
+from preferans.online.media import (
+    MEDIA_OPERATION_LIFETIME_MS,
+    MEDIA_STATE_LIFETIME_MS,
+    MediaRooms,
+    SIGNAL_LIFETIME_MS,
+)
 from preferans.online.store import FirestoreRooms, StoreError
 from test_secure_rooms import FakeDB, transactional
 
@@ -61,7 +67,7 @@ def test_offer_is_only_visible_to_receiver_and_expires():
     assert media.view(rid, "c")["signals"] == []
     assert media.view(rid, "b", cursor=response["version"])["signals"] == []
     # No game state or private hand is exposed in the media document.
-    assert "hands" not in str(db.docs[f"preferans_rooms/{rid}/media/current"])
+    assert "hands" not in str(db.docs[f"preferans_rooms/{rid}/preferans_media/current"])
     clock[0] += SIGNAL_LIFETIME_MS + 1
     assert media.view(rid, "b")["signals"] == []
 
@@ -138,3 +144,64 @@ def test_reject_signal_abuse_and_stale_participants():
     ]
     with pytest.raises(StoreError):
         do(media, rid, "a", "record_request")
+
+
+def test_signal_operation_and_room_state_have_firestore_ttl_fields():
+    db, media, rid, clock = setup()
+    connect_all(media, rid)
+    response = do(
+        media,
+        rid,
+        "a",
+        "signal",
+        {"to": 1, "kind": "restart", "data": {}},
+        "last-signal-ttl",
+    )
+    assert response["ok"]
+    state = db.docs[f"preferans_rooms/{rid}/preferans_media/current"]
+    expires_at = state["expires_at"]
+    assert isinstance(expires_at, datetime) and expires_at.tzinfo is not None
+    assert int(expires_at.timestamp() * 1000) == clock[0] + MEDIA_STATE_LIFETIME_MS
+    operations = [
+        value
+        for key, value in db.docs.items()
+        if key.startswith(f"preferans_rooms/{rid}/preferans_media_ops/")
+    ]
+    assert len(operations) == 1
+    assert int(operations[0]["expires_at"].timestamp() * 1000) == (
+        clock[0] + MEDIA_OPERATION_LIFETIME_MS
+    )
+
+
+def test_recording_projection_stops_on_expired_presence_without_mutation():
+    _, media, rid, clock = setup()
+    connect_all(media, rid)
+    do(media, rid, "a", "record_request")
+    do(media, rid, "b", "record_vote", {"approve": True})
+    do(media, rid, "c", "record_vote", {"approve": True})
+    do(media, rid, "a", "record_start")
+    assert media.view(rid, "a")["recording"]["status"] == "active"
+    clock[0] += 46_000
+    view = media.view(rid, "a")
+    assert view["recording"]["status"] == "stopped"
+    assert view["participants"] == [{"audio": False, "video": False} for _ in range(3)]
+    # A stale active session cannot silently resume on reconnection.
+    do(media, rid, "a", "presence", {"audio": True, "video": False}, "fresh-aa-0001")
+    assert media.view(rid, "a")["recording"]["status"] == "stopped"
+
+
+def test_expired_media_doc_is_never_served_and_cursor_resets_on_recreation():
+    db, media, rid, clock = setup()
+    connect_all(media, rid)
+    do(media, rid, "a", "signal", {"to": 1, "kind": "restart", "data": {}}, "before-ttl")
+    old_version = media.view(rid, "b")["version"]
+    clock[0] += MEDIA_STATE_LIFETIME_MS + 1
+    expired = media.view(rid, "b")
+    assert expired["signals"] == []
+    assert expired["version"] == 0
+    # Simulate Firestore's eventual physical TTL deletion.
+    db.docs.pop(f"preferans_rooms/{rid}/preferans_media/current")
+    do(media, rid, "a", "presence", {"audio": True, "video": False}, "new-aa-0001")
+    do(media, rid, "b", "presence", {"audio": True, "video": False}, "new-bb-0001")
+    do(media, rid, "a", "signal", {"to": 1, "kind": "restart", "data": {}}, "after-ttl")
+    assert media.view(rid, "b", cursor=old_version)["signals"]
