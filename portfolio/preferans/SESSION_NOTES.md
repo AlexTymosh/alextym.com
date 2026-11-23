@@ -3,28 +3,28 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.0 / 2026-11-22
+**Version:** 1.1 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (update after every meaningful commit)
 
-- **Baseline inspected:** `AlexTymosh/alextym.com`, `main`, 2026-11-22; Git tree SHA `491a909c65dbbecf0110d600c9d9516cf2e84d65` (not a commit SHA). Recheck latest HEAD before applying patch.
-- **Active PR:** PR 1, foundation, **patch prepared but not applied to user's repository**.
-- **Branch to create:** `feat/preferans-foundation`.
-- **PR URL / number:** not created.
-- **Latest local commit SHA:** none.
-- **Latest merged squash SHA:** none.
-- **Tests actually executed in user's repo:** none. Temporary fixture checks do not establish GitHub CI results.
-- **Deployments / Firebase migrations:** none.
+- **Merged PR 1:** [#268](https://github.com/AlexTymosh/alextym.com/pull/268), squash SHA `e7a2a6dd519b852d2c640cb7d1b8170f89baec4a`, on `main` 2026-11-23.
+- **PR 2:** `feat/preferans-engine` — pure Python domain engine, awaiting the user's local application, CI verification, push and PR.
+- **PR 2 base:** `e7a2a6dd519b852d2c640cb7d1b8170f89baec4a` (PR 1 merge). Verify fresh `main` before applying.
+- **PR 2 current local commit SHA:** not yet committed; update after user creates commits.
+- **PR 2 GitHub PR number:** not yet opened; update after push.
+- **Authoring sandbox validation:** 184 targeted pytest cases passed; Python compilation passed. This is NOT a result from the user's monorepo/CI.
+- **Host CI:** not yet executed for PR 2. Require five GitHub jobs before merge: project, backend, frontend, rag and docker.
+- **Public game API, Firestore game data and production gameplay:** not implemented.
 
-## 2. Next action
+## 2. Next action (PR 2)
 
-1. On Windows 11, update `main`, verify clean `git status`, create `feat/preferans-foundation`.
-2. Extract ZIP, execute `apply.ps1 -RepoRoot <repository path> -ExpectedBranch feat/preferans-foundation`.
-3. Run `verify.ps1` and the repository's `task repo:check`, `npm` frontend checks, then `task ci` with correctly configured toolchain.
-4. Inspect staged diff; make PR 1's **two meaningful commits** (first code/registration, second docs and handoff).
-5. Push branch, open PR with `PR01_HANDOFF.ru.md`, review CI (all five jobs) and protected-route behavior; squash merge only when passing.
-6. Update this document with actual PR number, checks, SHA and new risks, then create PR 2 branch from updated `main`.
+1. In Windows PowerShell, pull merged `main`, verify clean working tree, create `feat/preferans-engine` from it.
+2. Extract `preferans-pr02-engine.zip`; run provided `apply.ps1`, which preflights paths, branch, base commit and file hashes before changing the worktree.
+3. Format **only** new Preferans Python source/tests with Ruff; run targeted tests, repository checks and `task ci`.
+4. Review diff; create two meaningful commits (engine/tests; CI wiring/documentation); push and open PR 2.
+5. Verify protected existing site behavior and all five GitHub CI jobs. Squash merge to `main` only after green evidence.
+6. Record final PR URL, squash SHA, exact executed tests and any remaining rules assumption; start PR 3 from updated `main`.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -53,8 +53,8 @@
 
 | PR | Branch suffix | Scope | Status | Last evidence |
 |---:|---|---|---|---|
-| 1 | foundation | Registration, guarded shell, docs | PATCH READY; NOT APPLIED | ZIP bundle and local patch fixture |
-| 2 | engine | Pure Python auction, cards, play | PLANNED | — |
+| 1 | foundation | Registration, guarded shell, docs | MERGED | PR #268, `e7a2a6d` |
+| 2 | engine | Pure Python auction, cards, play | CODE PACKAGE READY; NOT MERGED | 184 sandbox pytest cases; host CI pending |
 | 3 | scoring | Ledger, rulesets, golden fixtures | PLANNED | — |
 | 4 | secure-rooms | Auth + Firestore + realtime spike | PLANNED | — |
 | 5 | game-ui | Full three-player table/UI | PLANNED | — |
@@ -87,3 +87,13 @@ Next smallest deliverable:
 ```
 
 Never mark a PR as merged, deployed, tested or complete based only on code appearance or this plan.
+
+## 7. PR 2 implementation notes
+
+- `preferans.domain.cards`: 32-card deck, 2-card packets, widow position, immutable hands, OS-backed shuffle.
+- `preferans.domain.auction`: all 32 ranked bids, first-hand `here` excluding 6 spades, special bids and immutable auction events; bid is a minimum, not final contract.
+- `preferans.domain.game`: explicit DISCARD/DECLARE/DEFENSE/PLAY stages; one-vister open/dark choice after first declarer lead; normal ten-trick completion, passout first-three lead override.
+- `preferans.domain.play`: follow suit, compulsory trump, optional overtrump, forced widow suit on the first two passout tricks.
+- Financial settlement, undo, media, Firebase, Firestore, realtime and player-view projection are **not** part of PR 2.
+- A forced-suit passout trick with zero cards of that suit uses an **explicit provisional fallback** to the actual led suit; user confirmation is needed before production game acceptance. See `docs/DOMAIN_ENGINE.ru.md`.
+- Never expose or serialize `GameState` directly to the browser; it contains all private hands, hidden widow and discarded cards.
