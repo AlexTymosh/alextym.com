@@ -14,6 +14,10 @@ function response(status: number, data: object) {
 
 function upstreamPath(method: string, parts: string[]): string | null {
   if (parts.length === 1 && parts[0] === "rooms" && method === "POST") return "/api/preferans/rooms";
+  if (method === "GET" && parts.length === 1 && ["history", "rankings"].includes(parts[0]))
+    return `/api/preferans/${parts[0]}`;
+  if (method === "GET" && parts.length === 2 && parts[0] === "results" && /^[a-f0-9]{32}$/.test(parts[1]))
+    return `/api/preferans/results/${parts[1]}`;
   if (parts.length !== 3 || parts[0] !== "rooms" || !/^[a-f0-9]{32}$/.test(parts[1])) return null;
   const allowed: Record<string, string[]> = {
     join: ["POST"], start: ["POST"], commands: ["POST"], settle: ["POST"],
@@ -54,10 +58,11 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
   }
   try {
     const isEvents = path.endsWith("/events");
+    const isHistory = path.endsWith("/history");
     const isView = path.endsWith("/view");
-    const query = isEvents || isView ? request.nextUrl.searchParams : new URLSearchParams();
+    const query = isEvents || isView || isHistory ? request.nextUrl.searchParams : new URLSearchParams();
     if (query.size > 1 || Array.from(query.keys()).some(k =>
-        k !== (isEvents ? "limit" : isView ? "since_version" : ""))) {
+        k !== (isEvents || isHistory ? "limit" : isView ? "since_version" : ""))) {
       return response(422, { detail: "Invalid query" });
     }
     const upstream = await fetch(workforceBackendOrigin() + path + (query.size ? `?${query}` : ""), {
