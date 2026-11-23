@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from preferans.domain.auction import Bid, legal_auction_bids
+from preferans.domain.auction import (
+    Bid,
+    can_say_here,
+    legal_auction_bids,
+    legal_final_contracts,
+)
 from preferans.domain.cards import Card
 from preferans.domain.game import GameState, Phase, legal_play_cards
 from preferans.domain.ledger import ScoreState
@@ -52,6 +57,11 @@ def seat_view(
         {
             "phase": state.phase.value,
             "turn": state.turn,
+            "controller": state.controllers[state.turn] if state.turn is not None else None,
+            "dealer": state.dealer,
+            "first_hand": state.first_hand,
+            "is_passout": state.is_passout,
+            "played_tricks": len(state.completed_tricks),
             "declarer": state.declarer,
             "contract": public_bid(state.contract),
             "high_bid": public_bid(state.auction.high_bid),
@@ -70,6 +80,7 @@ def seat_view(
             "widow": [public_card(card) for card in state.widow[: state.widow_revealed]],
             "defense": [d.value if d else None for d in state.defense],
             "end_reason": state.end_reason.value if state.end_reason else None,
+            "mode": state.mode.value if state.mode else None,
         }
     )
     if my_seat is not None:
@@ -86,6 +97,16 @@ def seat_view(
             if state.phase == Phase.AUCTION
             else []
         )
+        result["can_say_here"] = state.phase == Phase.AUCTION and can_say_here(
+            state.auction, my_seat
+        )
+        result["legal_contracts"] = (
+            [public_bid(b) for b in legal_final_contracts(state.winning_bid)]
+            if state.phase == Phase.DECLARE
+            and my_seat == state.declarer
+            and state.winning_bid is not None
+            else []
+        )
     if score is not None:
         result["score"] = {
             "pool": list(score.pool),
@@ -94,5 +115,6 @@ def seat_view(
             "passout_level": score.passout_level,
             "closed": score.closed,
             "ruleset_hash": score.ruleset.sha256,
+            "target": score.target,
         }
     return result

@@ -128,3 +128,11 @@ def room_view(room_id: str, request: Request, since_version: int | None = None) 
 @router.get("/rooms/{room_id}/events")
 def room_events(room_id: str, request: Request, limit: int = 30) -> dict:
     return _execute(request, "events", room_id, limit=limit)
+
+
+@router.get("/rooms/{room_id}/invitation")
+def room_invitation(room_id: str, request: Request) -> dict:
+    """Only admitted Test/Admin users may view a room's public lobby envelope."""
+    if getattr(request.state, "portfolio_lab_role", None) not in {"Test", "Admin"}:
+        raise HTTPException(403, "Game participation requires Test or Admin access")
+    return _execute(request, "invitation", room_id)
