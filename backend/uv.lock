@@ -14,6 +14,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alextym-fleet-hub" },
+    { name = "alextym-preferans" },
     { name = "alextym-workforce-intelligence" },
     { name = "fastapi" },
     { name = "firebase-admin" },
@@ -38,6 +39,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alextym-fleet-hub", editable = "../portfolio/fleet_hub/backend" },
+    { name = "alextym-preferans", editable = "../portfolio/preferans/backend" },
     { name = "alextym-workforce-intelligence", editable = "../portfolio/workforce_intelligence/backend" },
     { name = "fastapi", specifier = ">=0.138.1,<1.0" },
     { name = "firebase-admin", specifier = ">=7,<8" },
@@ -71,6 +73,21 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.138.1,<1.0" },
     { name = "httpx", specifier = ">=0.27,<1.0" },
     { name = "pydantic", specifier = ">=2,<3" },
+]
+
+[[package]]
+name = "alextym-preferans"
+version = "0.1.0"
+source = { editable = "../portfolio/preferans/backend" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "firebase-admin" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.138.1,<1.0" },
+    { name = "firebase-admin", specifier = ">=7,<8" },
 ]
 
 [[package]]
