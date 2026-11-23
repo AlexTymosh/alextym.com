@@ -61,7 +61,9 @@ def test_undo_vote_after_latest_bid_does_not_erase_audit():
         "request-undo-01",
         seen["version"],
         "undo_request",
-        {"reason": "\u0421\u043b\u0443\u0447\u0430\u0439\u043d\u043e \u043d\u0430\u0436\u0430\u043b \u0441\u0442\u0430\u0432\u043a\u0443"},
+        {
+            "reason": "\u0421\u043b\u0443\u0447\u0430\u0439\u043d\u043e \u043d\u0430\u0436\u0430\u043b \u0441\u0442\u0430\u0432\u043a\u0443"
+        },
     )
     assert opened["version"] > done["version"]
     with pytest.raises(StoreError) as exc:
@@ -98,7 +100,9 @@ def test_undo_rejected_or_timeout_keeps_bid():
         "request-reject",
         current["version"],
         "undo_request",
-        {"reason": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432 \u0441\u0442\u0430\u0432\u043a\u0435"},
+        {
+            "reason": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432 \u0441\u0442\u0430\u0432\u043a\u0435"
+        },
     )
     current = api.view(rid, "a")
     voter = next(uid for uid in "abc" if uid != player)
@@ -112,7 +116,9 @@ def test_undo_rejected_or_timeout_keeps_bid():
         "request-timeout",
         current["version"],
         "undo_request",
-        {"reason": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432 \u0441\u0442\u0430\u0432\u043a\u0435"},
+        {
+            "reason": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432 \u0441\u0442\u0430\u0432\u043a\u0435"
+        },
     )
     clock[0] += VOTE_MS
     api.db.docs[f"preferans_rooms/{rid}/private/current"]["controls"]["presence"] = [clock[0]] * 3
@@ -296,7 +302,9 @@ def test_card_undo_restores_last_card_before_next_actor_moves():
         "undo-play-request",
         now["version"],
         "undo_request",
-        {"reason": "\u0421\u044b\u0433\u0440\u0430\u043b \u043d\u0435\u0432\u0435\u0440\u043d\u0443\u044e \u043a\u0430\u0440\u0442\u0443"},
+        {
+            "reason": "\u0421\u044b\u0433\u0440\u0430\u043b \u043d\u0435\u0432\u0435\u0440\u043d\u0443\u044e \u043a\u0430\u0440\u0442\u0443"
+        },
     )
     for n in range(1, 3):
         now = api.view(rid, player)
