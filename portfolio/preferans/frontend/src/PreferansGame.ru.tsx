@@ -14,6 +14,7 @@ import {
 import styles from "./preferans-game.module.css";
 import { PreferansControls } from "./PreferansControls.ru";
 import { PreferansHistory } from "./PreferansHistory.ru";
+import { PreferansMedia } from "./PreferansMedia.ru";
 
 type Mutation = { label: string; run: () => Promise<unknown> };
 const seatNames = ["Игрок 1", "Игрок 2", "Игрок 3"];
@@ -509,6 +510,10 @@ export function PreferansGame() {
             passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
             onStart={start} onSettle={settle} />
           <PreferansControls view={view} busy={busy} command={command} adjust={adjust} />
+          {process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null && <PreferansMedia roomId={view.room_id} seat={view.my_seat} scene={{
+            phase: phaseLabel(view.phase), status: statusNames[view.status],
+            publicTrick: (view.trick ?? []).map(p => cardLabel(p.card)),
+          }} />}
           <ScoreBoard view={view} />
         </>}
       </div>

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .store import FirestoreRooms, StoreError
+from .media import MediaRooms
 
 router = APIRouter(prefix="/preferans", tags=["Preferans"])
 
@@ -149,6 +151,43 @@ def room_view(room_id: str, request: Request, since_version: int | None = None) 
 @router.get("/rooms/{room_id}/events")
 def room_events(room_id: str, request: Request, limit: int = 30) -> dict:
     return _execute(request, "events", room_id, limit=limit)
+
+
+class MediaCommand(Create):
+    action: Literal[
+        "presence", "signal", "record_request", "record_vote", "record_start", "record_stop"
+    ]
+    args: dict[str, Any] = Field(default_factory=dict)
+
+
+def _media(request: Request, room_id: str, uid_operation: str, **kwargs: Any) -> dict:
+    if os.getenv("PREFERANS_MEDIA_ENABLED") != "true":
+        raise HTTPException(404, "Not found")
+    base, uid, _ = _context(request)
+    service = MediaRooms(base.db, firestore_module=base.fs)
+    try:
+        return getattr(service, uid_operation)(room_id, uid, **kwargs)
+    except StoreError as exc:
+        raise HTTPException(exc.code, exc.detail) from exc
+    except Exception as exc:
+        raise HTTPException(503, "Media signalling unavailable") from exc
+
+
+@router.get("/rooms/{room_id}/media")
+def room_media(room_id: str, request: Request, cursor: int = 0) -> dict:
+    return _media(request, room_id, "view", cursor=cursor)
+
+
+@router.post("/rooms/{room_id}/media")
+def room_media_command(room_id: str, request: Request, body: MediaCommand) -> dict:
+    return _media(
+        request,
+        room_id,
+        "command",
+        token=body.idempotency_key,
+        action=body.action,
+        args=body.args,
+    )
 
 
 @router.get("/rooms/{room_id}/invitation")

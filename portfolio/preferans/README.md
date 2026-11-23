@@ -1,12 +1,12 @@
 # Zaporizhzhia Preferans — portfolio module
 
-**Status: PR 1–6 merged. PR 7 adds immutable game results, rankings and history. Production game API stays feature-gated pending security UAT.**
+**Status: PR 1–7 merged. PR 8 adds feature-gated voluntary WebRTC and local recording. Production media remains disabled pending device/security UAT.**
 
 - Project ID: `preferans`
 - Private route: `/portfolio/preferans`
 - Feature-gated API prefix (mounted): `/api/preferans`
 - Public portfolio card: disabled (`catalog.visible=false`)
-- PR 1–6: merged as #268–#273; PR 7 branch: `feat/preferans-history-ranking`
+- PR 1–7: merged as #268–#274; PR 8 branch: `feat/preferans-media`
 
 ## Boundaries
 
@@ -55,3 +55,7 @@ The flag is off by default; no existing public website routes change.
 ## PR 7 history and ranking
 
 The game now records one immutable result and three atomic ranking updates when a room closes normally. The guarded history/rankings endpoints and responsive table/three-line graph live under the same existing Next.js and FastAPI feature flags. See [`docs/PR07_HISTORY_RANKING.ru.md`](docs/PR07_HISTORY_RANKING.ru.md). User-accepted sheet discard, punishment substitution choices, real Firestore emulator UAT and opt-in media are not implemented.
+
+## PR 8 communication and nostalgia
+
+Private three-peer WebRTC with separate camera/microphone controls, recipient-scoped Firestore SDP/ICE signalling, unanimous recording votes and initiator-only local recording are implemented behind separate feature flags, off by default. Generated unidentifiable apartment artwork is bundled as `nostalgic-room.webp`; no private photographs are used. Before enabling in production follow `docs/PR08_MEDIA.ru.md` and `docs/PR08_UAT.ru.md` and resolve WebRTC NAT, recording revocation and Firestore quota/storage risks.

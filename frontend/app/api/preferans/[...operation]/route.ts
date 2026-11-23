@@ -22,6 +22,7 @@ function upstreamPath(method: string, parts: string[]): string | null {
   const allowed: Record<string, string[]> = {
     join: ["POST"], start: ["POST"], commands: ["POST"], settle: ["POST"],
     view: ["GET"], events: ["GET"], invitation: ["GET"], adjust: ["POST"],
+    media: ["GET", "POST"],
   };
   if (!allowed[parts[2]]?.includes(method)) return null;
   return `/api/preferans/rooms/${parts[1]}/${parts[2]}`;
@@ -30,7 +31,8 @@ function upstreamPath(method: string, parts: string[]): string | null {
 async function forward(request: NextRequest, { params }: { params: Promise<{ operation: string[] }> }) {
   const { operation } = await params;
   const path = upstreamPath(request.method, operation);
-  if (!path || !isLabEnabled() || process.env.PREFERANS_ROOMS_ENABLED !== "true") {
+  if (!path || !isLabEnabled() || process.env.PREFERANS_ROOMS_ENABLED !== "true" ||
+      (path?.endsWith("/media") && process.env.PREFERANS_MEDIA_ENABLED !== "true")) {
     return response(404, { detail: "Not found" });
   }
   if (request.method !== "GET" && !hasSameOrigin(request)) {
@@ -59,10 +61,12 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
   try {
     const isEvents = path.endsWith("/events");
     const isHistory = path.endsWith("/history");
+    const isMedia = path.endsWith("/media");
     const isView = path.endsWith("/view");
-    const query = isEvents || isView || isHistory ? request.nextUrl.searchParams : new URLSearchParams();
+    const query = isEvents || isView || isHistory || (isMedia && request.method === "GET")
+      ? request.nextUrl.searchParams : new URLSearchParams();
     if (query.size > 1 || Array.from(query.keys()).some(k =>
-        k !== (isEvents || isHistory ? "limit" : isView ? "since_version" : ""))) {
+        k !== (isEvents || isHistory ? "limit" : isView ? "since_version" : isMedia ? "cursor" : ""))) {
       return response(422, { detail: "Invalid query" });
     }
     const upstream = await fetch(workforceBackendOrigin() + path + (query.size ? `?${query}` : ""), {

@@ -183,7 +183,18 @@ test("includes frontend-scripted messages in the next chat request", async ({
   });
 
   await gotoAndExpectOk(page, "/chat");
+
+  // Wait for React hydration before interacting with the chat.
+  await expect(
+    page.getByText(chatShellCopy.readyStatus, { exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
+
   await page.getByRole("button", { name: quickPrompt.label }).click();
+
+  // Confirm that React actually processed the click.
+  await expect(
+    page.getByText(quickPrompt.label, { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText("Would you like to see an example from his experience?"),
   ).toBeVisible({ timeout: 10_000 });

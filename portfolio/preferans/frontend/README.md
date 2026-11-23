@@ -22,3 +22,7 @@ See `../docs/PR05_GAME_UI.ru.md` and `../docs/PR05_UAT.ru.md`.
 ## PR 7 ranking and history
 
 `PreferansHistory.ru.tsx` provides the sortable materialized ranking table, recent immutable result list and a graph of three explicitly chosen participants. `history-model.ts` contains pure sorting, timestamp ordering and API payload validation. The browser receives only server-allowlisted results and opaque identifiers; Firebase UID and hidden game state remain on the server. The 100-game history window can be incomplete; the UI says so. Read `../docs/PR07_HISTORY_RANKING.ru.md`.
+
+## PR 8 voluntary WebRTC and local media recording
+
+`PreferansMedia.ru.tsx` and `media-client.ts` add opt-in microphones and cameras using two WebRTC connections per peer. SDP/ICE is sent only through authenticated server routes; raw media never reaches Firestore/Render/Vercel. Three participant votes are mandatory before the initiator can save a local WebM/MP4 composition. The game runs without media. `nostalgic-room.webp` is a generated non-identifying background. Feature flags `PREFERANS_MEDIA_ENABLED` (server+BFF) and `NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED` (browser) are off by default. See `../docs/PR08_MEDIA.ru.md` and `../docs/PR08_UAT.ru.md` for limitations and release blockers.
