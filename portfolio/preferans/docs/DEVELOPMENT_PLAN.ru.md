@@ -228,7 +228,7 @@
 - **Коммит 3:** `test(preferans): cover three-client game flows and accessibility` — E2E 3 contexts, keyboard/mobile/resizing, no server data leak, no phantom transitions.
 - **Готовность:** реальная партия проходит от сдачи до завершения без ручной правки базы.
 
-### PR 6 — Timer, approvals, administrative adjustments and presets UI
+### PR 6 — Timer, approvals, administrative adjustments and presets UI (active after #272)
 
 - **Ветка:** `feat/preferans-game-controls`.
 - **Коммит 1:** `feat(preferans): add persisted timer, undo voting and game controls` — 180s repeated penalty, 120s undo, cancel conditions, pause reconnect, last trick requester.
@@ -372,3 +372,8 @@ gh pr create --base main --head feat/preferans-foundation --title "chore(prefera
 - [MDN MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/MediaRecorder)
 
 **Примечание:** цены и квоты меняются; отсутствие дополнительной платы — текущий бюджетный критерий, а не гарантированное свойство облачного сервиса при любой нагрузке.
+
+
+## PR 6 — implementation checkpoint after #272 (2026-11-23)
+
+Branch `feat/preferans-game-controls` adds persisted counter, vote-based last-action undo, room-admin correction with appended events and a numeric pre-game policy. Test acceptance is `docs/PR06_UAT.ru.md`, algorithm details are `docs/PR06_GAME_CONTROLS.ru.md`. The nominal PR 6 plan above remains authoritative for previously specified requirements not yet implemented: historical ruleset editor, immediate offline detection and accidentally exposed card voting. These are explicitly still release gaps, not claims of completeness. PR 7–9 proceed in the order above.
