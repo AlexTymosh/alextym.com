@@ -39,3 +39,7 @@ The raw Cyrillic check examines tracked files; stage newly added files before re
 ## Access
 
 The route returns 404 if Portfolio Lab is disabled. When enabled, the shared project-grant check allows only granted users (Owner inherits access). The shell does not expose rooms, player data, cards, game APIs or secrets. Further controls and endpoints require additional backend protection and review.
+
+## PR 4 — private rooms (feature gated)
+
+The room API is implemented behind `PREFERANS_ROOMS_ENABLED=true`; default is disabled. It uses Firebase Portfolio Lab access, transactional server-only Firestore storage, strict per-player projections and idempotent command receipts. The browser has no direct Firestore read/write access. See `docs/SECURE_ROOMS.ru.md`, `docs/HOUSE_RULES_DECISIONS.ru.md`, `docs/PR04_RUNBOOK.ru.md`. The interactive table is still planned for PR 5.
