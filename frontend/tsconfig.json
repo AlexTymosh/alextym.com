@@ -28,6 +28,9 @@
       ],
       "@workforce-intelligence": [
         "../portfolio/workforce_intelligence/frontend/src/index.ts"
+      ],
+      "@preferans": [
+        "../portfolio/preferans/frontend/src/index.ts"
       ]
     }
   },
