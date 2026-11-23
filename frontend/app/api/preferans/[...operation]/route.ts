@@ -17,7 +17,7 @@ function upstreamPath(method: string, parts: string[]): string | null {
   if (parts.length !== 3 || parts[0] !== "rooms" || !/^[a-f0-9]{32}$/.test(parts[1])) return null;
   const allowed: Record<string, string[]> = {
     join: ["POST"], start: ["POST"], commands: ["POST"], settle: ["POST"],
-    view: ["GET"], events: ["GET"],
+    view: ["GET"], events: ["GET"], invitation: ["GET"],
   };
   if (!allowed[parts[2]]?.includes(method)) return null;
   return `/api/preferans/rooms/${parts[1]}/${parts[2]}`;

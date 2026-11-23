@@ -303,3 +303,29 @@ class FirestoreRooms:
             "version": room["version"],
             "events": [snap.to_dict() for snap in rows.stream(timeout=5.0)],
         }
+
+    def invitation(self, room_id: str, uid: str) -> dict:
+        """Opaque invitation envelope. No room UID, hand or game state is read."""
+        if not isinstance(uid, str) or not uid or "/" in uid:
+            raise StoreError(403, "Access denied")
+        doc = self._room(room_id)
+        snap = doc.get(timeout=5.0)
+        room = snap.to_dict() if snap.exists else None
+        if not isinstance(room, dict) or room.get("status") != "lobby":
+            raise StoreError(404, "Not found")
+        seats = room.get("seats")
+        version = room.get("version")
+        if (
+            not isinstance(seats, list)
+            or len(seats) != 3
+            or any(seat is not None and not isinstance(seat, str) for seat in seats)
+            or type(version) is not int
+            or version < 0
+        ):
+            raise StoreError(503, "Room unavailable")
+        return {
+            "room_id": room_id,
+            "version": version,
+            "status": "lobby",
+            "occupied": [seat is not None for seat in seats],
+        }

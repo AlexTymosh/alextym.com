@@ -43,3 +43,10 @@ The route returns 404 if Portfolio Lab is disabled. When enabled, the shared pro
 ## PR 4 — private rooms (feature gated)
 
 The room API is implemented behind `PREFERANS_ROOMS_ENABLED=true`; default is disabled. It uses Firebase Portfolio Lab access, transactional server-only Firestore storage, strict per-player projections and idempotent command receipts. The browser has no direct Firestore read/write access. See `docs/SECURE_ROOMS.ru.md`, `docs/HOUSE_RULES_DECISIONS.ru.md`, `docs/PR04_RUNBOOK.ru.md`. The interactive table is still planned for PR 5.
+
+## PR 5 — private interactive game UI
+
+With the Portfolio Lab and Preferans room feature flags enabled, the project page
+now offers a responsive three-player table. Firestore remains server-only;
+`View` users cannot create/join games. See `docs/PR05_GAME_UI.ru.md`.
+The flag is off by default; no existing public website routes change.
