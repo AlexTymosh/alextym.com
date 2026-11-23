@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaPresence, MediaRecording, MediaSignal } from "./media-client";
-import { getMedia, postMedia } from "./media-client";
+import { getMedia, postMedia, recordingMayContinue } from "./media-client";
 import styles from "./preferans-media.module.css";
 
 // Public STUN may become unavailable; no TURN relay or paid dependency.
@@ -44,6 +44,7 @@ export function PreferansMedia({ roomId, seat, scene }: {
   const cursor = useRef(0);
   const mediaActive = useRef(false);
   const currentRecording = useRef<MediaRecording | null>(null);
+  const confirmedAtMs = useRef(0);
   const recordingResources = useRef<RecordingResources | null>(null);
   const sharedScene = useRef(scene);
   const remoteStreams = useRef<Record<number, MediaStream>>({});
@@ -171,6 +172,13 @@ export function PreferansMedia({ roomId, seat, scene }: {
         setPeers(Object.fromEntries(state.participants.map((p, i) => [i, p])));
         setRecording(state.recording);
         currentRecording.current = state.recording;
+        // Refresh the watchdog only after the server confirms live consent
+        // and all three current media participants.
+        if (state.recording?.status === "active" &&
+            state.recording.votes.every(v => v === true) &&
+            state.participants.every(p => p.audio || p.video)) {
+          confirmedAtMs.current = Date.now();
+        }
         if (recordingResources.current && (
           state.recording?.status !== "active" ||
           state.participants.some(p => !p.audio && !p.video)
@@ -183,16 +191,53 @@ export function PreferansMedia({ roomId, seat, scene }: {
           }
           for (const message of state.signals) await handleSignal(message);
         }
-        cursor.current = Math.max(cursor.current, state.version);
+        // Firestore TTL may delete/recreate media/current with version 0.
+        cursor.current = state.version;
       } catch {
-        if (!disposed && mediaActive.current) setError("Сигнализация временно недоступна. Игра продолжает работать.");
+        if (!disposed && recordingResources.current) {
+          stopLocalRecording();
+          setError("Запись остановлена: нет подтверждения согласий от сервера.");
+        } else if (!disposed && mediaActive.current) {
+          setError("Сигнализация временно недоступна. Игра продолжает работать.");
+        }
       } finally {
-        if (!disposed) timer = setTimeout(poll, mediaActive.current ? 2500 : 12000);
+        if (!disposed) {
+          // Fast polling is only needed for a pending vote or active recording.
+          const vote = currentRecording.current?.status;
+          const intervalMs = vote === "requested" || vote === "ready" || vote === "active"
+            ? 2500 : mediaActive.current ? 6000 : 12000;
+          timer = setTimeout(poll, intervalMs);
+        }
       }
     }
     void poll();
     return () => { disposed = true; clearTimeout(timer); };
   }, [roomId, seat, handleSignal, ensurePeer, stopLocalRecording, localVersion]);
+
+  // Recording is fail-closed on connectivity loss, tab suspension and consent
+  // expiry. JavaScript cannot promise instantaneous reaction while an OS is
+  // frozen; real-device validation remains mandatory before production.
+  useEffect(() => {
+    const check = () => {
+      if (!recordingResources.current) return;
+      if (!recordingMayContinue(
+        { recording: currentRecording.current, participants: Object.values(peers) },
+        seat, confirmedAtMs.current, Date.now(),
+        document.visibilityState === "visible" && navigator.onLine,
+      )) {
+        stopLocalRecording();
+        setError("Запись остановлена: подтверждение согласий недоступно.");
+      }
+    };
+    const clock = window.setInterval(check, 1_000);
+    window.addEventListener("offline", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      window.clearInterval(clock);
+      window.removeEventListener("offline", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [peers, seat, stopLocalRecording]);
 
   // Presence uses a bounded per-seat idempotency marker, not a new Firestore operation document.
   useEffect(() => {
@@ -312,8 +357,14 @@ export function PreferansMedia({ roomId, seat, scene }: {
         if (recordingResources.current === active) recordingResources.current = null;
       };
       await send("record_start");
+      currentRecording.current = { ...recording, status: "active" };
+      confirmedAtMs.current = Date.now();
       recordingResources.current = resources;
       recorder.start(1000);
+      recorder.addEventListener("error", () => {
+        stopLocalRecording();
+        void send("record_stop").catch(() => undefined);
+      });
     } catch {
       if (resources) {
         clearInterval(resources.interval);
