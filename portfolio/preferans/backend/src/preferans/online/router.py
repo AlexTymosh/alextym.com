@@ -26,9 +26,30 @@ class Mutation(Create):
 
 class Command(Mutation):
     action: Literal[
-        "bid", "pass", "here", "discard", "declare", "defense", "mode", "play", "without_three"
+        "bid",
+        "pass",
+        "here",
+        "discard",
+        "declare",
+        "defense",
+        "mode",
+        "play",
+        "without_three",
+        "pulse",
+        "counter_start",
+        "undo_request",
+        "undo_vote",
+        "preset",
     ]
     args: dict[str, Any] = Field(default_factory=dict)
+
+
+class Adjust(Mutation):
+    field: Literal["hill", "pool", "vist"]
+    seat: int = Field(ge=0, le=2)
+    against: int | None = Field(default=None, ge=0, le=2)
+    delta: int = Field(ge=-1000, le=1000)
+    reason: str = Field(min_length=5, max_length=180)
 
 
 class Settle(Mutation):
@@ -59,7 +80,7 @@ def _execute(request: Request, method: str, *args: Any, **kwargs: Any) -> dict:
     store, uid, owner = _context(request)
     try:
         call = getattr(store, method)
-        if method in {"start", "settle", "view", "events"}:
+        if method in {"start", "settle", "view", "events", "admin_adjust"}:
             kwargs["owner"] = owner
         return call(*args, uid=uid, **kwargs)
     except StoreError as exc:
@@ -136,3 +157,21 @@ def room_invitation(room_id: str, request: Request) -> dict:
     if getattr(request.state, "portfolio_lab_role", None) not in {"Test", "Admin"}:
         raise HTTPException(403, "Game participation requires Test or Admin access")
     return _execute(request, "invitation", room_id)
+
+
+@router.post("/rooms/{room_id}/adjust")
+def room_adjust(room_id: str, request: Request, body: Adjust) -> dict:
+    return _execute(
+        request,
+        "admin_adjust",
+        room_id,
+        token=body.idempotency_key,
+        expected_version=body.expected_version,
+        args={
+            "field": body.field,
+            "seat": body.seat,
+            "against": body.against,
+            "delta": body.delta,
+            "reason": body.reason,
+        },
+    )
