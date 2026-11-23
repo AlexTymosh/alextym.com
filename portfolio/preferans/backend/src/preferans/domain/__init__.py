@@ -26,6 +26,7 @@ from .game import (
     Phase,
     auction_action,
     choose_defense_mode,
+    concede_without_three,
     decide_defense,
     declare_contract,
     discard_cards,
@@ -34,6 +35,18 @@ from .game import (
     start_game,
 )
 from .play import CompletedTrick, PlayedCard, legal_cards, winning_card
+from .ledger import EntryKind, LedgerEntry, ScoreState
+from .rulesets import Ruleset, RulesetSnapshot, freeze_ruleset
+from .scoring import RewardRoute, settle_game
+from .settlement import (
+    PairPunishment,
+    discard_sheet_penalties,
+    discard_sheet_placements,
+    final_hill_vists,
+    net_results,
+    pair_punishments,
+    placements,
+)
 
 __all__ = [
     "BID_ORDER",
@@ -75,4 +88,20 @@ __all__ = [
     "PlayedCard",
     "legal_cards",
     "winning_card",
+    "concede_without_three",
+    "EntryKind",
+    "LedgerEntry",
+    "ScoreState",
+    "Ruleset",
+    "RulesetSnapshot",
+    "freeze_ruleset",
+    "RewardRoute",
+    "settle_game",
+    "PairPunishment",
+    "discard_sheet_penalties",
+    "discard_sheet_placements",
+    "final_hill_vists",
+    "net_results",
+    "pair_punishments",
+    "placements",
 ]

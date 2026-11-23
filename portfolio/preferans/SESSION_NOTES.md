@@ -3,28 +3,25 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.1 / 2026-11-23
+**Version:** 1.2 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (update after every meaningful commit)
 
-- **Merged PR 1:** [#268](https://github.com/AlexTymosh/alextym.com/pull/268), squash SHA `e7a2a6dd519b852d2c640cb7d1b8170f89baec4a`, on `main` 2026-11-23.
-- **PR 2:** `feat/preferans-engine` — pure Python domain engine, awaiting the user's local application, CI verification, push and PR.
-- **PR 2 base:** `e7a2a6dd519b852d2c640cb7d1b8170f89baec4a` (PR 1 merge). Verify fresh `main` before applying.
-- **PR 2 current local commit SHA:** not yet committed; update after user creates commits.
-- **PR 2 GitHub PR number:** not yet opened; update after push.
-- **Authoring sandbox validation:** 184 targeted pytest cases passed; Python compilation passed. This is NOT a result from the user's monorepo/CI.
-- **Host CI:** not yet executed for PR 2. Require five GitHub jobs before merge: project, backend, frontend, rag and docker.
-- **Public game API, Firestore game data and production gameplay:** not implemented.
+- **PR 1:** [#268](https://github.com/AlexTymosh/alextym.com/pull/268), merged `e7a2a6dd519b852d2c640cb7d1b8170f89baec4a`.
+- **PR 2:** [#269](https://github.com/AlexTymosh/alextym.com/pull/269), merged `59c60cd7d84149fb462fcd9ba24d93484931fd2e` on 2026-11-23.
+- **PR 2 CI:** GitHub Actions `45168567537`, SUCCESS. Base branch is up to date through PR 2.
+- **Current PR 3:** branch `feat/preferans-scoring`, pure scoring, immutable rulesets, numeric tests and documentation.
+- **Verification for PR 3:** independent sandbox pytest/compile PASS; host `task ci` and GitHub jobs still require execution by the user.
+- **Live API, Firestore, multiplayer UI:** not yet implemented. No deployment changes in PR 3.
 
-## 2. Next action (PR 2)
+## 2. Next action (PR 3)
 
-1. In Windows PowerShell, pull merged `main`, verify clean working tree, create `feat/preferans-engine` from it.
-2. Extract `preferans-pr02-engine.zip`; run provided `apply.ps1`, which preflights paths, branch, base commit and file hashes before changing the worktree.
-3. Format **only** new Preferans Python source/tests with Ruff; run targeted tests, repository checks and `task ci`.
-4. Review diff; create two meaningful commits (engine/tests; CI wiring/documentation); push and open PR 2.
-5. Verify protected existing site behavior and all five GitHub CI jobs. Squash merge to `main` only after green evidence.
-6. Record final PR URL, squash SHA, exact executed tests and any remaining rules assumption; start PR 3 from updated `main`.
+1. Create `feat/preferans-scoring` from an up-to-date `main`, run bundle preflight and apply.
+2. Format domain/tests with Ruff; run focused checks and `task ci`.
+3. Make two meaningful commits: code/tests, then documentation/handoff; push and open PR 3.
+4. Verify GitHub's project/backend/frontend/rag/docker jobs before squash merge.
+5. Agree unresolved passout reward ordering and passout-level transitions before PR 4.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -54,8 +51,8 @@
 | PR | Branch suffix | Scope | Status | Last evidence |
 |---:|---|---|---|---|
 | 1 | foundation | Registration, guarded shell, docs | MERGED | PR #268, `e7a2a6d` |
-| 2 | engine | Pure Python auction, cards, play | CODE PACKAGE READY; NOT MERGED | 184 sandbox pytest cases; host CI pending |
-| 3 | scoring | Ledger, rulesets, golden fixtures | PLANNED | — |
+| 2 | engine | Pure Python auction, cards, play | MERGED | PR #269, `59c60cd7`, CI green |
+| 3 | scoring | Ledger, rulesets, golden fixtures | IN DEVELOPMENT | PR 3 package; local CI pending |
 | 4 | secure-rooms | Auth + Firestore + realtime spike | PLANNED | — |
 | 5 | game-ui | Full three-player table/UI | PLANNED | — |
 | 6 | game-controls | Timer, votes, admin adjustments | PLANNED | — |
@@ -97,3 +94,11 @@ Never mark a PR as merged, deployed, tested or complete based only on code appea
 - Financial settlement, undo, media, Firebase, Firestore, realtime and player-view projection are **not** part of PR 2.
 - A forced-suit passout trick with zero cards of that suit uses an **explicit provisional fallback** to the actual led suit; user confirmation is needed before production game acceptance. See `docs/DOMAIN_ENGINE.ru.md`.
 - Never expose or serialize `GameState` directly to the browser; it contains all private hands, hidden widow and discarded cards.
+
+## 8. PR 3 implementation checkpoint
+
+- New pure modules: `rulesets.py`, `ledger.py`, `scoring.py`, `settlement.py`.
+- Game engine adds `WITHOUT_THREE` concession before the first card only.
+- Exact formulas and explicit rule assumptions: `docs/SCORING_ENGINE.ru.md`.
+- Three new scoring test files run through the existing backend test directory.
+- Pending: user-run `task ci`, GitHub review, PR URL, merge hash, confirmation of open rules.
