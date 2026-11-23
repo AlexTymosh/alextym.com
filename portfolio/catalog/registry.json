@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "projectIds": [
     "fleet_hub",
-    "workforce_intelligence"
+    "workforce_intelligence",
+    "preferans"
   ]
 }

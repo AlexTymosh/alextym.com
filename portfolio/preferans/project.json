@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "preferans",
+  "slug": "preferans",
+  "title": "Zaporizhzhia Preferans — Private Card Game",
+  "summary": "A private three-player Preferans game based on traditional house rules from Zaporizhzhia, currently in development.",
+  "category": "Interactive Projects",
+  "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "Firebase"],
+  "mode": "embedded",
+  "demo": {
+    "path": "/portfolio/preferans",
+    "apiPrefix": "/api/preferans"
+  },
+  "catalog": {
+    "visible": false,
+    "featured": false
+  }
+}

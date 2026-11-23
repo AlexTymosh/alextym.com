@@ -1,0 +1,1 @@
+﻿"""Isolated Preferans backend package."""

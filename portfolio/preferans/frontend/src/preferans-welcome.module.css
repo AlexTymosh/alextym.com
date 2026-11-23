@@ -1,0 +1,42 @@
+.root {
+  display: grid;
+  place-items: center;
+  min-height: 55vh;
+  padding: clamp(1.25rem, 3vw, 3rem);
+}
+
+.card {
+  width: min(100%, 48rem);
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 1rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  background: var(--background, transparent);
+  color: inherit;
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: clamp(1.75rem, 3.8vw, 2.75rem);
+  line-height: 1.15;
+}
+
+.description {
+  max-width: 62ch;
+  margin: 0 0 1.5rem;
+  line-height: 1.65;
+}
+
+.notice {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  opacity: 0.72;
+}
