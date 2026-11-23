@@ -7,3 +7,7 @@
 Run project tests from the repository root: `cd backend; uv run python -m pytest ../portfolio/preferans/tests -q`.
 
 `GameState` is a privileged server-only object with all private hands, widow and discarded cards. Never return it directly over HTTP or store it in a public Firestore view. See `../docs/DOMAIN_ENGINE.ru.md`.
+
+## PR 4 API
+
+`preferans.router` is the project-owned FastAPI entry. Host mounts it only with `app.security.preferans_access.require_preferans_member` and `PREFERANS_ROOMS_ENABLED=true`; every command checks the room seat and monotonic version in one Firestore transaction. No browser Firestore rules were loosened. Runbook: `../docs/SECURE_ROOMS.ru.md`.

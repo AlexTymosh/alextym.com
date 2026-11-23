@@ -18,6 +18,8 @@ COPY portfolio/fleet_hub/backend/pyproject.toml /portfolio/fleet_hub/backend/pyp
 COPY portfolio/fleet_hub/backend/src /portfolio/fleet_hub/backend/src
 COPY portfolio/workforce_intelligence/backend/pyproject.toml /portfolio/workforce_intelligence/backend/pyproject.toml
 COPY portfolio/workforce_intelligence/backend/src /portfolio/workforce_intelligence/backend/src
+COPY portfolio/preferans/backend/pyproject.toml /portfolio/preferans/backend/pyproject.toml
+COPY portfolio/preferans/backend/src /portfolio/preferans/backend/src
 COPY backend/app ./app
 COPY config ./config
 COPY content/public ./content/public

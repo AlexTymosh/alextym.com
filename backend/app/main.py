@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI
 from fleet_hub.bootstrap import prepare_demo_database
 from fleet_hub.router import configure_host_access, router as fleet_router
 from workforce_intelligence.router import router as workforce_router
+from preferans.router import router as preferans_router
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.cors import CORSMiddleware
 
@@ -25,6 +26,7 @@ from app.llm.workforce_voice import WorkforceVoiceOpenAI
 from app.middleware.request_context import RequestContextMiddleware
 from app.security.workforce_demo import require_workforce_member, router as workforce_access_router
 from app.security.fleet_access import guard_fleet_routes, require_fleet_access
+from app.security.preferans_access import require_preferans_member
 
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,9 @@ def create_app() -> FastAPI:
     # All Workforce data routes require a valid backend-signed demo session.
     app.include_router(
         workforce_router, prefix="/api", dependencies=[Depends(require_workforce_member)]
+    )
+    app.include_router(
+        preferans_router, prefix="/api", dependencies=[Depends(require_preferans_member)]
     )
     app.include_router(analytics_router, prefix="/api")
     app.include_router(redis_probe_router)

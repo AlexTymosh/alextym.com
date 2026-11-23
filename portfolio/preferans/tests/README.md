@@ -12,3 +12,7 @@ Pop-Location
 ```
 
 The domain's `conftest.py` temporarily supplies a test-only source path until PR 4 installs the backend package. Do not add a second authentication mechanism or public routes to make tests run.
+
+## PR 4 tests
+
+`test_secure_rooms.py` covers private state codec, room authorization, idempotency/version conflicts, event redaction and per-user hand projections using an in-memory fake. `backend/tests/test_preferans_access.py` covers host feature gating and grant adapter. Integration with the real Auth/Firestore emulators remains an explicit release gate.

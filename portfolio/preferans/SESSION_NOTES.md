@@ -3,25 +3,27 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.2 / 2026-11-23
+**Version:** 1.3 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
-## 1. Current status (update after every meaningful commit)
+## 1. Current status (verified 2026-11-23)
 
-- **PR 1:** [#268](https://github.com/AlexTymosh/alextym.com/pull/268), merged `e7a2a6dd519b852d2c640cb7d1b8170f89baec4a`.
-- **PR 2:** [#269](https://github.com/AlexTymosh/alextym.com/pull/269), merged `59c60cd7d84149fb462fcd9ba24d93484931fd2e` on 2026-11-23.
-- **PR 2 CI:** GitHub Actions `45168567537`, SUCCESS. Base branch is up to date through PR 2.
-- **Current PR 3:** branch `feat/preferans-scoring`, pure scoring, immutable rulesets, numeric tests and documentation.
-- **Verification for PR 3:** independent sandbox pytest/compile PASS; host `task ci` and GitHub jobs still require execution by the user.
-- **Live API, Firestore, multiplayer UI:** not yet implemented. No deployment changes in PR 3.
+- **PR 1** [#268](https://github.com/AlexTymosh/alextym.com/pull/268): merged `e7a2a6d`.
+- **PR 2** [#269](https://github.com/AlexTymosh/alextym.com/pull/269): merged `59c60cd7`.
+- **PR 3** [#270](https://github.com/AlexTymosh/alextym.com/pull/270): merged `9d46a8fdcc4d6e932aa788e23a8918dfc6f64939`.
+- **Current PR 4:** `feat/preferans-secure-rooms` — authenticated FastAPI room API, Firestore transactions, BFF, safe projections, idempotency.
+- **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
+- **Gate:** `PREFERANS_ROOMS_ENABLED=false` by default; no production game enabled, no client Firestore rules changed.
+- **Testing:** author sandbox Python tests only. Local full `task ci`, hosted GitHub CI and Firebase emulator integration remain unverified until user executes them.
 
-## 2. Next action (PR 3)
+## 2. Next action (PR 4)
 
-1. Create `feat/preferans-scoring` from an up-to-date `main`, run bundle preflight and apply.
-2. Format domain/tests with Ruff; run focused checks and `task ci`.
-3. Make two meaningful commits: code/tests, then documentation/handoff; push and open PR 3.
-4. Verify GitHub's project/backend/frontend/rag/docker jobs before squash merge.
-5. Agree unresolved passout reward ordering and passout-level transitions before PR 4.
+1. Apply the reviewed ZIP on a fresh branch from `main` after #270; do not overwrite user files.
+2. Run `uv lock` in backend, include `backend/uv.lock` in commit; format and test; run all `task ci` checks.
+3. Commit code in two stages (domain/rooms and host/BFF wiring), then docs/testing; push and manually open PR.
+4. Verify all GitHub CI jobs, Docker installation and Firebase Auth/Firestore emulator against real transactions.
+5. **Do not enable** new room API in production before direct-Render authorization, three-browser privacy, idempotency and reconnect UAT pass.
+6. After squash merge start PR 5 for the actual responsive three-player table UI.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -52,8 +54,8 @@
 |---:|---|---|---|---|
 | 1 | foundation | Registration, guarded shell, docs | MERGED | PR #268, `e7a2a6d` |
 | 2 | engine | Pure Python auction, cards, play | MERGED | PR #269, `59c60cd7`, CI green |
-| 3 | scoring | Ledger, rulesets, golden fixtures | IN DEVELOPMENT | PR 3 package; local CI pending |
-| 4 | secure-rooms | Auth + Firestore + realtime spike | PLANNED | — |
+| 3 | scoring | Ledger, rulesets, golden fixtures | MERGED | PR #270 `9d46a8f` |
+| 4 | secure-rooms | Auth + Firestore + realtime spike | IN DEVELOPMENT | PR 4 package; CI pending |
 | 5 | game-ui | Full three-player table/UI | PLANNED | — |
 | 6 | game-controls | Timer, votes, admin adjustments | PLANNED | — |
 | 7 | history-ranking | Stats, ranking, graphs | PLANNED | — |
