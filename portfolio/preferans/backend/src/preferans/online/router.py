@@ -175,3 +175,18 @@ def room_adjust(room_id: str, request: Request, body: Adjust) -> dict:
             "reason": body.reason,
         },
     )
+
+
+@router.get("/history")
+def game_history(request: Request, limit: int = 50) -> dict:
+    return _execute(request, "history", limit=limit)
+
+
+@router.get("/rankings")
+def game_rankings(request: Request) -> dict:
+    return _execute(request, "rankings")
+
+
+@router.get("/results/{room_id}")
+def game_result(room_id: str, request: Request) -> dict:
+    return _execute(request, "result", room_id)

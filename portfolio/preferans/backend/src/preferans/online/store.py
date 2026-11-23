@@ -18,6 +18,7 @@ from typing import Any
 from preferans.domain.auction import RuleViolation
 from preferans.domain.cards import deal, shuffled_deck
 from preferans.domain.game import GameState, Phase, start_game
+from preferans.domain.history import final_result, update_ranking
 from preferans.domain.ledger import ScoreState
 from preferans.domain.scoring import RewardRoute, settle_game
 from preferans.online.codec import decode, encode
@@ -120,6 +121,7 @@ class FirestoreRooms:
                 "version": 0,
                 "game_id": None,
                 "dealer": None,
+                "created_at_ms": self.now_ms(),
             }
             result = {"room_id": room_id, "version": 0, "my_seat": 0, "status": "lobby"}
             transaction.create(doc, room)
@@ -245,6 +247,7 @@ class FirestoreRooms:
                 room["dealer"] = dealer
                 room["game_id"] = uuid.uuid4().hex
                 room["status"] = "playing"
+                room.setdefault("started_at_ms", now)
                 controls["timer"] = None
                 controls["vote"] = None
                 controls["candidate"] = None
@@ -270,6 +273,24 @@ class FirestoreRooms:
                 controls["candidate"] = None
                 controls["timer"] = None
                 event_data = {"score_version": score.version, "closed": score.closed}
+                if score.closed:
+                    # Final result and all ranking projections commit with the CLOSED room.
+                    # No reads may occur after the first Firestore transaction write.
+                    result_doc = self.db.collection("preferans_results").document(room_id)
+                    if _get(transaction, result_doc) is not None:
+                        raise StoreError(409, "Finished result already exists")
+                    try:
+                        final = final_result(room, score, now)
+                        ranking_docs = [
+                            self.db.collection("preferans_rankings").document(player["id"])
+                            for player in final["players"]
+                        ]
+                        rankings = [
+                            update_ranking(_get(transaction, ref), player, final)
+                            for ref, player in zip(ranking_docs, final["players"])
+                        ]
+                    except (ValueError, TypeError, KeyError) as exc:
+                        raise StoreError(503, "Invalid final accounting") from exc
             elif action == "preset":
                 if room["status"] != "lobby":
                     raise StoreError(409, "Presets must be set before the first deal")
@@ -366,6 +387,10 @@ class FirestoreRooms:
                 "data": event_data,
             }
             response = {"room_id": room_id, "version": v, "status": room["status"]}
+            if action == "settle" and score.closed:
+                transaction.create(result_doc, final)
+                for ranking_doc, projection in zip(ranking_docs, rankings):
+                    transaction.set(ranking_doc, projection)
             transaction.set(doc, room)
             transaction.set(
                 private,
@@ -459,3 +484,45 @@ class FirestoreRooms:
             "status": "lobby",
             "occupied": [seat is not None for seat in seats],
         }
+
+    def history(self, uid: str, limit: int = 50) -> dict:
+        """Only project-authorized callers can reach this method through the host guard."""
+        if not isinstance(uid, str) or not uid or "/" in uid:
+            raise StoreError(403, "Access denied")
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise StoreError(422, "Invalid history limit")
+        query = (
+            self.db.collection("preferans_results")
+            .order_by("finished_at_ms", direction="DESCENDING")
+            .limit(limit + 1)
+        )
+        snapshots = [snap.to_dict() for snap in query.stream(timeout=5.0)]
+        return {"results": snapshots[:limit], "has_more": len(snapshots) > limit, "limit": limit}
+
+    def rankings(self, uid: str) -> dict:
+        """Materialized across ALL completed games; never derive from a page."""
+        if not isinstance(uid, str) or not uid or "/" in uid:
+            raise StoreError(403, "Access denied")
+        # This project is a private trio. Never accidentally serve a partial ranking.
+        query = (
+            self.db.collection("preferans_rankings")
+            .order_by("gold", direction="DESCENDING")
+            .limit(1001)
+        )
+        rows = [snap.to_dict() for snap in query.stream(timeout=5.0)]
+        if len(rows) > 1000:
+            raise StoreError(503, "Ranking exceeds supported size")
+        rows.sort(key=lambda row: (-row["gold"], -row["net_vists"], row["id"]))
+        return {"rankings": rows, "total_players": len(rows)}
+
+    def result(self, room_id: str, uid: str) -> dict:
+        if not isinstance(uid, str) or not uid or "/" in uid:
+            raise StoreError(403, "Access denied")
+        snapshot = (
+            self.db.collection("preferans_results")
+            .document(room_id if ROOM_ID.fullmatch(room_id) else "invalid")
+            .get(timeout=5.0)
+        )
+        if not ROOM_ID.fullmatch(room_id) or not snapshot.exists:
+            raise StoreError(404, "Not found")
+        return snapshot.to_dict()
