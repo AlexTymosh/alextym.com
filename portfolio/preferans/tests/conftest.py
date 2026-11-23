@@ -1,0 +1,10 @@
+"""Test-only import path until the Preferans package is wired into the host in PR 4."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+SOURCE = Path(__file__).resolve().parents[1] / "backend" / "src"
+if str(SOURCE) not in sys.path:
+    sys.path.insert(0, str(SOURCE))
