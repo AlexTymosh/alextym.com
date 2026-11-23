@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PreferansWelcome } from "@preferans";
+import { PreferansGame, PreferansWelcome } from "@preferans";
 import { isLabEnabled } from "../../../lib/portfolio-lab/firebase-server";
 import { requireLabProjectPage } from "../../../lib/portfolio-lab/project-access-server";
 
@@ -17,5 +17,7 @@ export default async function PreferansPage() {
   // Explicit 404 prevents the shell from becoming public in that mode.
   if (!isLabEnabled()) notFound();
   await requireLabProjectPage("preferans");
-  return <PreferansWelcome />;
+  return process.env.PREFERANS_ROOMS_ENABLED === "true"
+    ? <PreferansGame />
+    : <PreferansWelcome />;
 }
