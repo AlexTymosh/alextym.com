@@ -510,7 +510,7 @@ export function PreferansGame() {
             passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
             onStart={start} onSettle={settle} />
           <PreferansControls view={view} busy={busy} command={command} adjust={adjust} />
-          {process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null && <PreferansMedia roomId={view.room_id} seat={view.my_seat} scene={{
+          {process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null && <PreferansMedia key={`${view.room_id}:${view.my_seat}`} roomId={view.room_id} seat={view.my_seat} scene={{
             phase: phaseLabel(view.phase), status: statusNames[view.status],
             publicTrick: (view.trick ?? []).map(p => cardLabel(p.card)),
           }} />}

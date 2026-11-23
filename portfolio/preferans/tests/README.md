@@ -37,3 +37,7 @@ Firebase emulator UAT is still mandatory: `docs/PR05_UAT.ru.md`.
 ## PR 8 media and recording-consent tests
 
 `test_media.py` covers member-only access, recipient-scoped signalling, idempotency, SDP/ICE bounds, three explicit recording consents, voting denial, revocation and stale media presence with a fake Firestore transaction. `frontend/e2e/preferans-media.ru.spec.ts` validates the allowlisted media contract. These are **not** real-device/WebRTC/emulator tests; required UAT is `docs/PR08_UAT.ru.md`.
+
+## PR 9 release candidate tests
+
+`test_release_security.py` validates seat-bound signalling, cross-room isolation, expiry/secret minimization and rejection of invalid payloads. `test_cleanup_media.py` checks that the operator's maintenance process remains bounded and defaults to dry-run. Updated `test_media.py` verifies UTC expiration metadata, stopped projections after expired presence and a recovered sequence cursor after media/current deletion. Updated `frontend/e2e/preferans-media.ru.spec.ts` tests the pure fail-closed client guard. Real Firestore/Chrome/iOS verification remains a separate acceptance gate.

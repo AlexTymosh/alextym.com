@@ -3,7 +3,7 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.7 / 2026-11-23
+**Version:** 1.8 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (verified 2026-11-23)
@@ -12,18 +12,19 @@
 - **PR 2** [#269](https://github.com/AlexTymosh/alextym.com/pull/269): merged `59c60cd7`.
 - **PR 3** [#270](https://github.com/AlexTymosh/alextym.com/pull/270): merged `9d46a8fdcc4d6e932aa788e23a8918dfc6f64939`.
 - **PR 4** #271: merged `622d1831`; **PR 5** #272: merged `595f8b7f`.
-- **PR 6** #273: merged `008ee18e`; **PR 7** #274: merged `4f88428e`; **current PR 8** `feat/preferans-media` — opt-in WebRTC and local recording.
+- **PR 6** #273: merged `008ee18e`; **PR 7** #274: merged `4f88428e`; **PR 8** #275: merged `bae66e25`; **current PR 9:** `feat/preferans-release` — release candidate hardening, zero-cost retention controls and UAT.
 - **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
 - **Gate:** `PREFERANS_ROOMS_ENABLED=false` by default; no production game enabled, no client Firestore rules changed.
 - **Testing:** author sandbox Python tests only. Local full `task ci`, hosted GitHub CI and Firebase emulator integration remain unverified until user executes them.
 
-## 2. Next action (PR 8)
+## 2. Next action (PR 9)
 
-1. Apply exact-main PR8 ZIP on a clean branch after PR #274.
-2. Run formatting, repo checks, frontend/backend tests, complete `task ci` and five GitHub jobs.
-3. Three real devices: separate media grants, P2P through two networks, three approvals, local file, consent withdrawal.
-4. Keep `PREFERANS_MEDIA_ENABLED=false` in production until real-device UAT, storage cleanup, revocation delay and Firestore quota are resolved.
-5. PR 9 remains the production hardening and accessibility release gate.
+1. Install PR9 patch on a clean branch based on merged PR #275 SHA `bae66e25`.
+2. Run `task repo:check`, backend/frontend checks and `task ci`; all five GitHub CI jobs are required.
+3. Run real Auth/Firestore Emulator three-player UAT including denied grants, direct backend access and hidden-card projection checks.
+4. Run three physical-device WebRTC recording/consent test and measure Firestore quota; media remains off in production until acceptance.
+5. Strict £0: **do not enable paid Firestore TTL deletes**. Use documented bounded operator cleanup and record residual retention risk.
+6. PR9 is a release candidate, not Owner sign-off. Resolve missing house-rule workflows before promising full functional parity.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -59,8 +60,8 @@
 | 5 | game-ui | Full three-player table/UI | MERGED | PR #272 `595f8b7f` |
 | 6 | game-controls | Timer, votes, corrections | MERGED | PR #273 `008ee18e` |
 | 7 | history-ranking | Final results, medals, charts | MERGED | PR #274 `4f88428e` |
-| 8 | media | Private WebRTC + local recording | IN DEVELOPMENT | PR8 package |
-| 9 | release | Security/performance/regression/documentation | PLANNED | — |
+| 8 | media | WebRTC/recording/interior | MERGED | PR #275 `bae66e25` |
+| 9 | release | Privacy, retention, regression/UAT | IN DEVELOPMENT | PR9 package |
 
 ## 6. How to resume in a new coding session
 
@@ -139,3 +140,11 @@ Never mark a PR as merged, deployed, tested or complete based only on code appea
 - Tests: isolated Python fake-DB + focused TypeScript check are not equal to real Firebase Emulator or device UAT.
 - Blocking risks: no TURN guarantee, near-real-time rather than hard instant revocation, Firestore retention/quota, browser recording codec and audio-mixing compatibility.
 - PR 9 must close these gaps or explicitly remove noncompliant recording from release. See `docs/PR08_MEDIA.ru.md`, `docs/PR08_UAT.ru.md`.
+
+## PR 9 checkpoint (2026-11-23)
+
+- Verified PR #275 was merged to main SHA `bae66e255f1e3a4a39a41f4c217c23545568a0eb`.
+- Introduces fail-closed local recording watchdog, explicit expiry metadata, unique Preferans media collection groups and a bounded manual cleanup script.
+- Firebase Firestore TTL deletes require billing and **must NOT be enabled** under the no-paid-services rule. Metadata alone does not delete documents.
+- Isolated Python/type checks are not full browser/UAT or GitHub CI. Media and room feature flags remain disabled in production until sign-off.
+- `docs/PR09_RELEASE_CANDIDATE.ru.md`, `docs/PR09_UAT.ru.md` define operation and acceptance. Known gaps: sheet-discard workflow, punch substitution, full house rules editor, accidentally exposed card vote, live 3-device media and quota measurements.

@@ -26,3 +26,7 @@ See `../docs/PR05_GAME_UI.ru.md` and `../docs/PR05_UAT.ru.md`.
 ## PR 8 voluntary WebRTC and local media recording
 
 `PreferansMedia.ru.tsx` and `media-client.ts` add opt-in microphones and cameras using two WebRTC connections per peer. SDP/ICE is sent only through authenticated server routes; raw media never reaches Firestore/Render/Vercel. Three participant votes are mandatory before the initiator can save a local WebM/MP4 composition. The game runs without media. `nostalgic-room.webp` is a generated non-identifying background. Feature flags `PREFERANS_MEDIA_ENABLED` (server+BFF) and `NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED` (browser) are off by default. See `../docs/PR08_MEDIA.ru.md` and `../docs/PR08_UAT.ru.md` for limitations and release blockers.
+
+## PR 9 recording safety gate
+
+`recordingMayContinue` in `media-client.ts` and `PreferansMedia.ru.tsx` stop local recording when the server confirmation ages beyond 8 seconds, polling fails, the tab hides or the device goes offline. The client can never guarantee immediate stopping while JavaScript is suspended or against external screen recorders. WebRTC polling falls to six seconds when no recording/vote is active. `PreferansGame.ru.tsx` keys media components by room and seat so streams close when a user switches rooms. Media stays disabled until `../docs/PR09_UAT.ru.md` is signed off.

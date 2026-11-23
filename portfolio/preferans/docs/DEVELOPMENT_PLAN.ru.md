@@ -252,7 +252,7 @@
 - **Тесты:** real browser/device matrix, failure on symmetric NAT, MediaRecorder MIME fallback, Android performance, no upload, stop on revocation.
 - **Готовность:** core game работает без медиадоступа; совместимые клиенты могут говорить/видеть друг друга и записывать файл локально.
 
-### PR 9 — Accessibility, security hardening and release
+### PR 9 — Accessibility, security hardening and release candidate (active after #275)
 
 - **Ветка:** `feat/preferans-release`.
 - **Коммит 1:** `test(preferans): harden multiplayer, privacy and cross-project regressions` — full property tests, load budget and Firestore read-write count, adversarial auth, failure injection.
@@ -386,3 +386,7 @@ The implemented scope is an atomic immutable GameResult when a normally settled 
 ## PR 8 checkpoint (2026-11-23)
 
 PR8 introduces recipient-scoped, short-lived signalling, opt-in browser peer mesh, three-party recording consent, initiator-only local file and generic original interior artwork. Firestore client deny-all is unchanged. Full real-device media/consent tests, immediate revocation enforcement, retention lifecycle and TURN/NAT risk are **not verified** and remain blocking release conditions. Detailed scope: `PR08_MEDIA.ru.md`; acceptance: `PR08_UAT.ru.md`.
+
+## PR 9 checkpoint (2026-11-23)
+
+PR9 hardens browser recording on lost consent and browser visibility, introduces explicit media metadata expiration, dedicated media collection groups, conservative signal reset and a bounded manual cleanup. **Managed Firestore TTL deletes are paid**, so with £0 they remain disabled and privacy of dormant rooms requires an operator cleanup. Focused tests cover room isolation and fail-closed state, but Firebase Emulator, real 3-device UAT and historical house-rule gaps remain before Owner sign-off. Release/rollback: `PR09_RELEASE_CANDIDATE.ru.md`; acceptance checklist: `PR09_UAT.ru.md`.

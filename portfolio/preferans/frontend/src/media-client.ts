@@ -17,6 +17,25 @@ export type MediaState = {
 export type MediaAction =
   | "presence" | "signal" | "record_request" | "record_vote" | "record_start" | "record_stop";
 
+// Stop recording conservatively when permission cannot be confirmed. This is
+// a local safety guard, not a guarantee against a malicious third-party recorder.
+export const RECORDING_WATCHDOG_MS = 8_000;
+export function recordingMayContinue(
+  state: Pick<MediaState, "recording" | "participants"> | null,
+  seat: number,
+  confirmedAtMs: number,
+  nowMs: number,
+  visibleAndOnline: boolean,
+): boolean {
+  if (!visibleAndOnline || !Number.isFinite(confirmedAtMs) || confirmedAtMs <= 0 ||
+      !Number.isFinite(nowMs) || nowMs < confirmedAtMs ||
+      nowMs - confirmedAtMs > RECORDING_WATCHDOG_MS ||
+      state?.recording?.initiator !== seat || state.recording.status !== "active" ||
+      state.recording.votes.length !== 3 || !state.recording.votes.every(v => v === true) ||
+      state.participants.length !== 3) return false;
+  return state.participants.every(p => p.audio || p.video);
+}
+
 function route(room: string): string {
   if (!ROOM_ID_RE.test(room)) throw new Error("Invalid room ID");
   return `/api/preferans/rooms/${room}/media`;

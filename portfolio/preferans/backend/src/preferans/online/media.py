@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from preferans.online.store import StoreError, _fingerprint, _get, _key, _room_id
@@ -17,6 +18,20 @@ SIGNAL_LIFETIME_MS = 90_000
 PRESENCE_LIFETIME_MS = 45_000
 MAX_SIGNALS = 64
 MAX_PAYLOAD = 6_000
+# Firestore TTL is an operator-managed collection-group policy, NOT enabled by code.
+# Both expiries are UTC Timestamp values; old documents without these fields
+# must be reviewed/migrated before enabling production media.
+MEDIA_STATE_LIFETIME_MS = 3 * 60_000
+MEDIA_OPERATION_LIFETIME_MS = 24 * 60 * 60_000
+
+
+def _expires_at(now_ms: int, lifetime_ms: int) -> datetime:
+    return datetime.fromtimestamp((now_ms + lifetime_ms) / 1000, UTC)
+
+
+def _expired(state: dict, now_ms: int) -> bool:
+    expiry = state.get("expires_at")
+    return isinstance(expiry, datetime) and expiry <= datetime.fromtimestamp(now_ms / 1000, UTC)
 
 
 def _empty() -> dict:
@@ -100,7 +115,7 @@ class MediaRooms:
     def _refs(self, room_id: str):
         _room_id(room_id)
         room = self.db.collection("preferans_rooms").document(room_id)
-        media = room.collection("media").document("current")
+        media = room.collection("preferans_media").document("current")
         return room, media
 
     def view(self, room_id: str, uid: str, *, cursor: int = 0) -> dict:
@@ -113,17 +128,30 @@ class MediaRooms:
         media_snap = media_ref.get(timeout=5.0)
         state = media_snap.to_dict() if media_snap.exists else _empty()
         now = self.now_ms()
+        # TTL deletion is eventually consistent: never serve an expired envelope.
+        if _expired(state, now):
+            state = _empty()
+        # A TTL-expired media/current may restart sequence numbers from zero.
+        # Reset a stale client cursor rather than permanently missing new peers.
+        effective_cursor = cursor if cursor <= state["version"] else 0
+        live = _presence(state, now)
+        record = _recording_for_client(state["recording"])
+        if record and record["status"] in {"requested", "ready", "active"}:
+            if not all(p["audio"] or p["video"] for p in live):
+                record["status"] = "stopped"
         messages = [
             {"sequence": s["sequence"], "from": s["from"], "kind": s["kind"], "data": s["data"]}
             for s in state["signals"]
-            if s["to"] == seat and s["sequence"] > cursor and s["at_ms"] + SIGNAL_LIFETIME_MS > now
+            if s["to"] == seat
+            and s["sequence"] > effective_cursor
+            and s["at_ms"] + SIGNAL_LIFETIME_MS > now
         ]
         return {
             "room_id": room_id,
             "seat": seat,
             "version": state["version"],
-            "participants": _presence(state, now),
-            "recording": _recording_for_client(state["recording"]),
+            "participants": live,
+            "recording": record,
             "signals": messages,
         }
 
@@ -145,7 +173,7 @@ class MediaRooms:
         op_id = _key(uid, token)
         signature = _fingerprint({"room": room_id, "action": action, "args": args})
         room_ref, media_ref = self._refs(room_id)
-        operation_ref = room_ref.collection("media_operations").document(op_id)
+        operation_ref = room_ref.collection("preferans_media_ops").document(op_id)
         tx = self.db.transaction()
 
         @self.fs.transactional
@@ -160,11 +188,19 @@ class MediaRooms:
             state = _get(transaction, media_ref) or _empty()
             state = dict(state)
             now = self.now_ms()
+            if _expired(state, now):
+                state = _empty()
+            state["expires_at"] = _expires_at(now, MEDIA_STATE_LIFETIME_MS)
             state["signals"] = [
                 s for s in state["signals"] if s["at_ms"] + SIGNAL_LIFETIME_MS > now
             ][-MAX_SIGNALS:]
             state["participants"] = [dict(p) for p in state["participants"]]
             record = dict(state["recording"]) if state["recording"] else None
+            # A missing or stale participant invalidates even previously unanimous
+            # consent. Do not re-enable it implicitly on reconnect.
+            if record and record["status"] in {"requested", "ready", "active"}:
+                if not all(p["audio"] or p["video"] for p in _presence(state, now)):
+                    record["status"] = "stopped"
             if action == "presence":
                 if state.get("presence_tokens", [None] * 3)[seat] == op_id:
                     return {"room_id": room_id, "version": state["version"], "ok": True}
@@ -245,7 +281,14 @@ class MediaRooms:
             response = {"room_id": room_id, "version": state["version"], "ok": True}
             transaction.set(media_ref, state)
             if action != "presence":
-                transaction.create(operation_ref, {"fingerprint": signature, "response": response})
+                transaction.create(
+                    operation_ref,
+                    {
+                        "fingerprint": signature,
+                        "response": response,
+                        "expires_at": _expires_at(now, MEDIA_OPERATION_LIFETIME_MS),
+                    },
+                )
             return response
 
         return commit(tx)
