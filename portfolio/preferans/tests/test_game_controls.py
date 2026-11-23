@@ -61,7 +61,7 @@ def test_undo_vote_after_latest_bid_does_not_erase_audit():
         "request-undo-01",
         seen["version"],
         "undo_request",
-        {"reason": "Случайно нажал ставку"},
+        {"reason": "\u0421\u043b\u0443\u0447\u0430\u0439\u043d\u043e \u043d\u0430\u0436\u0430\u043b \u0441\u0442\u0430\u0432\u043a\u0443"},
     )
     assert opened["version"] > done["version"]
     with pytest.raises(StoreError) as exc:
@@ -98,7 +98,7 @@ def test_undo_rejected_or_timeout_keeps_bid():
         "request-reject",
         current["version"],
         "undo_request",
-        {"reason": "Ошибка в ставке"},
+        {"reason": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432 \u0441\u0442\u0430\u0432\u043a\u0435"},
     )
     current = api.view(rid, "a")
     voter = next(uid for uid in "abc" if uid != player)
@@ -112,7 +112,7 @@ def test_undo_rejected_or_timeout_keeps_bid():
         "request-timeout",
         current["version"],
         "undo_request",
-        {"reason": "Ошибка в ставке"},
+        {"reason": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432 \u0441\u0442\u0430\u0432\u043a\u0435"},
     )
     clock[0] += VOTE_MS
     api.db.docs[f"preferans_rooms/{rid}/private/current"]["controls"]["presence"] = [clock[0]] * 3
@@ -199,7 +199,7 @@ def test_admin_adjustment_is_audited_and_cannot_close_game():
         "seat": 1,
         "against": None,
         "delta": 5,
-        "reason": "Ошибку в расчёте исправил администратор",
+        "reason": "\u041e\u0448\u0438\u0431\u043a\u0443 \u0432 \u0440\u0430\u0441\u0447\u0451\u0442\u0435 \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u043b \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440",
     }
     with pytest.raises(StoreError) as exc:
         api.admin_adjust(rid, "b", "bad-admin-0001", current["version"], args, False)
@@ -251,7 +251,7 @@ def test_cannot_edit_closed_game_even_as_platform_owner():
         "seat": 1,
         "against": None,
         "delta": 5,
-        "reason": "Позднее исправление",
+        "reason": "\u041f\u043e\u0437\u0434\u043d\u0435\u0435 \u0438\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435",
     }
     with pytest.raises(StoreError) as exc:
         api.admin_adjust(rid, "owner", "too-late-001", version, args, True)
@@ -296,7 +296,7 @@ def test_card_undo_restores_last_card_before_next_actor_moves():
         "undo-play-request",
         now["version"],
         "undo_request",
-        {"reason": "Сыграл неверную карту"},
+        {"reason": "\u0421\u044b\u0433\u0440\u0430\u043b \u043d\u0435\u0432\u0435\u0440\u043d\u0443\u044e \u043a\u0430\u0440\u0442\u0443"},
     )
     for n in range(1, 3):
         now = api.view(rid, player)
