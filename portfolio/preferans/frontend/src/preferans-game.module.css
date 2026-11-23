@@ -164,3 +164,9 @@
 .adjustGrid select, .adjustGrid input { min-width: 0; box-sizing: border-box; width: 100%; min-height: 2.4rem;
   border-radius: .5rem; padding: .35rem .5rem; border: 1px solid #8c9a80;
   color: inherit; background: var(--background, #14281f); }
+
+/* PR 8: non-identifying, bundled nostalgic apartment background.
+   Deliberately behind opaque panels; never used in recordings of private hands. */
+.root { position: relative; isolation: isolate; border-radius: 1.4rem; }
+.root::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: -1;
+  border-radius: inherit; background: linear-gradient(#0c211dd8, #0e231de8), url('./nostalgic-room.webp') center top / cover no-repeat; }
