@@ -13,6 +13,7 @@ import {
 } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
 import { PreferansControls } from "./PreferansControls.ru";
+import { PreferansHistory } from "./PreferansHistory.ru";
 
 type Mutation = { label: string; run: () => Promise<unknown> };
 const seatNames = ["Игрок 1", "Игрок 2", "Игрок 3"];
@@ -527,6 +528,7 @@ export function PreferansGame() {
         </section>
       </aside>
     </div>
+    <PreferansHistory refreshKey={view?.status === "closed" ? view.version : 0} />
     {(status || pending || busy) && <div className={styles.notification} role="status" aria-live="polite">
       {busy ? "Операция выполняется…" : status}
       {!busy && pending && <button type="button" onClick={() => void mutate(pending.label, pending.run)}>Повторить операцию</button>}

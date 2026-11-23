@@ -1,0 +1,30 @@
+.root { margin: 1.5rem 0; padding: clamp(1rem, 2vw, 1.5rem); color: inherit; border: 1px solid rgba(150,150,150,.3); border-radius: 1rem; background: var(--background, transparent); }
+.heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+.heading h2 { margin: 0 0 .35rem; font-size: 1.35rem; }
+.heading p, .note { color: inherit; opacity: .78; font-size: .87rem; line-height: 1.5; }
+.heading button, .table button, .chartHead select, .legend select { border: 1px solid rgba(150,150,150,.35); padding: .4rem .6rem; border-radius: .45rem; background: var(--background, transparent); color: inherit; font: inherit; }
+.heading button, .table button { cursor: pointer; }
+.alert { color: #dc5e68; font-weight: 650; }
+.tableScroll { width: 100%; overflow-x: auto; }
+.table { border-collapse: collapse; width: 100%; font-size: .82rem; font-variant-numeric: tabular-nums; text-align: right; }
+.table caption { padding: .5rem 0; text-align: left; font-size: .81rem; opacity: .8; }
+.table th, .table td { padding: .55rem .4rem; border-bottom: 1px solid rgba(150,150,150,.2); white-space: nowrap; }
+.table th:first-child, .table td:first-child { text-align: left; }
+.table th button { border: 0; padding: .2rem; font-weight: 650; text-align: inherit; white-space: nowrap; }
+.table th button:hover, .table th button:focus-visible { text-decoration: underline; }
+.chartHead { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: .7rem; margin-top: 1.2rem; }
+.chartHead h3 { margin: 0; font-size: 1.1rem; }
+.chartHead label { display: flex; gap: .6rem; align-items: center; font-size: .88rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1rem 0; }
+.legend label { display: flex; align-items: center; gap: .35rem; font-size: .82rem; }
+.swatch { width: .7rem; height: .7rem; border-radius: 50%; }
+.chartScroll { overflow-x: auto; }
+.chart { width: 100%; min-width: 480px; height: auto; display: block; }
+.historyList { display: grid; gap: .6rem; }
+.result { padding: .6rem .8rem; border: 1px solid rgba(150,150,150,.28); border-radius: .5rem; }
+.result summary { cursor: pointer; font-size: .91rem; }
+.resultBody { overflow-x: auto; margin-top: .65rem; font-size: .85rem; }
+.resultBody table { border-collapse: collapse; min-width: 420px; width: 100%; font-variant-numeric: tabular-nums; }
+.resultBody th, .resultBody td { padding: .45rem .5rem; border-bottom: 1px solid rgba(150,150,150,.19); text-align: right; }
+.resultBody th:first-child, .resultBody td:first-child { text-align: left; }
+@media(max-width:640px) { .root { padding: .75rem; } .table { font-size: .74rem; } .chartHead { align-items: flex-start; } }

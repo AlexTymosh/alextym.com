@@ -1,18 +1,18 @@
 # Zaporizhzhia Preferans — portfolio module
 
-**Status: PR 2 pure game domain engine added. No live game API, Firestore writes, UI gameplay or media yet.**
+**Status: PR 1–6 merged. PR 7 adds immutable game results, rankings and history. Production game API stays feature-gated pending security UAT.**
 
 - Project ID: `preferans`
 - Private route: `/portfolio/preferans`
-- Reserved API prefix (not mounted): `/api/preferans`
+- Feature-gated API prefix (mounted): `/api/preferans`
 - Public portfolio card: disabled (`catalog.visible=false`)
-- PR 1: merged as #268; PR 2 branch: `feat/preferans-engine`
+- PR 1–6: merged as #268–#273; PR 7 branch: `feat/preferans-history-ranking`
 
 ## Boundaries
 
 The website owns authentication, project grants, the guarded Next.js adapter and build/deploy wiring. Preferans owns its UI, future deterministic game domain, data schema, room rules, and tests. No direct Fleet/Workforce imports, separate credentials or standalone deployment.
 
-`frontend/` hosts the project-owned React components and locally scoped CSS. `backend/src/preferans/domain/` contains a pure, side-effect-free rules engine. There are **no** live Preferans API routes or persistence adapters; those require separate protected integration. `tests/` now contains the original foundation guard and deterministic Python engine tests. `docs/` holds both specifications and the engine contract.
+`frontend/` hosts the project-owned React components and locally scoped CSS. `backend/src/preferans/domain/` contains a pure, side-effect-free rules engine. Authenticated Preferans API routes and server-only Firestore persistence adapters are implemented, but remain disabled until the feature flag and release gates are satisfied. `tests/` now contains the original foundation guard and deterministic Python engine tests. `docs/` holds both specifications and the engine contract.
 
 ## Read before writing code
 
@@ -50,3 +50,8 @@ With the Portfolio Lab and Preferans room feature flags enabled, the project pag
 now offers a responsive three-player table. Firestore remains server-only;
 `View` users cannot create/join games. See `docs/PR05_GAME_UI.ru.md`.
 The flag is off by default; no existing public website routes change.
+
+
+## PR 7 history and ranking
+
+The game now records one immutable result and three atomic ranking updates when a room closes normally. The guarded history/rankings endpoints and responsive table/three-line graph live under the same existing Next.js and FastAPI feature flags. See [`docs/PR07_HISTORY_RANKING.ru.md`](docs/PR07_HISTORY_RANKING.ru.md). User-accepted sheet discard, punishment substitution choices, real Firestore emulator UAT and opt-in media are not implemented.
