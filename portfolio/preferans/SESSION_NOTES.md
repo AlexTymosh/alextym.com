@@ -3,7 +3,7 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.6 / 2026-11-23
+**Version:** 1.7 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (verified 2026-11-23)
@@ -12,18 +12,18 @@
 - **PR 2** [#269](https://github.com/AlexTymosh/alextym.com/pull/269): merged `59c60cd7`.
 - **PR 3** [#270](https://github.com/AlexTymosh/alextym.com/pull/270): merged `9d46a8fdcc4d6e932aa788e23a8918dfc6f64939`.
 - **PR 4** #271: merged `622d1831`; **PR 5** #272: merged `595f8b7f`.
-- **PR 6** #273: merged `008ee18e`; **current PR 7** `feat/preferans-history-ranking` — immutable results, medals, statistics and graph.
+- **PR 6** #273: merged `008ee18e`; **PR 7** #274: merged `4f88428e`; **current PR 8** `feat/preferans-media` — opt-in WebRTC and local recording.
 - **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
 - **Gate:** `PREFERANS_ROOMS_ENABLED=false` by default; no production game enabled, no client Firestore rules changed.
 - **Testing:** author sandbox Python tests only. Local full `task ci`, hosted GitHub CI and Firebase emulator integration remain unverified until user executes them.
 
-## 2. Next action (PR 7)
+## 2. Next action (PR 8)
 
-1. Apply this exact-main package to the clean PR7 branch.
-2. Run project checks, backend formatting and full `task ci`.
-3. Make three commits (server, frontend, documentation), push and open PR manually.
-4. Wait for all five GitHub CI checks; three-user Firebase Emulator UAT remains required.
-5. Do not enable production before pending punch-choice and sheet-discard workflows are resolved.
+1. Apply exact-main PR8 ZIP on a clean branch after PR #274.
+2. Run formatting, repo checks, frontend/backend tests, complete `task ci` and five GitHub jobs.
+3. Three real devices: separate media grants, P2P through two networks, three approvals, local file, consent withdrawal.
+4. Keep `PREFERANS_MEDIA_ENABLED=false` in production until real-device UAT, storage cleanup, revocation delay and Firestore quota are resolved.
+5. PR 9 remains the production hardening and accessibility release gate.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -58,8 +58,8 @@
 | 4 | secure-rooms | Auth + Firestore + realtime spike | MERGED | PR #271 `622d1831` |
 | 5 | game-ui | Full three-player table/UI | MERGED | PR #272 `595f8b7f` |
 | 6 | game-controls | Timer, votes, corrections | MERGED | PR #273 `008ee18e` |
-| 7 | history-ranking | Final results, medals, charts | IN DEVELOPMENT | PR7 package |
-| 8 | media | WebRTC, consent, local recording, interior | PLANNED | — |
+| 7 | history-ranking | Final results, medals, charts | MERGED | PR #274 `4f88428e` |
+| 8 | media | Private WebRTC + local recording | IN DEVELOPMENT | PR8 package |
 | 9 | release | Security/performance/regression/documentation | PLANNED | — |
 
 ## 6. How to resume in a new coding session
@@ -130,3 +130,12 @@ Never mark a PR as merged, deployed, tested or complete based only on code appea
 - Historical Firebase UIDs and hidden hands are NOT serialized into results. Unknown pre-PR7 start time remains `null`.
 - Isolated Python tests and TypeScript source checks are not substitutes for GitHub CI or real Firestore transactions.
 - Known release gaps: confirmed punch conversions, accepted sheet-discard workflow, full pause durations, display names, three-browser UAT. See `docs/PR07_HISTORY_RANKING.ru.md`.
+
+## PR 8 checkpoint (2026-11-23)
+
+- Verified PR #274 merged to `main` SHA `4f88428e539fbe979f407d83f617ebc76a3b33d4`.
+- PR8 introduces backend-only Firestore media signals, optional client WebRTC mesh and local-only canvas/audio recording by the initiator after three approvals.
+- Separate media feature gates off by default; source files and local artwork are isolated under `portfolio/preferans`.
+- Tests: isolated Python fake-DB + focused TypeScript check are not equal to real Firebase Emulator or device UAT.
+- Blocking risks: no TURN guarantee, near-real-time rather than hard instant revocation, Firestore retention/quota, browser recording codec and audio-mixing compatibility.
+- PR 9 must close these gaps or explicitly remove noncompliant recording from release. See `docs/PR08_MEDIA.ru.md`, `docs/PR08_UAT.ru.md`.

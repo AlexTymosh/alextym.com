@@ -244,7 +244,7 @@
 - **Тесты:** exact three results, 2 winners, 3 tie none, sheet discard two winners, no double aggregation, filter/sort graph synchronized.
 - **Готовность:** все завершённые партии доступны после перезапуска и честно попадают в общую статистику.
 
-### PR 8 — Voluntary WebRTC and local recording + nostalgic backdrop
+### PR 8 — Voluntary WebRTC and local recording + nostalgic backdrop (active after #274)
 
 - **Ветка:** `feat/preferans-media`.
 - **Коммит 1:** `feat(preferans): add optional peer media and consent flow` — three-peer mesh, SDP/ICE signals auth + TTL, media off by default, mute/video controls, reconnect.
@@ -382,3 +382,7 @@ Branch `feat/preferans-game-controls` adds persisted counter, vote-based last-ac
 ## PR 7 checkpoint (2026-11-23)
 
 The implemented scope is an atomic immutable GameResult when a normally settled pool closes, per-player ranking projections, a history endpoint and a recent-results chart. Two golds and triple ties are deterministic. See `PR07_HISTORY_RANKING.ru.md` and `PR07_UAT.ru.md`. The full historical rules remain authoritative: accepted sheet discard, player-selected punch substitutions, exact pause duration and display-name resolution are NOT implemented by this PR and remain explicit release gates.
+
+## PR 8 checkpoint (2026-11-23)
+
+PR8 introduces recipient-scoped, short-lived signalling, opt-in browser peer mesh, three-party recording consent, initiator-only local file and generic original interior artwork. Firestore client deny-all is unchanged. Full real-device media/consent tests, immediate revocation enforcement, retention lifecycle and TURN/NAT risk are **not verified** and remain blocking release conditions. Detailed scope: `PR08_MEDIA.ru.md`; acceptance: `PR08_UAT.ru.md`.

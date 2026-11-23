@@ -33,3 +33,7 @@ Firebase emulator UAT is still mandatory: `docs/PR05_UAT.ru.md`.
 ## PR 7 immutable history and ranking tests
 
 `test_history_ranking.py` covers competition ranks, two golds, triple tie, sheet-discard rules in pure functions, unknown duration, no Firebase UID leakage, single transactional result, idempotent replay, repeated-game aggregates and bounded history. `frontend/e2e/preferans-history.ru.spec.ts` tests sort and timeline order. Firebase Emulator integration and three-browser UAT remain mandatory. `docs/PR07_UAT.ru.md` contains acceptance criteria.
+
+## PR 8 media and recording-consent tests
+
+`test_media.py` covers member-only access, recipient-scoped signalling, idempotency, SDP/ICE bounds, three explicit recording consents, voting denial, revocation and stale media presence with a fake Firestore transaction. `frontend/e2e/preferans-media.ru.spec.ts` validates the allowlisted media contract. These are **not** real-device/WebRTC/emulator tests; required UAT is `docs/PR08_UAT.ru.md`.
