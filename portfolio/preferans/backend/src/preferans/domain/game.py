@@ -52,6 +52,7 @@ class EndReason(str, Enum):
     PLAYED = "played"
     ALL_PASSED = "all_passed"
     HALF_VIST = "half_vist"
+    WITHOUT_THREE = "without_three"
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,6 +187,25 @@ def declare_contract(state: GameState, actor: int, contract: Bid) -> GameState:
             turn=state.first_hand,
         )
     return replace(state, phase=Phase.DEFENSE_FIRST, turn=(actor + 1) % 3)
+
+
+def concede_without_three(state: GameState, actor: int) -> GameState:
+    """Declarer accepts a three-trick penalty before the first card is played."""
+    if state.declarer != actor or state.contract is None:
+        raise RuleViolation("Only the declarer may concede")
+    if state.contract.kind not in (BidKind.REGULAR, BidKind.TEN_NO_WIDOW):
+        raise RuleViolation("Misere cannot be conceded without three")
+    allowed = (
+        Phase.DEFENSE_FIRST,
+        Phase.DEFENSE_SECOND,
+        Phase.DEFENSE_RECONSIDER,
+        Phase.CHOOSE_MODE,
+        Phase.OPENING_LEAD,
+        Phase.PLAY,
+    )
+    if state.phase not in allowed or state.trick or state.completed_tricks:
+        raise RuleViolation("Without-three concession must precede the first card")
+    return replace(state, phase=Phase.FINISHED, turn=None, end_reason=EndReason.WITHOUT_THREE)
 
 
 def _defense_after_decision(state: GameState) -> GameState:
