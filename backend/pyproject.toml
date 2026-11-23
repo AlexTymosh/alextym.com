@@ -43,4 +43,4 @@ line-length = 100
 target-version = "py311"
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "../portfolio/fleet_hub/tests", "../portfolio/workforce_intelligence/tests"]
+testpaths = ["tests", "../portfolio/fleet_hub/tests", "../portfolio/workforce_intelligence/tests", "../portfolio/preferans/tests"]

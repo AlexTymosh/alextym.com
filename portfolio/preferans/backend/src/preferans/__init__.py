@@ -1,1 +1,1 @@
-﻿"""Isolated Preferans backend package."""
+"""Isolated Preferans backend package."""
