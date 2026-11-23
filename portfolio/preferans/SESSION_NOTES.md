@@ -3,7 +3,7 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.5 / 2026-11-23
+**Version:** 1.6 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (verified 2026-11-23)
@@ -12,18 +12,18 @@
 - **PR 2** [#269](https://github.com/AlexTymosh/alextym.com/pull/269): merged `59c60cd7`.
 - **PR 3** [#270](https://github.com/AlexTymosh/alextym.com/pull/270): merged `9d46a8fdcc4d6e932aa788e23a8918dfc6f64939`.
 - **PR 4** #271: merged `622d1831`; **PR 5** #272: merged `595f8b7f`.
-- **Current PR 6:** `feat/preferans-game-controls` — server timers, two-vote undo, private snapshots, audited corrections and numeric policy.
+- **PR 6** #273: merged `008ee18e`; **current PR 7** `feat/preferans-history-ranking` — immutable results, medals, statistics and graph.
 - **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
 - **Gate:** `PREFERANS_ROOMS_ENABLED=false` by default; no production game enabled, no client Firestore rules changed.
 - **Testing:** author sandbox Python tests only. Local full `task ci`, hosted GitHub CI and Firebase emulator integration remain unverified until user executes them.
 
-## 2. Next action (PR 6)
+## 2. Next action (PR 7)
 
-1. Apply the PR6 package on a fresh branch from merged PR #272, after preflight.
-2. Format Python, run `task ci` and review the exact code diff.
-3. Make three scoped commits (server/tests, frontend, documentation) and manually open PR #273 or the next assigned number.
-4. Confirm all GitHub CI jobs before squash merge; keep feature flag off in production.
-5. Run three-user Auth/Firestore emulator UAT, direct Render denial checks and quota measurement before enabling in production.
+1. Apply this exact-main package to the clean PR7 branch.
+2. Run project checks, backend formatting and full `task ci`.
+3. Make three commits (server, frontend, documentation), push and open PR manually.
+4. Wait for all five GitHub CI checks; three-user Firebase Emulator UAT remains required.
+5. Do not enable production before pending punch-choice and sheet-discard workflows are resolved.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -57,8 +57,8 @@
 | 3 | scoring | Ledger, rulesets, golden fixtures | MERGED | PR #270 `9d46a8f` |
 | 4 | secure-rooms | Auth + Firestore + realtime spike | MERGED | PR #271 `622d1831` |
 | 5 | game-ui | Full three-player table/UI | MERGED | PR #272 `595f8b7f` |
-| 6 | game-controls | Timers, votes, audited adjustments | IN DEVELOPMENT | PR 6 package; full CI pending |
-| 7 | history-ranking | Stats, ranking, graphs | PLANNED | — |
+| 6 | game-controls | Timer, votes, corrections | MERGED | PR #273 `008ee18e` |
+| 7 | history-ranking | Final results, medals, charts | IN DEVELOPMENT | PR7 package |
 | 8 | media | WebRTC, consent, local recording, interior | PLANNED | — |
 | 9 | release | Security/performance/regression/documentation | PLANNED | — |
 
@@ -121,3 +121,12 @@ Never mark a PR as merged, deployed, tested or complete based only on code appea
 - **Storage:** existing deny-all client Firestore rules unchanged; all controls in `private/current`, append-only nonsecret room events. Public view is explicitly projected, not serialized from the hidden snapshot.
 - **Limitations:** heartbeat detection cannot instantly prove disconnect, no full historical numerical ruleset editor, unintentional card exposure vote and manual reconciliation of specific `ledger_entry_id` are deferred. See `docs/PR06_GAME_CONTROLS.ru.md`.
 - **Remaining:** PR 7 (immutable history/medals/rankings); PR 8 (opt-in WebRTC + local recording + nostalgic backdrop); PR 9 (security, offline fidelity, Firestore quota, performance/accessibility/UAT and release).
+
+
+## PR 7 checkpoint (2026-11-23)
+
+- Verified PR #273 merged into main SHA `008ee18ee2b27f2c1fb8d7a15506a140090003e0`.
+- Active PR 7: immutable one-per-room `GameResult`, atomic per-player rankings, public project-grant-protected history endpoints and chart.
+- Historical Firebase UIDs and hidden hands are NOT serialized into results. Unknown pre-PR7 start time remains `null`.
+- Isolated Python tests and TypeScript source checks are not substitutes for GitHub CI or real Firestore transactions.
+- Known release gaps: confirmed punch conversions, accepted sheet-discard workflow, full pause durations, display names, three-browser UAT. See `docs/PR07_HISTORY_RANKING.ru.md`.

@@ -236,7 +236,7 @@
 - **Тесты:** fake server clock, boundary/race penalties, timeout votes, no double charge, roomAdmin not global Owner, correct manual financial corrections.
 - **Готовность:** управление партиями прозрачно, редактирование результатов после finish невозможно.
 
-### PR 7 — Game history, medals, stats and ranking
+### PR 7 — Game history, medals, stats and ranking (active after #273)
 
 - **Ветка:** `feat/preferans-history-ranking`.
 - **Коммит 1:** `feat(preferans): persist history and compute ranking snapshots` — immutability after finish, win/tie logic, two golds for pairwise ties, tech defeat, received/given punishments.
@@ -377,3 +377,8 @@ gh pr create --base main --head feat/preferans-foundation --title "chore(prefera
 ## PR 6 — implementation checkpoint after #272 (2026-11-23)
 
 Branch `feat/preferans-game-controls` adds persisted counter, vote-based last-action undo, room-admin correction with appended events and a numeric pre-game policy. Test acceptance is `docs/PR06_UAT.ru.md`, algorithm details are `docs/PR06_GAME_CONTROLS.ru.md`. The nominal PR 6 plan above remains authoritative for previously specified requirements not yet implemented: historical ruleset editor, immediate offline detection and accidentally exposed card voting. These are explicitly still release gaps, not claims of completeness. PR 7–9 proceed in the order above.
+
+
+## PR 7 checkpoint (2026-11-23)
+
+The implemented scope is an atomic immutable GameResult when a normally settled pool closes, per-player ranking projections, a history endpoint and a recent-results chart. Two golds and triple ties are deterministic. See `PR07_HISTORY_RANKING.ru.md` and `PR07_UAT.ru.md`. The full historical rules remain authoritative: accepted sheet discard, player-selected punch substitutions, exact pause duration and display-name resolution are NOT implemented by this PR and remain explicit release gates.

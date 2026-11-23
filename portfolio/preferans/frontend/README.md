@@ -17,3 +17,8 @@ See `../docs/PR05_GAME_UI.ru.md` and `../docs/PR05_UAT.ru.md`.
 ## PR 6 game controls
 
 `PreferansControls.ru.tsx` provides an accessible undo/counter/adjustment panel and a numeric lobby policy editor. The client sends `pulse` heartbeats while playing, displays the **server-issued** countdown and does not calculate or apply financial penalties. All mutations go through the existing protected BFF with idempotency and current versions. See `../docs/PR06_GAME_CONTROLS.ru.md` and `../docs/PR06_UAT.ru.md`. HTTP-based offline presence is approximate, not an instant presence guarantee.
+
+
+## PR 7 ranking and history
+
+`PreferansHistory.ru.tsx` provides the sortable materialized ranking table, recent immutable result list and a graph of three explicitly chosen participants. `history-model.ts` contains pure sorting, timestamp ordering and API payload validation. The browser receives only server-allowlisted results and opaque identifiers; Firebase UID and hidden game state remain on the server. The 100-game history window can be incomplete; the UI says so. Read `../docs/PR07_HISTORY_RANKING.ru.md`.
