@@ -13,10 +13,26 @@ export type Score = {
   pool: number[]; hill: number[]; vists: number[][]; target?: number;
   passout_level: number; closed: boolean; ruleset_hash: string;
 };
+export type Adjustment = {
+  field: "pool" | "hill" | "vist"; seat: number; against: number | null;
+  delta: number; before: number; after: number; reason: string;
+  actor_seat: number | null; created_at_ms: number; game_version: number;
+};
+export type RoomControls = {
+  paused: boolean;
+  counter: null | { target: number; initiator: number; deadline_ms: number | null;
+    remaining_ms?: number; penalty: number; periods: number; period_ms: number };
+  undo: null | { kind: "card_play" | "auction_bid"; requester: number;
+    deadline_ms: number | null; reason: string; votes: Record<string, boolean>; can_vote: boolean };
+  can_request_undo: boolean;
+  adjustments: Adjustment[];
+  policy?: { counter_seconds: number; counter_multiplier: number; undo_seconds: number };
+};
 export type RoomView = {
   room_id: string; version: number;
   status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed";
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
+  controls?: RoomControls;
   phase?: Phase; turn?: number | null; controller?: number | null;
   dealer?: number; first_hand?: number; is_passout?: boolean; played_tricks?: number;
   declarer?: number | null; contract?: Bid | null; high_bid?: Bid | null;
@@ -34,7 +50,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -73,7 +89,8 @@ export function moveCard(order: string[], from: string, to: string): string[] {
   return result;
 }
 export function allowedToAct(view: RoomView): boolean {
-  if (view.my_seat === null || view.status !== "playing") return false;
+  if (view.my_seat === null || view.status !== "playing" ||
+      view.controls?.paused || view.controls?.undo) return false;
   if (view.phase === "opening_lead" || view.phase === "play") {
     return view.controller === view.my_seat;
   }

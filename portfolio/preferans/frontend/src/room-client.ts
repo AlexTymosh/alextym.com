@@ -73,3 +73,10 @@ export async function settleRoom(roomId: string, token: string, version: number,
     regular_route: regularRoute, passout_routes: passoutRoutes,
   }));
 }
+
+export async function adjustRoom(roomId: string, token: string, version: number,
+  adjustment: { field: "pool" | "hill" | "vist"; seat: number; against: number | null; delta: number; reason: string }) {
+  return assertMutation(await request(path(roomId, "adjust"), "POST", {
+    idempotency_key: token, expected_version: version, ...adjustment,
+  }));
+}
