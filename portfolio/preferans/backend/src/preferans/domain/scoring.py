@@ -8,10 +8,11 @@ only after its engine has entered FINISHED. The scoring layer never returns card
 from __future__ import annotations
 
 from enum import Enum
+from copy import deepcopy
 
 from .auction import BidKind, RuleViolation
 from .game import DefenseDecision, EndReason, GameState, Phase
-from .ledger import ScoreState, _Posting
+from .ledger import EntryKind, ScoreState, _Posting
 from .play import CompletedTrick
 
 
@@ -115,6 +116,99 @@ def _passout_bonus(post: _Posting, owner: int, amount: int, route: RewardRoute) 
     _reward_help(post, owner, remainder)
 
 
+def _simultaneous_passout_bonuses(
+    post: _Posting,
+    owners: tuple[int, ...],
+    amount: int,
+    routes: tuple[RewardRoute, RewardRoute, RewardRoute],
+) -> None:
+    """Stage all owners first, then distribute contested help without a first mover.
+
+    Credits that cannot be fairly split as whole points become equal vists against
+    both opponents (5+5 by default). No winner receives allocation priority.
+    """
+    remainder: dict[int, int] = {}
+    for owner in owners:
+        gap = post.rules.pool_target - post.pool[owner]
+        if gap == 0:
+            paid = min(amount, post.hill[owner])
+            post.pay_hill(owner, paid, "closed_pool_passout_hill_payment")
+            remainder[owner] = amount - paid
+        elif amount < gap:
+            if routes[owner] == RewardRoute.POOL:
+                post.add_pool(owner, amount, "passout_zero_tricks")
+                remainder[owner] = 0
+            elif routes[owner] == RewardRoute.HILL_FIRST and post.hill[owner] > 0:
+                paid = min(amount, post.hill[owner])
+                post.pay_hill(owner, paid, "passout_hill_payment")
+                post.add_pool(owner, amount - paid, "passout_hill_overflow_to_pool")
+                remainder[owner] = 0
+            else:
+                raise RuleViolation("Invalid passout reward choice")
+        else:
+            post.add_pool(owner, gap, "mandatory_passout_pool_closure")
+            extra = amount - gap
+            if extra and routes[owner] == RewardRoute.POOL and post.hill[owner] > 0:
+                raise RuleViolation("Choose hill repayment or help after pool closure")
+            if routes[owner] == RewardRoute.HILL_FIRST:
+                paid = min(extra, post.hill[owner])
+                post.pay_hill(owner, paid, "passout_remainder_hill_payment")
+                extra -= paid
+            remainder[owner] = extra
+
+    # Determine each recipient against the same post-own-bonus snapshot.
+    desires: dict[int, dict[int, int]] = {}
+    direct_vists: dict[int, list[tuple[int, int, str]]] = {}
+    for owner in owners:
+        trial = deepcopy(post)
+        base_entries = len(trial.entries)
+        _reward_help(trial, owner, remainder[owner])
+        desires[owner] = {}
+        direct_vists[owner] = []
+        for entry in trial.entries[base_entries:]:
+            if entry.kind == EntryKind.POOL:
+                desires[owner][entry.actor] = desires[owner].get(entry.actor, 0) + entry.amount
+            elif entry.kind == EntryKind.VIST and entry.reason in (
+                "surplus_after_all_pools_closed",
+                "odd_equal_pool_help",
+            ):
+                assert entry.against is not None
+                direct_vists[owner].append((entry.against, entry.amount, entry.reason))
+    for target in range(3):
+        requests = {owner: desires[owner].get(target, 0) for owner in owners}
+        total = sum(requests.values())
+        if not total:
+            continue
+        capacity = post.rules.pool_target - post.pool[target]
+        for owner in owners:
+            intended = requests[owner]
+            if not intended:
+                continue
+            granted = intended if total <= capacity else intended * capacity // total
+            if granted:
+                post.add_pool(target, granted, "simultaneous_help_received")
+                post.add_vist(
+                    owner,
+                    target,
+                    granted * post.rules.help_vists_per_point,
+                    "simultaneous_help_given",
+                )
+            # Non-divisible capacity must not give either zero-trick player priority.
+            not_granted = intended - granted
+            if not_granted:
+                for other in range(3):
+                    if other != owner:
+                        post.add_vist(
+                            owner,
+                            other,
+                            not_granted * post.rules.surplus_vists_per_opponent,
+                            "simultaneous_help_unallocated",
+                        )
+    for owner in owners:
+        for against, value, reason in direct_vists[owner]:
+            post.add_vist(owner, against, value, reason)
+
+
 def _defender_hill(
     post: _Posting,
     declarer: int,
@@ -208,9 +302,8 @@ def settle_game(
 ) -> ScoreState:
     """Apply one deal atomically, without modifying either input object.
 
-    Passout deals with two zero-trick winners require explicit reward order:
-    their bonuses may both cause help or close a pool. This ordering is a room
-    decision, not an implicit implementation detail.
+    Multiple zero-trick passout bonuses are staged simultaneously, without
+    allocating first-mover priority to either winner.
     """
     if not isinstance(ledger, ScoreState):
         raise TypeError("Expected a ScoreState")
@@ -243,20 +336,17 @@ def settle_game(
                 player, count * rules.passout_cost(ledger.passout_level), "passout_taken_tricks"
             )
         zero_winners = tuple(i for i, count in enumerate(game.tricks_won) if count == 0)
-        if len(zero_winners) > 1 and passout_reward_order is None:
-            raise RuleViolation("Explicit reward order required for simultaneous passout bonuses")
-        order = zero_winners if passout_reward_order is None else passout_reward_order
-        if (
-            type(order) is not tuple
-            or len(order) != len(zero_winners)
-            or any(type(i) is not int or i not in range(3) for i in order)
-            or set(order) != set(zero_winners)
-        ):
-            raise RuleViolation("Reward order must include each zero-trick seat exactly once")
-        for player in order:
-            _passout_bonus(
-                post, player, rules.passout_cost(ledger.passout_level), passout_routes[player]
+        if passout_reward_order is not None:
+            raise RuleViolation("Sequential passout reward order is forbidden by house rules")
+        if len(zero_winners) > 1:
+            _simultaneous_passout_bonuses(
+                post, zero_winners, rules.passout_cost(ledger.passout_level), passout_routes
             )
+        else:
+            for player in zero_winners:
+                _passout_bonus(
+                    post, player, rules.passout_cost(ledger.passout_level), passout_routes[player]
+                )
         next_passout = 6 if ledger.passout_level == 8 else ledger.passout_level + 1
     else:
         declarer = game.declarer
@@ -288,6 +378,7 @@ def settle_game(
                 elif game.half_vist_receiver is not None or game.end_reason == EndReason.HALF_VIST:
                     raise RuleViolation("Half-vist is available only on 6/7")
                 _regular_reward(post, declarer, cost, regular_route)
+                next_passout = 6  # Confirmed: automatic contract wins reset passouts.
             elif game.end_reason == EndReason.PLAYED:
                 taken = game.tricks_won[declarer]
                 missing = max(0, level - taken)

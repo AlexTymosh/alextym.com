@@ -341,15 +341,13 @@ def test_passout_bonus_insufficient_pool_can_pay_hill():
     assert state.pool[0] == 10
 
 
-def test_two_passout_zero_players_require_explicit_order():
+def test_two_passout_zero_players_receive_simultaneous_bonuses():
     game = passouts((0, 0, 10))
-    with pytest.raises(RuleViolation, match="Explicit reward order"):
-        settle(game)
-    state = settle(game, passout_reward_order=(0, 1))
+    state = settle(game)
     assert state.pool == (1, 1, 0)
-    with pytest.raises(RuleViolation):
-        settle(game, passout_reward_order=([0], 1))
     assert state.hill == (0, 0, 10)
+    with pytest.raises(RuleViolation, match="Sequential"):
+        settle(game, passout_reward_order=(0, 1))
 
 
 def test_passout_level_does_not_reset_on_contract_loss_or_concession():
@@ -385,3 +383,38 @@ def test_invalid_finished_results_rejected_without_mutation():
     with pytest.raises(RuleViolation):
         settle_game(base, bad, "d1")
     assert base == ledger()
+
+
+def test_confirmed_automatic_win_resets_passout_streak():
+    game = replace(
+        played(6, (6, 2, 2)),
+        passout_level=8,
+        end_reason=EndReason.ALL_PASSED,
+        completed_tricks=(),
+        tricks_won=(0, 0, 0),
+        trick=(),
+        half_vist_receiver=2,
+    )
+    state = settle(game, points=ledger(passout=8))
+    assert state.passout_level == 6
+
+
+def test_confirmed_hill_first_surplus_goes_to_own_open_pool():
+    game = passouts((0, 4, 6), level=8)
+    start = ledger(pool=(15, 20, 20), hill=(1, 0, 0), passout=8)
+    out = settle(
+        game,
+        points=start,
+        passout_routes=(RewardRoute.HILL_FIRST, RewardRoute.POOL, RewardRoute.POOL),
+    )
+    assert out.hill[0] == 0
+    assert out.pool[0] == 17
+
+
+def test_simultaneous_help_has_no_seat_priority_for_indivisible_pool_point():
+    game = passouts((0, 0, 10), level=6)
+    start = ledger(pool=(20, 20, 19), passout=6)
+    state = settle(game, points=start)
+    assert state.pool == (20, 20, 19)
+    assert state.vists[0][1:] == (5, 5)
+    assert state.vists[1][0] == 5 and state.vists[1][2] == 5
