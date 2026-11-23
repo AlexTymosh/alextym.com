@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -21,12 +22,26 @@ from preferans.domain.ledger import ScoreState
 from preferans.domain.scoring import RewardRoute, settle_game
 from preferans.online.codec import decode, encode
 from preferans.online.commands import apply_command, redacted_action
+from preferans.online.controls import (
+    ControlError,
+    adjust_score,
+    can_start_counter,
+    configure_policy,
+    fresh,
+    pulse,
+    reconcile,
+    record_candidate,
+    request_undo,
+    start_counter,
+    stop_counter,
+    vote_undo,
+)
 from preferans.online.views import seat_view
 
 ROOM_ID = re.compile(r"^[0-9a-f]{32}$")
 
 
-@dataclass(frozen=True)
+@dataclass
 class StoreError(Exception):
     code: int
     detail: str
@@ -68,8 +83,9 @@ def _get(tx: Any, ref: Any) -> dict | None:
 
 
 class FirestoreRooms:
-    def __init__(self, db: Any, *, firestore_module: Any = None):
+    def __init__(self, db: Any, *, firestore_module: Any = None, now_ms=None):
         self.db = db
+        self.now_ms = now_ms or (lambda: int(time.time() * 1000))
         if firestore_module is None:
             from firebase_admin import firestore
 
@@ -108,7 +124,13 @@ class FirestoreRooms:
             result = {"room_id": room_id, "version": 0, "my_seat": 0, "status": "lobby"}
             transaction.create(doc, room)
             transaction.create(
-                private, {"game": None, "score": encode(ScoreState.new()), "version": 0}
+                private,
+                {
+                    "game": None,
+                    "score": encode(ScoreState.new()),
+                    "controls": fresh(),
+                    "version": 0,
+                },
             )
             transaction.create(operation, {"fingerprint": identity, "response": result})
             return result
@@ -130,6 +152,11 @@ class FirestoreRooms:
         self, room_id: str, uid: str, token: str, expected_version: int, args: dict, owner: bool
     ) -> dict:
         return self._mutate(room_id, uid, token, expected_version, "settle", args, owner)
+
+    def admin_adjust(
+        self, room_id: str, uid: str, token: str, expected_version: int, args: dict, owner: bool
+    ) -> dict:
+        return self._mutate(room_id, uid, token, expected_version, "score_adjust", args, owner)
 
     def _mutate(
         self,
@@ -164,7 +191,7 @@ class FirestoreRooms:
             if action == "join":
                 if uid not in room["seats"] and room["status"] != "lobby":
                     raise StoreError(409, "Room is no longer open")
-            elif action in {"start", "settle"}:
+            elif action in {"start", "settle", "score_adjust", "preset"}:
                 _member(room, uid, admin=True, owner=owner)
                 if not owner and room["admin_uid"] != uid:
                     raise StoreError(403, "Room admin required")
@@ -184,6 +211,15 @@ class FirestoreRooms:
             score = decode(state_record["score"])
             if not isinstance(score, ScoreState):
                 raise StoreError(503, "Scoring state unavailable")
+            controls = state_record.get("controls") or fresh()
+            now = self.now_ms()
+            auto_events = []
+            # Reconcile timers at the same authoritative timestamp as this write.
+            if room["status"] == "playing":
+                try:
+                    score, auto_events = reconcile(controls, game, score, now, room.get("game_id"))
+                except ControlError as exc:
+                    raise StoreError(exc.status, exc.detail) from exc
             event_data = {}
             if action == "join":
                 if uid in room["seats"]:
@@ -197,6 +233,7 @@ class FirestoreRooms:
                 if seat is None:
                     raise StoreError(409, "Room full")
                 room["seats"][seat] = uid
+                controls["presence"][seat] = now
                 event_data = {"seat": seat}
             elif action == "start":
                 if room["status"] not in ("lobby", "between") or None in room["seats"]:
@@ -208,6 +245,9 @@ class FirestoreRooms:
                 room["dealer"] = dealer
                 room["game_id"] = uuid.uuid4().hex
                 room["status"] = "playing"
+                controls["timer"] = None
+                controls["vote"] = None
+                controls["candidate"] = None
                 event_data = {"dealer": dealer, "game_id": room["game_id"]}
             elif action == "settle":
                 if room["status"] != "awaiting_settlement" or not isinstance(game, GameState):
@@ -227,18 +267,96 @@ class FirestoreRooms:
                 except (RuleViolation, ValueError, TypeError) as exc:
                     raise StoreError(422, "Invalid settlement") from exc
                 room["status"] = "closed" if score.closed else "between"
+                controls["candidate"] = None
+                controls["timer"] = None
                 event_data = {"score_version": score.version, "closed": score.closed}
+            elif action == "preset":
+                if room["status"] != "lobby":
+                    raise StoreError(409, "Presets must be set before the first deal")
+                try:
+                    event_data = configure_policy(controls, args)
+                except ControlError as exc:
+                    raise StoreError(exc.status, exc.detail) from exc
+            elif action == "score_adjust":
+                if room["status"] not in ("playing", "between", "awaiting_settlement"):
+                    raise StoreError(409, "Finished games cannot be edited")
+                if uid != room["admin_uid"] and not owner:
+                    raise StoreError(403, "Room admin required")
+                if set(args) != {"field", "seat", "against", "delta", "reason"}:
+                    raise StoreError(422, "Invalid adjustment")
+                try:
+                    score, event_data = adjust_score(
+                        score,
+                        controls,
+                        args["field"],
+                        args["seat"],
+                        args["against"],
+                        args["delta"],
+                        args["reason"],
+                        room["seats"].index(uid) if uid in room["seats"] else None,
+                        now,
+                        room.get("game_id") or "between",
+                        room["version"] + 1,
+                    )
+                except ControlError as exc:
+                    raise StoreError(exc.status, exc.detail) from exc
             else:
                 if room["status"] != "playing" or not isinstance(game, GameState):
                     raise StoreError(409, "No active deal")
                 seat = room["seats"].index(uid)
                 try:
-                    game = apply_command(game, seat, action, args)
+                    if action == "pulse":
+                        if args:
+                            raise ControlError(422, "Unexpected pulse arguments")
+                        event_data = pulse(controls, seat, now)
+                    elif action == "counter_start":
+                        if args:
+                            raise ControlError(422, "Unexpected counter arguments")
+                        if not can_start_counter(controls, now):
+                            raise ControlError(409, "Other players are not online")
+                        event_data = start_counter(controls, game, score, seat, now)
+                    elif action == "undo_request":
+                        if set(args) != {"reason"}:
+                            raise ControlError(422, "Undo requires a reason")
+                        event_data = request_undo(
+                            controls, seat, room["version"], now, args["reason"]
+                        )
+                    elif action == "undo_vote":
+                        if set(args) != {"approve"}:
+                            raise ControlError(422, "Undo vote requires approve")
+                        game_restored, event_data = vote_undo(controls, seat, args["approve"], now)
+                        if game_restored is not None:
+                            game = game_restored
+                    else:
+                        if controls.get("paused_at") is not None or controls.get("vote"):
+                            raise ControlError(409, "Game is paused for a vote or connection")
+                        before = game
+                        game = apply_command(game, seat, action, args)
+                        event_data = redacted_action(action, args)
+                        record_candidate(
+                            controls,
+                            before,
+                            game,
+                            action,
+                            seat,
+                            room["version"] + 1 + len(auto_events),
+                        )
+                        if controls.get("timer") is not None:
+                            stop_counter(controls)
+                        if game.phase == Phase.FINISHED:
+                            room["status"] = "awaiting_settlement"
+                except ControlError as exc:
+                    raise StoreError(exc.status, exc.detail) from exc
                 except (ValueError, TypeError, KeyError) as exc:
                     raise StoreError(422, "Illegal game action") from exc
-                event_data = redacted_action(action, args)
-                if game.phase == Phase.FINISHED:
-                    room["status"] = "awaiting_settlement"
+            # Automatic timeout events are sequenced before the user mutation.
+            for automatic in auto_events:
+                room["version"] += 1
+                sequence = room["version"]
+                transaction.create(
+                    doc.collection("events").document(f"{sequence:08d}"),
+                    {"sequence": sequence, "seat": None, **automatic},
+                )
             room["version"] += 1
             v = room["version"]
             event = {
@@ -249,7 +367,10 @@ class FirestoreRooms:
             }
             response = {"room_id": room_id, "version": v, "status": room["status"]}
             transaction.set(doc, room)
-            transaction.set(private, {"game": encode(game), "score": encode(score), "version": v})
+            transaction.set(
+                private,
+                {"game": encode(game), "score": encode(score), "controls": controls, "version": v},
+            )
             transaction.create(doc.collection("events").document(f"{v:08d}"), event)
             transaction.create(operation, {"fingerprint": identity, "response": response})
             return response
@@ -283,7 +404,16 @@ class FirestoreRooms:
             score = decode(state_data["score"])
             if game is not None and not isinstance(game, GameState):
                 raise StoreError(503, "Game state corrupted")
-            return seat_view(room, game, score, uid, room["version"], owner=owner)
+            return seat_view(
+                room,
+                game,
+                score,
+                uid,
+                room["version"],
+                owner=owner,
+                controls=state_data.get("controls"),
+                now_ms=self.now_ms(),
+            )
         raise StoreError(409, "Room updated during read; retry")
 
     def events(self, room_id: str, uid: str, limit: int = 30, *, owner: bool = False) -> dict:

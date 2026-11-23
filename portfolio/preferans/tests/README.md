@@ -23,3 +23,8 @@ The domain's `conftest.py` temporarily supplies a test-only source path until PR
 control hints. `frontend/e2e/preferans-ui.ru.spec.ts` validates UI action guards,
 immutable hand sorting and the public response contract. Live three-browser
 Firebase emulator UAT is still mandatory: `docs/PR05_UAT.ru.md`.
+
+
+## PR 6 accounting/control tests
+
+`test_game_controls.py` tests undo of the last bid/card, rejection and vote timeout, duplicate counter, 180-second boundaries, two-period penalties, disconnection pause/rejoin, numerically bounded presets, admin compensation, finalized-game immutability, audit redaction and private snapshots with a fake Firestore and injected server clock. `frontend/e2e/preferans-controls.ru.spec.ts` tests the client action guard for pauses and undo votes. Full Firebase emulator and 3-client UAT are required before production (`docs/PR06_UAT.ru.md`).

@@ -11,6 +11,7 @@ from preferans.domain.auction import (
 from preferans.domain.cards import Card
 from preferans.domain.game import GameState, Phase, legal_play_cards
 from preferans.domain.ledger import ScoreState
+from preferans.online.controls import public_controls
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -35,6 +36,8 @@ def seat_view(
     version: int,
     *,
     owner: bool = False,
+    controls: dict | None = None,
+    now_ms: int = 0,
 ) -> dict:
     seats = room["seats"]
     my_seat = seats.index(uid) if uid in seats else None
@@ -46,6 +49,7 @@ def seat_view(
         "my_seat": my_seat,
         "room_admin": owner or uid == room["admin_uid"],
         "game_id": room.get("game_id"),
+        "controls": public_controls(controls or {}, now_ms, my_seat),
     }
     if state is None:
         return result

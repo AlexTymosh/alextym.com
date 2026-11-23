@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import {
-  ApiError, createRoom, invitation, joinRoom, newKey, roomView,
+  ApiError, adjustRoom, createRoom, invitation, joinRoom, newKey, roomView,
   sendCommand, settleRoom, startRoom,
 } from "./room-client";
 import {
@@ -12,6 +12,7 @@ import {
   type Card, type CommandAction, type RoomInvitation, type RoomView,
 } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
+import { PreferansControls } from "./PreferansControls.ru";
 
 type Mutation = { label: string; run: () => Promise<unknown> };
 const seatNames = ["Игрок 1", "Игрок 2", "Игрок 3"];
@@ -120,6 +121,11 @@ function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, s
   onStart: () => void; onSettle: () => void;
 }) {
   const myTurn = allowedToAct(view);
+  if (view.status === "playing" && (view.controls?.undo || view.controls?.paused)) {
+    return <section className={styles.actionPanel}><h3>Игра приостановлена</h3>
+      <p>Ожидаем голосование или восстановление соединения. Ходить сейчас нельзя.</p>
+    </section>;
+  }
   const bids = view.phase === "auction" ? view.legal_bids ?? [] : view.legal_contracts ?? [];
   const chosenBid = bids.find(b => JSON.stringify(b) === selectedBid) ?? bids[0];
   const chooseBid = (action: "bid" | "declare") => {
@@ -280,7 +286,7 @@ export function PreferansGame() {
         }
         setOnline(true);
         errors = 0;
-        nextMs = viewRef.current?.status === "playing" ? 3_000 : 6_000;
+        nextMs = viewRef.current?.status === "playing" ? 8_000 : 12_000;
       } catch (error) {
         if (stopped) return;
         if (error instanceof ApiError && error.status === 404 && !viewRef.current) {
@@ -300,7 +306,7 @@ export function PreferansGame() {
             return;
           }
         }
-        nextMs = Math.min(30_000, 3_000 * 2 ** Math.min(errors, 4));
+        nextMs = Math.min(30_000, 8_000 * 2 ** Math.min(errors, 3));
       } finally {
         if (!stopped) {
           timer = setTimeout(tick, document.visibilityState === "hidden" ? Math.max(15_000, nextMs) : nextMs);
@@ -310,6 +316,29 @@ export function PreferansGame() {
     void tick();
     return () => { stopped = true; if (timer) clearTimeout(timer); };
   }, [roomId, pollKey, updateView]);
+
+  // Presence leases are server-persisted. A stale lease conservatively pauses a counter.
+  // No browser clock can apply a financial penalty or decide who is online.
+  useEffect(() => {
+    if (!roomId || view?.my_seat === null || view?.my_seat === undefined || view?.status !== "playing") return;
+    let stopped = false;
+    async function heartbeat() {
+      if (stopped) return;
+      const current = viewRef.current;
+      if (!current || current.status !== "playing") return;
+      try {
+        await sendCommand(current.room_id, newKey(), current.version, "pulse", {});
+        if (!stopped) setPollKey(value => value + 1);
+      } catch (error) {
+        // Other players can update the room between our view and heartbeat.
+        // The next ordinary poll fetches the new version; never guess it here.
+        if (!stopped && error instanceof ApiError && error.status === 409) setPollKey(v => v + 1);
+      }
+    }
+    void heartbeat();
+    const interval = setInterval(() => { void heartbeat(); }, 45_000);
+    return () => { stopped = true; clearInterval(interval); };
+  }, [roomId, view?.game_id, view?.my_seat, view?.status]);
 
   useEffect(() => {
     setSelected([]); setSelectedBid("");
@@ -369,6 +398,13 @@ export function PreferansGame() {
     const token = newKey();
     const routes = [...passoutRoutes];
     void mutate("расчёт раздачи", () => settleRoom(view.room_id, token, view.version, regularRoute, routes));
+  };
+  const adjust = (value: { field: "pool" | "hill" | "vist"; seat: number;
+    against: number | null; delta: number; reason: string }) => {
+    if (!view) return;
+    const token = newKey();
+    void mutate("корректировка расчёта", () =>
+      adjustRoom(view.room_id, token, view.version, value));
   };
   const chosenCards = useMemo(() => {
     const all = [...(view?.hand ?? []), ...(view?.phase === "discard" && view.declarer === view.my_seat ? view.widow ?? [] : [])];
@@ -471,6 +507,7 @@ export function PreferansGame() {
             selectedCard={selectedCard} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
             passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
             onStart={start} onSettle={settle} />
+          <PreferansControls view={view} busy={busy} command={command} adjust={adjust} />
           <ScoreBoard view={view} />
         </>}
       </div>
@@ -479,11 +516,11 @@ export function PreferansGame() {
           <h2>Правила партии</h2>
           <p>Ставка в торговле — минимальная. После прикупа заказчик объявляет окончательный контракт.</p>
           <p>В свой ход доступны только действия и карты, разрешённые сервером. Ходы подтверждаются отдельно.</p>
-          <p className={styles.subtle}>Отмена хода голосованием и таймеры появятся на этапе PR 6.</p>
+          <p className={styles.subtle}>Для отмены последнего хода нужны два согласия. Счётчик ставит соперник; задержка и штраф подтверждаются сервером.</p>
         </section>
         <section className={styles.panel}>
           <h2>Подключение</h2>
-          <p>Состояние обновляется примерно каждые 3 секунды во время игры. После разрыва связи текущая партия восстанавливается по коду комнаты.</p>
+          <p>Состояние обновляется примерно каждые 8 секунд во время игры. После разрыва связи текущая партия восстанавливается по коду комнаты.</p>
           <p className={styles.subtle}>Не передавай ссылку посторонним. Сам по себе код не предоставляет доступ без аккаунта и гранта.</p>
           {view?.phase === "auction" && view.high_bid && <p>Лидирует: <strong>{bidLabel(view.high_bid)}</strong></p>}
           {view?.widow && view.widow.length > 0 && <p>Открытый прикуп: <strong>{view.widow.map(cardLabel).join(" ")}</strong></p>}

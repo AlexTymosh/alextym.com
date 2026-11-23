@@ -3,7 +3,7 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.4 / 2026-11-23
+**Version:** 1.5 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (verified 2026-11-23)
@@ -11,19 +11,19 @@
 - **PR 1** [#268](https://github.com/AlexTymosh/alextym.com/pull/268): merged `e7a2a6d`.
 - **PR 2** [#269](https://github.com/AlexTymosh/alextym.com/pull/269): merged `59c60cd7`.
 - **PR 3** [#270](https://github.com/AlexTymosh/alextym.com/pull/270): merged `9d46a8fdcc4d6e932aa788e23a8918dfc6f64939`.
-- **Current PR 4:** `feat/preferans-secure-rooms` — authenticated FastAPI room API, Firestore transactions, BFF, safe projections, idempotency.
+- **PR 4** #271: merged `622d1831`; **PR 5** #272: merged `595f8b7f`.
+- **Current PR 6:** `feat/preferans-game-controls` — server timers, two-vote undo, private snapshots, audited corrections and numeric policy.
 - **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
 - **Gate:** `PREFERANS_ROOMS_ENABLED=false` by default; no production game enabled, no client Firestore rules changed.
 - **Testing:** author sandbox Python tests only. Local full `task ci`, hosted GitHub CI and Firebase emulator integration remain unverified until user executes them.
 
-## 2. Next action (PR 4)
+## 2. Next action (PR 6)
 
-1. Apply the reviewed ZIP on a fresh branch from `main` after #270; do not overwrite user files.
-2. Run `uv lock` in backend, include `backend/uv.lock` in commit; format and test; run all `task ci` checks.
-3. Commit code in two stages (domain/rooms and host/BFF wiring), then docs/testing; push and manually open PR.
-4. Verify all GitHub CI jobs, Docker installation and Firebase Auth/Firestore emulator against real transactions.
-5. **Do not enable** new room API in production before direct-Render authorization, three-browser privacy, idempotency and reconnect UAT pass.
-6. After squash merge start PR 5 for the actual responsive three-player table UI.
+1. Apply the PR6 package on a fresh branch from merged PR #272, after preflight.
+2. Format Python, run `task ci` and review the exact code diff.
+3. Make three scoped commits (server/tests, frontend, documentation) and manually open PR #273 or the next assigned number.
+4. Confirm all GitHub CI jobs before squash merge; keep feature flag off in production.
+5. Run three-user Auth/Firestore emulator UAT, direct Render denial checks and quota measurement before enabling in production.
 
 ## 3. Decisions not to revisit without evidence
 
@@ -55,9 +55,9 @@
 | 1 | foundation | Registration, guarded shell, docs | MERGED | PR #268, `e7a2a6d` |
 | 2 | engine | Pure Python auction, cards, play | MERGED | PR #269, `59c60cd7`, CI green |
 | 3 | scoring | Ledger, rulesets, golden fixtures | MERGED | PR #270 `9d46a8f` |
-| 4 | secure-rooms | Auth + Firestore + realtime spike | IN DEVELOPMENT | PR 4 package; CI pending |
-| 5 | game-ui | Full three-player table/UI | PLANNED | — |
-| 6 | game-controls | Timer, votes, admin adjustments | PLANNED | — |
+| 4 | secure-rooms | Auth + Firestore + realtime spike | MERGED | PR #271 `622d1831` |
+| 5 | game-ui | Full three-player table/UI | MERGED | PR #272 `595f8b7f` |
+| 6 | game-controls | Timers, votes, audited adjustments | IN DEVELOPMENT | PR 6 package; full CI pending |
 | 7 | history-ranking | Stats, ranking, graphs | PLANNED | — |
 | 8 | media | WebRTC, consent, local recording, interior | PLANNED | — |
 | 9 | release | Security/performance/regression/documentation | PLANNED | — |
@@ -112,3 +112,12 @@ Never mark a PR as merged, deployed, tested or complete based only on code appea
 - **Required production gates:** actual Firebase Auth/Firestore emulator three-user test, signed auth/grant isolation including direct Render, and `task ci` + all five GitHub jobs. No claim of live multiplayer readiness without these tests.
 - **New API:** Test/Admin-only invitation envelope exposes lobby occupancy/version but no UID or private state.
 - **PR 6** remains planned for timer, undo voting, and audited corrections; **PR 8** for WebRTC media.
+
+## PR 6 checkpoint (2026-11-23)
+
+- **PR 5** [#272](https://github.com/AlexTymosh/alextym.com/pull/272) merged to `main` at `595f8b7f251832c912cc3fab524fe63d6a216188` on 2026-11-23 14:29 UTC. PR 1–5 are now merged.
+- **Active PR 6:** `feat/preferans-game-controls`, server-clock counter + auto repeat, two-person undo votes, private pre-move checkpoint, heartbeat-based conservative pause, numeric lobby policy and audited corrections.
+- **Tests in isolated author fixture:** 280 Preferans Python tests pass, TypeScript source typecheck with temporary stubs passes, compileall passes. Real CI, real Firestore transactions and 3-user production UAT are NOT verified.
+- **Storage:** existing deny-all client Firestore rules unchanged; all controls in `private/current`, append-only nonsecret room events. Public view is explicitly projected, not serialized from the hidden snapshot.
+- **Limitations:** heartbeat detection cannot instantly prove disconnect, no full historical numerical ruleset editor, unintentional card exposure vote and manual reconciliation of specific `ledger_entry_id` are deferred. See `docs/PR06_GAME_CONTROLS.ru.md`.
+- **Remaining:** PR 7 (immutable history/medals/rankings); PR 8 (opt-in WebRTC + local recording + nostalgic backdrop); PR 9 (security, offline fidelity, Firestore quota, performance/accessibility/UAT and release).

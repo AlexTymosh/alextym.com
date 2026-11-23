@@ -12,3 +12,8 @@ when `PREFERANS_ROOMS_ENABLED=true`; otherwise it keeps the informational shell.
 All actions go to the existing protected Next.js BFF; there is no direct browser
 Firestore SDK access. No persistent storage of private card order or hand data.
 See `../docs/PR05_GAME_UI.ru.md` and `../docs/PR05_UAT.ru.md`.
+
+
+## PR 6 game controls
+
+`PreferansControls.ru.tsx` provides an accessible undo/counter/adjustment panel and a numeric lobby policy editor. The client sends `pulse` heartbeats while playing, displays the **server-issued** countdown and does not calculate or apply financial penalties. All mutations go through the existing protected BFF with idempotency and current versions. See `../docs/PR06_GAME_CONTROLS.ru.md` and `../docs/PR06_UAT.ru.md`. HTTP-based offline presence is approximate, not an instant presence guarantee.
