@@ -3,7 +3,7 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.3 / 2026-11-23
+**Version:** 1.4 / 2026-11-23
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
 ## 1. Current status (verified 2026-11-23)
@@ -104,3 +104,11 @@ Never mark a PR as merged, deployed, tested or complete based only on code appea
 - Exact formulas and explicit rule assumptions: `docs/SCORING_ENGINE.ru.md`.
 - Three new scoring test files run through the existing backend test directory.
 - Pending: user-run `task ci`, GitHub review, PR URL, merge hash, confirmation of open rules.
+
+## PR 5 checkpoint (2026-11-23)
+
+- **PR 4** [#271](https://github.com/AlexTymosh/alextym.com/pull/271) was squash-merged into `main` at `622d1831d8ccc40e4dea701da0abc4a6ce78429d`.
+- **Active PR 5:** `feat/preferans-game-ui`, accessible lobby + invite/join, 3-seat table, complete action controls, restricted projections, polling/reconnect, scoring panel and responsive card sorting.
+- **Required production gates:** actual Firebase Auth/Firestore emulator three-user test, signed auth/grant isolation including direct Render, and `task ci` + all five GitHub jobs. No claim of live multiplayer readiness without these tests.
+- **New API:** Test/Admin-only invitation envelope exposes lobby occupancy/version but no UID or private state.
+- **PR 6** remains planned for timer, undo voting, and audited corrections; **PR 8** for WebRTC media.

@@ -220,7 +220,7 @@
 - **Тесты:** Firebase emulators (Auth + Firestore), threat matrix, chaos/concurrent commands, direct backend 401/403, view masking, N+1 reads, disconnect/restart.
 - **Готовность:** трое могут безопасно войти в одну комнату, состояние после перезапуска не потеряно, правила/снимки авторитетны на сервере.
 
-### PR 5 — Playable three-player responsive UI
+### PR 5 — Playable three-player responsive UI (active after #271)
 
 - **Ветка:** `feat/preferans-game-ui`.
 - **Коммит 1:** `feat(preferans): build room lobby, bidding and contract screens` — вход/места/правила/аукцион 2 клика/«здесь», pending undo, final order.
