@@ -1,12 +1,12 @@
 # Zaporizhzhia Preferans — portfolio module
 
-**Status: PR 1–7 merged. PR 8 adds feature-gated voluntary WebRTC and local recording. Production media remains disabled pending device/security UAT.**
+**Status: PR 1–8 merged. PR 9 adds release-candidate privacy and security hardening. Production activation remains blocked pending real UAT and outstanding house-rule workflows.**
 
 - Project ID: `preferans`
 - Private route: `/portfolio/preferans`
 - Feature-gated API prefix (mounted): `/api/preferans`
 - Public portfolio card: disabled (`catalog.visible=false`)
-- PR 1–7: merged as #268–#274; PR 8 branch: `feat/preferans-media`
+- PR 1–8: merged as #268–#275; PR 9 branch: `feat/preferans-release`
 
 ## Boundaries
 
@@ -59,3 +59,7 @@ The game now records one immutable result and three atomic ranking updates when 
 ## PR 8 communication and nostalgia
 
 Private three-peer WebRTC with separate camera/microphone controls, recipient-scoped Firestore SDP/ICE signalling, unanimous recording votes and initiator-only local recording are implemented behind separate feature flags, off by default. Generated unidentifiable apartment artwork is bundled as `nostalgic-room.webp`; no private photographs are used. Before enabling in production follow `docs/PR08_MEDIA.ru.md` and `docs/PR08_UAT.ru.md` and resolve WebRTC NAT, recording revocation and Firestore quota/storage risks.
+
+## PR 9 release candidate and operator checklist
+
+The media recorder now stops when browser consent can no longer be confirmed, signaling has explicit expiry and uses dedicated `preferans_media` / `preferans_media_ops` collections. For strict £0, **do not activate paid managed Firestore TTL**; the explicit maintenance script is `backend/scripts/cleanup_media.py` and requires an operator. `docs/PR09_RELEASE_CANDIDATE.ru.md` contains staging flags, storage cost estimates and rollback; `docs/PR09_UAT.ru.md` is the mandatory three-user acceptance checklist. Project flags and catalog visibility remain off until UAT and Owner sign-off. Not all historical house-rule workflows are implemented.
