@@ -13,6 +13,7 @@ from preferans.domain.auction import BidKind, RuleViolation
 from preferans.domain.game import GameState, Phase
 from preferans.domain.ledger import EntryKind, LedgerEntry, ScoreState
 from preferans.online.codec import decode, encode
+from preferans.online.pause_clock import reasons, transition
 
 TIMER_MS = 180_000
 VOTE_MS = 120_000
@@ -102,6 +103,8 @@ def record_candidate(
 
 def request_undo(control: dict, actor: int, version: int, now_ms: int, reason: object) -> dict:
     candidate = control.get("candidate")
+    if control.get("paused_at") is not None:
+        raise ControlError(409, "Game is paused")
     if control.get("vote") or not candidate or candidate["seat"] != actor:
         raise ControlError(409, "Only the author of the latest reversible move may request undo")
     note = _text(reason)
@@ -127,6 +130,8 @@ def vote_undo(
     vote = control.get("vote")
     if not vote:
         raise ControlError(409, "No pending undo vote")
+    if control.get("paused_at") is not None or vote.get("deadline_ms") is None:
+        raise ControlError(409, "Undo vote is paused")
     if now_ms >= vote["deadline_ms"]:
         raise ControlError(409, "Undo vote expired")
     if actor == vote["requester"] or str(actor) in vote["votes"] or type(approve) is not bool:
@@ -153,7 +158,7 @@ def vote_undo(
 def _end_vote(control: dict, now_ms: int) -> None:
     control["vote"] = None
     timer = control.get("timer")
-    if timer is not None and timer.get("deadline_ms") is None:
+    if timer is not None and timer.get("deadline_ms") is None and control.get("paused_at") is None:
         timer["deadline_ms"] = now_ms + timer.pop("remaining_ms", 0)
 
 
@@ -200,7 +205,12 @@ def tick_controls(
     """
     events: list[dict] = []
     vote = control.get("vote")
-    if vote and now_ms >= vote["deadline_ms"] and control.get("paused_at") is None:
+    if (
+        vote
+        and control.get("paused_at") is None
+        and isinstance(vote.get("deadline_ms"), int)
+        and now_ms >= vote["deadline_ms"]
+    ):
         _end_vote(control, now_ms)
         events.append({"action": "undo_expired", "data": {"kind": vote["kind"]}})
     timer = control.get("timer")
@@ -311,6 +321,7 @@ def public_controls(control: dict, now_ms: int, seat: int | None) -> dict:
     vote = control.get("vote")
     return {
         "paused": control.get("paused_at") is not None,
+        "pause_reasons": sorted(reasons(control) | ({"undo_vote"} if vote else set())),
         "counter": (
             {
                 k: timer[k]
@@ -329,6 +340,7 @@ def public_controls(control: dict, now_ms: int, seat: int | None) -> dict:
                 "reason": vote["reason"],
                 "votes": vote["votes"].copy(),
                 "can_vote": seat is not None
+                and control.get("paused_at") is None
                 and seat != vote["requester"]
                 and str(seat) not in vote["votes"],
             }
@@ -359,16 +371,7 @@ def reconcile(
     known = [seen + STALE_MS for seen in presence if seen is not None and seen + STALE_MS < now_ms]
     frozen_at = min(known) if known else now_ms
     score, events = tick_controls(control, game, score, frozen_at, deal_id)
-    control["paused_at"] = frozen_at
-    if control.get("timer"):
-        timer = control["timer"]
-        if timer.get("deadline_ms") is not None:
-            timer["remaining_ms"] = max(0, timer["deadline_ms"] - frozen_at)
-            timer["deadline_ms"] = None
-    if control.get("vote"):
-        vote = control["vote"]
-        vote["remaining_ms"] = max(0, vote["deadline_ms"] - frozen_at)
-        vote["deadline_ms"] = None
+    transition(control, reasons(control) | {"connection_lost"}, now_ms, freeze_at=frozen_at)
     events.append({"action": "room_paused", "data": {"reason": "heartbeat_stale"}})
     return score, events
 
@@ -379,12 +382,8 @@ def pulse(control: dict, seat: int, now_ms: int) -> dict:
     if control.get("paused_at") is not None and all(
         seen is not None and now_ms - seen <= STALE_MS for seen in control["presence"]
     ):
-        control["paused_at"] = None
-        if control.get("timer") is not None and control["timer"].get("deadline_ms") is None:
-            control["timer"]["deadline_ms"] = now_ms + control["timer"].pop("remaining_ms", 0)
-        if control.get("vote") is not None and control["vote"].get("deadline_ms") is None:
-            control["vote"]["deadline_ms"] = now_ms + control["vote"].pop("remaining_ms", 0)
-        return {"resumed": True}
+        changed = transition(control, reasons(control) - {"connection_lost"}, now_ms)
+        return {"resumed": changed and control.get("paused_at") is None}
     return {"resumed": False}
 
 

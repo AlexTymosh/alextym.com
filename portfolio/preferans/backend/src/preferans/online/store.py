@@ -12,6 +12,7 @@ import json
 import re
 import time
 import uuid
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Any
 
@@ -35,9 +36,12 @@ from preferans.online.controls import (
     request_undo,
     start_counter,
     stop_counter,
+    tick_controls,
     vote_undo,
 )
 from preferans.online.views import seat_view
+from preferans.online.pause_clock import synchronize
+from preferans.online.realtime import CHECKPOINT_MS, HubError, enabled as realtime_enabled, hub
 
 ROOM_ID = re.compile(r"^[0-9a-f]{32}$")
 
@@ -150,6 +154,10 @@ class FirestoreRooms:
     def command(
         self, room_id: str, uid: str, token: str, expected_version: int, action: str, args: dict
     ) -> dict:
+        if realtime_enabled() and action == "pulse":
+            if args:
+                raise StoreError(422, "Unexpected pulse arguments")
+            return self.realtime_pulse(room_id, uid)
         return self._mutate(room_id, uid, token, expected_version, action, args, False)
 
     def settle(
@@ -161,6 +169,149 @@ class FirestoreRooms:
         self, room_id: str, uid: str, token: str, expected_version: int, args: dict, owner: bool
     ) -> dict:
         return self._mutate(room_id, uid, token, expected_version, "score_adjust", args, owner)
+
+    def _realtime_controls(self, room, controls, game, score, now):
+        # Read presence + loss generation atomically. This is process-local, not a DB read.
+        with hub.lock:
+            presence = hub.presence(room["id"], room["seats"], now)
+            generation, interrupted = hub.generation(room["id"])
+        events = synchronize(controls, presence, hub.epoch, now, interrupted=interrupted)
+        if room["status"] == "playing":
+            score, expired = tick_controls(controls, game, score, now, room.get("game_id"))
+            events.extend(expired)
+        return score, events, generation
+
+    def _publish_realtime(self, room, game, score, controls, now, generation):
+        # Only after commit success, never inside the retryable transaction body.
+        # Publication failure must not change an already committed HTTP result.
+        import os
+
+        try:
+            owner_uid = os.getenv("PORTFOLIO_LAB_OWNER_UID", "").strip()
+            views = {
+                uid: seat_view(
+                    room,
+                    game,
+                    score,
+                    uid,
+                    room["version"],
+                    owner=uid == owner_uid,
+                    controls=controls,
+                    now_ms=now,
+                )
+                for uid in room["seats"]
+                if uid
+            }
+            hub.publish(room["id"], views, now)
+            hub.handled(room["id"], generation)
+        except Exception:
+            # Next authenticated view/revalidation can recover. No private state logged.
+            return
+
+    def realtime_pulse(self, room_id: str, uid: str) -> dict:
+        # Legacy HTTP fallback acknowledges presence, not an ordinary game mutation.
+        # The host still checks identity/grant on every request.
+        with hub.commit_lock:
+            view = self.view(room_id, uid)
+            if view.get("my_seat") is None:
+                raise StoreError(403, "Seat required")
+            now = self.now_ms()
+            try:
+                hub.fallback(room_id, uid, view, now)
+            except HubError as exc:
+                raise StoreError(503, "Realtime unavailable") from exc
+            if hub.due(room_id, now):
+                signature = tuple(s == "online" for s in hub.statuses(room_id, now))
+                ok = False
+                try:
+                    result = self.sync_realtime(room_id, uid)
+                    ok = True
+                finally:
+                    hub.synced(room_id, self.now_ms(), ok, signature)
+                return result
+            return {"room_id": room_id, "version": view["version"], "status": view["status"]}
+
+    def sync_realtime(self, room_id: str, uid: str) -> dict:
+        """Persist only meaningful pause/clock transitions or rare active-clock checkpoints."""
+        doc = self._room(room_id)
+        private = doc.collection("private").document("current")
+        tx = self.db.transaction()
+        captured = None
+        observed_generation = 0
+
+        @self.fs.transactional
+        def commit(transaction):
+            nonlocal captured, observed_generation
+            captured = None
+            observed_generation, _ = hub.generation(room_id)
+            with hub.lock:
+                hub.metrics["sync_reads"] += 1
+            room = _get(transaction, doc)
+            if room is None:
+                raise StoreError(404, "Not found")
+            _member(room, uid)
+            result = {"room_id": room_id, "version": room["version"], "status": room["status"]}
+            if room["status"] not in {"playing", "between", "awaiting_settlement"}:
+                return result
+            with hub.lock:
+                hub.metrics["sync_reads"] += 1
+            record = _get(transaction, private)
+            if record is None or record.get("version") != room["version"]:
+                raise StoreError(503, "Game state unavailable")
+            game = decode(record["game"]) if record["game"] is not None else None
+            score = decode(record["score"])
+            if not isinstance(score, ScoreState):
+                raise StoreError(503, "Scoring state unavailable")
+            controls = record.get("controls") or fresh()
+            now = self.now_ms()
+            last = controls.get("rt_checkpoint_ms")
+            try:
+                score, events, generation = self._realtime_controls(
+                    room, controls, game, score, now
+                )
+            except ControlError as exc:
+                raise StoreError(exc.status, exc.detail) from exc
+            active_clock = any(
+                isinstance((controls.get(key) or {}).get("deadline_ms"), int)
+                for key in ("timer", "vote")
+            )
+            checkpoint = active_clock and (not isinstance(last, int) or now - last >= CHECKPOINT_MS)
+            writes = 0
+            for event in events:
+                room["version"] += 1
+                sequence = room["version"]
+                transaction.create(
+                    doc.collection("events").document(f"{sequence:08d}"),
+                    {"sequence": sequence, "seat": None, **event},
+                )
+                writes += 1
+            if events:
+                transaction.set(doc, room)
+                writes += 1
+            if events or checkpoint:
+                transaction.set(
+                    private,
+                    {
+                        "game": encode(game),
+                        "score": encode(score),
+                        "controls": controls,
+                        "version": room["version"],
+                    },
+                )
+                writes += 1
+            with hub.lock:
+                hub.metrics["sync_writes"] += writes
+            captured = (room, game, score, controls, now, generation)
+            result["version"] = room["version"]
+            return result
+
+        with hub.commit_lock:
+            result = commit(tx)
+            if captured is not None:
+                self._publish_realtime(*captured)
+            else:
+                hub.handled(room_id, observed_generation)
+            return result
 
     def _mutate(
         self,
@@ -184,9 +335,15 @@ class FirestoreRooms:
         private = doc.collection("private").document("current")
         operation = doc.collection("operations").document(op_id)
         tx = self.db.transaction()
+        use_rt = realtime_enabled()
+        captured = None
+        generation = 0
 
         @self.fs.transactional
         def commit(transaction):
+            nonlocal captured, generation
+            captured = None
+            generation = 0
             # All Firestore reads precede any writes; required for real transactions.
             previous = _get(transaction, operation)
             room = _get(transaction, doc)
@@ -219,7 +376,16 @@ class FirestoreRooms:
             now = self.now_ms()
             auto_events = []
             # Reconcile timers at the same authoritative timestamp as this write.
-            if room["status"] == "playing":
+            if use_rt and room["status"] in {"playing", "between", "awaiting_settlement"}:
+                try:
+                    score, auto_events, generation = self._realtime_controls(
+                        room, controls, game, score, now
+                    )
+                except ControlError as exc:
+                    raise StoreError(exc.status, exc.detail) from exc
+                if controls.get("paused_at") is not None and action not in {"score_adjust"}:
+                    raise StoreError(409, "Game is paused for a connection or shared reason")
+            elif room["status"] == "playing":
                 try:
                     score, auto_events = reconcile(controls, game, score, now, room.get("game_id"))
                 except ControlError as exc:
@@ -254,6 +420,11 @@ class FirestoreRooms:
                 controls["vote"] = None
                 controls["candidate"] = None
                 event_data = {"dealer": dealer, "game_id": room["game_id"]}
+                if use_rt:
+                    score, events, generation = self._realtime_controls(
+                        room, controls, game, score, now
+                    )
+                    auto_events.extend(events)
             elif action == "settle":
                 if room["status"] != "awaiting_settlement" or not isinstance(game, GameState):
                     raise StoreError(409, "No completed deal to settle")
@@ -400,9 +571,19 @@ class FirestoreRooms:
             )
             transaction.create(doc.collection("events").document(f"{v:08d}"), event)
             transaction.create(operation, {"fingerprint": identity, "response": response})
+            if use_rt:
+                captured = (room, game, score, controls, now, generation)
             return response
 
-        return commit(tx)
+        with hub.commit_lock if use_rt else nullcontext():
+            result = commit(tx)
+            if captured is not None:
+                with hub.lock:
+                    hub.metrics["mutation_commits"] += 1
+                    hub.metrics["mutation_min_reads"] += 3
+                    hub.metrics["mutation_min_writes"] += 4
+                self._publish_realtime(*captured)
+            return result
 
     def view(
         self, room_id: str, uid: str, *, owner: bool = False, since_version: int | None = None
