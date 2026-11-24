@@ -1,13 +1,15 @@
 /** Bounded, versioned room transport. HTTP remains the only game-command channel. */
 import { isRoomView, ROOM_ID_RE, type RoomView } from "./game-model.ru";
 
+import { isMediaEnvelope, parseLiveFrame, type LiveFrame, type LiveSender } from "./live-media-model";
+
 export const REALTIME_PROTOCOL = 1;
 export const HEARTBEAT_MS = 15_000;
 export const STALE_MS = 38_000;
 export type Presence = "online" | "reconnecting" | "offline";
 
 type Frame =
-  | { type: "snapshot"; protocol: 1; view: RoomView; presence: Presence[]; server_now_ms: number }
+  | { type: "snapshot"; protocol: 1; view: RoomView; presence: Presence[]; server_now_ms: number; live_media?: boolean }
   | { type: "presence"; protocol: 1; presence: Presence[]; server_now_ms: number }
   | { type: "pong"; protocol: 1; server_now_ms: number };
 
@@ -49,6 +51,8 @@ export type RealtimeCallbacks = {
   onReady: (ready: boolean) => void;
   onPresence: (value: Presence[]) => void;
   onDenied: () => void;
+  onMediaTransport?: (sender: LiveSender | null) => void;
+  onMediaFrame?: (frame: LiveFrame) => void;
 };
 
 /** One socket, one heartbeat and one retry per mounted room. No tokens in URLs. */
@@ -64,6 +68,8 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
   let attempts = 0;
   let lastSeen = 0;
   let latestVersion = -1;
+  let mediaBound = false;
+  const releaseMedia = () => { if (mediaBound) callbacks.onMediaTransport?.(null); mediaBound = false; };
   const stopTimers = () => {
     if (heartbeat) clearInterval(heartbeat);
     if (startup) clearTimeout(startup);
@@ -116,6 +122,12 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
       };
       ws.onmessage = event => {
         if (disposed || socket !== ws) return;
+        if (isMediaEnvelope(event.data)) {
+          // Optional channel cannot cause a game socket disconnect on a bad payload.
+          const media = parseLiveFrame(event.data, seat);
+          if (mediaBound && media) callbacks.onMediaFrame?.(media);
+          return;
+        }
         const frame = parseRealtimeFrame(event.data, room, seat);
         if (!frame) { ws.close(); return; }
         lastSeen = Date.now();
@@ -127,12 +139,20 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
           callbacks.onView(frame.view);
           callbacks.onPresence(frame.presence);
           callbacks.onReady(true);
+          if (frame.live_media === true && callbacks.onMediaTransport && !mediaBound) {
+            mediaBound = true;
+            callbacks.onMediaTransport(message => {
+              if (!mediaBound || disposed || socket !== ws || ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 128_000) return false;
+              try { const wire = JSON.stringify({...message, protocol: REALTIME_PROTOCOL}); if (wire.length > 16_384) return false; ws.send(wire); return true; }
+              catch { return false; }
+            });
+          } else if (frame.live_media !== true && mediaBound) releaseMedia();
         } else if (frame.type === "presence") callbacks.onPresence(frame.presence);
       };
       ws.onerror = () => { if (!disposed && socket === ws) ws.close(); };
       ws.onclose = event => {
         if (socket !== ws) return;
-        socket = null; stopTimers();
+        socket = null; stopTimers(); releaseMedia();
         if (disposed) return;
         if ([4401, 4403].includes(event.code)) { failAccess(); return; }
         schedule();
@@ -142,6 +162,7 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
   }
   void start();
   return () => {
+    releaseMedia();
     disposed = true;
     if (retry) clearTimeout(retry);
     stopTimers(); abort?.abort();

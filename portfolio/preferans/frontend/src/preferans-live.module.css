@@ -1,0 +1,9 @@
+.panel { display:grid; gap:.5rem; min-width:0; font-size:.85rem; }
+.panel h3,.panel p { margin:0; }
+.buttons { display:flex; flex-wrap:wrap; gap:.4rem; }
+.tile { min-width:0; max-width:100%; display:flex; flex-direction:column; align-items:center; gap:.25rem; }
+.tile video { width:clamp(70px,10vw,150px); max-width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:.5rem; border:1px solid #d4b77a; background:#182e27; }
+.tile small { font-size:.64rem; text-align:center; color:#f4e8d1; }
+.tile audio { display:none; }
+.tile button { font-size:.72rem; min-height:32px; }
+@media(max-width:900px) and (orientation:landscape) { .tile video { width:clamp(55px,9vw,100px); } }
