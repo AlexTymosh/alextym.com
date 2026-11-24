@@ -1,8 +1,8 @@
 # Zaporizhzhia Preferans — Modernization Development Plan
 
-**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.6 · **Дата:** 24.11.2026
+**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.7 · **Дата:** 24.11.2026
 **Базовый `main` при анализе:** `93611d3ea7c67a5762888c6ed17bd146406d7d4c`.
-**Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 слит в main `9422f7a` (CI green по Owner). PR12 слит в main `d68cc1b` (CI green по Owner). PR13 A–C слит в main `8ad0e39` (CI green по Owner). PR13.D — отдельный кандидат `feat/preferans-live-media`; полный CI и real-device UAT ожидаются.
+**Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 слит в main `9422f7a` (CI green по Owner). PR12 слит в main `d68cc1b` (CI green по Owner). PR13 A–C слит в main `8ad0e39` (CI green по Owner). PR13.D и PR14.A слиты; main `50eddd4`, CI green по Owner. PR14.B1 — кандидат: единогласная перестановка мест до старта. Реальные UAT ожидаются.
 **Нормативный документ:** [MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md](MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md), далее MOD-TZ.
 **Проект:** `portfolio/preferans/`. Все пути ниже, кроме явно обозначенных host paths, относительно этой папки.
 

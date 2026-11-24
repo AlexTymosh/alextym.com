@@ -1,19 +1,8 @@
 # Preferans — session notes
 
-## Current candidate: PR14.A — technical finish and release acceptance
+Version 2.7 | 2026-11-24 | Project only.
 
-Base: `eab5354e6e1d92427a1f2254216f590ae7b2b667` (PR13.D merged; green CI reported by Owner).
-Branch: `feat/preferans-modernization-release`.
-
-- Implemented voluntary sheet discard and recipient-only offer/accept/refuse.
-- Reused the existing atomic result/ranking transaction; unfinished ledger is not settled.
-- Added terminal view and explicit UI confirmation; old offers expire with the deal.
-- Added pure tests, store integration tests, TS model checks and simulated 6h/8h hub tests.
-- Added offline release-evidence evaluator and acceptance documentation.
-- Isolated checks: 8 pure, 4 evidence and 2 simulated hub scenarios. Full repository CI and real-device/emulator/production acceptance pending.
-- No deployment, provider configuration changes, paid infrastructure or video recording.
-- Remaining: G02b, parts of G07, G08, real measurements and acceptance gates (G10).
-
-See `docs/PR14_RELEASE_ACCEPTANCE.ru.md`, `docs/MODERNIZATION_GAP_REGISTER.ru.md` and `docs/MODERNIZATION_DEVELOPMENT_PLAN.ru.md`.
-
-Next: apply candidate, run full checks, inspect diff, commit and review. Continue functional gaps and collect actual release evidence before enabling the new production capabilities.
+- PR10–13.D and PR14.A merged; inspected main `50eddd404fa5e320f04da58c942d13b426e9de71`. Owner reports green local CI. Hosted checks observed: seven success and frontend running at inspection; check final head before release. No verified production activation or real 6/8h device/provider evidence.
+- PR14.B1 candidate `feat/preferans-seat-swap`: unanimous swap of two occupied seats before the first deal, recipient/third-player consent, rejection preserves setup, successful swap resets readiness and retains selected dealer identity. Revokes old room tickets, leases, views and ephemeral media after commit; recoverable seat mismatch, fresh projection/reconnect, profile cache seat_revision. Existing ledger, admin UID, game rules and host guard unchanged. No automatic migration of legacy lobbies. No recording, billing or provider setting changes.
+- Local isolated evidence: 17 pure/hub Python cases (hub reconstructed from earlier overlays), 8 model assertions and ES5 strict compile, exact-context checks. Actual full checkout/transaction tests, hosted CI for candidate, real socket/browser/Emulator tests not run here. See `docs/PR14_SEAT_SWAP.ru.md`.
+- Next smallest task after Owner applies, tests, commits and merges: remaining G07 accidental reveal unanimous decisions (continue/redeal/penalty, preserve accounting/audit and pause invariants), then immutable punishment choices and G08 rules/archive. Read HOUSE_RULES and full specification before coding; no invented house rules. G10 real-device/core/media acceptance, 6/8h measurements and explicit release approval remain mandatory. Root SESSION_NOTES untouched. No remote changes by assistant.

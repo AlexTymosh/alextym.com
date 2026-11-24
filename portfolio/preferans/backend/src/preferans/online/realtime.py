@@ -216,6 +216,20 @@ class RealtimeHub:
             room.revision = version
         room.views[uid] = view
 
+    def invalidate_seats(self, room: str, at: int) -> None:
+        """After a committed lobby permutation, revoke every old seat binding."""
+        with self.lock:
+            for key in [k for k, t in self.tickets.items() if t.room == room]:
+                del self.tickets[key]
+            r = self.rooms.get(room)
+            if r is not None:
+                r.leases.clear()
+                r.views.clear()
+                r.live_media = LiveRelay()
+                r.loss_generation += 1
+                r.signature = None
+                r.touched = at
+
     def publish(self, room: str, views: dict[str, dict], at: int) -> None:
         with self.lock:
             r = self.rooms.get(room)

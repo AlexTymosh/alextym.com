@@ -25,8 +25,8 @@ function LobbyConfig({view,busy,command}: {view:RoomView;busy:boolean;command:(a
         {[0,1,2].map(seat=><option key={seat} value={seat}>Игрок {seat+1}</option>)}
       </select></label>
       <label className={styles.field}>Размер пули<input type="number" min={1} max={1000} value={target} onChange={e=>setTarget(e.target.value)}/></label>
-      <button type="button" disabled={busy||!valid||(dealer===setup.dealer&&numeric===setup.target)} onClick={()=>command("lobby_config",{dealer,target:numeric})}>Сохранить и сбросить готовность</button>
+      <button type="button" disabled={busy||Boolean(view.seat_swap)||!valid||(dealer===setup.dealer&&numeric===setup.target)} onClick={()=>command("lobby_config",{dealer,target:numeric})}>Сохранить и сбросить готовность</button>
     </div>}
-    {own!==null && <button type="button" disabled={busy||!full} className={styles.primary} onClick={()=>command("lobby_ready",{ready:!setup.ready[own]})}>{setup.ready[own]?"Отозвать готовность":"Подтверждаю состав, правила и готовность"}</button>}
+    {own!==null && <button type="button" disabled={busy||Boolean(view.seat_swap)||!full} className={styles.primary} onClick={()=>command("lobby_ready",{ready:!setup.ready[own]})}>{setup.ready[own]?"Отозвать готовность":"Подтверждаю состав, правила и готовность"}</button>}
   </section>;
 }

@@ -16,6 +16,7 @@ from preferans.online.deal_flow import projection as next_deal_projection
 from preferans.online.presentation import projection as presentation_projection
 from preferans.online.realtime import enabled as realtime_enabled
 from preferans.online.sheet_exit import current_offers
+from preferans.online.seat_swap import projection as swap_projection
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -55,6 +56,12 @@ def seat_view(
         "game_id": room.get("game_id"),
         "controls": public_controls(controls or {}, now_ms, my_seat),
     }
+    if my_seat is not None:
+        if "seat_revision" in room:
+            result["seat_revision"] = room["seat_revision"]
+        swap = swap_projection(room)
+        if swap is not None:
+            result["seat_swap"] = swap
     if room["status"] == "closed" and type(room.get("sheet_loser")) is int:
         # Do not reveal any remaining cards or advertise legal actions after a technical finish.
         result["sheet_loser"] = room["sheet_loser"]
