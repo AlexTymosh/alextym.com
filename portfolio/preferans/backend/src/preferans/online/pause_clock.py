@@ -27,16 +27,20 @@ def transition(control: dict, desired: set[str], at: int, *, freeze_at: int | No
     if not previous and desired:
         frozen = at if freeze_at is None else min(at, freeze_at)
         control["paused_at"] = frozen
-        for key in ("timer", "vote"):
+        for key in ("timer", "vote", "next_deal"):
             clock = control.get(key)
             if clock and isinstance(clock.get("deadline_ms"), int):
-                clock["remaining_ms"] = max(0, clock["deadline_ms"] - frozen)
+                remaining = max(0, clock["deadline_ms"] - frozen)
+                clock["remaining_ms"] = min(5_000, remaining) if key == "next_deal" else remaining
                 clock["deadline_ms"] = None
     elif previous and not desired:
         control["paused_at"] = None
         vote = control.get("vote")
         if vote and vote.get("deadline_ms") is None:
             vote["deadline_ms"] = at + vote.pop("remaining_ms", 0)
+        next_deal = control.get("next_deal")
+        if next_deal and not vote and next_deal.get("deadline_ms") is None:
+            next_deal["deadline_ms"] = at + next_deal.pop("remaining_ms", 5_000)
         timer = control.get("timer")
         if timer and not vote and timer.get("deadline_ms") is None:
             timer["deadline_ms"] = at + timer.pop("remaining_ms", 0)
@@ -72,7 +76,7 @@ def synchronize(
     current = reasons(control)
     if (
         (control.get("rt_epoch") != epoch or interrupted)
-        and (control.get("timer") or control.get("vote"))
+        and (control.get("timer") or control.get("vote") or control.get("next_deal"))
     ) or any(v is None for v in presence):
         if transition(control, current | {"connection_lost"}, at, freeze_at=checkpoint):
             events.append({"action": "room_paused", "data": {"reason": "connection_lost"}})

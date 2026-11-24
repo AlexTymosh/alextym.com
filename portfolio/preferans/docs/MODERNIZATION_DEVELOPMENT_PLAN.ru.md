@@ -1,8 +1,8 @@
 # Zaporizhzhia Preferans — Modernization Development Plan
 
-**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.2 · **Дата:** 24.11.2026
+**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.3 · **Дата:** 24.11.2026
 **Базовый `main` при анализе:** `93611d3ea7c67a5762888c6ed17bd146406d7d4c`.
-**Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 подготовлен как кандидат; review макета и интеграционный CI ожидаются.
+**Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 слит в main `9422f7a` (CI green по Owner). PR12 — кандидат, полный CI и UAT ожидаются.
 **Нормативный документ:** [MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md](MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md), далее MOD-TZ.
 **Проект:** `portfolio/preferans/`. Все пути ниже, кроме явно обозначенных host paths, относительно этой папки.
 
@@ -127,6 +127,8 @@ Next smallest deliverable / explicit stop condition:
 **Ветка:** `feat/preferans-game-interaction`
 **Цель:** перенести все действия в естественную игровую сцену, не менять формулы.
 **ТЗ:** §§6.4,8,9.1 (только контракт публичных snapshot),12–14.
+
+> PR12 candidate: см. [PR12_GAME_INTERACTION.ru.md](PR12_GAME_INTERACTION.ru.md). Автораздача работает при включённом realtime; legacy manual start сохранён.
 
 ### Срез 12.A — торговля и стадии
 

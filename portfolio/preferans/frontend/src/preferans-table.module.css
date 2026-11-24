@@ -85,3 +85,24 @@
   .roomLayout:not(.landscapeOnly) .projectMenu { flex-direction:row; flex-wrap:wrap; }
   .roomLayout:not(.landscapeOnly) .table { --side-w:31px; padding:.4rem; }
 }
+
+/* PR12: local, server-projection-driven actions and animation. */
+.bidPanel { display:grid; gap:.4rem; }
+.bidGroups,.bidSuits { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.3rem; }
+.bidGroups button,.bidSuits button { min-width:2.5rem; }
+.bidGroups button[aria-expanded="true"] { background:#ae8950; border-color:#f1cb87; color:#fff; }
+.table .decision .bidSuits button { font:700 1.2rem Georgia,serif; background:#f6eedc; color:#1e2823; }
+.table .decision .bidSuits button.redSuit { color:#a52c39; }
+.callBubble { color:#282e25; background:#e8d5aa; border-radius:.3rem; font-weight:700; padding:.16rem .45rem; }
+.table[data-dealing="true"] .rivalCard,.table[data-dealing="true"] .ownHand [data-card] { animation:preferansDeal .38s ease-out both; }
+.table[data-dealing="true"] .rivalCard:nth-child(n+3),.table[data-dealing="true"] .ownHand [data-hand-card]:nth-child(n+3) [data-card] { animation-delay:.13s; }
+.table[data-dealing="true"] .rivalCard:nth-child(n+5),.table[data-dealing="true"] .ownHand [data-hand-card]:nth-child(n+5) [data-card] { animation-delay:.26s; }
+.table[data-dealing="true"] .rivalCard:nth-child(n+7),.table[data-dealing="true"] .ownHand [data-hand-card]:nth-child(n+7) [data-card] { animation-delay:.39s; }
+.table[data-dealing="true"] .rivalCard:nth-child(n+9),.table[data-dealing="true"] .ownHand [data-hand-card]:nth-child(n+9) [data-card] { animation-delay:.52s; }
+@keyframes preferansDeal { from { opacity:.2; transform:translateY(-12px) scale(.8); } to { opacity:1; transform:none; } }
+.trickField[data-collecting] .tableCard { animation:preferansCollect .65s ease-in both; }
+.trickField[data-collecting="left"] { --collect-x:-75px; --collect-y:-20px; }
+.trickField[data-collecting="right"] { --collect-x:75px; --collect-y:-20px; }
+.trickField[data-collecting="bottom"] { --collect-x:0px; --collect-y:65px; }
+@keyframes preferansCollect { 0%,42% { opacity:1; transform:none; } 100% { opacity:0; transform:translate(var(--collect-x),var(--collect-y)) scale(.6); } }
+@media(prefers-reduced-motion:reduce) { .table[data-dealing="true"] .rivalCard,.table[data-dealing="true"] .ownHand [data-card],.trickField[data-collecting] .tableCard { animation:none; } }

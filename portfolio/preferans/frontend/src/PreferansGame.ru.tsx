@@ -7,8 +7,8 @@ import {
   sendCommand, settleRoom, startRoom,
 } from "./room-client";
 import {
-  allowedToAct, bidLabel, cardId, cardLabel, moveCard,
-  phaseLabel, ROOM_ID_RE, sortedHand, statusMessage,
+  allowedToAct, cardId, cardLabel, moveCard,
+  phaseLabel, ROOM_ID_RE, statusMessage,
   type Card, type CommandAction, type RoomInvitation, type RoomView,
 } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
@@ -22,6 +22,9 @@ import { ProjectSidebar } from "./ProjectSidebar.ru";
 import { Lobby } from "./Lobby.ru";
 import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
 import { LobbySetup } from "./LobbySetup.ru";
+import { BidPanel } from "./BidPanel.ru";
+import { DealStatus } from "./DealStatus.ru";
+import { orderHand, ownCards, mayConcede, type SortMode } from "./interaction-model";
 
 const REALTIME_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_REALTIME_ENABLED === "true";
 
@@ -42,7 +45,7 @@ function CardFace({ card, selected, playable, onClick, onDragStart, onDragOver, 
   return (
     <button type="button" className={`${styles.playingCard} ${red ? styles.red : ""} ${selected ? styles.selected : ""} ${playable ? styles.playable : ""}`}
       aria-label={`${cardLabel(card)}${selected ? ", выбрана" : ""}`}
-      aria-pressed={Boolean(selected)} disabled={!onClick} onClick={onClick}
+      aria-pressed={Boolean(selected)} disabled={!onClick && !onDragStart} onClick={onClick}
       draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop}
       data-card={cardId(card)}>
       <CardArtwork card={card} decorative />
@@ -72,10 +75,9 @@ function ScoreBoard({ view }: { view: RoomView }) {
   );
 }
 
-function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, selectedCard, command,
+function ActionPanel({ view, busy, selectedCards, selectedCard, command,
   regularRoute, setRegularRoute, passoutRoutes, setPassoutRoute, onStart, onSettle }: {
-  view: RoomView; busy: boolean; selectedCards: Card[]; selectedBid: string;
-  setSelectedBid: (value: string) => void; selectedCard: Card | null;
+  view: RoomView; busy: boolean; selectedCards: Card[]; selectedCard: Card | null;
   command: (action: CommandAction, args?: Record<string, unknown>) => void;
   regularRoute: "pool" | "hill_first"; setRegularRoute: (x: "pool" | "hill_first") => void;
   passoutRoutes: Array<"pool" | "hill_first" | "help">;
@@ -83,16 +85,17 @@ function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, s
   onStart: () => void; onSettle: () => void;
 }) {
   const myTurn = allowedToAct(view);
+  const concede = mayConcede(view) && <div className={styles.concede}><button type="button" disabled={busy} onClick={() => {
+    if (window.confirm("Признать игру без трёх? Это начислит штраф в гору без розыгрыша.")) command("without_three");
+  }}>Признать «без трёх»</button></div>;
   if (view.status === "playing" && (view.controls?.undo || view.controls?.paused)) {
     return <section className={styles.actionPanel}><h3>Игра приостановлена</h3>
       <p>Ожидаем голосование или восстановление соединения. Ходить сейчас нельзя.</p>
     </section>;
   }
-  const bids = view.phase === "auction" ? view.legal_bids ?? [] : view.legal_contracts ?? [];
-  const chosenBid = bids.find(b => JSON.stringify(b) === selectedBid) ?? bids[0];
-  const chooseBid = (action: "bid" | "declare") => {
-    if (chosenBid) command(action, { bid: chosenBid });
-  };
+  if (view.status === "between" && view.next_deal && REALTIME_ENABLED) {
+    return <section className={styles.actionPanel}><h3>Новая раздача</h3><DealStatus view={view}/></section>;
+  }
   if (view.status === "lobby" || view.status === "between") {
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
       <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Новую раздачу запускает администратор комнаты.</p>
@@ -116,23 +119,11 @@ function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, s
     </section>;
   }
   if (view.status === "closed") return <section className={styles.actionPanel}><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></section>;
-  if (!myTurn) return <section className={styles.actionPanel} aria-live="polite"><h3 id="preferans-actions">Ожидание хода</h3>
-    <p>{view.controller !== null && view.controller !== undefined && (view.phase === "play" || view.phase === "opening_lead")
-      ? `${seatNames[view.controller]} управляет ходом ${seatNames[view.turn ?? 0]}.`
-      : view.turn !== null && view.turn !== undefined ? `Сейчас очередь: ${seatNames[view.turn]}.` : "Ожидаем другого игрока."}</p>
-  </section>;
+  if (!myTurn) return concede || null;
   return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">Твоё действие</h3>
     {view.phase === "auction" && <>
       <p>Выбери минимальную ставку. Окончательный контракт объявляется после торгов.</p>
-      {bids.length > 0 && <label className={styles.field}>Ставка
-        <select value={chosenBid ? JSON.stringify(chosenBid) : ""} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedBid(e.target.value)}>
-          {bids.map((bid, index) => <option key={`${index}-${bidLabel(bid)}`} value={JSON.stringify(bid)}>{bidLabel(bid)}</option>)}
-        </select></label>}
-      <div className={styles.actions}>
-        <button type="button" className={styles.primary} disabled={!chosenBid || busy} onClick={() => chooseBid("bid")}>Заявить ставку</button>
-        {view.can_say_here && <button type="button" disabled={busy} onClick={() => command("here")}>Здесь</button>}
-        <button type="button" disabled={busy} onClick={() => command("pass")}>Пас</button>
-      </div>
+      <BidPanel key={`${view.game_id}:auction`} view={view} busy={busy} command={command}/>
     </>}
     {view.phase === "discard" && <>
       <p>Выбери две карты для скрытого сноса. Выбрано: {selectedCards.length}/2.</p>
@@ -141,14 +132,10 @@ function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, s
     </>}
     {view.phase === "declare" && <>
       <p>После прикупа можно повысить ставку, но нельзя изменить класс контракта.</p>
-      {bids.length > 0 && <label className={styles.field}>Окончательный контракт
-        <select value={chosenBid ? JSON.stringify(chosenBid) : ""} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedBid(e.target.value)}>
-          {bids.map((bid, index) => <option key={`${index}-${bidLabel(bid)}`} value={JSON.stringify(bid)}>{bidLabel(bid)}</option>)}
-        </select></label>}
-      <button type="button" className={styles.primary} disabled={busy || !chosenBid} onClick={() => chooseBid("declare")}>Заказать игру</button>
+      <BidPanel key={`${view.game_id}:declare`} view={view} busy={busy} command={command}/>
     </>}
     {(["defense_first", "defense_second", "defense_reconsider"] as string[]).includes(view.phase ?? "") && <>
-      <p>Защитник выбирает вист или пас.</p>
+      <p>{view.phase === "defense_reconsider" ? "Подтверди пас или вернись на вист." : "Защитник выбирает вист или пас."}</p>
       <div className={styles.actions}>
         <button type="button" className={styles.primary} disabled={busy} onClick={() => command("defense", { decision: "vist" })}>Вист</button>
         <button type="button" disabled={busy} onClick={() => command("defense", { decision: "pass" })}>Пас</button>
@@ -171,16 +158,11 @@ function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, s
         Сыграть {selectedCard ? cardLabel(selectedCard) : "карту"}
       </button>
     </>}
-    {view.declarer === view.my_seat && view.contract?.kind !== "misere" && view.contract?.kind !== "misere_no_widow" &&
-      (view.played_tricks ?? 0) === 0 && (view.trick ?? []).length === 0 &&
-      ["defense_first", "defense_second", "defense_reconsider", "choose_mode", "opening_lead", "play"].includes(view.phase ?? "") &&
-      <div className={styles.concede}><button type="button" disabled={busy} onClick={() => {
-        if (window.confirm("Признать игру без трёх? Это начислит штраф в гору без розыгрыша.")) command("without_three");
-      }}>Признать «без трёх»</button></div>}
+    {concede}
   </section>;
 }
 
-export function PreferansGame() {
+export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}) {
   const [roomId, setRoomId] = useState("");
   const [roomInput, setRoomInput] = useState("");
   const [view, setView] = useState<RoomView | null>(null);
@@ -210,7 +192,17 @@ export function PreferansGame() {
   const [pollKey, setPollKey] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [order, setOrder] = useState<string[]>([]);
-  const [selectedBid, setSelectedBid] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("grouped");
+  const sortKey = preferenceScope ? `preferans:sort:${preferenceScope}` : null;
+  useEffect(() => {
+    if (!sortKey) return;
+    try { setSortMode(window.localStorage.getItem(sortKey) === "suit" ? "suit" : "grouped"); }
+    catch { /* Local storage can be disabled. */ }
+  }, [sortKey]);
+  const changeSort = (mode: SortMode) => {
+    setSortMode(mode); setOrder([]);
+    if (sortKey) try { window.localStorage.setItem(sortKey, mode); } catch { /* Optional preference. */ }
+  };
   const [regularRoute, setRegularRoute] = useState<"pool" | "hill_first">("pool");
   const [passoutRoutes, setPassoutRoutes] = useState<Array<"pool" | "hill_first" | "help">>(["pool", "pool", "pool"]);
   const dragging = useRef<string | null>(null);
@@ -237,7 +229,7 @@ export function PreferansGame() {
     viewRef.current = null;
     activeRoomRef.current = id;
     setProfileState(null);
-    setView(null); setInvited(null); setSelected([]); setOrder([]); setSelectedBid("");
+    setView(null); setInvited(null); setSelected([]); setOrder([]);
     setRtReady(false); setRtPresence(null);
     setStatus(""); setRoomInput(id); setRoomId(id);
     const url = new URL(window.location.href);
@@ -346,18 +338,25 @@ export function PreferansGame() {
     return () => { stopped = true; clearInterval(interval); };
   }, [roomId, view?.game_id, view?.my_seat, view?.status, rtReady]);
 
+  const nextDeadline = view?.next_deal?.deadline_ms;
   useEffect(() => {
-    setSelected([]); setSelectedBid("");
-  }, [view?.game_id, view?.phase]);
+    if (!REALTIME_ENABLED || rtReady || !roomId || view?.my_seat == null || typeof nextDeadline !== "number") return;
+    let disposed = false;
+    const timer = setTimeout(() => {
+      const current = viewRef.current;
+      if (!current || current.room_id !== roomId || current.status !== "between" || current.next_deal?.deadline_ms !== nextDeadline) return;
+      void sendCommand(roomId, newKey(), current.version, "pulse", {}).then(response => {
+        if (!disposed && response.version > current.version) setPollKey(v => v + 1);
+      }).catch(() => { /* Existing bounded fallback remains responsible for recovery. */ });
+    }, Math.max(250, Math.min(5500, nextDeadline - Date.now() + 100)));
+    return () => { disposed = true; clearTimeout(timer); };
+  }, [roomId, view?.my_seat, nextDeadline, rtReady]);
 
   useEffect(() => {
-    const current = view?.hand ?? [];
-    setOrder(old => {
-      const known = old.filter(id => current.some(card => cardId(card) === id));
-      const additions = sortedHand(current, []).map(cardId).filter(id => !known.includes(id));
-      return [...known, ...additions];
-    });
-  }, [view?.hand]);
+    setSelected([]);
+  }, [view?.room_id, view?.game_id, view?.phase, view?.turn, view?.controller, view?.played_tricks]);
+
+  useEffect(() => { setOrder([]); }, [view?.room_id, view?.game_id]);
 
   const mutate = useCallback(async (label: string, run: () => Promise<unknown>) => {
     if (busy) return;
@@ -413,17 +412,17 @@ export function PreferansGame() {
       adjustRoom(view.room_id, token, view.version, value));
   };
   const chosenCards = useMemo(() => {
-    const all = [...(view?.hand ?? []), ...(view?.phase === "discard" && view.declarer === view.my_seat ? view.widow ?? [] : [])];
+    const all = ownCards(view);
     return all.filter(card => selected.includes(cardId(card)));
   }, [view, selected]);
   const legal = useMemo(() => new Set((view?.legal_cards ?? []).map(cardId)), [view?.legal_cards]);
   const controlledHand = view?.phase === "opening_lead" || view?.phase === "play"
     ? view.turn === view.my_seat ? view.hand ?? [] : view.open_hands?.find(row => row.seat === view.turn)?.cards ?? []
     : view?.hand ?? [];
-  const hand = sortedHand(view?.hand ?? [], order);
+  const hand = orderHand(ownCards(view), order, sortMode);
   const selectedCard = controlledHand.find(card => selected.includes(cardId(card))) ?? null;
   const isPlay = view?.phase === "opening_lead" || view?.phase === "play";
-  const canInteractCards = Boolean(view && allowedToAct(view) && (isPlay || view.phase === "discard"));
+  const canInteractCards = Boolean(!busy && view && allowedToAct(view) && (isPlay || view.phase === "discard"));
   const ownPlayable = canInteractCards && (!isPlay || view?.turn === view?.my_seat);
   const onCardSelect = (card: Card) => {
     const id = cardId(card);
@@ -436,7 +435,7 @@ export function PreferansGame() {
     return <CardFace card={card} selected={selected.includes(cardId(card)) && playable} playable={playable}
       onClick={playable ? () => onCardSelect(card) : undefined}/>;
   };
-  const reorder = (from: string, to: string) => setOrder(current => moveCard(current, from, to));
+  const reorder = (from: string, to: string) => setOrder(moveCard(hand.map(cardId), from, to));
   const copyInvitation = () => {
     if (!roomId) return;
     void navigator.clipboard.writeText(window.location.href).then(() => setStatus("Ссылка скопирована."))
@@ -445,12 +444,16 @@ export function PreferansGame() {
 
   const ownHand = view && <div className={styles.handsPanel}>
     <div className={styles.handTitle}><h3>Твоя рука</h3>
+      <label>Сортировка <select aria-label="Сортировка карт" value={sortMode} onChange={e => changeSort(e.target.value === "suit" ? "suit" : "grouped")}>
+        <option value="grouped">По длине масти</option><option value="suit">По порядку мастей</option>
+      </select></label>
+      <button type="button" onClick={() => setOrder([])}>Автосортировка</button>
       {isPlay && view.turn !== view.my_seat && view.controller === view.my_seat && <span>Ты управляешь открытой рукой соперника. Выбери карту на его месте.</span>}
     </div>
     <div className={styles.handRow} aria-label="Игровые карты">
-      {hand.map((card, index) => <div className={styles.cardWithSort} key={cardId(card)}>
+      {hand.map((card, index) => <div data-hand-card="true" className={styles.cardWithSort} key={cardId(card)}>
         <CardFace card={card} selected={ownPlayable && selected.includes(cardId(card))} playable={ownPlayable && (view.phase === "discard" || legal.has(cardId(card)))}
-          onClick={() => { if (ownPlayable) onCardSelect(card); }}
+          onClick={ownPlayable && (view.phase === "discard" || legal.has(cardId(card))) ? () => onCardSelect(card) : undefined}
           onDragStart={e => { dragging.current = cardId(card); e.dataTransfer.effectAllowed = "move"; }}
           onDragOver={e => e.preventDefault()}
           onDrop={e => { e.preventDefault(); if (dragging.current) reorder(dragging.current, cardId(card)); dragging.current = null; }} />
@@ -459,16 +462,12 @@ export function PreferansGame() {
           <button type="button" aria-label={`Переместить ${cardLabel(card)} вправо`} disabled={index === hand.length - 1} onClick={() => reorder(cardId(card), cardId(hand[index + 1]))}>›</button>
         </div>
       </div>)}
-      {view.phase === "discard" && view.declarer === view.my_seat && (view.widow ?? []).map(card => <div className={styles.cardWithSort} key={`widow-${cardId(card)}`}>
-        <CardFace card={card} selected={selected.includes(cardId(card))} playable={ownPlayable} onClick={() => onCardSelect(card)} />
-        <span className={styles.widowLabel}>Прикуп</span>
-      </div>)}
       {!hand.length && <span className={styles.subtle}>Нет карт для отображения</span>}
     </div>
   </div>;
   const actions = view && <>
     {view.status === "lobby" && view.lobby_setup && <LobbySetup view={view} busy={busy} command={command} />}
-    <ActionPanel view={view} busy={busy} selectedCards={chosenCards} selectedBid={selectedBid} setSelectedBid={setSelectedBid}
+    <ActionPanel view={view} busy={busy} selectedCards={chosenCards}
       selectedCard={selectedCard} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
       passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
       onStart={start} onSettle={settle} />

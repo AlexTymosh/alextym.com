@@ -39,6 +39,7 @@ from preferans.online.controls import (
     tick_controls,
     vote_undo,
 )
+from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
 from preferans.online.pause_clock import synchronize
 from preferans.online.realtime import CHECKPOINT_MS, HubError, enabled as realtime_enabled, hub
@@ -87,6 +88,19 @@ def _get(tx: Any, ref: Any) -> dict | None:
     # Keep the read inside this transaction and before every staged write.
     snap = ref.get(transaction=tx, timeout=5.0)
     return snap.to_dict() if snap.exists else None
+
+
+def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer: int):
+    game = start_game(deal(shuffled_deck(), dealer), score.passout_level)
+    room["dealer"] = dealer
+    room["game_id"] = uuid.uuid4().hex
+    room["status"] = "playing"
+    room.setdefault("started_at_ms", now)
+    controls["timer"] = None
+    controls["vote"] = None
+    controls["candidate"] = None
+    controls.pop("next_deal", None)
+    return game
 
 
 class FirestoreRooms:
@@ -273,6 +287,25 @@ class FirestoreRooms:
                 )
             except ControlError as exc:
                 raise StoreError(exc.status, exc.detail) from exc
+            # The existing single-worker reconciliation loop is the scheduler.
+            # No client clock, background billable job or extra polling is needed.
+            if (
+                room["status"] == "between"
+                and isinstance(game, GameState)
+                and game.phase == Phase.FINISHED
+                and not score.closed
+                and None not in room["seats"]
+                and next_deal_due(controls, room.get("game_id"), now)
+            ):
+                dealer = (room["dealer"] + 1) % 3
+                game = _begin_deal(room, score, controls, now, dealer)
+                events.append(
+                    {
+                        "action": "start",
+                        "data": {"dealer": dealer, "game_id": room["game_id"], "automatic": True},
+                    }
+                )
+                result["status"] = room["status"]
             active_clock = any(
                 isinstance((controls.get(key) or {}).get("deadline_ms"), int)
                 for key in ("timer", "vote")
@@ -414,6 +447,13 @@ class FirestoreRooms:
                     raise StoreError(409, "Room is not ready")
                 if score.closed:
                     raise StoreError(409, "Game is already closed")
+                if (
+                    use_rt
+                    and room["status"] == "between"
+                    and controls.get("next_deal")
+                    and not next_deal_due(controls, room.get("game_id"), now)
+                ):
+                    raise StoreError(409, "Next deal is not due")
                 setup = room.get("lobby_setup") if room["status"] == "lobby" else None
                 if setup is not None and setup.get("ready") != [True, True, True]:
                     raise StoreError(409, "All three players must confirm the setup")
@@ -422,14 +462,7 @@ class FirestoreRooms:
                     if room["dealer"] is None
                     else (room["dealer"] + 1) % 3
                 )
-                game = start_game(deal(shuffled_deck(), dealer), score.passout_level)
-                room["dealer"] = dealer
-                room["game_id"] = uuid.uuid4().hex
-                room["status"] = "playing"
-                room.setdefault("started_at_ms", now)
-                controls["timer"] = None
-                controls["vote"] = None
-                controls["candidate"] = None
+                game = _begin_deal(room, score, controls, now, dealer)
                 event_data = {"dealer": dealer, "game_id": room["game_id"]}
                 if use_rt:
                     score, events, generation = self._realtime_controls(
@@ -439,6 +472,8 @@ class FirestoreRooms:
             elif action == "settle":
                 if room["status"] != "awaiting_settlement" or not isinstance(game, GameState):
                     raise StoreError(409, "No completed deal to settle")
+                if controls.get("vote"):
+                    raise StoreError(409, "Pending undo decision")
                 if set(args) != {"regular_route", "passout_routes"}:
                     raise StoreError(422, "Invalid settlement options")
                 try:
@@ -454,6 +489,9 @@ class FirestoreRooms:
                 except (RuleViolation, ValueError, TypeError) as exc:
                     raise StoreError(422, "Invalid settlement") from exc
                 room["status"] = "closed" if score.closed else "between"
+                controls.pop("next_deal", None)
+                if use_rt and not score.closed:
+                    schedule_next_deal(controls, room["game_id"], now)
                 controls["candidate"] = None
                 controls["timer"] = None
                 event_data = {"score_version": score.version, "closed": score.closed}

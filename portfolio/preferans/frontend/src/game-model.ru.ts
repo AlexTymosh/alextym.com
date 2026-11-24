@@ -38,6 +38,9 @@ export type RoomView = {
   phase?: Phase; turn?: number | null; controller?: number | null;
   dealer?: number; first_hand?: number; is_passout?: boolean; played_tricks?: number;
   declarer?: number | null; contract?: Bid | null; high_bid?: Bid | null;
+  auction_calls?: Array<{kind: "bid" | "pass" | "here"; bid: Bid | null} | null>;
+  last_trick_winner?: number | null;
+  next_deal?: { after_game_id: string; deadline_ms: number | null; remaining_ms: number | null };
   hand?: Card[]; hand_counts?: number[]; legal_cards?: Card[];
   legal_bids?: Bid[]; legal_contracts?: Bid[]; can_say_here?: boolean;
   trick?: Array<{ owner: number; card: Card }>;
@@ -115,6 +118,14 @@ export function phaseLabel(phase?: Phase): string {
 export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
+  if (v.next_deal !== undefined) {
+    const clock = v.next_deal as Record<string, unknown> | null;
+    if (!clock || typeof clock !== "object" || v.status !== "between" ||
+      typeof clock.after_game_id !== "string" || clock.after_game_id !== v.game_id ||
+      !(clock.deadline_ms === null || (Number.isSafeInteger(clock.deadline_ms) && Number(clock.deadline_ms) >= 0)) ||
+      !(clock.remaining_ms === null || (Number.isInteger(clock.remaining_ms) && Number(clock.remaining_ms) >= 0 && Number(clock.remaining_ms) <= 5000)) ||
+      ((clock.deadline_ms === null) === (clock.remaining_ms === null))) return false;
+  }
   if (v.lobby_setup !== undefined) {
     const setup = v.lobby_setup as Record<string, unknown> | null;
     if (!setup || typeof setup !== "object" || !Array.isArray(setup.ready) || setup.ready.length !== 3 || !setup.ready.every(x => typeof x === "boolean") || ![0,1,2].includes(Number(setup.dealer)) || typeof setup.dealer !== "number" || !Number.isInteger(setup.target) || Number(setup.target)<1 || Number(setup.target)>1000 || typeof setup.ruleset !== "string" || !Number.isInteger(setup.ruleset_version)) return false;

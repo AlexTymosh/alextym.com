@@ -1,0 +1,19 @@
+# PR12 — Game Interaction & Deal Flow
+
+База: `9422f7ac18e626a61df02850f8db4ac440eba411`. Branch: `feat/preferans-game-interaction`. Кандидат, не production release.
+
+## Контракт и поведение
+
+- `BidPanel` использует только `legal_bids` / `legal_contracts`: пас, группы уровней, разрешённые масти/БК, особые заявки. Вторая кнопка отправляет прежний command, не рассчитывает допустимость самостоятельно. `here` требует `can_say_here`, не для 6♠. Реплики по местам из `auction_calls`; defense отображается из прежнего public view. «Без трёх» доступно заказчику до первой взятки согласно прежним фазовым ограничениям, не только в его ход.
+- `ownCards`: в фазе сноса только заказчик видит 12 карт (hand + уже открытый widow). Снос и розыгрыш требуют прежнего явного подтверждения. Ручная перестановка и сортировка без DB write; режим сортировки localStorage, namespace SHA-256 от серверной UID с domain separation, raw UID не передаётся в новом prop. Это идентификатор локальной настройки, не credential и не секрет. Ручной порядок живёт в рамках раздачи. Группировка по длине, затем старшей карте, масти S/C/D/H, ранг убывает.
+- В торговле две рубашки; при сносе только уже открытые карты; при распасах текущая открытая карта. Повтор локальный, только из `widow` public projection. Общий просмотр, закрытие при игре и общая пауза — PR13. `last_trick_winner` — публичный номер места, не новая приватная информация. Анимации CSS по snapshots, reduced motion, без игровых записей.
+
+## Серверное ожидание новой раздачи
+
+При включённом PR10 realtime после атомарного успешного `settle` с незакрытой пулей в private controls записывается `next_deal = {after_game_id, deadline_ms}`. Через 5000 мс существующий hub вызывает `sync_realtime` в транзакции. Проверяются status=between, завершённая предыдущая игра, открытая пуля, полный состав, presence и отсутствие pause/vote. Единственная транзакция создаёт следующий `game_id` и public start event; повторный sync в playing не создаёт вторую раздачу. `start` manual не обходит действующий deadline. Первый старт остаётся ручным. При выключенном realtime и для legacy between без deadline — прежний ручной старт. Не создаются фоновые cron/tasks/платные сервисы.
+
+Public `next_deal` доступен в between: `after_game_id`, `deadline_ms` либо `remaining_ms` (второе поле null). При disconnect/shared pause дедлайн замораживается через независимые причины; после восстановления продолжается. Restart трактуется консервативно, может дать дополнительные секунды, но не засчитывает неизвестный downtime. HTTP fallback использует существующий pulse и ограниченный один дополнительный pulse на видимый deadline. Фактическая задержка зависит от transport и transaction; при выключенном realtime автораздача недоступна. Не включать production flags без Owner review.
+
+## Проверки
+
+В packaging environment: 15 isolated Python tests (новые deadline tests + ранее доставленные hub tests на локальных PR10 sources, scheduler anchor приведён к main форматированию), 14 Node model assertions с contract fixture, TypeScript strict compile модели, syntax transpile BidPanel/DealStatus/GameTable. Патч использует проверенные уникальные anchors и Git blob guards. Нет полного checkout/dependencies/Firebase emulator; полный `task ci` и store integration тесты должны быть выполнены Owner. Нет доказательства production UAT, 6/8h session, latency, quotas. Проверить три реальные учётные записи: lobby → auction → declare → defense → play → settle → auto-next, misere/БП, passouts, undo, counters, network loss, refresh, legacy start; убедиться в golden scoring. Тесты не заменять имитацией зелёного CI. Исторические scoring formulas, seat order, auth и PR11 layout сохранены. Остаточные gaps G02b/G07/G08, согласованный исход мизера/случайное раскрытие, полноценный UI общих объектов и live video относятся к последующим PR.

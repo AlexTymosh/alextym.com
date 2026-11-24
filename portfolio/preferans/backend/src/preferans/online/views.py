@@ -12,6 +12,7 @@ from preferans.domain.cards import Card
 from preferans.domain.game import GameState, Phase, legal_play_cards
 from preferans.domain.ledger import ScoreState
 from preferans.online.controls import public_controls
+from preferans.online.deal_flow import projection as next_deal_projection
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -51,6 +52,10 @@ def seat_view(
         "game_id": room.get("game_id"),
         "controls": public_controls(controls or {}, now_ms, my_seat),
     }
+    if room["status"] == "between":
+        clock = next_deal_projection(controls or {}, room.get("game_id"))
+        if clock is not None:
+            result["next_deal"] = clock
     if state is None:
         setup = room.get("lobby_setup")
         if room["status"] == "lobby" and setup is not None and score is not None:
@@ -66,6 +71,18 @@ def seat_view(
         {"seat": i, "cards": [public_card(c) for c in state.hands[i]]}
         for i in sorted(state.exposed_hands)
     ]
+    # Auction history is public. Retain only the last call per seat, never
+    # serialize the state or a player's private discard.
+    calls = [None, None, None]
+    high = None
+    for event in state.auction.history:
+        action = event.action
+        if action.bid is not None:
+            high = action.bid
+        calls[event.actor] = {
+            "kind": action.kind.value,
+            "bid": public_bid(high if action.kind.value == "here" else action.bid),
+        }
     result.update(
         {
             "phase": state.phase.value,
@@ -78,6 +95,10 @@ def seat_view(
             "declarer": state.declarer,
             "contract": public_bid(state.contract),
             "high_bid": public_bid(state.auction.high_bid),
+            "auction_calls": calls,
+            "last_trick_winner": state.completed_tricks[-1].winner
+            if state.completed_tricks
+            else None,
             "tricks_won": list(state.tricks_won),
             "hand_counts": [len(h) for h in state.hands],
             "open_hands": exposed,
