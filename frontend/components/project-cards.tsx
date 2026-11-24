@@ -74,7 +74,9 @@ function ProjectCaseStudy({ project }: { project: ProjectCard }) {
       {project.technologies.map((technology) => <li key={technology}>{technology}</li>)}
     </ul>
     <div className={styles.caseFooter}>
-      <span>Concept prototype · Synthetic data, with support for importing, processing and exporting your own datasets.</span>
+      <span>{project.id === "preferans"
+        ? "Private three-player card game · Invitation-only access; no public player data."
+        : "Concept prototype · Synthetic data, with support for importing, processing and exporting your own datasets."}</span>
       <Link className={styles.demoLink} href={project.path} aria-label={`Open ${project.title} demo`}>
         Open demo
       </Link>
