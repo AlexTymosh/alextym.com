@@ -79,7 +79,9 @@ def _member(room: dict, uid: str, *, admin: bool = False, owner: bool = False) -
 
 
 def _get(tx: Any, ref: Any) -> dict | None:
-    snap = tx.get(ref)
+    # Transaction.get(ref) yields snapshots; DocumentReference.get returns one.
+    # Keep the read inside this transaction and before every staged write.
+    snap = ref.get(transaction=tx, timeout=5.0)
     return snap.to_dict() if snap.exists else None
 
 

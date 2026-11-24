@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import copy
+import inspect
 from types import SimpleNamespace
 
 import pytest
+from google.api_core.exceptions import AlreadyExists
+from google.auth.credentials import AnonymousCredentials
+from google.cloud.firestore_v1 import Client
 
 from preferans.domain.cards import FULL_DECK, deal
 from preferans.domain.game import start_game
@@ -29,7 +33,9 @@ class FakeDocument:
     def collection(self, name):
         return FakeCollection(self.db, self.path + "/" + name)
 
-    def get(self, timeout=None):
+    def get(self, transaction=None, timeout=None):
+        if transaction is not None:
+            return transaction.read_document(self)
         return FakeSnapshot(self.db.docs.get(self.path))
 
 
@@ -42,6 +48,7 @@ class FakeCollection:
 
     def order_by(self, field, direction=None):
         self.sort_field = field
+        self.descending = direction == "DESCENDING"
         return self
 
     def limit(self, count):
@@ -49,8 +56,13 @@ class FakeCollection:
         return self
 
     def stream(self, timeout=None):
-        rows = [(k, v) for k, v in self.db.docs.items() if k.startswith(self.path + "/")]
-        rows.sort(key=lambda pair: pair[1][self.sort_field], reverse=True)
+        prefix = self.path + "/"
+        rows = [
+            (k, v)
+            for k, v in self.db.docs.items()
+            if k.startswith(prefix) and "/" not in k[len(prefix) :] and self.sort_field in v
+        ]
+        rows.sort(key=lambda pair: pair[1][self.sort_field], reverse=self.descending)
         return iter(FakeSnapshot(v) for _, v in rows[: self.count])
 
 
@@ -60,18 +72,28 @@ class FakeTransaction:
         self.pending = []
 
     def get(self, ref):
+        # The Python SDK yields snapshots even for one DocumentReference.
+        yield self.read_document(ref)
+
+    def read_document(self, ref):
+        if self.pending:
+            raise ValueError("Attempted read after write in a transaction")
         return FakeSnapshot(self.db.docs.get(ref.path))
 
     def create(self, ref, value):
-        assert ref.path not in self.db.docs
-        self.pending.append((ref.path, value))
+        self.pending.append(("create", ref.path, copy.deepcopy(value)))
 
     def set(self, ref, value):
-        self.pending.append((ref.path, value))
+        self.pending.append(("set", ref.path, copy.deepcopy(value)))
 
     def commit(self):
-        for path, value in self.pending:
-            self.db.docs[path] = copy.deepcopy(value)
+        # Preconditions are checked at commit, and a failed batch writes nothing.
+        updated = copy.deepcopy(self.db.docs)
+        for kind, path, value in self.pending:
+            if kind == "create" and path in updated:
+                raise AlreadyExists("Document already exists")
+            updated[path] = copy.deepcopy(value)
+        self.db.docs = updated
 
 
 class FakeDB:
@@ -87,9 +109,12 @@ class FakeDB:
 
 def transactional(function):
     def run(tx):
-        result = function(tx)
-        tx.commit()
-        return result
+        try:
+            result = function(tx)
+            tx.commit()
+            return result
+        finally:
+            tx.pending.clear()
 
     return run
 
@@ -97,6 +122,58 @@ def transactional(function):
 @pytest.fixture
 def service():
     return FirestoreRooms(FakeDB(), firestore_module=SimpleNamespace(transactional=transactional))
+
+
+def test_fake_matches_sdk_single_document_read_shapes():
+    db = FakeDB()
+    ref = db.collection("items").document("missing")
+    tx = db.transaction()
+    assert inspect.isgenerator(tx.get(ref))
+    assert next(tx.get(ref)).exists is False
+    assert ref.get(transaction=tx).exists is False
+    # No RPC is made: Transaction.get returns the lazy generator immediately.
+    client = Client(project="demo-preferans-contract", credentials=AnonymousCredentials())
+    try:
+        assert inspect.isgenerator(client.transaction().get(client.document("items/missing")))
+    finally:
+        client.close()
+
+
+def test_fake_rejects_reads_after_writes_and_rolls_back_duplicate_create():
+    db = FakeDB()
+    existing = db.collection("items").document("existing")
+    new = db.collection("items").document("new")
+    db.docs[existing.path] = {"value": "original"}
+    tx = db.transaction()
+    tx.create(new, {"value": "pending"})
+    with pytest.raises(ValueError, match="read after write"):
+        new.get(transaction=tx)
+    with pytest.raises(ValueError, match="read after write"):
+        next(tx.get(new))
+    tx.create(existing, {"value": "replacement"})
+    with pytest.raises(AlreadyExists):
+        tx.commit()
+    assert db.docs == {existing.path: {"value": "original"}}
+
+
+def test_fake_query_ignores_subcollections_and_missing_order_field():
+    db = FakeDB()
+    db.docs = {
+        "items/a": {"sequence": 1},
+        "items/b": {"sequence": 2},
+        "items/missing": {},
+        "items/a/children/hidden": {"sequence": 3},
+    }
+    rows = db.collection("items").order_by("sequence", direction="DESCENDING").limit(10)
+    assert [row.to_dict() for row in rows.stream()] == [
+        {"sequence": 2},
+        {"sequence": 1},
+    ]
+
+
+def test_empty_history_and_rankings(service):
+    assert service.history("member") == {"results": [], "has_more": False, "limit": 50}
+    assert service.rankings("member") == {"rankings": [], "total_players": 0}
 
 
 def test_secret_state_codec_roundtrip_and_reject_unknown_types():
@@ -189,7 +266,12 @@ def test_invalid_commands_cannot_mutate_persisted_state(service):
     view_before = service.view(room, "p1")
     with pytest.raises(StoreError) as exc:
         service.command(
-            room, "p1", "badcmd-001", 3, "play", {"owner": 0, "card": {"suit": "H", "rank": 7}}
+            room,
+            "p1",
+            "badcmd-001",
+            3,
+            "play",
+            {"owner": 0, "card": {"suit": "H", "rank": 7}},
         )
     assert exc.value.code == 422
     assert service.view(room, "p1") == view_before
