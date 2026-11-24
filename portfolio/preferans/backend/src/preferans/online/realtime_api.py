@@ -36,6 +36,8 @@ def _verified_view(
     with hub.commit_lock:
         view = store.view(ticket.room, uid, owner=owner)
         if view.get("my_seat") != ticket.seat:
+            if view.get("my_seat") in (0, 1, 2):
+                raise HubError("Seat changed; reconnect")
             raise HTTPException(403, "Seat denied")
         return store, view
 
@@ -66,6 +68,8 @@ def _revalidate(ticket: Ticket, connection: str, verify: Callable[[str], tuple[s
         if view.get("unchanged"):
             return
         if view.get("my_seat") != ticket.seat:
+            if view.get("my_seat") in (0, 1, 2):
+                raise HubError("Seat changed; reconnect")
             raise HTTPException(403, "Seat denied")
         if owner:
             view["room_admin"] = True

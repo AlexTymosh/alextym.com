@@ -41,6 +41,12 @@ from preferans.online.controls import (
 )
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
+from preferans.online.seat_swap import (
+    ACTIONS as SWAP_ACTIONS,
+    SeatSwapError,
+    change as change_swap,
+    pending as pending_swap,
+)
 from preferans.online.presentation import (
     ACTIONS as PRESENTATION_ACTIONS,
     PresentationError,
@@ -390,12 +396,14 @@ class FirestoreRooms:
         use_rt = realtime_enabled()
         captured = None
         generation = 0
+        swapped = False
 
         @self.fs.transactional
         def commit(transaction):
-            nonlocal captured, generation
+            nonlocal captured, generation, swapped
             captured = None
             generation = 0
+            swapped = False
             # All Firestore reads precede any writes; required for real transactions.
             previous = _get(transaction, operation)
             room = _get(transaction, doc)
@@ -453,7 +461,19 @@ class FirestoreRooms:
                     raise StoreError(exc.status, exc.detail) from exc
             event_data = {}
             sheet_loser = None
-            if action in SHEET_ACTIONS:
+            seat_before = room["seats"].index(uid) if uid in room["seats"] else None
+            if pending_swap(room) and action in {"start", "lobby_ready", "lobby_config", "preset"}:
+                raise StoreError(409, "Resolve seat change first")
+            if action in SWAP_ACTIONS:
+                if game is not None or score.version != 0:
+                    raise StoreError(409, "Seat changes require an untouched game")
+                try:
+                    event_data, swapped = change_swap(
+                        control=controls, room=room, seat=seat_before, action=action, args=args
+                    )
+                except SeatSwapError as exc:
+                    raise StoreError(exc.code, str(exc)) from exc
+            elif action in SHEET_ACTIONS:
                 try:
                     event_data, sheet_loser = change_sheet(
                         controls, room, room["seats"].index(uid), action, args
@@ -683,7 +703,9 @@ class FirestoreRooms:
             v = room["version"]
             event = {
                 "sequence": v,
-                "seat": room["seats"].index(uid) if uid in room["seats"] else None,
+                "seat": seat_before
+                if action in SWAP_ACTIONS
+                else (room["seats"].index(uid) if uid in room["seats"] else None),
                 "action": action,
                 "data": event_data,
             }
@@ -710,6 +732,8 @@ class FirestoreRooms:
                     hub.metrics["mutation_commits"] += 1
                     hub.metrics["mutation_min_reads"] += 3
                     hub.metrics["mutation_min_writes"] += 4
+                if swapped:
+                    hub.invalidate_seats(room_id, captured[4])
                 self._publish_realtime(*captured)
             return result
 

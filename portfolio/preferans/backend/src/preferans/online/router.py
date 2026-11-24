@@ -80,6 +80,8 @@ class Command(Mutation):
         "sheet_offer",
         "sheet_reply",
         "sheet_discard",
+        "seat_swap_offer",
+        "seat_swap_vote",
     ]
     args: dict[str, Any] = Field(default_factory=dict)
 
