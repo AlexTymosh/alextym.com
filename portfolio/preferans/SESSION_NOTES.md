@@ -6,13 +6,41 @@
 **Version:** 1.9 / 2026-11-24
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
 
+## PR #278 conflict-resolution checkpoint (2026-11-24)
+
+- The Owner committed the SDK fix as `298849d`, documentation as `d94f0fe`,
+  pushed `feat/preferans-release` and opened [PR #278](https://github.com/AlexTymosh/alextym.com/pull/278).
+- The branch retained the original PR 9 commits after PR #276 was squash-merged
+  as `80baed7`. Main then enabled the public catalogue card in PR #277 at
+  `2063f63`; the branch had not yet incorporated that main history.
+- Prepared a local `origin/main` merge without creating a commit. Resolved
+  conflicts in this file, the project README and the tests README, preserving
+  the current catalogue visibility and all HTTP 503 evidence/test instructions.
+  The SDK fix, diagnostics and regression tests are unchanged by this resolution.
+- The merge awaits the Owner's commit and ordinary push; no history rewrite,
+  force push, PR merge, production IAM change or deployment was performed.
+- Verification after resolution: `task repo:check`, `task backend:check`
+  (1327 passed, 8 optional skipped), frontend lint/typecheck/production build
+  and both desktop/mobile public-catalogue browser smoke tests passed. The
+  build needed to run outside the filesystem sandbox to create a Sharp junction.
+- Additional standalone `check-foundation.mjs` fails because its raw-Cyrillic
+  scan decodes the binary `nostalgic-room.webp` as UTF-8. The checker and image
+  match `origin/main`; this pre-existing failure is outside `task ci` and was
+  not hidden by changing the checker during conflict resolution.
+- Full `task ci`, live Firebase and production recovery were not rerun for
+  this documentation merge. The original checks remain recorded below; hosted
+  verification of the new merge commit awaits the Owner's push.
+- After a future squash merge, start follow-up work from updated main history
+  or incorporate that history into a retained feature branch before continuing.
+
 ## Current checkpoint — Firestore HTTP 503 repair (2026-11-24)
 
 - Latest verification: the Owner reports the checks are now green after the
   requested rerun. The new run logs were not independently inspected by the
   agent; the earlier agent-run network failure below remains historical evidence.
-- Work uses the user-selected existing `feat/preferans-release` from `69a8ece`.
-  No commits, push, PR, deploy, IAM changes or production writes were performed.
+- The original repair used the user-selected existing `feat/preferans-release`
+  from `69a8ece`. The agent did not commit, push, open a PR, deploy, change IAM
+  or write production data; subsequent Owner commits and PR are recorded above.
 - Confirmed SDK defect and a separate checked-account IAM blocker: the known
   Render runtime principal lacks query,
   transaction and create/update IAM permissions; `_get()` treated the real

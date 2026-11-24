@@ -19,7 +19,7 @@ assert.equal(manifest.id, "preferans");
 assert.equal(manifest.slug, "preferans");
 assert.equal(manifest.demo.path, "/portfolio/preferans");
 assert.equal(manifest.demo.apiPrefix, "/api/preferans");
-assert.equal(manifest.catalog.visible, false, "Do not publish an unimplemented game");
+assert.equal(manifest.catalog.visible, true, "Portfolio card must be visible");
 assert.deepEqual(tsconfig.compilerOptions.paths["@preferans"], ["../portfolio/preferans/frontend/src/index.ts"]);
 assert.match(routes, /from\s+["']@preferans["']/);
 assert.match(routes, /if\s*\(!isLabEnabled\(\)\)\s*notFound\(\)/);
