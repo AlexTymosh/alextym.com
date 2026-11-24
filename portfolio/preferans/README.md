@@ -8,6 +8,12 @@
 - Public portfolio card: disabled (`catalog.visible=false`)
 - PR 1–8: merged as #268–#275; PR 9 branch: `feat/preferans-release`
 
+The 2026-11-24 HTTP 503 repair fixes Python Admin SDK transaction reads and adds
+regression coverage and safe storage diagnostics. The checked Render runtime
+also needs a separate existing-role IAM correction for queries and writes.
+See [evidence, permissions and deployment checks](docs/HTTP_503_FIRESTORE.ru.md).
+Live IAM changes, deployment and production recovery remain operator actions.
+
 ## Boundaries
 
 The website owns authentication, project grants, the guarded Next.js adapter and build/deploy wiring. Preferans owns its UI, future deterministic game domain, data schema, room rules, and tests. No direct Fleet/Workforce imports, separate credentials or standalone deployment.

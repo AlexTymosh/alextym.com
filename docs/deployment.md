@@ -181,6 +181,18 @@ Owner table once IAM has applied the change.
 [Firestore permissions](https://firebase.google.com/docs/firestore/security/iam)
 and [editing custom roles](https://docs.cloud.google.com/iam/docs/creating-custom-roles).
 
+Preferans persists rooms and results on Render. Its existing Render runtime role
+must retain `firebaseauth.users.get` and `datastore.entities.get` and include
+`datastore.entities.list`, `datastore.databases.get`, `datastore.entities.create`
+and `datastore.entities.update`. Query permission is needed even for empty
+history/rankings; `databases.get` permits beginning/rolling back a transaction.
+Vercel's separate credential cannot supply missing Render permissions. Match
+the actual Render service-account principal before editing its existing custom
+role; do not replace the credential, grant Owner/Editor or open client rules.
+The [Preferans 503 runbook](../portfolio/preferans/docs/HTTP_503_FIRESTORE.ru.md)
+records live read-only evidence, the independent SDK fix and post-deploy checks.
+The local patch does not apply IAM changes or establish production recovery.
+
 GitHub controls are hidden by default. To enable them later, register a GitHub OAuth App with homepage
 `https://alextym.com` and callback
 `https://portfolio-lab-dev.firebaseapp.com/__/auth/handler`. In Firebase
