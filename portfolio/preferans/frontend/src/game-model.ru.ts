@@ -34,6 +34,7 @@ export type RoomView = {
   status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed";
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
   controls?: RoomControls;
+  lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number };
   phase?: Phase; turn?: number | null; controller?: number | null;
   dealer?: number; first_hand?: number; is_passout?: boolean; played_tricks?: number;
   declarer?: number | null; contract?: Bid | null; high_bid?: Bid | null;
@@ -51,7 +52,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -114,6 +115,10 @@ export function phaseLabel(phase?: Phase): string {
 export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
+  if (v.lobby_setup !== undefined) {
+    const setup = v.lobby_setup as Record<string, unknown> | null;
+    if (!setup || typeof setup !== "object" || !Array.isArray(setup.ready) || setup.ready.length !== 3 || !setup.ready.every(x => typeof x === "boolean") || ![0,1,2].includes(Number(setup.dealer)) || typeof setup.dealer !== "number" || !Number.isInteger(setup.target) || Number(setup.target)<1 || Number(setup.target)>1000 || typeof setup.ruleset !== "string" || !Number.isInteger(setup.ruleset_version)) return false;
+  }
   return typeof v.room_id === "string" && ROOM_ID_RE.test(v.room_id) &&
     Number.isSafeInteger(v.version) && (v.version as number) >= 0 &&
     ["lobby", "playing", "awaiting_settlement", "between", "closed"].includes(String(v.status)) &&
