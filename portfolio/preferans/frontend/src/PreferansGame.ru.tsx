@@ -24,6 +24,7 @@ import { ProjectSidebar } from "./ProjectSidebar.ru";
 import { Lobby } from "./Lobby.ru";
 import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
 import { LobbySetup } from "./LobbySetup.ru";
+import { SeatSwap } from "./SeatSwap.ru";
 import { BidPanel } from "./BidPanel.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { orderHand, ownCards, mayConcede, type SortMode } from "./interaction-model";
@@ -102,7 +103,7 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
   if (view.status === "lobby" || view.status === "between") {
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
       <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Новую раздачу запускает администратор комнаты.</p>
-      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || Boolean(view.controls?.paused) || view.occupied.some(x => !x) || Boolean(view.status === "lobby" && view.lobby_setup && !view.lobby_setup.ready.every(Boolean))} onClick={onStart}>Раздать карты</button>}
+      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || Boolean(view.seat_swap) || Boolean(view.controls?.paused) || view.occupied.some(x => !x) || Boolean(view.status === "lobby" && view.lobby_setup && !view.lobby_setup.ready.every(Boolean))} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
   if (view.status === "awaiting_settlement") {
@@ -183,7 +184,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const [rtPresence, setRtPresence] = useState<Presence[] | null>(null);
   const [profileState, setProfileState] = useState<{ room: string; seats: string; profiles: SeatProfile[] } | null>(null);
   const [lobbyHistory, setLobbyHistory] = useState(false);
-  const occupiedKey = view?.occupied.map(v => v ? "1" : "0").join("") ?? "";
+  const occupiedKey = view ? `${view.occupied.map(v => v ? "1" : "0").join("")}:${view.seat_revision ?? 0}` : "";
   const profileRoom = view && view.my_seat !== null ? view.room_id : "";
   const profiles = profileState && profileState.room === profileRoom && profileState.seats === occupiedKey ? profileState.profiles : null;
   useEffect(() => {
@@ -485,7 +486,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     </div>
   </div>;
   const actions = view && <>
-    {view.status === "lobby" && view.lobby_setup && <LobbySetup view={view} busy={busy} command={command} />}
+    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
     <ActionPanel view={view} busy={busy} selectedCards={chosenCards}
       selectedCard={selectedCard} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
       passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}

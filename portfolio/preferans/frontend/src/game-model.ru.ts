@@ -1,6 +1,7 @@
 /** Public, allow-listed types only. No Firestore game state or Firebase credentials. */
 import { isPresentation, replayMoveAllowed, type Presentation } from "./presentation-model";
 import { isSeat, isSheetOffers, type SheetOffer } from "./sheet-exit-model";
+import { isSeatSwap, type SeatSwap } from "./seat-swap-model";
 export type Suit = "S" | "C" | "D" | "H";
 export type Card = { suit: Suit; rank: number };
 export type Bid = {
@@ -38,6 +39,7 @@ export type RoomView = {
   controls?: RoomControls;
   presentation?: Presentation;
   sheet_loser?: number; sheet_offers?: SheetOffer[];
+  seat_swap?: SeatSwap; seat_revision?: number;
   last_trick_suit?: Suit | null;
   lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number };
   phase?: Phase; turn?: number | null; controller?: number | null;
@@ -60,7 +62,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -123,6 +125,8 @@ export function phaseLabel(phase?: Phase): string {
 export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
+  if (v.seat_revision !== undefined && (!Number.isSafeInteger(v.seat_revision) || Number(v.seat_revision) < 0 || !isSeat(v.my_seat))) return false;
+  if (v.seat_swap !== undefined && (v.status !== "lobby" || !isSeat(v.my_seat) || !isSeatSwap(v.seat_swap))) return false;
   if (v.sheet_loser !== undefined && (!isSeat(v.sheet_loser) || v.status !== "closed" || v.hand !== undefined || v.legal_cards !== undefined)) return false;
   if (v.sheet_offers !== undefined && (!isSheetOffers(v.sheet_offers) || !isSeat(v.my_seat) || !["playing", "between", "awaiting_settlement"].includes(String(v.status)))) return false;
   if (v.presentation !== undefined && (!isPresentation(v.presentation) || v.my_seat === null)) return false;
