@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CardArtwork } from "./CardArtwork.ru";
 import { bidLabel, cardId, cardLabel, type Card, type RoomView } from "./game-model.ru";
 import type { Presence } from "./realtime-client";
 import { actorSeat, opponentCards, seatPosition, tableSeats, type Seat, type SeatProfile } from "./table-model";
 import styles from "./preferans-table.module.css";
+import { animationBetween, replayWidow, visibleWidow } from "./interaction-model";
 
 const positionNames = { left: "Слева", right: "Справа", bottom: "Перед собой" };
 const statuses = { online: "В игре", reconnecting: "Переподключение", offline: "Отключён", unknown: "Связь неизвестна" };
@@ -40,6 +41,10 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard }: {
     aria-label={`${positionNames[position]}: ${profiles?.[seat]?.name || fallbackName(seat)}${own ? ", ты" : ""}`}>
     <Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={presence?.[seat]} occupied={view.occupied[seat]} own={own} />
     <div className={styles.seatMeta}>
+      {view.phase === "auction" && view.auction_calls?.[seat] && <span className={styles.callBubble}>
+        {view.auction_calls[seat]?.kind === "pass" ? "ПАС" : `${view.auction_calls[seat]?.kind === "here" ? "Здесь " : ""}${view.auction_calls[seat]?.bid ? bidLabel(view.auction_calls[seat]!.bid!) : ""}`}
+      </span>}
+      {view.defense?.[seat] && ["defense_first","defense_second","defense_reconsider","choose_mode","opening_lead","play"].includes(view.phase ?? "") && <span className={styles.callBubble}>{view.defense[seat]==="vist"?"Вист":view.defense[seat]==="half"?"Полвиста":"Пас"}</span>}
       {view.dealer === seat && <span>Сдаёт</span>}
       {view.declarer === seat && <span>Заказчик</span>}
       {view.turn === seat && view.controller !== undefined && view.controller !== null && view.controller !== seat && <span>Открытая рука в ходе</span>}
@@ -53,29 +58,32 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard }: {
   </section>;
 }
 
-function CenterCards({ view }: { view: RoomView }) {
-  const widow = view.widow ?? [];
-  const hasDeal = view.status === "playing" || view.status === "awaiting_settlement";
-  // Until PR12 only show the already-public widow; no client-side reconstruction.
-  const showWidow = hasDeal && (view.phase === "auction" || widow.length > 0 || view.is_passout);
+function CenterCards({ view, collecting }: { view: RoomView; collecting: boolean }) {
+  const widow = visibleWidow(view);
+  const publicWidow = replayWidow(view);
+  const [replay,setReplay] = useState(false);
+  const showReplay = replay && publicWidow.length > 0;
+  const shown = collecting ? view.last_trick ?? [] : view.trick ?? [];
   const names = tableSeats(view.my_seat);
   return <div className={styles.center}>
     <div className={styles.widow} aria-label="Прикуп">
-      {showWidow && <><span className={styles.zoneLabel}>Прикуп</span><div className={styles.widowCards}>
-        {[0,1].map(i => <span key={i} className={styles.tableCard}><CardArtwork card={widow[i]} /></span>)}
+      {(widow.count > 0 || showReplay) && <><span className={styles.zoneLabel}>Прикуп</span><div className={styles.widowCards}>
+        {Array.from({length:showReplay?publicWidow.length:widow.count},(_,i)=><span key={i} className={styles.tableCard}><CardArtwork card={(showReplay?publicWidow:widow.cards)[i]}/></span>)}
       </div></>}
+      {widow.count === 0 && publicWidow.length > 0 && <button type="button" aria-expanded={showReplay} onClick={()=>setReplay(v=>!v)}>{showReplay?"Скрыть прикуп":"Показать прикуп"}</button>}
     </div>
-    <div className={styles.trickField} aria-label="Текущая взятка">
+    <div className={styles.trickField} aria-label="Текущая взятка" data-collecting={collecting ? seatPosition(view.my_seat, view.last_trick_winner ?? -1) ?? undefined : undefined}>
       {(["left","right","bottom"] as const).map(position => {
-        const played = view.trick?.find(p=>p.owner===names[position]);
+        const played = shown.find(p=>p.owner===names[position]);
         return <div key={position} className={`${styles.trickSpot} ${styles[`trick_${position}`]}`} data-trick-seat={names[position]}>
           {played && <span className={styles.tableCard}><CardArtwork card={played.card}/></span>}
         </div>;
       })}
-      {!view.trick?.length && <span className={styles.fieldHint}>{view.status === "lobby" ? "Сбор игроков" : "Поле розыгрыша"}</span>}
+      {!shown.length && <span className={styles.fieldHint}>{view.status === "lobby" ? "Сбор игроков" : "Поле розыгрыша"}</span>}
     </div>
     {view.high_bid && view.phase === "auction" && <p className={styles.contract}>Торговля · {bidLabel(view.high_bid)}</p>}
     {view.contract && <p className={styles.contract}>Контракт · {bidLabel(view.contract)}</p>}
+    {view.contract?.kind === "regular" && view.contract.level === 6 && view.contract.suit === "S" && <p className={styles.contract}>Обязаловка</p>}
     {view.is_passout && <p className={styles.contract}>Распасы</p>}
   </div>;
 }
@@ -86,10 +94,26 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
 }) {
   const seats = tableSeats(view.my_seat);
   const inLobby = view.status === "lobby";
-  return <section className={styles.table} aria-label="Игровой стол" data-table-view="true">
+  const previous = useRef<RoomView|null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+  const [animation,setAnimation] = useState<{kind:"deal"|"trick";game:string|null;count:number}|null>(null);
+  useEffect(()=>{
+    const before=previous.current;
+    previous.current=view;
+    const kind=animationBetween(before,view);
+    if (kind && document.visibilityState === "visible" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if(timer.current) clearTimeout(timer.current);
+      setAnimation({kind,game:view.game_id,count:view.played_tricks??0});
+      timer.current=setTimeout(()=>setAnimation(null),kind==="deal"?1000:650);
+    }
+  },[view]);
+  useEffect(()=>()=>{if(timer.current) clearTimeout(timer.current);},[]);
+  const active=animation&&animation.game===view.game_id&&animation.count===(view.played_tricks??0)?animation.kind:null;
+  const collecting=active==="trick"&&!view.trick?.length;
+  return <section data-dealing={active==="deal"?"true":undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
       <SeatAtTable view={view} seat={seats.left} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
-      <CenterCards view={view}/>
+      <CenterCards key={`${view.room_id}:${view.game_id}:${view.phase}:${view.played_tricks??0}`} view={view} collecting={collecting}/>
       <SeatAtTable view={view} seat={seats.right} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
     </div>
     <div className={styles.decision} data-table-actions="true">{actions}</div>
