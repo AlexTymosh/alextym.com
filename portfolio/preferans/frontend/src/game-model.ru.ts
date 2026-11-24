@@ -1,4 +1,5 @@
 /** Public, allow-listed types only. No Firestore game state or Firebase credentials. */
+import { isPresentation, replayMoveAllowed, type Presentation } from "./presentation-model";
 export type Suit = "S" | "C" | "D" | "H";
 export type Card = { suit: Suit; rank: number };
 export type Bid = {
@@ -24,7 +25,7 @@ export type RoomControls = {
   counter: null | { target: number; initiator: number; deadline_ms: number | null;
     remaining_ms?: number; penalty: number; periods: number; period_ms: number };
   undo: null | { kind: "card_play" | "auction_bid"; requester: number;
-    deadline_ms: number | null; reason: string; votes: Record<string, boolean>; can_vote: boolean };
+    deadline_ms: number | null; remaining_ms?: number; reason: string; votes: Record<string, boolean>; can_vote: boolean };
   can_request_undo: boolean;
   adjustments: Adjustment[];
   policy?: { counter_seconds: number; counter_multiplier: number; undo_seconds: number };
@@ -34,6 +35,8 @@ export type RoomView = {
   status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed";
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
   controls?: RoomControls;
+  presentation?: Presentation;
+  last_trick_suit?: Suit | null;
   lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number };
   phase?: Phase; turn?: number | null; controller?: number | null;
   dealer?: number; first_hand?: number; is_passout?: boolean; played_tricks?: number;
@@ -55,7 +58,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -95,7 +98,7 @@ export function moveCard(order: string[], from: string, to: string): string[] {
 }
 export function allowedToAct(view: RoomView): boolean {
   if (view.my_seat === null || view.status !== "playing" ||
-      view.controls?.paused || view.controls?.undo) return false;
+      (view.controls?.paused && !replayMoveAllowed(view)) || view.controls?.undo) return false;
   if (view.phase === "opening_lead" || view.phase === "play") {
     return view.controller === view.my_seat;
   }
@@ -118,6 +121,7 @@ export function phaseLabel(phase?: Phase): string {
 export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
+  if (v.presentation !== undefined && (!isPresentation(v.presentation) || v.my_seat === null)) return false;
   if (v.next_deal !== undefined) {
     const clock = v.next_deal as Record<string, unknown> | null;
     if (!clock || typeof clock !== "object" || v.status !== "between" ||

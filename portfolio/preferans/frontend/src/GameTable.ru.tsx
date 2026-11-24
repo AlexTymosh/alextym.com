@@ -58,7 +58,7 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard }: {
   </section>;
 }
 
-function CenterCards({ view, collecting }: { view: RoomView; collecting: boolean }) {
+function CenterCards({ view, collecting, onWidow, onField }: { view: RoomView; collecting: boolean; onWidow?: () => void; onField?: () => void }) {
   const widow = visibleWidow(view);
   const publicWidow = replayWidow(view);
   const [replay,setReplay] = useState(false);
@@ -70,7 +70,7 @@ function CenterCards({ view, collecting }: { view: RoomView; collecting: boolean
       {(widow.count > 0 || showReplay) && <><span className={styles.zoneLabel}>Прикуп</span><div className={styles.widowCards}>
         {Array.from({length:showReplay?publicWidow.length:widow.count},(_,i)=><span key={i} className={styles.tableCard}><CardArtwork card={(showReplay?publicWidow:widow.cards)[i]}/></span>)}
       </div></>}
-      {widow.count === 0 && publicWidow.length > 0 && <button type="button" aria-expanded={showReplay} onClick={()=>setReplay(v=>!v)}>{showReplay?"Скрыть прикуп":"Показать прикуп"}</button>}
+      {widow.count === 0 && publicWidow.length > 0 && <button type="button" aria-expanded={showReplay} onClick={()=>onWidow ? onWidow() : setReplay(v=>!v)}>{showReplay?"Скрыть прикуп":"Показать прикуп"}</button>}
     </div>
     <div className={styles.trickField} aria-label="Текущая взятка" data-collecting={collecting ? seatPosition(view.my_seat, view.last_trick_winner ?? -1) ?? undefined : undefined}>
       {(["left","right","bottom"] as const).map(position => {
@@ -80,6 +80,7 @@ function CenterCards({ view, collecting }: { view: RoomView; collecting: boolean
         </div>;
       })}
       {!shown.length && <span className={styles.fieldHint}>{view.status === "lobby" ? "Сбор игроков" : "Поле розыгрыша"}</span>}
+      {onField && <button type="button" className={styles.closeSharedField} onClick={onField}>Закрыть общий просмотр</button>}
     </div>
     {view.high_bid && view.phase === "auction" && <p className={styles.contract}>Торговля · {bidLabel(view.high_bid)}</p>}
     {view.contract && <p className={styles.contract}>Контракт · {bidLabel(view.contract)}</p>}
@@ -88,9 +89,10 @@ function CenterCards({ view, collecting }: { view: RoomView; collecting: boolean
   </div>;
 }
 
-export function GameTable({view, profiles, presence, hand, actions, renderOpenCard}: {
+export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel}: {
   view: RoomView; profiles: SeatProfile[] | null; presence: Presence[] | null;
   hand: ReactNode; actions: ReactNode; renderOpenCard: (card: Card, seat: Seat) => ReactNode;
+  objects?: ReactNode; sharedPanel?: ReactNode; onWidow?: () => void; onField?: () => void;
 }) {
   const seats = tableSeats(view.my_seat);
   const inLobby = view.status === "lobby";
@@ -113,9 +115,11 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
   return <section data-dealing={active==="deal"?"true":undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
       <SeatAtTable view={view} seat={seats.left} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
-      <CenterCards key={`${view.room_id}:${view.game_id}:${view.phase}:${view.played_tricks??0}`} view={view} collecting={collecting}/>
+      <CenterCards key={`${view.room_id}:${view.game_id}:${view.phase}:${view.played_tricks??0}`} view={view} collecting={collecting} onWidow={onWidow} onField={onField}/>
       <SeatAtTable view={view} seat={seats.right} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
     </div>
+    {objects}
+    {sharedPanel}
     <div className={styles.decision} data-table-actions="true">{actions}</div>
     <div className={styles.bottomArea}>
       <SeatAtTable view={view} seat={seats.bottom} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>

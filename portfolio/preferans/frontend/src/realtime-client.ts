@@ -45,6 +45,7 @@ function validSocketUrl(value: unknown, room: string): string | null {
 
 export type RealtimeCallbacks = {
   onView: (view: RoomView) => void;
+  onClock?: (at: number) => void;
   onReady: (ready: boolean) => void;
   onPresence: (value: Presence[]) => void;
   onDenied: () => void;
@@ -118,6 +119,7 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
         const frame = parseRealtimeFrame(event.data, room, seat);
         if (!frame) { ws.close(); return; }
         lastSeen = Date.now();
+        callbacks.onClock?.(frame.server_now_ms);
         if (frame.type === "snapshot" && frame.view.version >= latestVersion) {
           latestVersion = frame.view.version;
           if (startup) clearTimeout(startup);

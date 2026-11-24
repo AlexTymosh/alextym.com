@@ -72,7 +72,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
     (field !== "vist" || seat !== against);
   return <section className={styles.controlPanel} aria-labelledby="preferans-controls-heading">
     <h3 id="preferans-controls-heading">Управление игрой</h3>
-    {controls.paused && <p role="status" className={styles.controlAlert}>Пауза: ожидаем восстановления соединения всех трёх игроков. Таймеры заморожены.</p>}
+    {controls.paused && <p role="status" className={styles.controlAlert}>Пауза: таймеры заморожены. Проверь общие панели, перерыв и соединение.</p>}
     {counter && <div className={styles.controlNote} aria-live="off">
       <strong>На счётчике: {names[counter.target]}</strong>
       <span>Поставил: {names[counter.initiator]}</span>
@@ -88,7 +88,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
     {vote && <div className={styles.controlNote} role="group" aria-label="Голосование за отмену">
       <strong>Запрос на отмену: {vote.kind === "card_play" ? "карты" : "ставки"}</strong>
       <p>{names[vote.requester]}: {vote.reason}</p>
-      <p>Осталось: {secondsLeft(vote.deadline_ms, undefined, now)} сек. · Голосов: {Object.keys(vote.votes).length}/2</p>
+      <p>Осталось: {secondsLeft(vote.deadline_ms, vote.remaining_ms, now)} сек. · Голосов: {Object.keys(vote.votes).length}/2</p>
       {vote.can_vote && !controls.paused && <div className={styles.actions}>
         <button type="button" disabled={busy} onClick={() => command("undo_vote", { approve: true })}>Простить</button>
         <button type="button" disabled={busy} onClick={() => command("undo_vote", { approve: false })}>Отказать</button>

@@ -18,6 +18,8 @@ import { PreferansMedia } from "./PreferansMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
 import { CardArtwork } from "./CardArtwork.ru";
 import { GameTable, PreviousTrick } from "./GameTable.ru";
+import { SharedRoom, SharedObjects, type SharedCommand } from "./SharedRoom.ru";
+import { replayMoveAllowed, type OverlayKind } from "./presentation-model";
 import { ProjectSidebar } from "./ProjectSidebar.ru";
 import { Lobby } from "./Lobby.ru";
 import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
@@ -88,9 +90,9 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
   const concede = mayConcede(view) && <div className={styles.concede}><button type="button" disabled={busy} onClick={() => {
     if (window.confirm("Признать игру без трёх? Это начислит штраф в гору без розыгрыша.")) command("without_three");
   }}>Признать «без трёх»</button></div>;
-  if (view.status === "playing" && (view.controls?.undo || view.controls?.paused)) {
+  if (view.status === "playing" && (view.controls?.undo || (view.controls?.paused && !replayMoveAllowed(view)))) {
     return <section className={styles.actionPanel}><h3>Игра приостановлена</h3>
-      <p>Ожидаем голосование или восстановление соединения. Ходить сейчас нельзя.</p>
+      <p>Закрой общий объект, подтверди готовность или дождись восстановления связи. Ходить сейчас нельзя.</p>
     </section>;
   }
   if (view.status === "between" && view.next_deal && REALTIME_ENABLED) {
@@ -99,7 +101,7 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
   if (view.status === "lobby" || view.status === "between") {
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
       <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Новую раздачу запускает администратор комнаты.</p>
-      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || view.occupied.some(x => !x) || Boolean(view.status === "lobby" && view.lobby_setup && !view.lobby_setup.ready.every(Boolean))} onClick={onStart}>Раздать карты</button>}
+      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || Boolean(view.controls?.paused) || view.occupied.some(x => !x) || Boolean(view.status === "lobby" && view.lobby_setup && !view.lobby_setup.ready.every(Boolean))} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
   if (view.status === "awaiting_settlement") {
@@ -114,7 +116,7 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
           <select value={passoutRoutes[seat]} onChange={(e: ChangeEvent<HTMLSelectElement>) => setPassoutRoute(seat, e.target.value as "pool" | "hill_first" | "help")}>
             <option value="pool">В пулю</option><option value="hill_first">Сначала погасить гору</option><option value="help">Помочь другому</option>
           </select></label>)}
-        <button type="button" disabled={busy} className={styles.primary} onClick={onSettle}>Рассчитать раздачу</button>
+        <button type="button" disabled={busy || Boolean(view.controls?.paused || view.controls?.undo)} className={styles.primary} onClick={onSettle}>Рассчитать раздачу</button>
       </> : <p className={styles.subtle}>Ожидаем расчёт администратора.</p>}
     </section>;
   }
@@ -168,6 +170,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const [view, setView] = useState<RoomView | null>(null);
   const [invited, setInvited] = useState<RoomInvitation | null>(null);
   const viewRef = useRef<RoomView | null>(null);
+  const serverOffset = useRef(0);
+  const serverNow = useCallback(() => Date.now() + serverOffset.current, []);
   const [status, setStatus] = useState("");
   const [online, setOnline] = useState(true);
   const [rtReady, setRtReady] = useState(false);
@@ -261,6 +265,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         const result = await roomView(roomId, viewRef.current?.version);
         if (stopped) return;
         if (!("unchanged" in result)) {
+          if (result.presentation) serverOffset.current = result.presentation.server_now_ms - Date.now();
           updateView(result);
           setStatus("");
         }
@@ -303,6 +308,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   useEffect(() => {
     if (!REALTIME_ENABLED || !roomId || mySeat === null || mySeat === undefined) return;
     return connectRealtime(roomId, mySeat, {
+      onClock: at => { if (activeRoomRef.current === roomId) serverOffset.current = at - Date.now(); },
       onView: next => { if (activeRoomRef.current === roomId) { updateView(next); setOnline(true); } },
       onReady: ready => { if (activeRoomRef.current === roomId) { setRtReady(ready); if (!ready) setRtPresence(null); } },
       onPresence: value => { if (activeRoomRef.current === roomId) setRtPresence(value); },
@@ -442,6 +448,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       .catch(() => setStatus("Не удалось скопировать. Скопируй адрес из браузера."));
   };
 
+  const shared: SharedCommand = (action, args = {}) => {
+    if (view?.presentation) command(action, { ...args, presentation_version: view.presentation.revision });
+  };
+  const openShared = (kind: OverlayKind) => shared("overlay_open", {kind});
   const ownHand = view && <div className={styles.handsPanel}>
     <div className={styles.handTitle}><h3>Твоя рука</h3>
       <label>Сортировка <select aria-label="Сортировка карт" value={sortMode} onChange={e => changeSort(e.target.value === "suit" ? "suit" : "grouped")}>
@@ -516,12 +526,17 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             controls={<PreferansControls view={view} busy={busy} command={command} adjust={adjust}/>}
             last={<PreviousTrick view={view}/>}
             urgent={Boolean(view.controls?.counter || view.controls?.undo)}
+            shared={view.presentation?.enabled ? openShared : undefined}
             media={process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null
               ? <PreferansMedia key={`${view.room_id}:${view.my_seat}`} roomId={view.room_id} seat={view.my_seat} liveOnly scene={{
                 phase: phaseLabel(view.phase), status: statusNames[view.status], publicTrick: (view.trick ?? []).map(p => cardLabel(p.card)),
               }}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
-              hand={ownHand} actions={actions} renderOpenCard={renderOpenCard}/>
+              hand={ownHand} actions={actions} renderOpenCard={renderOpenCard}
+              objects={view.presentation?.enabled ? <SharedObjects view={view} busy={busy} open={openShared}/> : undefined}
+              onWidow={view.presentation?.enabled ? () => openShared("widow_replay") : undefined}
+              onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
+              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} scoreTable={<ScoreBoard view={view}/>}/>}/>
           </ProjectSidebar>
         </>}
     </div>
