@@ -52,6 +52,15 @@ def seat_view(
         "controls": public_controls(controls or {}, now_ms, my_seat),
     }
     if state is None:
+        setup = room.get("lobby_setup")
+        if room["status"] == "lobby" and setup is not None and score is not None:
+            result["lobby_setup"] = {
+                "ready": list(setup["ready"]),
+                "dealer": setup["dealer"],
+                "target": score.target,
+                "ruleset": score.ruleset.rules.identifier,
+                "ruleset_version": score.ruleset.rules.version,
+            }
         return result
     exposed = [
         {"seat": i, "cards": [public_card(c) for c in state.hands[i]]}
