@@ -1,6 +1,6 @@
 # Zaporizhzhia Preferans — Modernization Development Plan
 
-**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.5 · **Дата:** 24.11.2026
+**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.6 · **Дата:** 24.11.2026
 **Базовый `main` при анализе:** `93611d3ea7c67a5762888c6ed17bd146406d7d4c`.
 **Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 слит в main `9422f7a` (CI green по Owner). PR12 слит в main `d68cc1b` (CI green по Owner). PR13 A–C слит в main `8ad0e39` (CI green по Owner). PR13.D — отдельный кандидат `feat/preferans-live-media`; полный CI и real-device UAT ожидаются.
 **Нормативный документ:** [MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md](MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md), далее MOD-TZ.
@@ -226,3 +226,8 @@ Next smallest deliverable / explicit stop condition:
 ### Контрольная точка PR13 A–C
 
 Срезы A–C доставляются одним промежуточным ZIP в ветку PR13. После локальной проверки продолжить D в той же ветке; не сливать PR до проверки всех срезов. Пулька показывает текущие суммы из публичного ledger projection, без выдуманной детализации записей. G07/G08 не закрыты. Два собственных тестовых WAV, без коммерческих песен. Legacy live media остаётся; не заявлять перенос signalling до реализации D.
+
+
+### Контрольная точка PR14.A
+
+PR13.D слит в main `eab5354` (green CI по Owner). PR14.A — добровольный технический финал, регрессионные тесты и offline evaluator для последующей приёмки. Не считать пройденными 6/8h реальные тесты. G02b, G07 (замена ударов и раскрытие карты), G08 остаются открыты; требуется отдельная проверка и реализация.
