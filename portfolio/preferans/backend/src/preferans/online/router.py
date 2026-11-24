@@ -265,7 +265,12 @@ class MediaCommand(Create):
 
 
 def _media(request: Request, room_id: str, uid_operation: str, **kwargs: Any) -> dict:
-    if os.getenv("PREFERANS_MEDIA_ENABLED") != "true":
+    # The new live-only mode and legacy consent/recording transport must never
+    # operate simultaneously. Preserve old stored documents for audited cleanup.
+    if (
+        os.getenv("PREFERANS_MEDIA_ENABLED") != "true"
+        or os.getenv("PREFERANS_LIVE_MEDIA_WS_ENABLED") == "true"
+    ):
         raise HTTPException(404, "Not found")
     operation = f"media.{uid_operation}"
     base, uid, _ = _context(request, operation)

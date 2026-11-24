@@ -31,3 +31,7 @@
 ## Проверка
 
 Локально в изолированной среде: 23 Python теста на новых pure functions и сохранённых PR12 pause_clock/hub/deal_flow; 9 model assertions с ES5/strict; TSX syntax; 2 WAV проверены через wave. Нельзя считать это полноценным CI. В ZIP также test_shared_room_store.py и preferans-shared.ru.spec.ts; запустить в реальном репозитории. Full CI, Firebase Emulator, три браузера, моб. landscape, реальная пауза/таймер/музыка, квоты ещё ожидаются. G07/G08 не закрыты, не имитировать их в UI. Не сливать до завершения D и проверки итогового PR13.
+
+## Дополнение после merge A–C
+
+Owner сообщил о зелёном CI; A–C слиты в `8ad0e39`. D вынесен в отдельную ветку. См. `PR13_LIVE_MEDIA.ru.md` для нового транспорта, флагов и ограничений.

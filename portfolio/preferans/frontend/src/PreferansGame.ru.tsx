@@ -14,7 +14,7 @@ import {
 import styles from "./preferans-game.module.css";
 import { PreferansControls } from "./PreferansControls.ru";
 import { PreferansHistory } from "./PreferansHistory.ru";
-import { PreferansMedia } from "./PreferansMedia.ru";
+import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
 import { CardArtwork } from "./CardArtwork.ru";
 import { GameTable, PreviousTrick } from "./GameTable.ru";
@@ -29,6 +29,7 @@ import { DealStatus } from "./DealStatus.ru";
 import { orderHand, ownCards, mayConcede, type SortMode } from "./interaction-model";
 
 const REALTIME_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_REALTIME_ENABLED === "true";
+const LIVE_MEDIA_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && process.env.NEXT_PUBLIC_PREFERANS_LIVE_MEDIA_WS_ENABLED === "true";
 
 type Mutation = { label: string; run: () => Promise<unknown> };
 const seatNames = ["Игрок 1", "Игрок 2", "Игрок 3"];
@@ -166,6 +167,8 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
 
 export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}) {
   const [roomId, setRoomId] = useState("");
+  const liveMedia = useLiveMedia();
+  const {bind: bindMedia, receive: receiveMedia} = liveMedia;
   const [roomInput, setRoomInput] = useState("");
   const [view, setView] = useState<RoomView | null>(null);
   const [invited, setInvited] = useState<RoomInvitation | null>(null);
@@ -230,6 +233,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
 
   const openRoom = useCallback((id: string) => {
     if (!ROOM_ID_RE.test(id)) { setStatus("Нужен идентификатор комнаты из 32 символов (0–9, a–f)."); return; }
+    bindMedia(0, null);
     viewRef.current = null;
     activeRoomRef.current = id;
     setProfileState(null);
@@ -240,9 +244,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     url.searchParams.set("room", id);
     window.history.replaceState({}, "", url);
     setPollKey(v => v + 1);
-  }, []);
+  }, [bindMedia]);
 
   const leaveRoom = useCallback(() => {
+    bindMedia(0, null);
     viewRef.current = null;
     activeRoomRef.current = "";
     setProfileState(null);
@@ -251,7 +256,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     const url = new URL(window.location.href);
     url.searchParams.delete("room");
     window.history.replaceState({}, "", url);
-  }, []);
+  }, [bindMedia]);
 
   // HTTP bootstrap and bounded fallback. Healthy sockets own room delivery.
   useEffect(() => {
@@ -308,6 +313,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   useEffect(() => {
     if (!REALTIME_ENABLED || !roomId || mySeat === null || mySeat === undefined) return;
     return connectRealtime(roomId, mySeat, {
+      onMediaTransport: LIVE_MEDIA_ENABLED ? sender => { if (activeRoomRef.current === roomId) bindMedia(mySeat, sender); } : undefined,
+      onMediaFrame: LIVE_MEDIA_ENABLED ? frame => { if (activeRoomRef.current === roomId) receiveMedia(frame); } : undefined,
       onClock: at => { if (activeRoomRef.current === roomId) serverOffset.current = at - Date.now(); },
       onView: next => { if (activeRoomRef.current === roomId) { updateView(next); setOnline(true); } },
       onReady: ready => { if (activeRoomRef.current === roomId) { setRtReady(ready); if (!ready) setRtPresence(null); } },
@@ -318,7 +325,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         setStatus(statusMessage(403));
       },
     });
-  }, [roomId, mySeat, updateView]);
+  }, [roomId, mySeat, updateView, bindMedia, receiveMedia]);
 
   // Presence leases are server-persisted. A stale lease conservatively pauses a counter.
   // No browser clock can apply a financial penalty or decide who is online.
@@ -496,6 +503,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div>
     </header>
 
+    {(liveMedia.state.joined || liveMedia.state.joining) && <div className={styles.actions}>
+      <button type="button" onClick={liveMedia.leave}>Отключить камеру, микрофон и звонок</button>
+    </div>}
     <div className={styles.tableShell}>
         {!roomId && <><Lobby roomInput={roomInput} setRoomInput={setRoomInput} openRoom={openRoom} create={create} busy={busy}/>
           <button type="button" aria-expanded={lobbyHistory} onClick={() => setLobbyHistory(v => !v)}>История и рейтинг</button>
@@ -527,12 +537,11 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             last={<PreviousTrick view={view}/>}
             urgent={Boolean(view.controls?.counter || view.controls?.undo)}
             shared={view.presentation?.enabled ? openShared : undefined}
-            media={process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null
-              ? <PreferansMedia key={`${view.room_id}:${view.my_seat}`} roomId={view.room_id} seat={view.my_seat} liveOnly scene={{
-                phase: phaseLabel(view.phase), status: statusNames[view.status], publicTrick: (view.trick ?? []).map(p => cardLabel(p.card)),
-              }}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
+            media={LIVE_MEDIA_ENABLED && view.my_seat !== null
+              ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
               hand={ownHand} actions={actions} renderOpenCard={renderOpenCard}
+              mediaForSeat={LIVE_MEDIA_ENABLED && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
               objects={view.presentation?.enabled ? <SharedObjects view={view} busy={busy} open={openShared}/> : undefined}
               onWidow={view.presentation?.enabled ? () => openShared("widow_replay") : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}

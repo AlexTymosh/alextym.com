@@ -1,8 +1,8 @@
 # Zaporizhzhia Preferans — Modernization Development Plan
 
-**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.4 · **Дата:** 24.11.2026
+**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.5 · **Дата:** 24.11.2026
 **Базовый `main` при анализе:** `93611d3ea7c67a5762888c6ed17bd146406d7d4c`.
-**Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 слит в main `9422f7a` (CI green по Owner). PR12 слит в main `d68cc1b` (CI green по Owner). PR13 A–C — кандидат, интеграционная проверка ожидается; D ещё не выполнен.
+**Статус:** PR10 слит в main `2166e10`; Owner сообщил о зелёном CI. PR11 слит в main `9422f7a` (CI green по Owner). PR12 слит в main `d68cc1b` (CI green по Owner). PR13 A–C слит в main `8ad0e39` (CI green по Owner). PR13.D — отдельный кандидат `feat/preferans-live-media`; полный CI и real-device UAT ожидаются.
 **Нормативный документ:** [MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md](MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md), далее MOD-TZ.
 **Проект:** `portfolio/preferans/`. Все пути ниже, кроме явно обозначенных host paths, относительно этой папки.
 
@@ -149,6 +149,8 @@ Next smallest deliverable / explicit stop condition:
 **DoD:** UI-03–05, повторные показы пока только подготовленный контракт/открытый data projection, auto-deal работает; сохранены правила и pending settlement; никаких неподтверждённых карт в HTML/WS/API. PR13 подключает общие overlays.
 
 ## 5. PR13 — Shared Room & Live Media
+
+> A–C уже слиты по решению Owner. D доставляется отдельным PR из актуального main (`feat/preferans-live-media`), без расширения исторических правил. Если WS отсутствует, звонок отключается; игровой HTTP fallback сохраняется. Старый HTTP signalling не запускается новой сценой.
 
 **Ветка:** `feat/preferans-shared-room`
 **Цель:** единое пространство комнаты, не только персональный экран. Пулька, прикуп/last trick, перерыв, музыка и добровольная живая связь.

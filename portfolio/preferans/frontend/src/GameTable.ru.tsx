@@ -29,9 +29,9 @@ function Avatar({ seat, profile, active, presence, occupied, own }: {
   </div>;
 }
 
-function SeatAtTable({ view, seat, profiles, presence, renderOpenCard }: {
+function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media }: {
   view: RoomView; seat: Seat; profiles: SeatProfile[] | null; presence: Presence[] | null;
-  renderOpenCard: (card: Card, seat: Seat) => ReactNode;
+  renderOpenCard: (card: Card, seat: Seat) => ReactNode; media?: ReactNode;
 }) {
   const own = view.my_seat === seat;
   const position = seatPosition(view.my_seat, seat)!;
@@ -40,6 +40,7 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard }: {
   return <section className={`${styles.seat} ${styles[position]}`} data-seat={seat} data-position={position}
     aria-label={`${positionNames[position]}: ${profiles?.[seat]?.name || fallbackName(seat)}${own ? ", ты" : ""}`}>
     <Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={presence?.[seat]} occupied={view.occupied[seat]} own={own} />
+    {media}
     <div className={styles.seatMeta}>
       {view.phase === "auction" && view.auction_calls?.[seat] && <span className={styles.callBubble}>
         {view.auction_calls[seat]?.kind === "pass" ? "ПАС" : `${view.auction_calls[seat]?.kind === "here" ? "Здесь " : ""}${view.auction_calls[seat]?.bid ? bidLabel(view.auction_calls[seat]!.bid!) : ""}`}
@@ -89,10 +90,11 @@ function CenterCards({ view, collecting, onWidow, onField }: { view: RoomView; c
   </div>;
 }
 
-export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel}: {
+export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat}: {
   view: RoomView; profiles: SeatProfile[] | null; presence: Presence[] | null;
   hand: ReactNode; actions: ReactNode; renderOpenCard: (card: Card, seat: Seat) => ReactNode;
   objects?: ReactNode; sharedPanel?: ReactNode; onWidow?: () => void; onField?: () => void;
+  mediaForSeat?: (seat: Seat) => ReactNode;
 }) {
   const seats = tableSeats(view.my_seat);
   const inLobby = view.status === "lobby";
@@ -114,15 +116,15 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
   const collecting=active==="trick"&&!view.trick?.length;
   return <section data-dealing={active==="deal"?"true":undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
-      <SeatAtTable view={view} seat={seats.left} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
+      <SeatAtTable view={view} seat={seats.left} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)}/>
       <CenterCards key={`${view.room_id}:${view.game_id}:${view.phase}:${view.played_tricks??0}`} view={view} collecting={collecting} onWidow={onWidow} onField={onField}/>
-      <SeatAtTable view={view} seat={seats.right} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
+      <SeatAtTable view={view} seat={seats.right} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)}/>
     </div>
     {objects}
     {sharedPanel}
     <div className={styles.decision} data-table-actions="true">{actions}</div>
     <div className={styles.bottomArea}>
-      <SeatAtTable view={view} seat={seats.bottom} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard}/>
+      <SeatAtTable view={view} seat={seats.bottom} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.bottom)}/>
       {!inLobby && view.my_seat !== null && <div className={styles.ownHand} data-own-hand="true">{hand}</div>}
       {inLobby && <p className={styles.lobbyHint}>Занято мест: {view.occupied.filter(Boolean).length} из 3</p>}
     </div>
