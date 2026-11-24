@@ -7,6 +7,22 @@ type ProjectOverview = {
 };
 
 export const projectOverviews: Readonly<Partial<Record<string, ProjectOverview>>> = {
+  preferans: {
+    focus: "A familiar card table, shared house rules, and three friends — wherever they are.",
+    challenge: "Recreate a personal three-player Preferans variant with its own bidding hierarchy, misere, whist, settlement rules and traditions, while keeping player hands private and access invitation-only.",
+    approach: "The project separates a deterministic Python game engine and auditable scoring from authenticated online rooms. The React interface uses server-projected game state; optional peer-to-peer media and consent-based local recording remain feature-gated pending acceptance testing.",
+    highlights: [
+      "Private three-player rooms with authenticated access and seat-based visibility.",
+      "House-rule contracts covering bids, misere, whist, pass-outs and pool, hill and vist accounting.",
+      "Immutable completed-game history, statistics and rankings.",
+      "Optional audio/video and local recording, disabled until privacy and device testing are complete.",
+    ],
+    preview: {
+      src: "/images/portfolio/preferans-concept.png",
+      alt: "Illustrated nostalgic apartment room with a green three-player card table; conceptual artwork, not a live game screenshot.",
+      caption: "Concept artwork · Private three-player card game",
+    },
+  },
   fleet_hub: {
     focus: "One vehicle. Every issue. A shared conversation.",
     challenge: "A rapid concept for aligning a parent company and its subsidiary when their operational units differ: one tracks breakdown tickets, while the other manages vehicles and the events in each vehicle's lifecycle.",

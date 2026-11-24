@@ -5,7 +5,7 @@
 - Project ID: `preferans`
 - Private route: `/portfolio/preferans`
 - Feature-gated API prefix (mounted): `/api/preferans`
-- Public portfolio card: disabled (`catalog.visible=false`)
+- Public portfolio card: enabled (`catalog.visible=true`); game access remains protected
 - PR 1–8: merged as #268–#275; PR 9 branch: `feat/preferans-release`
 
 ## Boundaries
