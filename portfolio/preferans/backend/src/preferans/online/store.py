@@ -50,6 +50,12 @@ from preferans.online.presentation import (
     invalidate_ready,
 )
 from preferans.online.pause_clock import synchronize
+from preferans.online.sheet_exit import (
+    ACTIONS as SHEET_ACTIONS,
+    SheetExitError,
+    change as change_sheet,
+    finish as finish_sheet,
+)
 from preferans.online.realtime import CHECKPOINT_MS, HubError, enabled as realtime_enabled, hub
 
 ROOM_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -108,6 +114,7 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     controls["vote"] = None
     controls["candidate"] = None
     controls.pop("next_deal", None)
+    controls.pop("sheet_offers", None)
     return game
 
 
@@ -421,7 +428,11 @@ class FirestoreRooms:
             now = self.now_ms()
             auto_events = []
             # Reconcile timers at the same authoritative timestamp as this write.
-            if use_rt and room["status"] in {"playing", "between", "awaiting_settlement"}:
+            if action in SHEET_ACTIONS:
+                # A voluntary exit must remain possible during any pause. No
+                # implicit settlement or timer penalty is charged by this action.
+                pass
+            elif use_rt and room["status"] in {"playing", "between", "awaiting_settlement"}:
                 try:
                     score, auto_events, generation = self._realtime_controls(
                         room, controls, game, score, now
@@ -441,7 +452,19 @@ class FirestoreRooms:
                 except ControlError as exc:
                     raise StoreError(exc.status, exc.detail) from exc
             event_data = {}
-            if action in PRESENTATION_ACTIONS:
+            sheet_loser = None
+            if action in SHEET_ACTIONS:
+                try:
+                    event_data, sheet_loser = change_sheet(
+                        controls, room, room["seats"].index(uid), action, args
+                    )
+                except SheetExitError as exc:
+                    raise StoreError(exc.code, str(exc)) from exc
+                if sheet_loser is not None:
+                    room["status"] = "closed"
+                    room["sheet_loser"] = sheet_loser
+                    finish_sheet(controls)
+            elif action in PRESENTATION_ACTIONS:
                 # The shared pause API uses the existing authenticated transaction.
                 # New shared actions need the realtime presence scheduler. On rollback
                 # permit closing an already-open overlay, never force-resume a break.
@@ -522,24 +545,6 @@ class FirestoreRooms:
                 controls["candidate"] = None
                 controls["timer"] = None
                 event_data = {"score_version": score.version, "closed": score.closed}
-                if score.closed:
-                    # Final result and all ranking projections commit with the CLOSED room.
-                    # No reads may occur after the first Firestore transaction write.
-                    result_doc = self.db.collection("preferans_results").document(room_id)
-                    if _get(transaction, result_doc) is not None:
-                        raise StoreError(409, "Finished result already exists")
-                    try:
-                        final = final_result(room, score, now)
-                        ranking_docs = [
-                            self.db.collection("preferans_rankings").document(player["id"])
-                            for player in final["players"]
-                        ]
-                        rankings = [
-                            update_ranking(_get(transaction, ref), player, final)
-                            for ref, player in zip(ranking_docs, final["players"])
-                        ]
-                    except (ValueError, TypeError, KeyError) as exc:
-                        raise StoreError(503, "Invalid final accounting") from exc
             elif action == "lobby_ready":
                 if room["status"] != "lobby" or "lobby_setup" not in room or None in room["seats"]:
                     raise StoreError(409, "Lobby setup is not ready")
@@ -648,6 +653,24 @@ class FirestoreRooms:
                     raise StoreError(exc.status, exc.detail) from exc
                 except (ValueError, TypeError, KeyError) as exc:
                     raise StoreError(422, "Illegal game action") from exc
+            finalize = (action == "settle" and score.closed) or sheet_loser is not None
+            if finalize:
+                # All reads precede writes, including the immutable result and all rankings.
+                result_doc = self.db.collection("preferans_results").document(room_id)
+                if _get(transaction, result_doc) is not None:
+                    raise StoreError(409, "Finished result already exists")
+                try:
+                    final = final_result(room, score, now, sheet_loser=sheet_loser)
+                    ranking_docs = [
+                        self.db.collection("preferans_rankings").document(player["id"])
+                        for player in final["players"]
+                    ]
+                    rankings = [
+                        update_ranking(_get(transaction, ref), player, final)
+                        for ref, player in zip(ranking_docs, final["players"])
+                    ]
+                except (ValueError, TypeError, KeyError) as exc:
+                    raise StoreError(503, "Invalid final accounting") from exc
             # Automatic timeout events are sequenced before the user mutation.
             for automatic in auto_events:
                 room["version"] += 1
@@ -665,7 +688,7 @@ class FirestoreRooms:
                 "data": event_data,
             }
             response = {"room_id": room_id, "version": v, "status": room["status"]}
-            if action == "settle" and score.closed:
+            if finalize:
                 transaction.create(result_doc, final)
                 for ranking_doc, projection in zip(ranking_docs, rankings):
                     transaction.set(ranking_doc, projection)

@@ -77,6 +77,9 @@ class Command(Mutation):
         "break_start",
         "break_ready",
         "music",
+        "sheet_offer",
+        "sheet_reply",
+        "sheet_discard",
     ]
     args: dict[str, Any] = Field(default_factory=dict)
 

@@ -1,8 +1,19 @@
 # Preferans — session notes
 
-Version 2.5 | 2026-11-24 | Project only; root notes unchanged.
+## Current candidate: PR14.A — technical finish and release acceptance
 
-- PR10–12 and PR13 A–C merged; inspected main `8ad0e39421ae68194fd225240b4b9936b6df54a7`. Owner reports green full CI. Real Firebase, authenticated three-device UAT, latency, production flags and quotas not established here. Shared overlay/break/music are existing merged scope, not changed in D.
-- Owner authorized continuation. PR13.D candidate separate branch `feat/preferans-live-media` from current main because A–C already merged. Adds live-only optional WebRTC on existing authenticated game socket; targeted, generation-scoped bounded SDP/ICE relay in Room memory; no Firestore signalling, no record path in new UI. Explicit join is receive-only; camera/mic explicit, tracks closed on connection loss/room change/pagehide. Seat tiles use existing orientation; shared gameplay and scoring unchanged. New dedicated server/public media flags disabled by default. Legacy API blocked when new server mode enabled; legacy storage and code retained. No media fallback polling, no TURN, degraded mode game-only. Read `docs/PR13_LIVE_MEDIA.ru.md` for contract, rollout/rollback, privacy and UAT. No actual flag or billing changes.
-- Isolated verification: nine relay tests, one ASGI three-socket test with exact copied realtime_api source and patched local hub/stub storage, strict ES5 model/session compile. Full checkout, CI and actual browser P2P blocked in this environment; do not claim successful real call. Run format.ps1 + verify.ps1 on repo. All changed file anchors checked against pinned main. New legacy API guard and frontend E2E tests require repo CI. Record exact Owner results before next stage.
-- Next PR14 `feat/preferans-modernization-release` after Owner confirms PR13.D merged and authorizes continuation: remaining historical gaps G02/G07/G08 and acceptance, preserve immutable results and approved house rules; no new recording, no paid TURN/TTL. Read MOD-TZ, plan, gap register, PR10/PR13 runbooks. Do not assume remaining gaps closed or invent house rules. 6–8 hour quota and real browser tests, safe rollout. Owner commits/pushes/merges. No changes to unrelated modules, host authorization or root notes.
+Base: `eab5354e6e1d92427a1f2254216f590ae7b2b667` (PR13.D merged; green CI reported by Owner).
+Branch: `feat/preferans-modernization-release`.
+
+- Implemented voluntary sheet discard and recipient-only offer/accept/refuse.
+- Reused the existing atomic result/ranking transaction; unfinished ledger is not settled.
+- Added terminal view and explicit UI confirmation; old offers expire with the deal.
+- Added pure tests, store integration tests, TS model checks and simulated 6h/8h hub tests.
+- Added offline release-evidence evaluator and acceptance documentation.
+- Isolated checks: 8 pure, 4 evidence and 2 simulated hub scenarios. Full repository CI and real-device/emulator/production acceptance pending.
+- No deployment, provider configuration changes, paid infrastructure or video recording.
+- Remaining: G02b, parts of G07, G08, real measurements and acceptance gates (G10).
+
+See `docs/PR14_RELEASE_ACCEPTANCE.ru.md`, `docs/MODERNIZATION_GAP_REGISTER.ru.md` and `docs/MODERNIZATION_DEVELOPMENT_PLAN.ru.md`.
+
+Next: apply candidate, run full checks, inspect diff, commit and review. Continue functional gaps and collect actual release evidence before enabling the new production capabilities.
