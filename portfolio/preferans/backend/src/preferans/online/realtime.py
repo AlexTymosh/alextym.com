@@ -14,6 +14,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from .live_relay import LiveRelay
+
 PROTOCOL = 1
 TICKET_MS = 30_000
 WS_LEASE_MS = 35_000
@@ -100,6 +102,7 @@ class Room:
     syncing: bool = False
     loss_generation: int = 0
     handled_generation: int = 0
+    live_media: LiveRelay = field(default_factory=LiveRelay)
 
 
 class RealtimeHub:

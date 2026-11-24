@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .realtime import AUTH_MS, PROTOCOL, HubError, Ticket, enabled, hub, now_ms, origin_allowed
 from .store import FirestoreRooms, StoreError
+from .live_relay import MAX_FRAME, LiveError, live_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +88,49 @@ def _sync(store: FirestoreRooms, ticket: Ticket) -> None:
         hub.synced(ticket.room, now_ms(), ok, signature)
 
 
+def _live_room(ticket: Ticket, connection: str, at: int):
+    # Caller holds the hub lock. The active lease is the authenticated identity;
+    # never use a seat, connection, room or sender identifier from a media frame.
+    if not live_enabled() or not hub.current(ticket, connection, at):
+        raise LiveError("Media unavailable")
+    room = hub.rooms[ticket.room]
+    active = {
+        seat: lease.connection
+        for seat, lease in room.leases.items()
+        if lease.connection is not None and lease.live(at)
+    }
+    room.live_media.prune(active, at)
+    return room.live_media
+
+
+def _media_receive(ticket: Ticket, connection: str, frame: dict, at: int) -> None:
+    with hub.lock:
+        _live_room(ticket, connection, at).receive(ticket.seat, connection, frame, at)
+
+
+def _media_delivery(ticket: Ticket, connection: str, at: int):
+    with hub.lock:
+        relay = _live_room(ticket, connection, at)
+        return relay.snapshot(ticket.seat, connection), relay.drain(ticket.seat, connection)
+
+
+def _media_prune(ticket: Ticket, at: int) -> None:
+    with hub.lock:
+        room = hub.rooms.get(ticket.room)
+        if room:
+            room.live_media.prune(
+                {
+                    seat: lease.connection
+                    for seat, lease in room.leases.items()
+                    if lease.connection is not None and lease.live(at)
+                },
+                at,
+            )
+
+
 async def _receive(socket: WebSocket) -> dict:
     message = await socket.receive_text()
-    if len(message) > 1024:
+    if len(message) > MAX_FRAME:
         raise HubError("Frame too large")
     try:
         value = json.loads(message)
@@ -97,6 +138,10 @@ async def _receive(socket: WebSocket) -> dict:
         raise HubError("Invalid frame") from exc
     if not isinstance(value, dict):
         raise HubError("Invalid frame")
+    if len(message) > 1024 and not (
+        isinstance(value.get("type"), str) and value["type"].startswith("media_")
+    ):
+        raise HubError("Frame too large")
     return value
 
 
@@ -142,6 +187,8 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
             last_version = -1
             last_presence: list[str] | None = None
             last_ping = 0
+            last_media = None
+            last_media_error = None
             last_auth = now_ms()
             reader = asyncio.create_task(_receive(socket))
             while True:
@@ -168,6 +215,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                             "type": "snapshot",
                             "protocol": PROTOCOL,
                             "view": view,
+                            "live_media": live_enabled(),
                             "presence": presence,
                             "server_now_ms": now_ms(),
                         },
@@ -187,10 +235,46 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                         },
                     )
                     last_presence = presence
+                if live_enabled():
+                    roster, messages = _media_delivery(ticket, connection, now_ms())
+                    if roster != last_media:
+                        last_media = roster
+                        if roster is not None:
+                            await _send(
+                                socket,
+                                {
+                                    "type": "media_state",
+                                    "protocol": PROTOCOL,
+                                    "participants": roster,
+                                    "server_now_ms": now_ms(),
+                                },
+                            )
+                    for message in messages:
+                        await _send(
+                            socket, {**message, "protocol": PROTOCOL, "server_now_ms": now_ms()}
+                        )
                 done, _ = await asyncio.wait({reader}, timeout=0.15)
                 if done:
                     frame = reader.result()
                     at = now_ms()
+                    if isinstance(frame.get("type"), str) and frame["type"].startswith("media_"):
+                        try:
+                            _media_receive(ticket, connection, frame, at)
+                        except LiveError:
+                            # A bad or stale media command cannot close the game socket.
+                            # Coalesce errors under a flood; do not echo the payload.
+                            if last_media_error is None or at - last_media_error >= 5_000:
+                                last_media_error = at
+                                await _send(
+                                    socket,
+                                    {
+                                        "type": "media_error",
+                                        "protocol": PROTOCOL,
+                                        "server_now_ms": at,
+                                    },
+                                )
+                        reader = asyncio.create_task(_receive(socket))
+                        continue
                     if frame != {"type": "ping", "protocol": PROTOCOL} or (
                         last_ping and at - last_ping < 2_000
                     ):
@@ -222,6 +306,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                     await reader
             if ticket and connection:
                 hub.disconnect(ticket, connection, now_ms())
+                _media_prune(ticket, now_ms())
                 if store:
                     with contextlib.suppress(Exception):
                         await run_in_threadpool(_sync, store, ticket)
