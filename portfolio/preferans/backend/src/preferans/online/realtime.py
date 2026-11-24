@@ -342,8 +342,19 @@ class RealtimeHub:
                 if isinstance(d, int)
             ]
             active = view.get("status") == "playing"
+            next_deal = view.get("next_deal") or {}
+            next_deadline = next_deal.get("deadline_ms")
+            deal_due = (
+                view.get("status") == "between"
+                and all(signature)
+                and not controls.get("paused")
+                and not undo
+                and type(next_deadline) is int
+                and next_deadline <= at
+            )
             if (
-                r.signature != signature
+                deal_due
+                or r.signature != signature
                 or r.loss_generation > r.handled_generation
                 or (
                     active
