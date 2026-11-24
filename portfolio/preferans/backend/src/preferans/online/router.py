@@ -12,6 +12,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .store import FirestoreRooms, StoreError
 from .media import MediaRooms
+from .realtime import (
+    PROTOCOL,
+    TICKET_MS,
+    HubError,
+    enabled as realtime_enabled,
+    hub,
+    now_ms,
+    origin_allowed,
+)
 
 router = APIRouter(prefix="/preferans", tags=["Preferans"])
 logger = logging.getLogger(__name__)
@@ -166,6 +175,34 @@ def settle_room(room_id: str, request: Request, body: Settle) -> dict:
     )
 
 
+@router.post("/rooms/{room_id}/realtime-ticket")
+def realtime_ticket(room_id: str, request: Request, body: Strict) -> dict:
+    if not realtime_enabled():
+        raise HTTPException(404, "Not found")
+    origin = request.headers.get("x-preferans-origin", "")
+    if not origin_allowed(origin) or getattr(request.state, "portfolio_lab_role", None) not in {
+        "Test",
+        "Admin",
+    }:
+        raise HTTPException(403, "Realtime access denied")
+    view = _execute(request, "view", room_id)
+    seat = view.get("my_seat")
+    if seat not in (0, 1, 2):
+        raise HTTPException(403, "Seat required")
+    try:
+        token = hub.issue(
+            room_id,
+            request.state.preferans_uid,
+            seat,
+            origin,
+            request.headers.get("authorization", ""),
+            now_ms(),
+        )
+    except HubError as exc:
+        raise HTTPException(503, "Realtime unavailable") from exc
+    return {"ticket": token, "protocol": PROTOCOL, "expires_in_ms": TICKET_MS}
+
+
 @router.get("/rooms/{room_id}/view")
 def room_view(room_id: str, request: Request, since_version: int | None = None) -> dict:
     return _execute(request, "view", room_id, since_version=since_version)
@@ -241,6 +278,20 @@ def room_adjust(room_id: str, request: Request, body: Adjust) -> dict:
             "reason": body.reason,
         },
     )
+
+
+@router.get("/realtime-metrics")
+def realtime_metrics(request: Request) -> dict:
+    if not realtime_enabled():
+        raise HTTPException(404, "Not found")
+    if not getattr(request.state, "preferans_owner", False):
+        raise HTTPException(403, "Owner required")
+    with hub.lock:
+        return {
+            "scope": "process-local-estimates",
+            "metrics": dict(hub.metrics),
+            "active_rooms": len(hub.rooms),
+        }
 
 
 @router.get("/history")

@@ -14,7 +14,7 @@ function response(status: number, data: object) {
 
 function upstreamPath(method: string, parts: string[]): string | null {
   if (parts.length === 1 && parts[0] === "rooms" && method === "POST") return "/api/preferans/rooms";
-  if (method === "GET" && parts.length === 1 && ["history", "rankings"].includes(parts[0]))
+  if (method === "GET" && parts.length === 1 && ["history", "rankings", "realtime-metrics"].includes(parts[0]))
     return `/api/preferans/${parts[0]}`;
   if (method === "GET" && parts.length === 2 && parts[0] === "results" && /^[a-f0-9]{32}$/.test(parts[1]))
     return `/api/preferans/results/${parts[1]}`;
@@ -22,7 +22,7 @@ function upstreamPath(method: string, parts: string[]): string | null {
   const allowed: Record<string, string[]> = {
     join: ["POST"], start: ["POST"], commands: ["POST"], settle: ["POST"],
     view: ["GET"], events: ["GET"], invitation: ["GET"], adjust: ["POST"],
-    media: ["GET", "POST"],
+    media: ["GET", "POST"], "realtime-ticket": ["POST"],
   };
   if (!allowed[parts[2]]?.includes(method)) return null;
   return `/api/preferans/rooms/${parts[1]}/${parts[2]}`;
@@ -32,7 +32,8 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
   const { operation } = await params;
   const path = upstreamPath(request.method, operation);
   if (!path || !isLabEnabled() || process.env.PREFERANS_ROOMS_ENABLED !== "true" ||
-      (path?.endsWith("/media") && process.env.PREFERANS_MEDIA_ENABLED !== "true")) {
+      (path?.endsWith("/media") && process.env.PREFERANS_MEDIA_ENABLED !== "true") ||
+      ((path?.endsWith("/realtime-ticket") || path?.endsWith("/realtime-metrics")) && process.env.PREFERANS_REALTIME_ENABLED !== "true")) {
     return response(404, { detail: "Not found" });
   }
   if (request.method !== "GET" && !hasSameOrigin(request)) {
@@ -69,7 +70,14 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
         k !== (isEvents || isHistory ? "limit" : isView ? "since_version" : isMedia ? "cursor" : ""))) {
       return response(422, { detail: "Invalid query" });
     }
-    const upstream = await fetch(workforceBackendOrigin() + path + (query.size ? `?${query}` : ""), {
+    const backendOrigin = workforceBackendOrigin();
+    const isRealtime = path.endsWith("/realtime-ticket");
+    if (isRealtime) {
+      const origin = request.headers.get("origin");
+      if (!origin) return response(403, { detail: "Origin required" });
+      headers.set("X-Preferans-Origin", origin);
+    }
+    const upstream = await fetch(backendOrigin + path + (query.size ? `?${query}` : ""), {
       method: request.method, headers, body, cache: "no-store", redirect: "error",
       signal: AbortSignal.timeout(25000),
     });
@@ -79,6 +87,13 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
     const data: unknown = await upstream.json();
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       return response(502, { detail: "Invalid upstream response" });
+    }
+    if (isRealtime && upstream.ok) {
+      const ticket = data as Record<string, unknown>;
+      if (typeof ticket.ticket !== "string" || ticket.protocol !== 1) return response(502, { detail: "Invalid realtime ticket" });
+      const socket = new URL(backendOrigin + path.replace(/realtime-ticket$/, "realtime"));
+      socket.protocol = socket.protocol === "https:" ? "wss:" : "ws:";
+      return response(200, { ticket: ticket.ticket, protocol: 1, expires_in_ms: ticket.expires_in_ms, ws_url: socket.href });
     }
     return response(upstream.status, data);
   } catch {

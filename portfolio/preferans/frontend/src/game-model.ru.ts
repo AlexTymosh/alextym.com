@@ -20,6 +20,7 @@ export type Adjustment = {
 };
 export type RoomControls = {
   paused: boolean;
+  pause_reasons?: string[];
   counter: null | { target: number; initiator: number; deadline_ms: number | null;
     remaining_ms?: number; penalty: number; periods: number; period_ms: number };
   undo: null | { kind: "card_play" | "auction_bid"; requester: number;

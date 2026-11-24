@@ -15,6 +15,9 @@ import styles from "./preferans-game.module.css";
 import { PreferansControls } from "./PreferansControls.ru";
 import { PreferansHistory } from "./PreferansHistory.ru";
 import { PreferansMedia } from "./PreferansMedia.ru";
+import { connectRealtime, type Presence } from "./realtime-client";
+
+const REALTIME_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_REALTIME_ENABLED === "true";
 
 type Mutation = { label: string; run: () => Promise<unknown> };
 const seatNames = ["Игрок 1", "Игрок 2", "Игрок 3"];
@@ -228,6 +231,9 @@ export function PreferansGame() {
   const viewRef = useRef<RoomView | null>(null);
   const [status, setStatus] = useState("");
   const [online, setOnline] = useState(true);
+  const [rtReady, setRtReady] = useState(false);
+  const [rtPresence, setRtPresence] = useState<Presence[] | null>(null);
+  const activeRoomRef = useRef("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Mutation | null>(null);
   const [pollKey, setPollKey] = useState(0);
@@ -239,6 +245,8 @@ export function PreferansGame() {
   const dragging = useRef<string | null>(null);
 
   const updateView = useCallback((next: RoomView) => {
+    if (activeRoomRef.current !== next.room_id) return;
+    if (viewRef.current?.room_id === next.room_id && viewRef.current.version > next.version) return;
     viewRef.current = next;
     setView(next);
     setInvited(null);
@@ -248,6 +256,7 @@ export function PreferansGame() {
     const url = new URL(window.location.href);
     const fromUrl = url.searchParams.get("room");
     const initial = fromUrl && ROOM_ID_RE.test(fromUrl) ? fromUrl : "";
+    activeRoomRef.current = initial;
     setRoomInput(initial);
     setRoomId(initial);
   }, []);
@@ -255,7 +264,9 @@ export function PreferansGame() {
   const openRoom = useCallback((id: string) => {
     if (!ROOM_ID_RE.test(id)) { setStatus("Нужен идентификатор комнаты из 32 символов (0–9, a–f)."); return; }
     viewRef.current = null;
+    activeRoomRef.current = id;
     setView(null); setInvited(null); setSelected([]); setOrder([]); setSelectedBid("");
+    setRtReady(false); setRtPresence(null);
     setStatus(""); setRoomInput(id); setRoomId(id);
     const url = new URL(window.location.href);
     url.searchParams.set("room", id);
@@ -265,15 +276,17 @@ export function PreferansGame() {
 
   const leaveRoom = useCallback(() => {
     viewRef.current = null;
+    activeRoomRef.current = "";
     setRoomId(""); setRoomInput(""); setView(null); setInvited(null); setSelected([]); setStatus("");
+    setRtReady(false); setRtPresence(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("room");
     window.history.replaceState({}, "", url);
   }, []);
 
-  // One polling loop per room. The server never returns an unchanged view to a different user.
+  // HTTP bootstrap and bounded fallback. Healthy sockets own room delivery.
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || rtReady) return;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let errors = 0;
@@ -288,7 +301,7 @@ export function PreferansGame() {
         }
         setOnline(true);
         errors = 0;
-        nextMs = viewRef.current?.status === "playing" ? 8_000 : 12_000;
+        nextMs = REALTIME_ENABLED ? 20_000 : viewRef.current?.status === "playing" ? 8_000 : 12_000;
       } catch (error) {
         if (stopped) return;
         if (error instanceof ApiError && error.status === 404 && !viewRef.current) {
@@ -304,7 +317,9 @@ export function PreferansGame() {
           if (error instanceof ApiError) setStatus(statusMessage(error.status));
           else setStatus(statusMessage(503));
           if (error instanceof ApiError && [401, 403].includes(error.status)) {
-            // No further reads of revoked content; keep the public error visible.
+            // Stop the finally-scheduled poll and clear previously authorized private state.
+            stopped = true;
+            viewRef.current = null; setView(null); setInvited(null);
             return;
           }
         }
@@ -317,20 +332,36 @@ export function PreferansGame() {
     }
     void tick();
     return () => { stopped = true; if (timer) clearTimeout(timer); };
-  }, [roomId, pollKey, updateView]);
+  }, [roomId, pollKey, updateView, rtReady]);
+
+  const mySeat = view?.my_seat;
+  useEffect(() => {
+    if (!REALTIME_ENABLED || !roomId || mySeat === null || mySeat === undefined) return;
+    return connectRealtime(roomId, mySeat, {
+      onView: next => { if (activeRoomRef.current === roomId) { updateView(next); setOnline(true); } },
+      onReady: ready => { if (activeRoomRef.current === roomId) { setRtReady(ready); if (!ready) setRtPresence(null); } },
+      onPresence: value => { if (activeRoomRef.current === roomId) setRtPresence(value); },
+      onDenied: () => {
+        if (activeRoomRef.current !== roomId) return;
+        viewRef.current = null; setView(null); setInvited(null); setOnline(false);
+        setStatus(statusMessage(403));
+      },
+    });
+  }, [roomId, mySeat, updateView]);
 
   // Presence leases are server-persisted. A stale lease conservatively pauses a counter.
   // No browser clock can apply a financial penalty or decide who is online.
   useEffect(() => {
-    if (!roomId || view?.my_seat === null || view?.my_seat === undefined || view?.status !== "playing") return;
+    if (!roomId || rtReady || view?.my_seat === null || view?.my_seat === undefined ||
+        (!REALTIME_ENABLED && view?.status !== "playing") || view?.status === "closed") return;
     let stopped = false;
     async function heartbeat() {
       if (stopped) return;
       const current = viewRef.current;
-      if (!current || current.status !== "playing") return;
+      if (!current || current.status === "closed" || (!REALTIME_ENABLED && current.status !== "playing")) return;
       try {
-        await sendCommand(current.room_id, newKey(), current.version, "pulse", {});
-        if (!stopped) setPollKey(value => value + 1);
+        const response = await sendCommand(current.room_id, newKey(), current.version, "pulse", {});
+        if (!stopped && response.version > current.version) setPollKey(value => value + 1);
       } catch (error) {
         // Other players can update the room between our view and heartbeat.
         // The next ordinary poll fetches the new version; never guess it here.
@@ -340,7 +371,7 @@ export function PreferansGame() {
     void heartbeat();
     const interval = setInterval(() => { void heartbeat(); }, 45_000);
     return () => { stopped = true; clearInterval(interval); };
-  }, [roomId, view?.game_id, view?.my_seat, view?.status]);
+  }, [roomId, view?.game_id, view?.my_seat, view?.status, rtReady]);
 
   useEffect(() => {
     setSelected([]); setSelectedBid("");
@@ -438,7 +469,7 @@ export function PreferansGame() {
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
         <p className={styles.headerSub}>Три игрока. Твои карты видишь только ты. Все решения проверяет сервер.</p></div>
       <div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
-        {online ? "Связь активна" : "Переподключение"}</div>
+        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div>
     </header>
 
     <div className={styles.shell}>
@@ -526,7 +557,12 @@ export function PreferansGame() {
         </section>
         <section className={styles.panel}>
           <h2>Подключение</h2>
-          <p>Состояние обновляется примерно каждые 8 секунд во время игры. После разрыва связи текущая партия восстанавливается по коду комнаты.</p>
+          <p>{rtReady ? "Ходы доставляются сразу после подтверждения сервером."
+            : REALTIME_ENABLED ? "Резервное обновление примерно каждые 20 секунд."
+              : "Состояние обновляется примерно каждые 8 секунд во время игры."} После разрыва связи текущая партия восстанавливается по коду комнаты.</p>
+          {rtPresence && <div aria-label="Связь игроков">{rtPresence.map((value, seat) => <p key={seat}>
+            {seatNames[seat]}: {value === "online" ? "В игре" : value === "reconnecting" ? "Переподключение" : "Отключён"}
+          </p>)}</div>}
           <p className={styles.subtle}>Не передавай ссылку посторонним. Сам по себе код не предоставляет доступ без аккаунта и гранта.</p>
           {view?.phase === "auction" && view.high_bid && <p>Лидирует: <strong>{bidLabel(view.high_bid)}</strong></p>}
           {view?.widow && view.widow.length > 0 && <p>Открытый прикуп: <strong>{view.widow.map(cardLabel).join(" ")}</strong></p>}
