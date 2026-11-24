@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .store import FirestoreRooms, StoreError
 from .media import MediaRooms
+from .lobby import can_create_room, directory, room_profiles
 from .realtime import (
     PROTOCOL,
     TICKET_MS,
@@ -69,6 +70,8 @@ class Command(Mutation):
         "undo_request",
         "undo_vote",
         "preset",
+        "lobby_ready",
+        "lobby_config",
     ]
     args: dict[str, Any] = Field(default_factory=dict)
 
@@ -126,7 +129,43 @@ def _execute(request: Request, method: str, *args: Any, **kwargs: Any) -> dict:
 
 @router.post("/rooms", status_code=201)
 def create_room(request: Request, body: Create) -> dict:
-    return _execute(request, "create", token=body.idempotency_key)
+    if not can_create_room(
+        getattr(request.state, "portfolio_lab_role", None),
+        getattr(request.state, "preferans_owner", False),
+    ):
+        raise HTTPException(403, "Room creation requires project Admin")
+    return _execute(request, "create", token=body.idempotency_key, require_ready=True)
+
+
+@router.get("/rooms")
+def list_rooms(request: Request) -> dict:
+    role = getattr(request.state, "portfolio_lab_role", None)
+    owner = getattr(request.state, "preferans_owner", False)
+    if role not in {"Test", "Admin"} and not owner:
+        raise HTTPException(403, "Game participation required")
+    store, uid, _ = _context(request, "directory")
+    try:
+        return directory(store.db, uid, admin=can_create_room(role, owner))
+    except StoreError as exc:
+        raise HTTPException(exc.code, exc.detail) from exc
+    except Exception as exc:
+        _storage_failure(request, "directory", "operation", exc)
+        raise HTTPException(503, "Storage unavailable") from exc
+
+
+@router.get("/rooms/{room_id}/profiles")
+def profiles(room_id: str, request: Request) -> dict:
+    role = getattr(request.state, "portfolio_lab_role", None)
+    if role not in {"Test", "Admin"} and not getattr(request.state, "preferans_owner", False):
+        raise HTTPException(403, "Game participation required")
+    store, uid, _ = _context(request, "profiles")
+    try:
+        return room_profiles(store.db, room_id, uid)
+    except StoreError as exc:
+        raise HTTPException(exc.code, exc.detail) from exc
+    except Exception as exc:
+        _storage_failure(request, "profiles", "operation", exc)
+        raise HTTPException(503, "Storage unavailable") from exc
 
 
 @router.post("/rooms/{room_id}/join")

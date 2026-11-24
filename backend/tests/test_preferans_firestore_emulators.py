@@ -116,10 +116,30 @@ def test_real_sdk_room_lifecycle_empty_queries_and_private_views(environment, ki
             json={"idempotency_key": f"join-room-emulator-{seat}", "expected_version": version},
         )
         assert joined.status_code == 200 and joined.json()["version"] == version + 1
+    assert (
+        client.post(
+            f"/api/preferans/rooms/{room}/start",
+            headers=admin,
+            json={"idempotency_key": "early-start-emulator", "expected_version": 2},
+        ).status_code
+        == 409
+    )
+    for seat in range(3):
+        ready = client.post(
+            f"/api/preferans/rooms/{room}/commands",
+            headers=credential(kind, seat, environment),
+            json={
+                "idempotency_key": f"ready-room-emulator-{seat}",
+                "expected_version": 2 + seat,
+                "action": "lobby_ready",
+                "args": {"ready": True},
+            },
+        )
+        assert ready.status_code == 200
     start = client.post(
         f"/api/preferans/rooms/{room}/start",
         headers=admin,
-        json={"idempotency_key": "start-room-emulator-0001", "expected_version": 2},
+        json={"idempotency_key": "start-room-emulator-0001", "expected_version": 5},
     )
     assert start.status_code == 200
     for seat in range(3):
@@ -137,12 +157,12 @@ def test_real_sdk_room_lifecycle_empty_queries_and_private_views(environment, ki
         headers=admin,
         json={
             "idempotency_key": "first-command-emulator-0001",
-            "expected_version": 3,
+            "expected_version": 6,
             "action": "pass",
             "args": {},
         },
     )
-    assert moved.status_code == 200 and moved.json()["version"] == 4
+    assert moved.status_code == 200 and moved.json()["version"] == 7
     assert (
         client.get(f"/api/preferans/rooms/{room}/private/current", headers=admin).status_code == 404
     )

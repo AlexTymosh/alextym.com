@@ -8,7 +8,7 @@ import {
 } from "./room-client";
 import {
   allowedToAct, bidLabel, cardId, cardLabel, moveCard,
-  phaseLabel, ROOM_ID_RE, sortedHand, statusMessage, suitSymbol,
+  phaseLabel, ROOM_ID_RE, sortedHand, statusMessage,
   type Card, type CommandAction, type RoomInvitation, type RoomView,
 } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
@@ -16,6 +16,12 @@ import { PreferansControls } from "./PreferansControls.ru";
 import { PreferansHistory } from "./PreferansHistory.ru";
 import { PreferansMedia } from "./PreferansMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
+import { CardArtwork } from "./CardArtwork.ru";
+import { GameTable, PreviousTrick } from "./GameTable.ru";
+import { ProjectSidebar } from "./ProjectSidebar.ru";
+import { Lobby } from "./Lobby.ru";
+import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
+import { LobbySetup } from "./LobbySetup.ru";
 
 const REALTIME_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_REALTIME_ENABLED === "true";
 
@@ -39,34 +45,8 @@ function CardFace({ card, selected, playable, onClick, onDragStart, onDragOver, 
       aria-pressed={Boolean(selected)} disabled={!onClick} onClick={onClick}
       draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop}
       data-card={cardId(card)}>
-      <span className={styles.cardCorner}>{cardLabel(card)}</span>
-      <span className={styles.cardSymbol} aria-hidden="true">{suitSymbol(card.suit)}</span>
-      <span className={styles.cardFoot} aria-hidden="true">{cardLabel(card)}</span>
+      <CardArtwork card={card} decorative />
     </button>
-  );
-}
-
-function SeatSummary({ seat, view }: { seat: number; view: RoomView }) {
-  const isMe = view.my_seat === seat;
-  const active = view.turn === seat;
-  const cards = view.open_hands?.find(row => row.seat === seat)?.cards;
-  return (
-    <section className={`${styles.player} ${active ? styles.playerTurn : ""}`} aria-label={`${seatNames[seat]}${isMe ? ", ты" : ""}`}>
-      <div className={styles.playerTitle}>
-        <strong>{seatNames[seat]} {isMe && <span className={styles.me}>(ты)</span>}</strong>
-        {active && <span className={styles.turnLabel}>Ход</span>}
-      </div>
-      <span className={styles.subtle}>{view.occupied[seat] ? "За столом" : "Место свободно"}</span>
-      <div className={styles.playerStats}>
-        <span>Карт: {view.hand_counts?.[seat] ?? "—"}</span>
-        <span>Взяток: {view.tricks_won?.[seat] ?? "—"}</span>
-      </div>
-      {cards && cards.length > 0 && (
-        <div className={styles.exposedCards} aria-label={`Открытые карты: ${seatNames[seat]}`}>
-          {cards.map(card => <span className={styles.exposedCard} key={cardId(card)}>{cardLabel(card)}</span>)}
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -89,29 +69,6 @@ function ScoreBoard({ view }: { view: RoomView }) {
       </div>
       <p className={styles.subtle}>Распасы: уровень {score.passout_level}. Расчёт выполняется сервером после раздачи.</p>
     </section>
-  );
-}
-
-function TrickArea({ view }: { view: RoomView }) {
-  return (
-    <div className={styles.trickGrid}>
-      <div className={styles.trickBox}>
-        <h3>Текущая взятка</h3>
-        <div className={styles.trickCards}>
-          {(view.trick ?? []).length ? view.trick?.map((play, index) => <div key={`${index}-${cardId(play.card)}`} className={styles.trickCard}>
-            <span>{seatNames[play.owner]}</span><strong>{cardLabel(play.card)}</strong>
-          </div>) : <span className={styles.subtle}>Карты ещё не сыграны</span>}
-        </div>
-      </div>
-      <div className={styles.trickBox}>
-        <h3>Последняя взятка</h3>
-        <div className={styles.trickCards}>
-          {(view.last_trick ?? []).length ? view.last_trick?.map((play, index) => <div key={`${index}-${cardId(play.card)}`} className={styles.trickCard}>
-            <span>{seatNames[play.owner]}</span><strong>{cardLabel(play.card)}</strong>
-          </div>) : <span className={styles.subtle}>Пока нет</span>}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -139,7 +96,7 @@ function ActionPanel({ view, busy, selectedCards, selectedBid, setSelectedBid, s
   if (view.status === "lobby" || view.status === "between") {
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
       <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Новую раздачу запускает администратор комнаты.</p>
-      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || view.occupied.some(x => !x)} onClick={onStart}>Раздать карты</button>}
+      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || view.occupied.some(x => !x) || Boolean(view.status === "lobby" && view.lobby_setup && !view.lobby_setup.ready.every(Boolean))} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
   if (view.status === "awaiting_settlement") {
@@ -233,6 +190,20 @@ export function PreferansGame() {
   const [online, setOnline] = useState(true);
   const [rtReady, setRtReady] = useState(false);
   const [rtPresence, setRtPresence] = useState<Presence[] | null>(null);
+  const [profileState, setProfileState] = useState<{ room: string; seats: string; profiles: SeatProfile[] } | null>(null);
+  const [lobbyHistory, setLobbyHistory] = useState(false);
+  const occupiedKey = view?.occupied.map(v => v ? "1" : "0").join("") ?? "";
+  const profileRoom = view && view.my_seat !== null ? view.room_id : "";
+  const profiles = profileState && profileState.room === profileRoom && profileState.seats === occupiedKey ? profileState.profiles : null;
+  useEffect(() => {
+    if (!profileRoom) return;
+    const controller = new AbortController();
+    fetch(`/api/preferans/rooms/${profileRoom}/profiles`, { credentials:"same-origin", cache:"no-store", signal:controller.signal })
+      .then(async response => response.ok ? safeProfiles(await response.json()) : null)
+      .then(data => { if (data && !controller.signal.aborted) setProfileState({room:profileRoom,seats:occupiedKey,profiles:data}); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [profileRoom, occupiedKey]);
   const activeRoomRef = useRef("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Mutation | null>(null);
@@ -265,6 +236,7 @@ export function PreferansGame() {
     if (!ROOM_ID_RE.test(id)) { setStatus("Нужен идентификатор комнаты из 32 символов (0–9, a–f)."); return; }
     viewRef.current = null;
     activeRoomRef.current = id;
+    setProfileState(null);
     setView(null); setInvited(null); setSelected([]); setOrder([]); setSelectedBid("");
     setRtReady(false); setRtPresence(null);
     setStatus(""); setRoomInput(id); setRoomId(id);
@@ -277,6 +249,7 @@ export function PreferansGame() {
   const leaveRoom = useCallback(() => {
     viewRef.current = null;
     activeRoomRef.current = "";
+    setProfileState(null);
     setRoomId(""); setRoomInput(""); setView(null); setInvited(null); setSelected([]); setStatus("");
     setRtReady(false); setRtPresence(null);
     const url = new URL(window.location.href);
@@ -447,15 +420,21 @@ export function PreferansGame() {
   const controlledHand = view?.phase === "opening_lead" || view?.phase === "play"
     ? view.turn === view.my_seat ? view.hand ?? [] : view.open_hands?.find(row => row.seat === view.turn)?.cards ?? []
     : view?.hand ?? [];
-  const hand = sortedHand(controlledHand, order);
-  const selectedCard = hand.find(card => selected.includes(cardId(card))) ?? null;
+  const hand = sortedHand(view?.hand ?? [], order);
+  const selectedCard = controlledHand.find(card => selected.includes(cardId(card))) ?? null;
   const isPlay = view?.phase === "opening_lead" || view?.phase === "play";
   const canInteractCards = Boolean(view && allowedToAct(view) && (isPlay || view.phase === "discard"));
+  const ownPlayable = canInteractCards && (!isPlay || view?.turn === view?.my_seat);
   const onCardSelect = (card: Card) => {
     const id = cardId(card);
     if (!canInteractCards || (isPlay && !legal.has(id))) return;
     setSelected(current => isPlay ? [id] : current.includes(id)
       ? current.filter(x => x !== id) : current.length < 2 ? [...current, id] : current);
+  };
+  const renderOpenCard = (card: Card, seat: Seat) => {
+    const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
+    return <CardFace card={card} selected={selected.includes(cardId(card)) && playable} playable={playable}
+      onClick={playable ? () => onCardSelect(card) : undefined}/>;
   };
   const reorder = (from: string, to: string) => setOrder(current => moveCard(current, from, to));
   const copyInvitation = () => {
@@ -464,7 +443,43 @@ export function PreferansGame() {
       .catch(() => setStatus("Не удалось скопировать. Скопируй адрес из браузера."));
   };
 
-  return <main className={styles.root}>
+  const ownHand = view && <div className={styles.handsPanel}>
+    <div className={styles.handTitle}><h3>Твоя рука</h3>
+      {isPlay && view.turn !== view.my_seat && view.controller === view.my_seat && <span>Ты управляешь открытой рукой соперника. Выбери карту на его месте.</span>}
+    </div>
+    <div className={styles.handRow} aria-label="Игровые карты">
+      {hand.map((card, index) => <div className={styles.cardWithSort} key={cardId(card)}>
+        <CardFace card={card} selected={ownPlayable && selected.includes(cardId(card))} playable={ownPlayable && (view.phase === "discard" || legal.has(cardId(card)))}
+          onClick={() => { if (ownPlayable) onCardSelect(card); }}
+          onDragStart={e => { dragging.current = cardId(card); e.dataTransfer.effectAllowed = "move"; }}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); if (dragging.current) reorder(dragging.current, cardId(card)); dragging.current = null; }} />
+        <div className={styles.sortControls}>
+          <button type="button" aria-label={`Переместить ${cardLabel(card)} влево`} disabled={index === 0} onClick={() => reorder(cardId(card), cardId(hand[index - 1]))}>‹</button>
+          <button type="button" aria-label={`Переместить ${cardLabel(card)} вправо`} disabled={index === hand.length - 1} onClick={() => reorder(cardId(card), cardId(hand[index + 1]))}>›</button>
+        </div>
+      </div>)}
+      {view.phase === "discard" && view.declarer === view.my_seat && (view.widow ?? []).map(card => <div className={styles.cardWithSort} key={`widow-${cardId(card)}`}>
+        <CardFace card={card} selected={selected.includes(cardId(card))} playable={ownPlayable} onClick={() => onCardSelect(card)} />
+        <span className={styles.widowLabel}>Прикуп</span>
+      </div>)}
+      {!hand.length && <span className={styles.subtle}>Нет карт для отображения</span>}
+    </div>
+  </div>;
+  const actions = view && <>
+    {view.status === "lobby" && view.lobby_setup && <LobbySetup view={view} busy={busy} command={command} />}
+    <ActionPanel view={view} busy={busy} selectedCards={chosenCards} selectedBid={selectedBid} setSelectedBid={setSelectedBid}
+      selectedCard={selectedCard} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
+      passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
+      onStart={start} onSettle={settle} />
+  </>;
+  const rules = <section className={styles.panel}><h3>Правила партии</h3>
+    <p>Ставка в торговле — минимальная. После прикупа заказчик объявляет окончательный контракт.</p>
+    <p>В свой ход доступны только действия и карты, разрешённые сервером. Ходы подтверждаются отдельно.</p>
+    <p>Для отмены последнего хода нужны два согласия. Счётчик ставит соперник; задержка и штраф подтверждаются сервером.</p>
+    <p>{rtReady ? "Обновление в реальном времени." : REALTIME_ENABLED ? "Резервное обновление примерно каждые 20 секунд." : "Обновление примерно каждые 8 секунд во время игры."} Не передавай ссылку посторонним.</p>
+  </section>;
+  return <main className={`${styles.root} ${styles.tableRoot}`}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
         <p className={styles.headerSub}>Три игрока. Твои карты видишь только ты. Все решения проверяет сервер.</p></div>
@@ -472,17 +487,10 @@ export function PreferansGame() {
         {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div>
     </header>
 
-    <div className={styles.shell}>
-      <div className={styles.primaryColumn}>
-        {!roomId && <section className={styles.panel} aria-labelledby="preferans-join-heading">
-          <h2 id="preferans-join-heading">Создать игру или присоединиться</h2>
-          <p>Нужны три разных аккаунта Portfolio Lab с доступом Test или Admin к проекту Preferans.</p>
-          <button type="button" className={styles.primary} onClick={create} disabled={busy}>Создать комнату</button>
-          <div className={styles.joinField}><label htmlFor="room-id">Код приглашения</label>
-            <input id="room-id" spellCheck={false} autoComplete="off" value={roomInput} onChange={(e: ChangeEvent<HTMLInputElement>) => setRoomInput(e.target.value.trim().toLowerCase())} placeholder="32 символа" />
-            <button type="button" onClick={() => openRoom(roomInput)} disabled={busy || !ROOM_ID_RE.test(roomInput)}>Найти комнату</button>
-          </div>
-        </section>}
+    <div className={styles.tableShell}>
+        {!roomId && <><Lobby roomInput={roomInput} setRoomInput={setRoomInput} openRoom={openRoom} create={create} busy={busy}/>
+          <button type="button" aria-expanded={lobbyHistory} onClick={() => setLobbyHistory(v => !v)}>История и рейтинг</button>
+          {lobbyHistory && <PreferansHistory/>}</>}
 
         {roomId && <section className={styles.roomBar} aria-label="Комната">
           <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{view ? statusNames[view.status] : invited ? "Приглашение" : "Подключение…"}</span></div>
@@ -501,75 +509,23 @@ export function PreferansGame() {
         {view && <>
           <div className={styles.gameHead}>
             <div><span className={styles.eyebrow}>{statusNames[view.status]}</span><h2>{phaseLabel(view.phase)}</h2>
-              <p>{view.my_seat !== null ? `Твоё место: ${seatNames[view.my_seat]}` : "Ты наблюдаешь без доступа к чужим картам."}</p>
-            </div>
-            <div className={styles.gameBadges}><span>Версия {view.version}</span>{view.contract && <span>Контракт: {bidLabel(view.contract)}</span>}
-              {view.is_passout && <span>Распасы</span>}
-            </div>
+              <p>{view.my_seat !== null ? `Твоё место: ${profiles?.[view.my_seat]?.name || seatNames[view.my_seat]}` : "Ты наблюдаешь без доступа к чужим картам."}</p></div>
+            <div className={styles.gameBadges}><span>Версия {view.version}</span></div>
           </div>
-          <section className={styles.table} aria-label="Игровой стол">
-            <div className={styles.rivals}>
-              {[0, 1, 2].filter(s => s !== view.my_seat).map(s => <SeatSummary view={view} seat={s} key={s} />)}
-            </div>
-            <TrickArea view={view} />
-            {view.my_seat !== null && <SeatSummary view={view} seat={view.my_seat} />}
-          </section>
-          <div className={styles.handsPanel}>
-            <div className={styles.handTitle}><h3>{isPlay && view.turn !== view.my_seat ? `Открытая рука: ${seatNames[view.turn ?? 0]}` : "Твоя рука"}</h3>
-              <span>Коснись карты для выбора; перетаскивай или используй кнопки для сортировки</span></div>
-            <div className={styles.handRow} aria-label="Игровые карты">
-              {hand.map((card, index) => <div className={styles.cardWithSort} key={cardId(card)}>
-                <CardFace card={card} selected={selected.includes(cardId(card))} playable={canInteractCards && (view.phase === "discard" || legal.has(cardId(card)))}
-                  onClick={() => onCardSelect(card)}
-                  onDragStart={e => { dragging.current = cardId(card); e.dataTransfer.effectAllowed = "move"; }}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={e => { e.preventDefault(); if (dragging.current) reorder(dragging.current, cardId(card)); dragging.current = null; }} />
-                <div className={styles.sortControls}>
-                  <button type="button" aria-label={`Переместить ${cardLabel(card)} влево`} disabled={index === 0} onClick={() => reorder(cardId(card), cardId(hand[index - 1]))}>‹</button>
-                  <button type="button" aria-label={`Переместить ${cardLabel(card)} вправо`} disabled={index === hand.length - 1} onClick={() => reorder(cardId(card), cardId(hand[index + 1]))}>›</button>
-                </div>
-              </div>)}
-              {view.phase === "discard" && view.declarer === view.my_seat && (view.widow ?? []).map(card => <div className={styles.cardWithSort} key={`widow-${cardId(card)}`}>
-                <CardFace card={card} selected={selected.includes(cardId(card))} playable onClick={() => onCardSelect(card)} />
-                <span className={styles.widowLabel}>Прикуп</span>
-              </div>)}
-              {!hand.length && <span className={styles.subtle}>Нет карт для отображения</span>}
-            </div>
-          </div>
-          <ActionPanel view={view} busy={busy} selectedCards={chosenCards} selectedBid={selectedBid} setSelectedBid={setSelectedBid}
-            selectedCard={selectedCard} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
-            passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
-            onStart={start} onSettle={settle} />
-          <PreferansControls view={view} busy={busy} command={command} adjust={adjust} />
-          {process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null && <PreferansMedia key={`${view.room_id}:${view.my_seat}`} roomId={view.room_id} seat={view.my_seat} scene={{
-            phase: phaseLabel(view.phase), status: statusNames[view.status],
-            publicTrick: (view.trick ?? []).map(p => cardLabel(p.card)),
-          }} />}
-          <ScoreBoard view={view} />
+          <ProjectSidebar key={view.room_id} active={view.status !== "lobby"} rules={rules}
+            score={<ScoreBoard view={view}/>} history={<PreferansHistory refreshKey={view.status === "closed" ? view.version : 0}/>}
+            controls={<PreferansControls view={view} busy={busy} command={command} adjust={adjust}/>}
+            last={<PreviousTrick view={view}/>}
+            urgent={Boolean(view.controls?.counter || view.controls?.undo)}
+            media={process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && view.my_seat !== null
+              ? <PreferansMedia key={`${view.room_id}:${view.my_seat}`} roomId={view.room_id} seat={view.my_seat} liveOnly scene={{
+                phase: phaseLabel(view.phase), status: statusNames[view.status], publicTrick: (view.trick ?? []).map(p => cardLabel(p.card)),
+              }}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
+            <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
+              hand={ownHand} actions={actions} renderOpenCard={renderOpenCard}/>
+          </ProjectSidebar>
         </>}
-      </div>
-      <aside className={styles.sideColumn}>
-        <section className={styles.panel}>
-          <h2>Правила партии</h2>
-          <p>Ставка в торговле — минимальная. После прикупа заказчик объявляет окончательный контракт.</p>
-          <p>В свой ход доступны только действия и карты, разрешённые сервером. Ходы подтверждаются отдельно.</p>
-          <p className={styles.subtle}>Для отмены последнего хода нужны два согласия. Счётчик ставит соперник; задержка и штраф подтверждаются сервером.</p>
-        </section>
-        <section className={styles.panel}>
-          <h2>Подключение</h2>
-          <p>{rtReady ? "Ходы доставляются сразу после подтверждения сервером."
-            : REALTIME_ENABLED ? "Резервное обновление примерно каждые 20 секунд."
-              : "Состояние обновляется примерно каждые 8 секунд во время игры."} После разрыва связи текущая партия восстанавливается по коду комнаты.</p>
-          {rtPresence && <div aria-label="Связь игроков">{rtPresence.map((value, seat) => <p key={seat}>
-            {seatNames[seat]}: {value === "online" ? "В игре" : value === "reconnecting" ? "Переподключение" : "Отключён"}
-          </p>)}</div>}
-          <p className={styles.subtle}>Не передавай ссылку посторонним. Сам по себе код не предоставляет доступ без аккаунта и гранта.</p>
-          {view?.phase === "auction" && view.high_bid && <p>Лидирует: <strong>{bidLabel(view.high_bid)}</strong></p>}
-          {view?.widow && view.widow.length > 0 && <p>Открытый прикуп: <strong>{view.widow.map(cardLabel).join(" ")}</strong></p>}
-        </section>
-      </aside>
     </div>
-    <PreferansHistory refreshKey={view?.status === "closed" ? view.version : 0} />
     {(status || pending || busy) && <div className={styles.notification} role="status" aria-live="polite">
       {busy ? "Операция выполняется…" : status}
       {!busy && pending && <button type="button" onClick={() => void mutate(pending.label, pending.run)}>Повторить операцию</button>}

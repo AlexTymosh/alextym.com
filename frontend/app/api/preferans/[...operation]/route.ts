@@ -13,7 +13,7 @@ function response(status: number, data: object) {
 }
 
 function upstreamPath(method: string, parts: string[]): string | null {
-  if (parts.length === 1 && parts[0] === "rooms" && method === "POST") return "/api/preferans/rooms";
+  if (parts.length === 1 && parts[0] === "rooms" && ["GET", "POST"].includes(method)) return "/api/preferans/rooms";
   if (method === "GET" && parts.length === 1 && ["history", "rankings", "realtime-metrics"].includes(parts[0]))
     return `/api/preferans/${parts[0]}`;
   if (method === "GET" && parts.length === 2 && parts[0] === "results" && /^[a-f0-9]{32}$/.test(parts[1]))
@@ -21,7 +21,7 @@ function upstreamPath(method: string, parts: string[]): string | null {
   if (parts.length !== 3 || parts[0] !== "rooms" || !/^[a-f0-9]{32}$/.test(parts[1])) return null;
   const allowed: Record<string, string[]> = {
     join: ["POST"], start: ["POST"], commands: ["POST"], settle: ["POST"],
-    view: ["GET"], events: ["GET"], invitation: ["GET"], adjust: ["POST"],
+    view: ["GET"], events: ["GET"], invitation: ["GET"], adjust: ["POST"], profiles: ["GET"],
     media: ["GET", "POST"], "realtime-ticket": ["POST"],
   };
   if (!allowed[parts[2]]?.includes(method)) return null;

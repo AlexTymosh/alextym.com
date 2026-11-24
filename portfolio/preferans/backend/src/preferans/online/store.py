@@ -13,7 +13,7 @@ import re
 import time
 import uuid
 from contextlib import nullcontext
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from preferans.domain.auction import RuleViolation
@@ -103,7 +103,7 @@ class FirestoreRooms:
         _room_id(room_id)
         return self.db.collection("preferans_rooms").document(room_id)
 
-    def create(self, uid: str, token: str) -> dict:
+    def create(self, uid: str, token: str, *, require_ready: bool = False) -> dict:
         op_id = _key(uid, token)
         identity = _fingerprint({"kind": "create", "uid": uid})
         operation = self.db.collection("preferans_create_ops").document(op_id)
@@ -129,6 +129,8 @@ class FirestoreRooms:
                 "dealer": None,
                 "created_at_ms": self.now_ms(),
             }
+            if require_ready:
+                room["lobby_setup"] = {"ready": [False, False, False], "dealer": 2}
             result = {"room_id": room_id, "version": 0, "my_seat": 0, "status": "lobby"}
             transaction.create(doc, room)
             transaction.create(
@@ -352,7 +354,7 @@ class FirestoreRooms:
             if action == "join":
                 if uid not in room["seats"] and room["status"] != "lobby":
                     raise StoreError(409, "Room is no longer open")
-            elif action in {"start", "settle", "score_adjust", "preset"}:
+            elif action in {"start", "settle", "score_adjust", "preset", "lobby_config"}:
                 _member(room, uid, admin=True, owner=owner)
                 if not owner and room["admin_uid"] != uid:
                     raise StoreError(403, "Room admin required")
@@ -403,6 +405,8 @@ class FirestoreRooms:
                 if seat is None:
                     raise StoreError(409, "Room full")
                 room["seats"][seat] = uid
+                if "lobby_setup" in room:
+                    room["lobby_setup"]["ready"] = [False, False, False]
                 controls["presence"][seat] = now
                 event_data = {"seat": seat}
             elif action == "start":
@@ -410,7 +414,14 @@ class FirestoreRooms:
                     raise StoreError(409, "Room is not ready")
                 if score.closed:
                     raise StoreError(409, "Game is already closed")
-                dealer = 2 if room["dealer"] is None else (room["dealer"] + 1) % 3
+                setup = room.get("lobby_setup") if room["status"] == "lobby" else None
+                if setup is not None and setup.get("ready") != [True, True, True]:
+                    raise StoreError(409, "All three players must confirm the setup")
+                dealer = (
+                    (setup["dealer"] if setup is not None else 2)
+                    if room["dealer"] is None
+                    else (room["dealer"] + 1) % 3
+                )
                 game = start_game(deal(shuffled_deck(), dealer), score.passout_level)
                 room["dealer"] = dealer
                 room["game_id"] = uuid.uuid4().hex
@@ -464,11 +475,35 @@ class FirestoreRooms:
                         ]
                     except (ValueError, TypeError, KeyError) as exc:
                         raise StoreError(503, "Invalid final accounting") from exc
+            elif action == "lobby_ready":
+                if room["status"] != "lobby" or "lobby_setup" not in room or None in room["seats"]:
+                    raise StoreError(409, "Lobby setup is not ready")
+                if set(args) != {"ready"} or type(args["ready"]) is not bool:
+                    raise StoreError(422, "Invalid readiness")
+                seat = room["seats"].index(uid)
+                room["lobby_setup"]["ready"][seat] = args["ready"]
+                event_data = {"seat": seat, "ready": args["ready"]}
+            elif action == "lobby_config":
+                if room["status"] != "lobby" or "lobby_setup" not in room:
+                    raise StoreError(409, "Setup can only change before the first deal")
+                if (
+                    set(args) != {"dealer", "target"}
+                    or type(args["dealer"]) is not int
+                    or args["dealer"] not in range(3)
+                    or type(args["target"]) is not int
+                    or not 1 <= args["target"] <= 1000
+                ):
+                    raise StoreError(422, "Invalid lobby setup")
+                room["lobby_setup"] = {"ready": [False, False, False], "dealer": args["dealer"]}
+                score = ScoreState.new(replace(score.ruleset.rules, pool_target=args["target"]))
+                event_data = {"dealer": args["dealer"], "target": args["target"]}
             elif action == "preset":
                 if room["status"] != "lobby":
                     raise StoreError(409, "Presets must be set before the first deal")
                 try:
                     event_data = configure_policy(controls, args)
+                    if "lobby_setup" in room:
+                        room["lobby_setup"]["ready"] = [False, False, False]
                 except ControlError as exc:
                     raise StoreError(exc.status, exc.detail) from exc
             elif action == "score_adjust":

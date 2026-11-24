@@ -29,8 +29,8 @@ function VideoTile({ stream, seat, muted = false }: {
   </div>;
 }
 
-export function PreferansMedia({ roomId, seat, scene }: {
-  roomId: string; seat: number; scene: SharedScene;
+export function PreferansMedia({ roomId, seat, scene, liveOnly = false }: {
+  roomId: string; seat: number; scene: SharedScene; liveOnly?: boolean;
 }) {
   const [enabled, setEnabled] = useState<MediaPresence>({ audio: false, video: false });
   const [peers, setPeers] = useState<Record<number, MediaPresence>>({});
@@ -383,7 +383,7 @@ export function PreferansMedia({ roomId, seat, scene }: {
     local.current?.getTracks().forEach(track => track.stop());
   }, [stopLocalRecording]);
 
-  return <section className={styles.mediaPanel} aria-label="Медиа и локальная запись">
+  return <section className={styles.mediaPanel} aria-label={liveOnly ? "Связь за столом" : "Медиа и локальная запись"}>
     <h2>Связь за столом</h2>
     <p>Камера и микрофон добровольны. Без них можно продолжать игру. Для прямой связи нужен WebRTC; некоторые сети без TURN могут её блокировать.</p>
     <div className={styles.buttons}>
@@ -401,7 +401,7 @@ export function PreferansMedia({ roomId, seat, scene }: {
     {recording?.status === "active" && <p className={styles.recordAlert} role="status">
       ИДЁТ ЗАПИСЬ — инициатор {label(recording.initiator)}. Видео сохраняется только на его устройстве.
     </p>}
-    {recording?.status === "requested" && <div className={styles.consent}>
+    {!liveOnly && recording?.status === "requested" && <div className={styles.consent}>
       <p>{label(recording.initiator)} предлагает локальную запись видео/голоса/открытого стола.</p>
       <p>Согласия: {recording.votes.map(v => v === true ? "Да" : v === false ? "Нет" : "Ожидание").join(" / ")}</p>
       {recording.votes[seat] === null && <div className={styles.buttons}>
@@ -409,15 +409,15 @@ export function PreferansMedia({ roomId, seat, scene }: {
         <button type="button" onClick={() => void recordCommand("record_vote", { approve: false })}>Не согласен</button>
       </div>}
     </div>}
-    {recording?.status === "ready" && recording.initiator === seat &&
+    {!liveOnly && recording?.status === "ready" && recording.initiator === seat &&
       <button type="button" onClick={() => void startRecording()}>Начать локальную запись</button>}
-    {(!recording || recording.status === "stopped") && (enabled.audio || enabled.video) &&
+    {!liveOnly && (!recording || recording.status === "stopped") && (enabled.audio || enabled.video) &&
       <button type="button" onClick={() => void recordCommand("record_request")}>Запросить согласие на запись</button>}
     {recording && ["requested", "ready", "active"].includes(recording.status) &&
       <button type="button" className={styles.stop} onClick={() => void recordCommand("record_stop")}>
         Отозвать согласие / остановить запись
       </button>}
-    <p className={styles.footnote}>Запись содержит только общедоступный стол и разрешённые медиапотоки, не личные карты. Сервер не хранит аудио/видео. Участники видят статус записи. Отзыв согласия приходит через соединение и опрос сервера; мгновенная доставка при сбоях сети не гарантируется.</p>
+    {!liveOnly && <p className={styles.footnote}>Запись содержит только общедоступный стол и разрешённые медиапотоки, не личные карты. Сервер не хранит аудио/видео. Участники видят статус записи. Отзыв согласия приходит через соединение и опрос сервера; мгновенная доставка при сбоях сети не гарантируется.</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     <p className={styles.footnote}>Сейчас участвуют: {SEATS.filter(i => peers[i]?.audio || peers[i]?.video).length} из 3.</p>
   </section>;
