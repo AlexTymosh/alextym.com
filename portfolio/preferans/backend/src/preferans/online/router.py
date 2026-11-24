@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 from typing import Any, Literal
 
@@ -12,6 +14,22 @@ from .store import FirestoreRooms, StoreError
 from .media import MediaRooms
 
 router = APIRouter(prefix="/preferans", tags=["Preferans"])
+logger = logging.getLogger(__name__)
+
+
+def _storage_failure(request: Request, operation: str, stage: str, exc: Exception) -> None:
+    # Log only an allowlisted envelope, never str(exc), traceback, request data,
+    # Firebase identity/credentials, game state or provider error metadata.
+    diagnostic = {
+        "event": "preferans.storage.failed",
+        "operation": operation,
+        "stage": stage,
+        "error_type": type(exc).__name__,
+        "request_id": getattr(request.state, "request_id", None),
+    }
+    if exc.__cause__ is not None:
+        diagnostic["cause_type"] = type(exc.__cause__).__name__
+    logger.error(json.dumps(diagnostic, sort_keys=True))
 
 
 class Strict(BaseModel):
@@ -63,7 +81,7 @@ class Settle(Mutation):
     ] = ("pool", "pool", "pool")
 
 
-def _context(request: Request) -> tuple[FirestoreRooms, str, bool]:
+def _context(request: Request, operation: str) -> tuple[FirestoreRooms, str, bool]:
     # The host guard sets these only after signed Firebase verification + grant.
     uid = getattr(request.state, "preferans_uid", None)
     owner = getattr(request.state, "preferans_owner", False)
@@ -73,22 +91,27 @@ def _context(request: Request) -> tuple[FirestoreRooms, str, bool]:
         from firebase_admin import firestore, get_app
 
         db = firestore.client(app=get_app("portfolio-lab"))
+        store = FirestoreRooms(db)
     except Exception as exc:
+        _storage_failure(request, operation, "initialization", exc)
         raise HTTPException(503, "Storage unavailable") from exc
-    return FirestoreRooms(db), uid, owner
+    return store, uid, owner
 
 
 def _execute(request: Request, method: str, *args: Any, **kwargs: Any) -> dict:
-    store, uid, owner = _context(request)
+    store, uid, owner = _context(request, method)
     try:
         call = getattr(store, method)
         if method in {"start", "settle", "view", "events", "admin_adjust"}:
             kwargs["owner"] = owner
         return call(*args, uid=uid, **kwargs)
     except StoreError as exc:
+        if exc.code == 503:
+            _storage_failure(request, method, "state", exc)
         raise HTTPException(exc.code, exc.detail) from exc
     except Exception as exc:
         # Do not return Google SDK errors or internal state in an HTTP response.
+        _storage_failure(request, method, "operation", exc)
         raise HTTPException(503, "Storage unavailable") from exc
 
 
@@ -163,13 +186,17 @@ class MediaCommand(Create):
 def _media(request: Request, room_id: str, uid_operation: str, **kwargs: Any) -> dict:
     if os.getenv("PREFERANS_MEDIA_ENABLED") != "true":
         raise HTTPException(404, "Not found")
-    base, uid, _ = _context(request)
-    service = MediaRooms(base.db, firestore_module=base.fs)
+    operation = f"media.{uid_operation}"
+    base, uid, _ = _context(request, operation)
     try:
+        service = MediaRooms(base.db, firestore_module=base.fs)
         return getattr(service, uid_operation)(room_id, uid, **kwargs)
     except StoreError as exc:
+        if exc.code == 503:
+            _storage_failure(request, operation, "state", exc)
         raise HTTPException(exc.code, exc.detail) from exc
     except Exception as exc:
+        _storage_failure(request, operation, "operation", exc)
         raise HTTPException(503, "Media signalling unavailable") from exc
 
 

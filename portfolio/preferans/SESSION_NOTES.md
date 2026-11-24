@@ -3,8 +3,81 @@
 **Project ID:** `preferans`
 **Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.8 / 2026-11-23
+**Version:** 1.9 / 2026-11-24
 **Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
+
+## PR #278 conflict-resolution checkpoint (2026-11-24)
+
+- The Owner committed the SDK fix as `298849d`, documentation as `d94f0fe`,
+  pushed `feat/preferans-release` and opened [PR #278](https://github.com/AlexTymosh/alextym.com/pull/278).
+- The branch retained the original PR 9 commits after PR #276 was squash-merged
+  as `80baed7`. Main then enabled the public catalogue card in PR #277 at
+  `2063f63`; the branch had not yet incorporated that main history.
+- Prepared a local `origin/main` merge without creating a commit. Resolved
+  conflicts in this file, the project README and the tests README, preserving
+  the current catalogue visibility and all HTTP 503 evidence/test instructions.
+  The SDK fix, diagnostics and regression tests are unchanged by this resolution.
+- The merge awaits the Owner's commit and ordinary push; no history rewrite,
+  force push, PR merge, production IAM change or deployment was performed.
+- Verification after resolution: `task repo:check`, `task backend:check`
+  (1327 passed, 8 optional skipped), frontend lint/typecheck/production build
+  and both desktop/mobile public-catalogue browser smoke tests passed. The
+  build needed to run outside the filesystem sandbox to create a Sharp junction.
+- Additional standalone `check-foundation.mjs` fails because its raw-Cyrillic
+  scan decodes the binary `nostalgic-room.webp` as UTF-8. The checker and image
+  match `origin/main`; this pre-existing failure is outside `task ci` and was
+  not hidden by changing the checker during conflict resolution.
+- Full `task ci`, live Firebase and production recovery were not rerun for
+  this documentation merge. The original checks remain recorded below; hosted
+  verification of the new merge commit awaits the Owner's push.
+- After a future squash merge, start follow-up work from updated main history
+  or incorporate that history into a retained feature branch before continuing.
+
+## Current checkpoint — Firestore HTTP 503 repair (2026-11-24)
+
+- Latest verification: the Owner reports the checks are now green after the
+  requested rerun. The new run logs were not independently inspected by the
+  agent; the earlier agent-run network failure below remains historical evidence.
+- The original repair used the user-selected existing `feat/preferans-release`
+  from `69a8ece`. The agent did not commit, push, open a PR, deploy, change IAM
+  or write production data; subsequent Owner commits and PR are recorded above.
+- Confirmed SDK defect and a separate checked-account IAM blocker: the known
+  Render runtime principal lacks query,
+  transaction and create/update IAM permissions; `_get()` treated the real
+  Python SDK generator as a document snapshot. The current local runtime key
+  reads a real document, but both Preferans queries return `PermissionDenied`.
+  The Owner is unsure which account is in the current Render secret and the MCP
+  did not read it. Production history/ranking root cause is therefore not fully
+  established: match `client_email` or inspect new safe logs after deployment
+  before applying the IAM correction. Do not assume this account is active.
+- Fixed `ref.get(transaction=tx, timeout=5.0)`, corrected Fake transaction/query
+  semantics and added safe operation/type/stage/request-ID diagnostics.
+  No auth/grant, client rule, data schema or dependency changes.
+- Executed: `task repo:check`; `task backend:check` (1327 passed, 8 optional
+  skipped); `task frontend:check` (444 passed, 50 mode-specific skipped);
+  four real Auth/Firestore Emulator tests and 17 local HTTP assertions through
+  the real Next.js BFF. `task ci`: 7/8 PASS; the frontend phase had one mobile
+  Resume `page.goto` failure (`net::ERR_ADDRESS_IN_USE`), 443 passed/50 skipped.
+  That exact test passed separately on an isolated localhost port outside the
+  network sandbox, with one worker, zero retries and no code changes. The full
+  CI invocation is recorded as failed, not retroactively green.
+- Live read-only guest checks returned 401 for history/rankings on both the
+  site and direct Render origin (four requests). Authenticated production
+  recovery still requires IAM correction and deployment.
+- If the checked principal is confirmed active, the operator must add only
+  `datastore.entities.list`, `datastore.databases.get`,
+  `datastore.entities.create`, `datastore.entities.update` to the existing Render
+  runtime role, preserving current permissions, then deploy and verify production
+  201/200 and 401/403. Neither IAM nor production recovery is claimed complete.
+- Emulator lock contention can exhaust the SDK's five attempts; tests preserve
+  this real 503 and verify a subsequent request cannot duplicate the room.
+- Evidence, complete 503 inventory, commands and deployment limitations:
+  [HTTP 503 investigation and runbook](docs/HTTP_503_FIRESTORE.ru.md).
+  [Owner handoff](docs/HTTP_503_HANDOFF.ru.md) contains PowerShell test/commit
+  commands and ready English PR/squash text; no Git mutations were performed.
+
+The checkpoints below are historical; this repair does not sign off media,
+full house rules or three-device production UAT.
 
 ## 1. Current status (verified 2026-11-23)
 
@@ -14,8 +87,8 @@
 - **PR 4** #271: merged `622d1831`; **PR 5** #272: merged `595f8b7f`.
 - **PR 6** #273: merged `008ee18e`; **PR 7** #274: merged `4f88428e`; **PR 8** #275: merged `bae66e25`; **current PR 9:** `feat/preferans-release` — release candidate hardening, zero-cost retention controls and UAT.
 - **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
-- **Gate:** `PREFERANS_ROOMS_ENABLED=false` by default; no production game enabled, no client Firestore rules changed.
-- **Testing:** author sandbox Python tests only. Local full `task ci`, hosted GitHub CI and Firebase emulator integration remain unverified until user executes them.
+- **Gate:** `PREFERANS_ROOMS_ENABLED=false` remains the default. The Owner reports it enabled on Render during this incident; current production activity must not be inferred from older release notes. Client rules are unchanged.
+- **Testing:** executed local checks are recorded above. Hosted GitHub CI, production recovery and broader multiplayer/media UAT remain separate gates.
 
 ## 2. Next action (PR 9)
 

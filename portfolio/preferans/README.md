@@ -1,12 +1,18 @@
 # Zaporizhzhia Preferans — portfolio module
 
-**Status: PR 1–8 merged. PR 9 adds release-candidate privacy and security hardening. Production activation remains blocked pending real UAT and outstanding house-rule workflows.**
+**Status: PR 1–9 merged. PR #278 fixes Firestore transaction reads and adds diagnostics. Production readiness still requires real UAT and outstanding house-rule workflows.**
 
 - Project ID: `preferans`
 - Private route: `/portfolio/preferans`
 - Feature-gated API prefix (mounted): `/api/preferans`
 - Public portfolio card: enabled (`catalog.visible=true`); game access remains protected
-- PR 1–8: merged as #268–#275; PR 9 branch: `feat/preferans-release`
+- PR 1–9: merged as #268–#276; current repair: [PR #278](https://github.com/AlexTymosh/alextym.com/pull/278)
+
+The 2026-11-24 HTTP 503 repair fixes Python Admin SDK transaction reads and adds
+regression coverage and safe storage diagnostics. The checked Render runtime
+also needs a separate existing-role IAM correction for queries and writes.
+See [evidence, permissions and deployment checks](docs/HTTP_503_FIRESTORE.ru.md).
+Live IAM changes, deployment and production recovery remain operator actions.
 
 ## Boundaries
 
@@ -62,4 +68,4 @@ Private three-peer WebRTC with separate camera/microphone controls, recipient-sc
 
 ## PR 9 release candidate and operator checklist
 
-The media recorder now stops when browser consent can no longer be confirmed, signaling has explicit expiry and uses dedicated `preferans_media` / `preferans_media_ops` collections. For strict £0, **do not activate paid managed Firestore TTL**; the explicit maintenance script is `backend/scripts/cleanup_media.py` and requires an operator. `docs/PR09_RELEASE_CANDIDATE.ru.md` contains staging flags, storage cost estimates and rollback; `docs/PR09_UAT.ru.md` is the mandatory three-user acceptance checklist. Project flags and catalog visibility remain off until UAT and Owner sign-off. Not all historical house-rule workflows are implemented.
+The media recorder now stops when browser consent can no longer be confirmed, signaling has explicit expiry and uses dedicated `preferans_media` / `preferans_media_ops` collections. For strict £0, **do not activate paid managed Firestore TTL**; the explicit maintenance script is `backend/scripts/cleanup_media.py` and requires an operator. `docs/PR09_RELEASE_CANDIDATE.ru.md` contains staging flags, storage cost estimates and rollback; `docs/PR09_UAT.ru.md` is the mandatory three-user acceptance checklist. Game and media features remain gated independently from the visible public portfolio card and require UAT and Owner sign-off. Not all historical house-rule workflows are implemented.
