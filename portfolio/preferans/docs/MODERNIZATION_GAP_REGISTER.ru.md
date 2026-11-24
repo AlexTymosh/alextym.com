@@ -1,6 +1,6 @@
 # Modernization — реестр функциональных пробелов
 
-База: main d68cc1b, 24.11.2026. PR10–12 слиты, CI green по Owner; PR13 A–C кандидат. Реестр не меняет правил. «Проверить» означает недостаточность доказательства полного workflow; не утверждение об отсутствии всех доменных функций.
+База: main 8ad0e39, 24.11.2026. PR10–12 и PR13 A–C слиты, CI green по Owner; PR13.D кандидат. Реестр не меняет правил. «Проверить» означает недостаточность доказательства полного workflow; не утверждение об отсутствии всех доменных функций.
 
 | ID | Сценарий / evidence | Статус / этап |
 |---|---|---|
@@ -9,10 +9,10 @@
 | G03 | `ActionPanel` запускает новую раздачу вручную; UX-06 требует 5 с после settlement и решений. | PR12 merged: серверный deadline, freeze/resume/restart, coalesced transactional start; integration/CI/UAT ожидаются. Legacy manual start сохранён. |
 | G04 | `game-model.ru.ts`, `views.py`: проверить сортировку по длине масти, persist, владение рукой, special bids, повтор widow и last trick. | PR12 merged: legal bid groups, сортировка, public-only widow/replay, winner animation. Shared replay PR13; live 3-seat UAT ожидается. |
 | G05 | `controls.py` прежде объединял network pause с восстановлением vote/counter; PR10 добавляет независимые причины и lease/checkpoint. | PR10 merged, CI green по Owner. Staging/real devices и квоты отдельно не подтверждены. |
-| G06 | Shared overlay, last-trick close on valid move, unanimous break ready, score sheet, radio. | PR13 A–C candidate: общие объекты, независимый перерыв, пулька с текущими суммами, музыка на собственных тестовых WAV. Полный CI и real-device UAT ожидаются. |
+| G06 | Shared overlay, last-trick close on valid move, unanimous break ready, score sheet, radio. | PR13 A–C merged: общие объекты, независимый перерыв, пулька с текущими суммами, музыка на собственных тестовых WAV. Полный CI и real-device UAT ожидаются. |
 | G07 | `online/router.py` allowlist Command не содержит полного sheet-discard / punch substitution / accidental reveal workflow. Проверить доменные функции и интеграцию. | PR12/13 по плану; terminal result immutable, pairwise rating, unanimous decisions. |
 | G08 | Ruleset editor, immutable snapshots, Owner archive, history/reports. | Проверить PR11/13/14, не считать готовыми по наличию preset и history. |
-| G09 | `online/media.py` и `PreferansMedia.ru.tsx`: отдельный polling и NAT/permission risks. | PR13 D pending: live signalling/seat tiles; прежнее live-only меню сохранено. No recording development. |
+| G09 | `online/media.py` и `PreferansMedia.ru.tsx`: отдельный polling и NAT/permission risks. | PR13.D candidate: адресный временный WS relay, добровольный звонок, видео у мест, ноль Firestore signalling операций в новом пути; без WS звонок отключён. CI, три устройства, NAT/браузеры и квоты требуют проверки. No recording development. |
 | G10 | HTTP 503 SDK repair, production IAM, full role matrix, 6/8h quotas and real devices. | PR10 integration + PR14 acceptance; старые runbooks сохраняются. |
 
 Ранее открытые исторические edge cases (forced-suit fallback при отсутствии масти, timer cost на распасах, выбор первого сдающего при ничьей) проверять по уже утверждённым источникам и тестам; не вводить новые правила молча. Реестр уточняется по фактическим тестам, не по предположениям.
