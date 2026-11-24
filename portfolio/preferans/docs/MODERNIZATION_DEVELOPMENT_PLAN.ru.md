@@ -1,10 +1,12 @@
 # Zaporizhzhia Preferans — Modernization Development Plan
 
-**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.0 · **Дата:** 24.11.2026
+**ID:** PREF-MOD-PLAN-001 · **Версия:** 1.1 · **Дата:** 24.11.2026
 **Базовый `main` при анализе:** `93611d3ea7c67a5762888c6ed17bd146406d7d4c`.
-**Статус:** план и документы готовы к согласованию; программирование PR10 не начато.
+**Статус:** PR10 подготовлен как кандидат; полная проверка репозитория и приёмка ожидаются.
 **Нормативный документ:** [MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md](MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md), далее MOD-TZ.
 **Проект:** `portfolio/preferans/`. Все пути ниже, кроме явно обозначенных host paths, относительно этой папки.
+
+> Решение Owner 24.11.2026: снять видеозапись из объёма всех пяти PR, сохранить добровольную живую аудио/видеосвязь. UX-08, NFR-12, AV-02/03 сняты.
 
 ## 1. Стратегия доставки: пять PR, один контекст за раз
 
@@ -15,7 +17,7 @@
 | 10 | `feat/preferans-realtime` | Защищённый realtime, присутствие, паузы/таймеры, измеряемые расходы | 1 docs + 3 code/checkpoint | Актуальный main |
 | 11 | `feat/preferans-game-table` | Макет, новый стол, колода, ротация мест, лобби | 2–3 | 10 merged |
 | 12 | `feat/preferans-game-interaction` | Торговля, снос/ход, прикуп/взятка, сортировка, автораздача и анимации | 2–3 | 11 merged |
-| 13 | `feat/preferans-shared-room` | Общие объекты, пулька/магнитофон, перерыв, медиа/запись и меню | 4 | 12 merged |
+| 13 | `feat/preferans-shared-room` | Общие объекты, пулька/магнитофон, перерыв, живая медиасвязь и меню | 4 | 12 merged |
 | 14 | `feat/preferans-modernization-release` | Приёмка, остаточные точечные исправления, 6/8h budget, release/rollback | 2–3 | 13 merged |
 
 Всего ориентир **14–17 содержательных коммитов**, включая первоначальную фиксацию плана. Это не обязательная квота коммитов. Один коммит должен соответствовать проверяемому срезу, а не отдельному файлу, тесту или косметической правке. Не сохранять полурабочую миграцию в main. Squash merge каждого PR после hosted CI и Owner review. После merge начать следующую ветку от нового main; не продолжать с устаревшей feature branch. Не создавать отдельные PR только ради форматирования, документации или прототипа. При объективном крупном ранее неучтённом блокере — показать его Owner, согласовать перераспределение/отдельный PR; не добавлять silently.
@@ -59,7 +61,7 @@ Next smallest deliverable / explicit stop condition:
 - Перечитать `online/store.py`, `views.py`, `router.py`, `controls`/timer modules по фактическому tree, клиент `room-client.ts`, `PreferansGame.ru.tsx`, текущие BFF, Firebase credentials/admission/grant path, host `AGENTS.md` и deployment docs. Подтвердить существующий SDK fix `ref.get(transaction=tx, timeout=5.0)` и отсутствие регрессий HTTP 503. Не предполагать рабочий production IAM на основании unit tests. Проверить процессы/worker count Render по доступной конфигурации, не менять их.
 - Создать короткий ADR `docs/ADR_REALTIME_TRANSPORT.ru.md`: выбор Render WSS с одноразовым ticket и HTTP BFF commands, исключение прямого WSS из host architecture, config discovery, auth/revocation, bounded state, restart, multiple workers, rollback, измерение бесплатных квот. Разрешение на прямой WSS ограничено этим каналом и должно быть обосновано; при невозможности безопасного решения остановиться. Не использовать неподтверждённый платный broker или Vercel proxy на 6h.
 - Измерить baseline на emulator/test fixtures: document reads/writes на create/join, 1 accepted action, repeated action, view unchanged/changed, pulse, media poll, history, settlement; разделить latency commit от client update. Не использовать production реальные комнаты для нагрузочного теста. Составить таблицу реального пути и целевые бюджеты. Проверить лимит Firestore shared daily quota, Render/Vercel plan, storage и traffic (Owner может предоставить usage); при отсутствии метрик явно «не проверено».
-- Сформировать список gaps исходного ТЗ (`docs/MODERNIZATION_GAP_REGISTER.ru.md`, только действительно непокрытые требования с evidence file/test, PR owner и status). Обязательные кандидаты: room creation admin-only, first readiness/seat/rules, room list/archive, sheet discard/technical loss, punch substitution, ruleset editor, accidental reveal voting, stale timer edge cases, recording consent. Отдельно проверить старые открытые исторические случаи, не менять правила без подтверждения. Распределить работу по PR11–14, не откладывать все пробелы на финал.
+- Сформировать список gaps исходного ТЗ (`docs/MODERNIZATION_GAP_REGISTER.ru.md`, только действительно непокрытые требования с evidence file/test, PR owner и status). Обязательные кандидаты: room creation admin-only, first readiness/seat/rules, room list/archive, sheet discard/technical loss, punch substitution, ruleset editor, accidental reveal voting, stale timer edge cases. Отдельно проверить старые открытые исторические случаи, не менять правила без подтверждения. Распределить работу по PR11–14, не откладывать все пробелы на финал.
 - Ввести измерения без PII и без лишних Firestore writes; список performance metrics в ADR. Проверить, что обычный `pulse` сейчас меняет version/пишет события; сформулировать будущий тест, что heartbeat это больше не делает.
 
 **Checkpoint A:** baseline report, ADR, gap register, точные test evidence. Согласовать предлагаемое исключение WSS и topology до B. В первом рабочем коммите допустимо совместить ADR, instrumentation и тесты; если это всего лишь документация без достаточной проверки, не маркировать транспорт реализованным.
@@ -144,10 +146,10 @@ Next smallest deliverable / explicit stop condition:
 **Коммиты:** `feat(preferans): ♠️ add phase-aware bidding and contracts`; `feat(preferans): 🃏 improve hand and trick interactions`; при необходимости `feat(preferans): ⏱️ automate next deal after settlement`.
 **DoD:** UI-03–05, повторные показы пока только подготовленный контракт/открытый data projection, auto-deal работает; сохранены правила и pending settlement; никаких неподтверждённых карт в HTML/WS/API. PR13 подключает общие overlays.
 
-## 5. PR13 — Shared Room & Long-session Media
+## 5. PR13 — Shared Room & Live Media
 
 **Ветка:** `feat/preferans-shared-room`
-**Цель:** единое пространство комнаты, не только персональный экран. Пулька, прикуп/last trick, перерыв, музыка и добровольная связь/запись.
+**Цель:** единое пространство комнаты, не только персональный экран. Пулька, прикуп/last trick, перерыв, музыка и добровольная живая связь.
 **ТЗ:** §§6,9–12,14.
 **Предусловие:** server pause/transport из PR10, scene and actions из PR11/12. Это самый объёмный этап, поэтому четыре самостоятельных среза; остановка после каждого проверенного коммита и handoff, не требовать удерживать код всех четырёх срезов в одном сеансе.
 
@@ -165,13 +167,12 @@ Next smallest deliverable / explicit stop condition:
 
 - Оригинальный локальный визуальный asset; UI увеличения с общей паузой, close любым/по столу, доступные controls. Music state как timestamped desired state, local play/pause/next/prev, reconnect position, drift, autoplay, local volume/mute. Синхронизируются команды, а не звук через сервер. Лицензированный manifest, тестовые разрешённые звуки; коммерческие композиции не поставляются без прав. Тесты sync, no unnecessary Firestore writes, disconnect, mobile gesture, volume private, музыка продолжает играть после закрытия и во время pause.
 
-### Срез 13.D — перенос медиа на realtime и запись на диск
+### Срез 13.D — перенос живой медиасвязи на realtime
 
-- Переиспользовать WebRTC mesh, auth, consent state; перенести SDP/ICE на targeted WS, удалить постоянный Firestore media polling из healthy path. P2P без платного TURN; fallback ограничен, при failure игра остаётся доступной. Cameras у соответствующих seats. Разрешения и mic/camera independent; не запускать автоматически. Защищённый consent, stop/watchdog/offline/revoke, restart/reconnect только с подтверждённым прежним контекстом, отсутствие hidden cards в canvas/audio. Включение записи по-прежнему gate.
-- File System Access direct sequential writable stream, feature detection, chunk/backpressure limit, independently playable fallback segments, bounded RAM, disk failure graceful stop. Никакой загрузки файла на server. Тесты consent/recording adapter/writer failure/synthetic chunk sequence and queue, replay, all three sources; короткая реальная запись на поддерживаемом браузере. Полный 6h soak в PR14. Обновить docs фактических браузеров, прав, privacy и эксплуатационных ограничений. Старые Firestore signalling docs не удалять автоматически; ручная cleanup с лимитами и project confirm из PR9.
+- Переиспользовать существующий WebRTC mesh, адресный SDP/ICE relay по WS, проверить роли и membership. Удалить постоянный Firestore signalling polling из healthy path. P2P без платного TURN; ограниченный fallback, при failure игра остаётся доступной. Камера и микрофон добровольны, расположены у соответствующих seats. Проверить все три пары, права доступа, отключения и повторное подключение. Не запускать legacy recorder в новой сцене; его разработка, writer, сегментация и испытания исключены по решению Owner. Не удалять старые данные и не ослаблять действующую защиту. Старые Firestore signalling docs не удалять автоматически; ручная cleanup с лимитами и project confirm из PR9.
 
-**Коммиты:** `feat(preferans): 🤝 synchronize shared room pauses`; `feat(preferans): 📒 add interactive score sheet and room menu`; `feat(preferans): 📻 synchronize local music playback`; `feat(preferans): 🎥 stream consensual recordings to disk`. Включить relevant tests/docs в соответствующие commits; отдельный docs-only PR не нужен.
-**DoD:** SH-01–04, AV-01–03 на уровне автоматических сценариев и короткой проверки реальных устройств, оставшиеся длительные проверки в PR14. Core не зависит от медиа; consent/watchdog и private projection не ослаблены; бюджетная проекция с media теперь измерена; запись остаётся отключённой при невыполненной privacy gate.
+**Коммиты:** `feat(preferans): 🤝 synchronize shared room pauses`; `feat(preferans): 📒 add interactive score sheet and room menu`; `feat(preferans): 📻 synchronize local music playback`; `feat(preferans): 🎥 integrate live peer media`. Включить relevant tests/docs в соответствующие commits.
+**DoD:** SH-01–04, AV-01; короткие проверки реальных устройств, длительные проверки в PR14. Core не зависит от медиа; private projection не ослаблена; бюджетная проекция с media измерена; живое медиа остаётся отключённым при невыполненной privacy gate.
 
 ## 6. PR14 — Acceptance, Hardening & Release
 
@@ -186,8 +187,8 @@ Next smallest deliverable / explicit stop condition:
 
 ### Срез 14.B — измерения 6/8 часов и реальные устройства
 
-- Отдельный воспроизводимый нагрузочный сценарий (не обычный CI): 3 независимых клиентов, 6h normal session и 8h reserve soak; как минимум сценарий с частыми действиями, паузами, reconnect, fallback, cold/restart, history access, audio commands, media signalling/recording where safe. Быстрые deterministic simulation tests не заменяют real-duration run. Вычислить rates и полный расход, измерить SDK/emulator counters, latency p50/p95/p99, memory/CPU/traffic, write/read retry, queue bounds, no-event heartbeat, quota reserve. Сверить с actual provider usage при отдельно разрешённом staging/Owner run; не проводить массовый production load без разрешения. Не включать billing для теста. Если бюджет выше, сначала оптимизировать и повторить; отсутствие данных = не пройдено.
-- 3 реальных устройства минимум 2 сети, audio/video each pair, no-camera fallback, revoke/loss, 6h recording direct disk/segmented fallback, воспроизводимые файлы, RAM stable, disk errors. Измерить remote consent-stop latency, зафиксировать ограничения. Если P2P невозможно на сети, честно указать деградацию. Указать проверенные browser versions и unsupported modes. Никакого платного TURN/relay. В реальной приёмке Owner/друзья — добровольно, не публиковать записи/закрытые карты, тестовые материалы/снимки обезличены.
+- Отдельный воспроизводимый нагрузочный сценарий (не обычный CI): 3 независимых клиентов, 6h normal session и 8h reserve soak; как минимум сценарий с частыми действиями, паузами, reconnect, fallback, cold/restart, history access, audio commands, live media signalling where safe. Быстрые deterministic simulation tests не заменяют real-duration run. Вычислить rates и полный расход, измерить SDK/emulator counters, latency p50/p95/p99, memory/CPU/traffic, write/read retry, queue bounds, no-event heartbeat, quota reserve. Сверить с actual provider usage при отдельно разрешённом staging/Owner run; не проводить массовый production load без разрешения. Не включать billing для теста. Если бюджет выше, сначала оптимизировать и повторить; отсутствие данных = не пройдено.
+- 3 реальных устройства минимум 2 сети, audio/video each pair, no-camera fallback, disconnect/reconnect, длительная живая связь, RAM stable. При ограничениях NAT честно указать деградацию. Указать проверенные browser versions и unsupported modes. Никакого платного TURN/relay; запись не тестировать. Тестовые материалы обезличены.
 
 ### Срез 14.C — release gate, runbook, финальный checkpoint
 
@@ -214,6 +215,6 @@ Next smallest deliverable / explicit stop condition:
 - Прямой Render WSS с одноразовым ticket: согласованный выбор архитектуры; точная реализация и worker topology проверяются на PR10. Старые BFF API остаются.
 - Показ прикупа трактуется как ещё один общий увеличенный объект с паузой; одновременно открытые objects заменяются атомарно. Это инженерные defaults MOD-TZ, не новые исторические правила; при прототипе Owner может уточнить.
 - Нулевая стоимость и 500 ms — цели, не доказанные характеристики; текущая общая provider usage и IAM неизвестны в полной мере. Managed TTL, новые paid services и production changes запрещены без разрешения.
-- Возможности браузеров и лицензии музыки/колоды требуют проверки; запись при потере связи fail-closed, а не обещание бесшовного файла при любом сбое. Не повторять ранее закрытые вопросы.
+- Возможности браузеров и лицензии музыки/колоды требуют проверки; живая связь при сбое не блокирует игру. Не повторять ранее закрытые вопросы.
 
 **Следующее действие Owner:** создать `feat/preferans-realtime`, сохранить документы из ZIP, проверить diff, при желании сделать один docs commit. Затем отдельной командой разрешить реализацию PR10. До этого не начинать программирование.
