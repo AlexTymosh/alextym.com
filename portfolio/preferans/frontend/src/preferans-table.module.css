@@ -106,3 +106,5 @@
 .trickField[data-collecting="bottom"] { --collect-x:0px; --collect-y:65px; }
 @keyframes preferansCollect { 0%,42% { opacity:1; transform:none; } 100% { opacity:0; transform:translate(var(--collect-x),var(--collect-y)) scale(.6); } }
 @media(prefers-reduced-motion:reduce) { .table[data-dealing="true"] .rivalCard,.table[data-dealing="true"] .ownHand [data-card],.trickField[data-collecting] .tableCard { animation:none; } }
+
+.closeSharedField { position:absolute; inset:0; z-index:2; font-size:.7rem; display:flex; align-items:end; justify-content:center; background:transparent!important; border:1px dashed #d3c49b!important; color:#fff4db!important; border-radius:45%!important; }
