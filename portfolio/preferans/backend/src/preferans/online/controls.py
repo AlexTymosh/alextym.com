@@ -337,6 +337,7 @@ def public_controls(control: dict, now_ms: int, seat: int | None) -> dict:
                 "kind": vote["kind"],
                 "requester": vote["requester"],
                 "deadline_ms": vote["deadline_ms"],
+                **({"remaining_ms": vote["remaining_ms"]} if "remaining_ms" in vote else {}),
                 "reason": vote["reason"],
                 "votes": vote["votes"].copy(),
                 "can_vote": seat is not None

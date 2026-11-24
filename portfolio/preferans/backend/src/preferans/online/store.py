@@ -41,6 +41,14 @@ from preferans.online.controls import (
 )
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
+from preferans.online.presentation import (
+    ACTIONS as PRESENTATION_ACTIONS,
+    PresentationError,
+    allows_replay_move,
+    change as change_presentation,
+    close_after_move,
+    invalidate_ready,
+)
 from preferans.online.pause_clock import synchronize
 from preferans.online.realtime import CHECKPOINT_MS, HubError, enabled as realtime_enabled, hub
 
@@ -191,7 +199,9 @@ class FirestoreRooms:
         with hub.lock:
             presence = hub.presence(room["id"], room["seats"], now)
             generation, interrupted = hub.generation(room["id"])
+        restarted = controls.get("rt_epoch") != hub.epoch
         events = synchronize(controls, presence, hub.epoch, now, interrupted=interrupted)
+        events.extend(invalidate_ready(controls, presence, restarted or interrupted))
         if room["status"] == "playing":
             score, expired = tick_controls(controls, game, score, now, room.get("game_id"))
             events.extend(expired)
@@ -418,7 +428,12 @@ class FirestoreRooms:
                     )
                 except ControlError as exc:
                     raise StoreError(exc.status, exc.detail) from exc
-                if controls.get("paused_at") is not None and action not in {"score_adjust"}:
+                if (
+                    controls.get("paused_at") is not None
+                    and action not in {"score_adjust"}
+                    and action not in PRESENTATION_ACTIONS
+                    and not (action == "play" and allows_replay_move(controls))
+                ):
                     raise StoreError(409, "Game is paused for a connection or shared reason")
             elif room["status"] == "playing":
                 try:
@@ -426,7 +441,19 @@ class FirestoreRooms:
                 except ControlError as exc:
                     raise StoreError(exc.status, exc.detail) from exc
             event_data = {}
-            if action == "join":
+            if action in PRESENTATION_ACTIONS:
+                # The shared pause API uses the existing authenticated transaction.
+                # New shared actions need the realtime presence scheduler. On rollback
+                # permit closing an already-open overlay, never force-resume a break.
+                if not use_rt and action != "overlay_close":
+                    raise StoreError(409, "Shared room requires realtime")
+                try:
+                    event_data = change_presentation(
+                        controls, room, game, room["seats"].index(uid), action, args, now
+                    )
+                except PresentationError as exc:
+                    raise StoreError(exc.code, str(exc)) from exc
+            elif action == "join":
                 if uid in room["seats"]:
                     return {
                         "room_id": room_id,
@@ -595,10 +622,15 @@ class FirestoreRooms:
                         if game_restored is not None:
                             game = game_restored
                     else:
-                        if controls.get("paused_at") is not None or controls.get("vote"):
+                        replay_move = action == "play" and allows_replay_move(controls)
+                        if (
+                            controls.get("paused_at") is not None and not replay_move
+                        ) or controls.get("vote"):
                             raise ControlError(409, "Game is paused for a vote or connection")
                         before = game
                         game = apply_command(game, seat, action, args)
+                        if replay_move:
+                            close_after_move(controls, now)
                         event_data = redacted_action(action, args)
                         record_candidate(
                             controls,

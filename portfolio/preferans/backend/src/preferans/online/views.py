@@ -13,6 +13,8 @@ from preferans.domain.game import GameState, Phase, legal_play_cards
 from preferans.domain.ledger import ScoreState
 from preferans.online.controls import public_controls
 from preferans.online.deal_flow import projection as next_deal_projection
+from preferans.online.presentation import projection as presentation_projection
+from preferans.online.realtime import enabled as realtime_enabled
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -52,6 +54,10 @@ def seat_view(
         "game_id": room.get("game_id"),
         "controls": public_controls(controls or {}, now_ms, my_seat),
     }
+    if my_seat is not None and room["status"] in {"playing", "between", "awaiting_settlement"}:
+        shared = presentation_projection(controls or {}, realtime_enabled(), now_ms)
+        if shared is not None:
+            result["presentation"] = shared
     if room["status"] == "between":
         clock = next_deal_projection(controls or {}, room.get("game_id"))
         if clock is not None:
@@ -96,6 +102,9 @@ def seat_view(
             "contract": public_bid(state.contract),
             "high_bid": public_bid(state.auction.high_bid),
             "auction_calls": calls,
+            "last_trick_suit": state.completed_tricks[-1].effective_suit.value
+            if state.completed_tricks
+            else None,
             "last_trick_winner": state.completed_tricks[-1].winner
             if state.completed_tricks
             else None,

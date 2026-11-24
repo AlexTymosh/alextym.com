@@ -72,6 +72,11 @@ class Command(Mutation):
         "preset",
         "lobby_ready",
         "lobby_config",
+        "overlay_open",
+        "overlay_close",
+        "break_start",
+        "break_ready",
+        "music",
     ]
     args: dict[str, Any] = Field(default_factory=dict)
 
