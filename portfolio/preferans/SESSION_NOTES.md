@@ -1,223 +1,124 @@
 # Preferans — Session Notes
 
 **Project ID:** `preferans`
-**Site route:** `/portfolio/preferans`
 **Folder:** `portfolio/preferans/`
-**Version:** 1.9 / 2026-11-24
-**Delivery:** 9 PRs, about 20 meaningful working commits; squash merge each PR.
+**Site route:** `/portfolio/preferans`
+**Version:** 2.0 / 2026-11-24 (modernization handoff)
+**Inspected main:** `93611d3ea7c67a5762888c6ed17bd146406d7d4c`
+**Status:** PLANNING ONLY. Owner authorization to implement PR 10 is pending.
 
-## PR #278 conflict-resolution checkpoint (2026-11-24)
+## 1. Next action — STOP before implementation
 
-- The Owner committed the SDK fix as `298849d`, documentation as `d94f0fe`,
-  pushed `feat/preferans-release` and opened [PR #278](https://github.com/AlexTymosh/alextym.com/pull/278).
-- The branch retained the original PR 9 commits after PR #276 was squash-merged
-  as `80baed7`. Main then enabled the public catalogue card in PR #277 at
-  `2063f63`; the branch had not yet incorporated that main history.
-- Prepared a local `origin/main` merge without creating a commit. Resolved
-  conflicts in this file, the project README and the tests README, preserving
-  the current catalogue visibility and all HTTP 503 evidence/test instructions.
-  The SDK fix, diagnostics and regression tests are unchanged by this resolution.
-- The merge awaits the Owner's commit and ordinary push; no history rewrite,
-  force push, PR merge, production IAM change or deployment was performed.
-- Verification after resolution: `task repo:check`, `task backend:check`
-  (1327 passed, 8 optional skipped), frontend lint/typecheck/production build
-  and both desktop/mobile public-catalogue browser smoke tests passed. The
-  build needed to run outside the filesystem sandbox to create a Sharp junction.
-- Additional standalone `check-foundation.mjs` fails because its raw-Cyrillic
-  scan decodes the binary `nostalgic-room.webp` as UTF-8. The checker and image
-  match `origin/main`; this pre-existing failure is outside `task ci` and was
-  not hidden by changing the checker during conflict resolution.
-- Full `task ci`, live Firebase and production recovery were not rerun for
-  this documentation merge. The original checks remain recorded below; hosted
-  verification of the new merge commit awaits the Owner's push.
-- After a future squash merge, start follow-up work from updated main history
-  or incorporate that history into a retained feature branch before continuing.
+- Owner creates `feat/preferans-realtime` from updated `main`, saves the three
+  planning documents, optionally commits them, and explicitly authorizes PR 10.
+- No product source, tests, assets, deployment, IAM, billing, or database changes
+  are authorized by this documentation handoff. Do not begin PR 10 merely because
+  this file exists or because the planning commit is on its branch.
+- On explicit authorization, read the current branch/status/diff, refreshed main,
+  root `AGENTS.md`, the relevant host contracts, and PR 10 in the new plan.
+  Start with slice 10.A (baseline, ADR, gap inventory). Do not begin PR 11–14.
 
-## Current checkpoint — Firestore HTTP 503 repair (2026-11-24)
+## 2. Authoritative documents (read selectively)
 
-- Latest verification: the Owner reports the checks are now green after the
-  requested rerun. The new run logs were not independently inspected by the
-  agent; the earlier agent-run network failure below remains historical evidence.
-- The original repair used the user-selected existing `feat/preferans-release`
-  from `69a8ece`. The agent did not commit, push, open a PR, deploy, change IAM
-  or write production data; subsequent Owner commits and PR are recorded above.
-- Confirmed SDK defect and a separate checked-account IAM blocker: the known
-  Render runtime principal lacks query,
-  transaction and create/update IAM permissions; `_get()` treated the real
-  Python SDK generator as a document snapshot. The current local runtime key
-  reads a real document, but both Preferans queries return `PermissionDenied`.
-  The Owner is unsure which account is in the current Render secret and the MCP
-  did not read it. Production history/ranking root cause is therefore not fully
-  established: match `client_email` or inspect new safe logs after deployment
-  before applying the IAM correction. Do not assume this account is active.
-- Fixed `ref.get(transaction=tx, timeout=5.0)`, corrected Fake transaction/query
-  semantics and added safe operation/type/stage/request-ID diagnostics.
-  No auth/grant, client rule, data schema or dependency changes.
-- Executed: `task repo:check`; `task backend:check` (1327 passed, 8 optional
-  skipped); `task frontend:check` (444 passed, 50 mode-specific skipped);
-  four real Auth/Firestore Emulator tests and 17 local HTTP assertions through
-  the real Next.js BFF. `task ci`: 7/8 PASS; the frontend phase had one mobile
-  Resume `page.goto` failure (`net::ERR_ADDRESS_IN_USE`), 443 passed/50 skipped.
-  That exact test passed separately on an isolated localhost port outside the
-  network sandbox, with one worker, zero retries and no code changes. The full
-  CI invocation is recorded as failed, not retroactively green.
-- Live read-only guest checks returned 401 for history/rankings on both the
-  site and direct Render origin (four requests). Authenticated production
-  recovery still requires IAM correction and deployment.
-- If the checked principal is confirmed active, the operator must add only
-  `datastore.entities.list`, `datastore.databases.get`,
-  `datastore.entities.create`, `datastore.entities.update` to the existing Render
-  runtime role, preserving current permissions, then deploy and verify production
-  201/200 and 401/403. Neither IAM nor production recovery is claimed complete.
-- Emulator lock contention can exhaust the SDK's five attempts; tests preserve
-  this real 503 and verify a subsequent request cannot duplicate the room.
-- Evidence, complete 503 inventory, commands and deployment limitations:
-  [HTTP 503 investigation and runbook](docs/HTTP_503_FIRESTORE.ru.md).
-  [Owner handoff](docs/HTTP_503_HANDOFF.ru.md) contains PowerShell test/commit
-  commands and ready English PR/squash text; no Git mutations were performed.
+1. [Modernization specification](docs/MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md)
+   — PREF-MOD-TRS-001 v1.0, approved UX-01–14 and NFRs, transport/UX/media design,
+   acceptance matrix and explicit implementation defaults.
+2. [Modernization development plan](docs/MODERNIZATION_DEVELOPMENT_PLAN.ru.md)
+   — PREF-MOD-PLAN-001 v1.0, PR 10–14, slices, scope and completion gates.
+3. [Original full specification](docs/FULL_TECHNICAL_SPECIFICATION.ru.md),
+   [House rules](docs/HOUSE_RULES.ru.md), [confirmed decisions](docs/HOUSE_RULES_DECISIONS.ru.md),
+   [scoring](docs/SCORING_ENGINE.ru.md). Keep existing historical rules, formulas,
+   validated golden tests and immutable results. Modernization changes only the
+   explicitly identified UX/transport requirements. No new house rules by inference.
+4. Root `AGENTS.md`, `docs/architecture.md`, `docs/architecture/portfolio.md`,
+   `docs/api-contract.md`, `docs/security-privacy.md`, `docs/deployment.md` when relevant.
+   The root `SESSION_NOTES.md` belongs to the website; leave it unchanged here.
+5. Historical release evidence: [PR 9 release candidate](docs/PR09_RELEASE_CANDIDATE.ru.md),
+   [PR 9 UAT](docs/PR09_UAT.ru.md), [HTTP 503 investigation](docs/HTTP_503_FIRESTORE.ru.md),
+   [HTTP 503 handoff](docs/HTTP_503_HANDOFF.ru.md), previous project session notes in Git history.
 
-The checkpoints below are historical; this repair does not sign off media,
-full house rules or three-device production UAT.
+## 3. Baseline and non-negotiable constraints
 
-## 1. Current status (verified 2026-11-23)
+- PR 1–9 delivered the existing domain, scoring, rooms, controls, ranking, media
+  and release candidate. Public catalog card is visible. Owner reports the game
+  now works; this is not independent production/UAT or quota verification.
+- Preserve HTTP 503 SDK repair (`ref.get(transaction=tx, timeout=5.0)`) and
+  safe diagnostics. Historical IAM/account uncertainty and outstanding UAT must
+  not be treated as resolved without evidence. Prior standalone foundation
+  checker reported a binary WebP raw-Cyrillic false positive; reproduce first.
+- One embedded monorepo, existing Next.js/Vercel + FastAPI/Render + Firestore;
+  no paid services, no paid TURN or managed TTL, no billing/IAM changes.
+  Three humans, normal meetings 4–6h twice monthly; engineering reserve 8h.
+  Target commit-to-opponent p95 <= 500ms on stable warm connections, <=15k reads
+  and <=10k writes per 6h room session. These targets require measurements.
+- Existing auth/grants, role/seat isolation, authoritative transactions,
+  idempotency, append-only audit and immutable results. Never serialize private
+  GameState or opponents' hidden cards into HTTP, WS, DOM, logs or recordings.
+- Keep game commands on existing authenticated HTTP BFF; proposed narrow Render
+  WSS exception needs an ADR and secure short-lived one-use ticket, Origin and
+  membership checks, revocation, bounded queues, single-worker/topology review,
+  fallback and restart tests. No raw token in URL; no hard-coded backend host.
+- Remove ordinary heartbeat writes, not durable game commits. Separate
+  presentation version, pause reasons and game version; freeze timers on pause,
+  preserve remaining time, never resume while another pause reason exists.
+- 2D table, own cards bottom, left=(seat+1)%3, right=(seat+2)%3; Russian classic
+  deck, red patterned backs; landscape phone only, accessible portrait guidance.
+  Shared score sheet, radio, last trick and replayable public widow; one open
+  object, any seated player closes. Last trick closes atomically on next legal
+  play; break resumes on all three ready; next deal 5s after complete settlement.
+- Music controls shared, volume local, approved/licensed tracks only; reconnect
+  catches up without interrupting others. WebRTC is optional, no paid relay.
+  Unanimous recording consent, fail-closed withdrawal, only public scene,
+  direct local disk or playable bounded segments; no unbounded Blob array.
+- Russian content in `*.ru.*` files or Unicode escapes; this handoff stays in
+  English. Project-local source, scoped CSS, existing shared packages/host
+  adapters only. Do not touch other project domains or public site behavior.
 
-- **PR 1** [#268](https://github.com/AlexTymosh/alextym.com/pull/268): merged `e7a2a6d`.
-- **PR 2** [#269](https://github.com/AlexTymosh/alextym.com/pull/269): merged `59c60cd7`.
-- **PR 3** [#270](https://github.com/AlexTymosh/alextym.com/pull/270): merged `9d46a8fdcc4d6e932aa788e23a8918dfc6f64939`.
-- **PR 4** #271: merged `622d1831`; **PR 5** #272: merged `595f8b7f`.
-- **PR 6** #273: merged `008ee18e`; **PR 7** #274: merged `4f88428e`; **PR 8** #275: merged `bae66e25`; **current PR 9:** `feat/preferans-release` — release candidate hardening, zero-cost retention controls and UAT.
-- **Confirmed house decisions:** 1B simultaneous passout rewards, 2A auto-win resets passouts, 3A remaining positive points after hill payment enter own open pool. See `docs/HOUSE_RULES_DECISIONS.ru.md`.
-- **Gate:** `PREFERANS_ROOMS_ENABLED=false` remains the default. The Owner reports it enabled on Render during this incident; current production activity must not be inferred from older release notes. Client rules are unchanged.
-- **Testing:** executed local checks are recorded above. Hosted GitHub CI, production recovery and broader multiplayer/media UAT remain separate gates.
+## 4. Delivery ledger
 
-## 2. Next action (PR 9)
+| Stage | Branch | Status | Next gate |
+|---:|---|---|---|
+| 10 | `feat/preferans-realtime` | PLANNED / authorization pending | 10.A baseline and transport ADR |
+| 11 | `feat/preferans-game-table` | PLANNED | PR10 merge; approve local interactive mockup |
+| 12 | `feat/preferans-game-interaction` | PLANNED | PR11 merge; full deal flow |
+| 13 | `feat/preferans-shared-room` | PLANNED | PR12 merge; shared pause/audio/media |
+| 14 | `feat/preferans-modernization-release` | PLANNED | PR13 merge; real acceptance and quota evidence |
 
-1. Install PR9 patch on a clean branch based on merged PR #275 SHA `bae66e25`.
-2. Run `task repo:check`, backend/frontend checks and `task ci`; all five GitHub CI jobs are required.
-3. Run real Auth/Firestore Emulator three-player UAT including denied grants, direct backend access and hidden-card projection checks.
-4. Run three physical-device WebRTC recording/consent test and measure Firestore quota; media remains off in production until acceptance.
-5. Strict £0: **do not enable paid Firestore TTL deletes**. Use documented bounded operator cleanup and record residual retention risk.
-6. PR9 is a release candidate, not Owner sign-off. Resolve missing house-rule workflows before promising full functional parity.
+Five stages, one PR per stage, roughly 14–17 working commits including docs.
+Squash merge after Owner review/hosted checks. Stage numbers are not GitHub PR IDs.
+Do not advance to the next stage without Owner instruction and updated main.
 
-## 3. Decisions not to revisit without evidence
+## 5. Open work / risks
 
-- One existing monorepo, existing Vercel + Render, **no new paid services**.
-- Project owned UI/backend/docs/tests, host-owned adapters only. No Fleet or Workforce domain imports.
-- Existing Firebase Portfolio Lab auth + per-project grants; Owner controls access.
-- Three authenticated humans; game admin is NOT global Owner; Owner is room admin by default.
-- Durable Firestore game state, server-authoritative deterministic Python game engine.
-- Hidden cards never in public views, logs, or other players' projections.
-- Full game specs in `docs/FULL_TECHNICAL_SPECIFICATION.ru.md`; player rules in `docs/HOUSE_RULES.ru.md`; this is a **handoff**, not an alternate ruleset.
-- Trading is a **minimum bid**, final contract is a separate event after widow; special bids, "here" (except 6 spades), penalties in referenced specs.
-- Each game captures immutable ruleset snapshot; finish is immutable; admin corrections have append-only audit while active.
-- Russian game UX, public English card; filenames `*.ru.*` for Cyrillic (repo policy).
-- No server-side video storage; 3-party consent before local recording. TURN under strict £0 is a release risk, not silently solved.
+- PR10: inventory actual implementation vs original requirements, including
+  admin-only room creation, lobby readiness/list, sheet-discard, punch choice,
+  rule sets, accidental reveal voting; assign gaps across PR11–14. Do not hide
+  missing workflows behind UI or rewrite historic results. Old unresolved rule
+  examples: forced-suit passout fallback, timer reference on passouts, tied last
+  loser; inspect later evidence before asking a focused Owner question.
+- Confirm actual free-tier configuration/shared daily usage, worker topology,
+  secure realtime authorization and baseline metrics; do not claim a cost SLA.
+- PR11: approved local table prototype and asset provenance. PR13: music rights,
+  actual browser file-writer support, NAT and consent-safety evidence. PR14: real
+  three-account/device, 6h/8h soak, privacy, quotas and rollback acceptance.
+- Existing core may be live; do not change production flags from historical
+  notes. New features gated, compatible old clients, safe rollback; Owner approves
+  release separately. Green CI is not full UAT.
 
-## 4. Runtime and security gates
+## 6. Compact checkpoint — update after each verified slice
 
-- Page must be hidden when Portfolio Lab is disabled; with Lab enabled, require explicit `preferans` project grant. A catalog entry **never grants access**.
-- No live Preferans API in PR 1. Before adding one: enforce direct Render authentication, project/room permissions, no cross-project access, idempotent Firestore transactions.
-- Firestore projection approach is a PR 4 spike; inspect client Firebase Auth persistence across page reload, otherwise consider authorised BFF/SSE.
-- Server persists absolute timer deadlines; clients only display countdown; reconnect/restart must not lose a game.
-- No `View` writes, no debug endpoint exposing room secret state, no real user UID or Firebase secret in Git.
-- Verify CI: project, backend, frontend, rag, docker. Do not mark green without executed results.
+- Date / current branch / base main SHA: 2026-11-24 / planned PR10 / `93611d3`.
+- Owner authorization: documentation only; implementation pending.
+- Completed: requirements and delivery plan prepared; no product implementation.
+- Verification: repository/source inspection; provider documentation review.
+  No product CI, emulator, load, browser or production acceptance run for this handoff.
+- Last working commit / status: Owner to fill after saving docs; no Git mutations
+  by the author of this ZIP. Re-check local state before any work.
+- Decisions/risks: see MOD-TZ sections 4–6, 11–14 and plan 10.A.
+- Next smallest deliverable: after authorization, baseline/ADR/gap register.
+- STOP: do not start implementation, create PRs, deploy or enable flags now.
 
-## 5. Work packages and merge states
-
-| PR | Branch suffix | Scope | Status | Last evidence |
-|---:|---|---|---|---|
-| 1 | foundation | Registration, guarded shell, docs | MERGED | PR #268, `e7a2a6d` |
-| 2 | engine | Pure Python auction, cards, play | MERGED | PR #269, `59c60cd7`, CI green |
-| 3 | scoring | Ledger, rulesets, golden fixtures | MERGED | PR #270 `9d46a8f` |
-| 4 | secure-rooms | Auth + Firestore + realtime spike | MERGED | PR #271 `622d1831` |
-| 5 | game-ui | Full three-player table/UI | MERGED | PR #272 `595f8b7f` |
-| 6 | game-controls | Timer, votes, corrections | MERGED | PR #273 `008ee18e` |
-| 7 | history-ranking | Final results, medals, charts | MERGED | PR #274 `4f88428e` |
-| 8 | media | WebRTC/recording/interior | MERGED | PR #275 `bae66e25` |
-| 9 | release | Privacy, retention, regression/UAT | IN DEVELOPMENT | PR9 package |
-
-## 6. How to resume in a new coding session
-
-Read in this order:
-
-1. `portfolio/preferans/SESSION_NOTES.md` (this file; verify status is up to date).
-2. `portfolio/preferans/docs/DEVELOPMENT_PLAN.ru.md` — active PR section and gates.
-3. `portfolio/preferans/docs/FULL_TECHNICAL_SPECIFICATION.ru.md` — only relevant spec sections.
-4. `portfolio/preferans/docs/HOUSE_RULES.ru.md` — rules as users see them.
-5. `docs/architecture/portfolio.md` and Portfolio Lab auth/grants contract.
-6. `git status --short`, `git log -5 --oneline`, current `main`, recent PR CI and deployment evidence.
-
-**Checkpoint template:**
-
-```text
-Date / branch / base main SHA:
-PR and last commit SHA:
-Implemented (commit-scoped):
-Tests executed (exact commands + PASS/FAIL):
-Not tested / missing setup:
-New risks and spec decisions (ADR link):
-Next smallest deliverable:
-```
-
-Never mark a PR as merged, deployed, tested or complete based only on code appearance or this plan.
-
-## 7. PR 2 implementation notes
-
-- `preferans.domain.cards`: 32-card deck, 2-card packets, widow position, immutable hands, OS-backed shuffle.
-- `preferans.domain.auction`: all 32 ranked bids, first-hand `here` excluding 6 spades, special bids and immutable auction events; bid is a minimum, not final contract.
-- `preferans.domain.game`: explicit DISCARD/DECLARE/DEFENSE/PLAY stages; one-vister open/dark choice after first declarer lead; normal ten-trick completion, passout first-three lead override.
-- `preferans.domain.play`: follow suit, compulsory trump, optional overtrump, forced widow suit on the first two passout tricks.
-- Financial settlement, undo, media, Firebase, Firestore, realtime and player-view projection are **not** part of PR 2.
-- A forced-suit passout trick with zero cards of that suit uses an **explicit provisional fallback** to the actual led suit; user confirmation is needed before production game acceptance. See `docs/DOMAIN_ENGINE.ru.md`.
-- Never expose or serialize `GameState` directly to the browser; it contains all private hands, hidden widow and discarded cards.
-
-## 8. PR 3 implementation checkpoint
-
-- New pure modules: `rulesets.py`, `ledger.py`, `scoring.py`, `settlement.py`.
-- Game engine adds `WITHOUT_THREE` concession before the first card only.
-- Exact formulas and explicit rule assumptions: `docs/SCORING_ENGINE.ru.md`.
-- Three new scoring test files run through the existing backend test directory.
-- Pending: user-run `task ci`, GitHub review, PR URL, merge hash, confirmation of open rules.
-
-## PR 5 checkpoint (2026-11-23)
-
-- **PR 4** [#271](https://github.com/AlexTymosh/alextym.com/pull/271) was squash-merged into `main` at `622d1831d8ccc40e4dea701da0abc4a6ce78429d`.
-- **Active PR 5:** `feat/preferans-game-ui`, accessible lobby + invite/join, 3-seat table, complete action controls, restricted projections, polling/reconnect, scoring panel and responsive card sorting.
-- **Required production gates:** actual Firebase Auth/Firestore emulator three-user test, signed auth/grant isolation including direct Render, and `task ci` + all five GitHub jobs. No claim of live multiplayer readiness without these tests.
-- **New API:** Test/Admin-only invitation envelope exposes lobby occupancy/version but no UID or private state.
-- **PR 6** remains planned for timer, undo voting, and audited corrections; **PR 8** for WebRTC media.
-
-## PR 6 checkpoint (2026-11-23)
-
-- **PR 5** [#272](https://github.com/AlexTymosh/alextym.com/pull/272) merged to `main` at `595f8b7f251832c912cc3fab524fe63d6a216188` on 2026-11-23 14:29 UTC. PR 1–5 are now merged.
-- **Active PR 6:** `feat/preferans-game-controls`, server-clock counter + auto repeat, two-person undo votes, private pre-move checkpoint, heartbeat-based conservative pause, numeric lobby policy and audited corrections.
-- **Tests in isolated author fixture:** 280 Preferans Python tests pass, TypeScript source typecheck with temporary stubs passes, compileall passes. Real CI, real Firestore transactions and 3-user production UAT are NOT verified.
-- **Storage:** existing deny-all client Firestore rules unchanged; all controls in `private/current`, append-only nonsecret room events. Public view is explicitly projected, not serialized from the hidden snapshot.
-- **Limitations:** heartbeat detection cannot instantly prove disconnect, no full historical numerical ruleset editor, unintentional card exposure vote and manual reconciliation of specific `ledger_entry_id` are deferred. See `docs/PR06_GAME_CONTROLS.ru.md`.
-- **Remaining:** PR 7 (immutable history/medals/rankings); PR 8 (opt-in WebRTC + local recording + nostalgic backdrop); PR 9 (security, offline fidelity, Firestore quota, performance/accessibility/UAT and release).
-
-
-## PR 7 checkpoint (2026-11-23)
-
-- Verified PR #273 merged into main SHA `008ee18ee2b27f2c1fb8d7a15506a140090003e0`.
-- Active PR 7: immutable one-per-room `GameResult`, atomic per-player rankings, public project-grant-protected history endpoints and chart.
-- Historical Firebase UIDs and hidden hands are NOT serialized into results. Unknown pre-PR7 start time remains `null`.
-- Isolated Python tests and TypeScript source checks are not substitutes for GitHub CI or real Firestore transactions.
-- Known release gaps: confirmed punch conversions, accepted sheet-discard workflow, full pause durations, display names, three-browser UAT. See `docs/PR07_HISTORY_RANKING.ru.md`.
-
-## PR 8 checkpoint (2026-11-23)
-
-- Verified PR #274 merged to `main` SHA `4f88428e539fbe979f407d83f617ebc76a3b33d4`.
-- PR8 introduces backend-only Firestore media signals, optional client WebRTC mesh and local-only canvas/audio recording by the initiator after three approvals.
-- Separate media feature gates off by default; source files and local artwork are isolated under `portfolio/preferans`.
-- Tests: isolated Python fake-DB + focused TypeScript check are not equal to real Firebase Emulator or device UAT.
-- Blocking risks: no TURN guarantee, near-real-time rather than hard instant revocation, Firestore retention/quota, browser recording codec and audio-mixing compatibility.
-- PR 9 must close these gaps or explicitly remove noncompliant recording from release. See `docs/PR08_MEDIA.ru.md`, `docs/PR08_UAT.ru.md`.
-
-## PR 9 checkpoint (2026-11-23)
-
-- Verified PR #275 was merged to main SHA `bae66e255f1e3a4a39a41f4c217c23545568a0eb`.
-- Introduces fail-closed local recording watchdog, explicit expiry metadata, unique Preferans media collection groups and a bounded manual cleanup script.
-- Firebase Firestore TTL deletes require billing and **must NOT be enabled** under the no-paid-services rule. Metadata alone does not delete documents.
-- Isolated Python/type checks are not full browser/UAT or GitHub CI. Media and room feature flags remain disabled in production until sign-off.
-- `docs/PR09_RELEASE_CANDIDATE.ru.md`, `docs/PR09_UAT.ru.md` define operation and acceptance. Known gaps: sheet-discard workflow, punch substitution, full house rules editor, accidentally exposed card vote, live 3-device media and quota measurements.
+Replace this compact checkpoint after a tested slice; record exact commands,
+PASS/FAIL/SKIPPED, actual commit/dirty state, ADR decisions and next task.
+Never fabricate test/merge/deploy status. This is a human handoff, not a CI/build
+contract; do not introduce checks of its existence, title or hash.
