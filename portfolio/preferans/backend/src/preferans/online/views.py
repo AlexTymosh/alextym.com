@@ -15,6 +15,7 @@ from preferans.online.controls import public_controls
 from preferans.online.deal_flow import projection as next_deal_projection
 from preferans.online.presentation import projection as presentation_projection
 from preferans.online.realtime import enabled as realtime_enabled
+from preferans.online.sheet_exit import current_offers
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -54,6 +55,24 @@ def seat_view(
         "game_id": room.get("game_id"),
         "controls": public_controls(controls or {}, now_ms, my_seat),
     }
+    if room["status"] == "closed" and type(room.get("sheet_loser")) is int:
+        # Do not reveal any remaining cards or advertise legal actions after a technical finish.
+        result["sheet_loser"] = room["sheet_loser"]
+        if score is not None:
+            result["score"] = {
+                "pool": list(score.pool),
+                "hill": list(score.hill),
+                "vists": [list(row) for row in score.vists],
+                "passout_level": score.passout_level,
+                "closed": score.closed,
+                "ruleset_hash": score.ruleset.sha256,
+                "target": score.target,
+            }
+        return result
+    if my_seat is not None:
+        offers = current_offers(controls or {}, room)
+        if offers:
+            result["sheet_offers"] = offers
     if my_seat is not None and room["status"] in {"playing", "between", "awaiting_settlement"}:
         shared = presentation_projection(controls or {}, realtime_enabled(), now_ms)
         if shared is not None:

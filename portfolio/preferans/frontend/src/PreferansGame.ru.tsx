@@ -121,7 +121,9 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
       </> : <p className={styles.subtle}>Ожидаем расчёт администратора.</p>}
     </section>;
   }
-  if (view.status === "closed") return <section className={styles.actionPanel}><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></section>;
+  if (view.status === "closed") return <section className={styles.actionPanel}>
+    {view.sheet_loser !== undefined ? <><h3>Листик выброшен</h3><p>{seatNames[view.sheet_loser]}: техническое поражение. Соперникам — по первому месту. Незакрытая пуля не дорассчитывается.</p></> : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
+  </section>;
   if (!myTurn) return concede || null;
   return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">Твоё действие</h3>
     {view.phase === "auction" && <>
@@ -535,7 +537,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             score={<ScoreBoard view={view}/>} history={<PreferansHistory refreshKey={view.status === "closed" ? view.version : 0}/>}
             controls={<PreferansControls view={view} busy={busy} command={command} adjust={adjust}/>}
             last={<PreviousTrick view={view}/>}
-            urgent={Boolean(view.controls?.counter || view.controls?.undo)}
+            urgent={Boolean(view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat))}
             shared={view.presentation?.enabled ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
