@@ -6,7 +6,7 @@ import { actorSeat, opponentCards, seatPosition, tableSeats, type Seat, type Sea
 import styles from "./preferans-table.module.css";
 import { animationBetween, orderHand, replayWidow, visibleWidow, type SortMode } from "./interaction-model";
 import { dealerFor } from "./table-interaction";
-import { animateDeal, animateArrival } from "./table-motion";
+import { animateDeal, animateArrival, animateCollection, DEAL_DURATION_MS, TRICK_DURATION_MS } from "./table-motion";
 import { latestTrickSeat, trickTrain } from "./table-refinements";
 
 const positionNames = { left: "Слева", right: "Справа", bottom: "Перед собой" };
@@ -19,8 +19,7 @@ function Avatar({ seat, profile, active, presence, occupied, own, media, dealer 
   const name = occupied ? profile?.name || fallbackName(seat) : "Свободное место";
   const link = occupied ? presence || "unknown" : "unknown";
   return <div className={styles.identity}>
-    <div className={styles.identityText}><strong title={name}>{name}{own ? " (ты)" : ""}</strong></div>
-    <div className={`${styles.avatar} ${active ? styles.activeAvatar : ""}`} data-turn={active ? "true" : "false"} data-dealer={dealer?"true":undefined}>
+    <div className={`${styles.avatar} ${active ? styles.activeAvatar : ""}`} title={name+(own?" (ты)":"")} aria-label={name} data-turn={active ? "true" : "false"} data-dealer={dealer?"true":undefined}>
       {profile?.avatar && occupied ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={profile.avatar} alt="" width={64} height={64} draggable={false} />
@@ -68,7 +67,8 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
   const opened = cards.open ? orderHand(cards.open, [], sortMode) : null;
   return <section className={`${styles.seat} ${styles[position]}`} data-seat={seat} data-position={position}
     aria-label={`${positionNames[position]}: ${profiles?.[seat]?.name || fallbackName(seat)}${own ? ", ты" : ""}`} onDragOver={e=>{if(onSeatDrop)e.preventDefault();}} onDrop={e=>onSeatDrop?.(seat,e)}>
-    <div className={styles.seatSignals}>{speech&&<span className={styles.callBubble}>{speech}</span>}{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div>
+    <div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div>
+    {speech&&<span className={styles.callBubble}>{speech}</span>}
     <Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} />
     {localControls}
     {deck}
@@ -98,14 +98,14 @@ function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, p
       </div></>}
       {widow.count === 0 && publicWidow.length > 0 && <><div className={styles.widowCards}>{Array.from({length:2},(_,i)=><span className={styles.widowGhost} key={i}>{showReplay&&publicWidow[i]&&<CardArtwork card={publicWidow[i]}/>}</span>)}</div><button type="button" className={styles.widowEye} aria-label={showReplay?"Скрыть прикуп":"Показать прикуп"} title="Показать прикуп" aria-expanded={showReplay} onClick={()=>{setReplay(v=>!v);if(onWidow&&!showReplay)onWidow();}}>◉</button></>}
     </div>
-    <div className={styles.trickField} aria-label="Текущая взятка" onDragOver={e=>{if(onTableDrop)e.preventDefault();}} onDrop={onTableDrop} data-collecting={collecting ? seatPosition(view.my_seat, view.last_trick_winner ?? -1) ?? undefined : undefined}>
+    <div className={styles.trickField} data-play-field="true" aria-label="Текущая взятка" onDragOver={e=>{if(onTableDrop)e.preventDefault();}} onDrop={onTableDrop} data-collecting={collecting ? seatPosition(view.my_seat, view.last_trick_winner ?? -1) ?? undefined : undefined}>
       {(["left","right","bottom"] as const).map(position => {
         const played = shown.find(p=>p.owner===names[position]);
         return <div key={position} className={`${styles.trickSpot} ${styles[`trick_${position}`]}`} data-trick-seat={names[position]}>
           {played && <span className={styles.tableCard}><CardArtwork card={played.card}/></span>}
         </div>;
       })}
-      {!shown.length && <span className={styles.fieldHint}>{view.status === "lobby" ? "Сбор игроков" : "Поле розыгрыша"}</span>}
+      {!shown.length && <span className={styles.fieldHint}>{view.status === "lobby" ? "Сбор игроков" : "Игровое поле"}</span>}
       {onField && <button type="button" className={styles.closeSharedField} onClick={onField}>Закрыть общий просмотр</button>}
     </div>
     {view.contract?.kind === "regular" && view.contract.level === 6 && view.contract.suit === "S" && <p className={styles.contract}>Обязаловка</p>}
@@ -134,8 +134,7 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     if (kind && document.visibilityState === "visible" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       if(timer.current) clearTimeout(timer.current);
       setAnimation({kind,game:view.game_id,count:view.played_tricks??0,from:kind==="dealer"?seatPosition(view.my_seat,before?.lobby_setup?.dealer??-1)??undefined:undefined});
-      timer.current=setTimeout(()=>setAnimation(null),kind==="deal"?1100:kind==="widow"?850:kind==="trick"?1300:650);
-      if(kind==="deal"&&tableRef.current&&view.dealer!==undefined)animateDeal(tableRef.current,view.dealer);
+      timer.current=setTimeout(()=>setAnimation(null),kind==="deal"?DEAL_DURATION_MS:kind==="widow"?850:kind==="trick"?TRICK_DURATION_MS:650);
     }
     if(before?.game_id===view.game_id&&before&&view.version>before.version&&tableRef.current&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
       const play=view.trick?.at(-1);
@@ -145,13 +144,22 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
   useEffect(()=>()=>{if(timer.current) clearTimeout(timer.current);},[]);
   const active=animation&&animation.game===view.game_id&&animation.count===(view.played_tricks??0)?animation.kind:null;
   const collecting=active==="trick";
+  const dealing=active==="deal";
+  const animationSeat=view.last_trick_winner;
+  const currentDealer=view.dealer;
+  useLayoutEffect(()=>{
+    const table=tableRef.current;
+    if(!table)return;
+    if(dealing&&currentDealer!==undefined)return animateDeal(table,currentDealer);
+    if(collecting&&animationSeat!=null)return animateCollection(table,animationSeat);
+  },[dealing,collecting,animationSeat,currentDealer]);
   useLayoutEffect(()=>{
     const el=tableRef.current;if(!el)return;
     const fit=()=>el.style.setProperty("--available-table-height",`${Math.max(220,window.innerHeight-el.getBoundingClientRect().top-34)}px`);
     fit();window.addEventListener("resize",fit);document.addEventListener("fullscreenchange",fit);
     return()=>{window.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
   },[inLobby]);
-  return <div className={styles.tableScene}><section ref={tableRef} data-theme={theme} data-holding-trick={collecting?"true":undefined} onKeyDownCapture={e=>{if(collecting&&e.target instanceof HTMLElement&&e.target.closest("[data-card]")&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();}}} data-playing={inLobby?undefined:"true"} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
+  return <div className={styles.tableScene}><section ref={tableRef} data-theme={theme} data-holding-trick={collecting?"true":undefined} onKeyDownCapture={e=>{if(collecting&&e.target instanceof HTMLElement&&e.target.closest("[data-card]")&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();}}} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.left} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
       <CenterCards pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}:${view.phase}`} view={view} collecting={collecting} onWidow={onWidow} onField={onField} onTableDrop={collecting?undefined:onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>
@@ -159,10 +167,13 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     </div>
     {objects}
     {sharedPanel}
-    <div className={styles.decision} data-table-actions="true">{actions}</div>
+    {inLobby&&<div className={styles.decision} data-table-actions="true">{actions}</div>}
     <div className={styles.bottomArea}>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.bottom} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.bottom)} deck={dealerFor(view)===seats.bottom?deck:undefined} onSeatDrop={onSeatDrop} localControls={localControls}/>
-      {!inLobby && view.my_seat !== null && <div className={styles.ownHand} data-own-hand="true">{hand}</div>}
+      {!inLobby&&<div className={styles.handColumn}>
+        <div className={styles.decision} data-table-actions="true">{actions}</div>
+        {view.my_seat!==null&&<div className={styles.ownHand} data-own-hand="true">{hand}</div>}
+      </div>}
       {inLobby && <p className={styles.lobbyHint}>Занято мест: {view.occupied.filter(Boolean).length} из 3</p>}
     </div>
   </section><div role="status" className={styles.statusLine}>{statusLine}</div></div>;

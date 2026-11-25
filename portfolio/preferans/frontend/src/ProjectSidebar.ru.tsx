@@ -37,7 +37,7 @@ export function ProjectSidebar({children, score, controls, media, settings, urge
         {action("↗","Скопировать приглашение",copy)}
         {action("⇥","К выбору комнаты",leave)}
       </nav>
-      <div className={styles.sceneColumn}>{children}{shown==="score"&&<section className={`${styles.localDrawer} ${styles.scoreDrawer}`} role="dialog" aria-label="Пулька"><button type="button" onClick={()=>setPanel(null)}>Закрыть</button>{score}</section>}{collapsed&&shown&&shown!=="score"&&<section className={`${styles.localDrawer} ${styles.railDrawer}`} role="dialog" aria-label={items.find(item=>item.key===shown)?.label}><button type="button" onClick={()=>setPanel(null)}>Закрыть</button>{nodes[shown]}</section>}</div>
+      <div className={styles.sceneColumn}>{children}{shown==="score"&&<section className={`${styles.localDrawer} ${styles.scoreDrawer}`} role="dialog" aria-label="Пулька">{score}<div className={styles.scoreClose}><button type="button" onClick={()=>setPanel(null)}>Закрыть</button></div></section>}{collapsed&&shown&&shown!=="score"&&<section className={`${styles.localDrawer} ${styles.railDrawer}`} role="dialog" aria-label={items.find(item=>item.key===shown)?.label}><button type="button" onClick={()=>setPanel(null)}>Закрыть</button>{nodes[shown]}</section>}</div>
     </div>
   </>;
 }

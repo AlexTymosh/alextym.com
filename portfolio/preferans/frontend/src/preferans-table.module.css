@@ -237,3 +237,42 @@
  .table[data-playing="true"] .bottomArea { --tile-w:clamp(74px,min(40.6dvh,28cqw),273px); --card-w:clamp(26px,min(12.5dvh,calc((100cqw - var(--tile-w) - 40px)/8)),81px); }
  .table .trickField { width:min(100%,36dvh); }
 }
+
+/* PR18: a centered playing area, inward calls and actual geometry-based motion. */
+.table .center { position:relative; align-self:stretch; justify-content:center; min-width:0; }
+.table .trickField { width:min(100%,52.5dvh,675px); aspect-ratio:1; min-height:0; border-radius:50%; margin:auto; }
+.table .widow { position:absolute; top:0; left:50%; transform:translate(-50%,-20%); min-height:0; z-index:2; }
+.table .widow:empty { display:none; }
+.table .fieldHint { opacity:.5; }
+.table .trickField[data-collecting] .tableCard { animation:none; }
+.table[data-holding-trick="true"] .trickBundle[data-latest="true"] { visibility:hidden; }
+.table .deck:disabled { opacity:1; cursor:default; }
+.table .deck { position:relative; z-index:3; }
+.table .seatSignals { min-height:1.4rem; }
+.table .callBubble { font-size:clamp(1rem,2vw,1.8rem); font-weight:700; line-height:1.15; z-index:4; text-align:center; }
+.table .left>.callBubble,.table .right>.callBubble { position:absolute; top:clamp(1.9rem,6dvh,4rem); max-width:min(17cqw,220px); }
+.table .left>.callBubble { left:calc(100% - 1.6rem); }
+.table .right>.callBubble { right:calc(100% - 1.6rem); }
+.table .left>.callBubble::before { left:auto; right:100%; top:25%; border-top-color:transparent; border-right-color:#fff7dc; }
+.table .right>.callBubble::before { left:100%; right:auto; top:25%; border-top-color:transparent; border-left-color:#fff7dc; }
+.table .bottom>.callBubble { position:absolute; bottom:100%; left:50%; transform:translateX(-50%); white-space:nowrap; }
+.table .bottom>.callBubble::before { left:45%; }
+.table[data-playing="true"] .bottomArea { grid-template-columns:minmax(0,var(--tile-w)) minmax(0,1fr); }
+.handColumn { min-width:0; width:100%; display:flex; flex-direction:column; align-items:stretch; gap:.25rem; }
+.handColumn .decision { width:100%; max-width:none; margin:0; }
+.handColumn .decision:empty { display:none; }
+.handColumn .decision section { padding:.25rem .35rem; background:transparent; }
+.concessionHint { display:block; font-size:.8rem; }
+.scoreDrawer { width:min(576px,calc(100% - 16px)); }
+.scoreClose { display:flex; justify-content:flex-end; margin-top:.4rem; }
+@media(max-height:650px) and (orientation:landscape) {
+ .table .trickField { width:min(100%,45dvh); }
+ .table .callBubble { font-size:clamp(.8rem,1.8vw,1.3rem); }
+ .table .left>.callBubble,.table .right>.callBubble { max-width:19cqw; }
+ .table .widow { transform:translate(-50%,-35%); }
+}
+/* Between deals, the deck has its own visible spot facing the playing area. */
+.table[data-between-deals="true"] .seat .deck { position:absolute; z-index:6; top:35%; }
+.table[data-between-deals="true"] .left .deck { left:calc(100% - 1.4rem); }
+.table[data-between-deals="true"] .right .deck { right:calc(100% - 1.4rem); }
+.table[data-between-deals="true"] .bottom .deck { left:calc(100% + .3rem); top:15%; }

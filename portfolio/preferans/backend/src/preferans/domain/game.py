@@ -189,23 +189,23 @@ def declare_contract(state: GameState, actor: int, contract: Bid) -> GameState:
     return replace(state, phase=Phase.DEFENSE_FIRST, turn=(actor + 1) % 3)
 
 
-def concede_without_three(state: GameState, actor: int) -> GameState:
-    """Declarer accepts a three-trick penalty before the first card is played."""
-    if state.declarer != actor or state.contract is None:
-        raise RuleViolation("Only the declarer may concede")
-    if state.contract.kind not in (BidKind.REGULAR, BidKind.TEN_NO_WIDOW):
+def concede_without_three(state: GameState, actor: int, contract: Bid) -> GameState:
+    """Announce a legal contract and concede atomically, before defense starts."""
+    if state.phase != Phase.DECLARE or state.declarer != actor:
+        raise RuleViolation("Without-three concession is only allowed during declaration")
+    if contract.kind not in (BidKind.REGULAR, BidKind.TEN_NO_WIDOW):
         raise RuleViolation("Misere cannot be conceded without three")
-    allowed = (
-        Phase.DEFENSE_FIRST,
-        Phase.DEFENSE_SECOND,
-        Phase.DEFENSE_RECONSIDER,
-        Phase.CHOOSE_MODE,
-        Phase.OPENING_LEAD,
-        Phase.PLAY,
+    if state.winning_bid is None or contract not in legal_final_contracts(state.winning_bid):
+        raise RuleViolation("Invalid final contract")
+    if state.trick or state.completed_tricks or any(state.defense):
+        raise RuleViolation("Defense or play has already started")
+    return replace(
+        state,
+        contract=contract,
+        phase=Phase.FINISHED,
+        turn=None,
+        end_reason=EndReason.WITHOUT_THREE,
     )
-    if state.phase not in allowed or state.trick or state.completed_tricks:
-        raise RuleViolation("Without-three concession must precede the first card")
-    return replace(state, phase=Phase.FINISHED, turn=None, end_reason=EndReason.WITHOUT_THREE)
 
 
 def _defense_after_decision(state: GameState) -> GameState:

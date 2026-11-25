@@ -1,16 +1,26 @@
 import { useState } from "react";
 import { bidLabel, suitSymbol, type Bid, type CommandAction, type RoomView } from "./game-model.ru";
-import { BID_GROUPS, bidsInGroup, canHold, type BidGroup } from "./interaction-model";
+import { BID_GROUPS, bidsInGroup, canHold, mayConcede, type BidGroup } from "./interaction-model";
 import styles from "./preferans-table.module.css";
 
 const labels: Record<BidGroup,string> = {"6":"6","7":"7","8":"8","9":"9","10":"10",misere:"Мизер",misere_no_widow:"Мизер без прикупа",ten_no_widow:"10 без прикупа"};
 export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;command:(action:CommandAction,args?:Record<string,unknown>)=>void}) {
   const auction = view.phase === "auction";
-  const bids = auction ? view.legal_bids ?? [] : view.legal_contracts ?? [];
+  const [conceding,setConceding] = useState(false);
+  const canConcede = mayConcede(view);
+  const concessionMode = canConcede && conceding;
+  const availableBids = auction ? view.legal_bids ?? [] : view.legal_contracts ?? [];
+  const bids = concessionMode ? availableBids.filter(b => b.kind === "regular" || b.kind === "ten_no_widow") : availableBids;
   const [group,setGroup] = useState<BidGroup|null>(null);
   const options = group ? bidsInGroup(bids,group) : [];
-  const submit = (bid:Bid) => command(auction?"bid":"declare",{bid});
+  const submit = (bid:Bid) => {
+    if (concessionMode) {
+      if (window.confirm(`Без трёх: ${bidLabel(bid)}?`)) command("without_three",{bid});
+    } else command(auction?"bid":"declare",{bid});
+  };
   return <div className={styles.bidPanel} aria-label={auction?"Торговля":"Окончательный контракт"}>
+    {canConcede&&<button type="button" aria-pressed={concessionMode} disabled={busy} onClick={()=>{setConceding(v=>!v);setGroup(null);}}>Без трёх</button>}
+    {concessionMode&&<span className={styles.concessionHint}>Выбери контракт для штрафа</span>}
     <div className={styles.bidGroups}>
       {auction && <button type="button" disabled={busy} onClick={()=>command("pass")}>ПАС</button>}
       {BID_GROUPS.map(key=>{

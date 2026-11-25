@@ -442,6 +442,8 @@ class FirestoreRooms:
                 _member(room, uid, admin=True, owner=owner)
                 setup = room.get("lobby_setup") if room["status"] == "lobby" else None
                 dealer = setup.get("dealer") if setup else None
+                if room["status"] == "between" and type(room.get("dealer")) is int:
+                    dealer = (room["dealer"] + 1) % 3
                 selected = (
                     type(dealer) is int and dealer in range(3) and room["seats"][dealer] == uid
                 )

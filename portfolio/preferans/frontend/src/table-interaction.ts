@@ -23,7 +23,7 @@ export function dealerFor(view: RoomView): number | null {
 }
 export function mayStart(view: RoomView): boolean {
   const dealer = dealerFor(view);
-  return dealer !== null && (view.room_admin || (view.status === "lobby" && !!view.lobby_setup && view.my_seat === dealer)) &&
+  return dealer !== null && (view.room_admin || (view.my_seat === dealer && (view.status === "between" || !!view.lobby_setup))) &&
     !view.next_deal && !view.seat_swap && !view.controls?.paused && !view.controls?.undo &&
     view.occupied.every(Boolean) && (!view.lobby_setup || view.lobby_setup.ready.every(Boolean));
 }

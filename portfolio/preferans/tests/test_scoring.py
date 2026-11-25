@@ -195,12 +195,12 @@ def test_two_passers_at_level_eight_get_no_auto_vists():
 def test_without_three_declaration_before_first_card():
     game = replace(
         start_game(deal(FULL_DECK, 2)),
-        phase=Phase.DEFENSE_FIRST,
+        phase=Phase.DECLARE,
         declarer=0,
-        contract=Bid.regular(7, Suit.HEARTS),
-        turn=1,
+        winning_bid=Bid.regular(7, Suit.HEARTS),
+        turn=0,
     )
-    conceded = concede_without_three(game, 0)
+    conceded = concede_without_three(game, 0, Bid.regular(7, Suit.HEARTS))
     assert conceded.end_reason == EndReason.WITHOUT_THREE
     state = settle(conceded)
     assert state.hill == (12, 0, 0)
@@ -210,19 +210,19 @@ def test_without_three_declaration_before_first_card():
 def test_without_three_allowed_for_ten_no_widow():
     game = replace(
         start_game(deal(FULL_DECK, 2)),
-        phase=Phase.PLAY,
+        phase=Phase.DECLARE,
         declarer=0,
-        contract=Bid.ten_no_widow(Suit.HEARTS),
+        winning_bid=Bid.ten_no_widow(Suit.HEARTS),
     )
-    assert settle(concede_without_three(game, 0)).hill[0] == 30
+    assert settle(concede_without_three(game, 0, Bid.ten_no_widow(Suit.HEARTS))).hill[0] == 30
 
 
 def test_without_three_misere_forbidden():
     game = replace(
-        start_game(deal(FULL_DECK, 2)), phase=Phase.PLAY, declarer=0, contract=Bid.misere()
+        start_game(deal(FULL_DECK, 2)), phase=Phase.DECLARE, declarer=0, winning_bid=Bid.misere()
     )
     with pytest.raises(RuleViolation):
-        concede_without_three(game, 0)
+        concede_without_three(game, 0, Bid.misere())
 
 
 def test_without_three_after_first_play_forbidden():
@@ -234,7 +234,7 @@ def test_without_three_after_first_play_forbidden():
         trick=(1,),
     )
     with pytest.raises(RuleViolation):
-        concede_without_three(game, 0)
+        concede_without_three(game, 0, Bid.regular(7, Suit.HEARTS))
 
 
 def test_regular_hill_first_is_all_or_nothing_before_pool():

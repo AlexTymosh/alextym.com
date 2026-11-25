@@ -116,6 +116,8 @@ def seat_view(
         if shared is not None:
             result["presentation"] = shared
     if room["status"] == "between":
+        if type(room.get("dealer")) is int and room["dealer"] in range(3):
+            result["dealer"] = room["dealer"]
         clock = next_deal_projection(controls or {}, room.get("game_id"))
         if clock is not None:
             result["next_deal"] = clock
