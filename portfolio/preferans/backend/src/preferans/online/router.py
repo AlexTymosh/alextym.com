@@ -72,6 +72,7 @@ class Command(Mutation):
         "preset",
         "lobby_ready",
         "lobby_config",
+        "dealer_pass",
         "overlay_open",
         "overlay_close",
         "break_start",

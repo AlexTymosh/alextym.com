@@ -94,9 +94,12 @@ def test_directory_exposes_only_own_or_joinable_rooms():
         "status": "playing",
         "occupied": [True, True, True],
         "mine": True,
+        "created_at_ms": 1,
+        "daily_number": None,
+        "waiting_names": [],
     }
     assert not result["can_create"] and not result["truncated"]
-    assert "seats" not in str(result) and "created_at_ms" not in str(result)
+    assert "seats" not in str(result) and "email" not in str(result)
 
 
 def test_profile_allowlist_and_membership():

@@ -20,6 +20,7 @@ from preferans.online.seat_swap import projection as swap_projection
 
 
 from preferans.online.ruleset_catalog import parameters, snapshot_hash
+from preferans.online.table_presentation import notebook
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -65,6 +66,8 @@ def seat_view(
         swap = swap_projection(room)
         if swap is not None:
             result["seat_swap"] = swap
+    if score is not None and my_seat is not None and room["status"] != "lobby":
+        result["score_sheet"] = notebook(score, controls or {})
     if owner and room["status"] in {"lobby", "playing", "between", "awaiting_settlement"}:
         result["can_archive"] = True
     if room["status"] == "archived":
@@ -183,6 +186,10 @@ def seat_view(
         }
     )
     if my_seat is not None:
+        if len(state.discarded) == 2 and room["status"] == "playing":
+            result["discard_count"] = 2
+            if my_seat == state.declarer:
+                result["own_discard"] = [public_card(card) for card in state.discarded]
         result["hand"] = [public_card(card) for card in state.hands[my_seat]]
         result["legal_cards"] = (
             [public_card(c) for c in legal_play_cards(state, state.turn)]
