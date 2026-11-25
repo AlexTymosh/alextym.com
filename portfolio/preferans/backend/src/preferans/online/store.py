@@ -1093,7 +1093,10 @@ class FirestoreRooms:
         if len(rows) > 1000:
             raise StoreError(503, "Ranking exceeds supported size")
         rows.sort(key=lambda row: (-row["gold"], -row["net_vists"], row["id"]))
-        return {"rankings": rows, "total_players": len(rows)}
+        from preferans.online.history_names import ranking_names
+
+        names = ranking_names(self.db, {row["id"] for row in rows})
+        return {"rankings": rows, "total_players": len(rows), "player_names": names}
 
     def result(self, room_id: str, uid: str) -> dict:
         if not isinstance(uid, str) or not uid or "/" in uid:

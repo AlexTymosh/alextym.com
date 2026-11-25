@@ -22,7 +22,6 @@ import { replayMoveAllowed, type OverlayKind } from "./presentation-model";
 import { ProjectSidebar as ImmersiveMenu } from "./ProjectSidebar.ru";
 import { Deck } from "./Deck.ru";
 import { attachCardPointerDrag } from "./pointer-drag";
-import { Notebook } from "./Notebook.ru";
 import { CardBackContext } from "./CardBackTheme";
 import { type BackTheme, type DragIntent, isBackTheme, legalDrop, matchingDrag, mayStart, mayPassDeck, dealerFor, changeDraft } from "./table-interaction";
 import { Lobby } from "./Lobby.ru";
@@ -99,8 +98,9 @@ function ActionPanel({ view, busy, selectedCards, command,
     </section>;
   }
   if (view.status === "archived") return <section className={styles.actionPanel}><h3>Партия архивирована</h3><p>Без игрового поражения, медалей и расчёта незакрытой пули.</p></section>;
+  if (view.status === "closed" && view.sheet_loser !== undefined) return null;
   if (view.status === "closed") return <section className={styles.actionPanel}>
-    {view.sheet_loser !== undefined ? <><h3>Листик выброшен</h3><p>{seatNames[view.sheet_loser]}: техническое поражение. Соперникам — по первому месту. Незакрытая пуля не дорассчитывается.</p></> : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
+    {view.sheet_loser !== undefined ? null : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
   </section>;
   if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
   return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Игровое действие">
@@ -478,7 +478,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if(isPlay&&(view.controller!==view.my_seat||view.turn!==drag.owner)){setDropNotice("Убери карту, не твой ход!");return;}
     const card=legalDrop(view,drag);
     if(card&&view.turn!=null)playNow(card,view.turn);
-    else if(isPlay)setDropNotice("Эту карту сейчас сыграть нельзя.");
+    else if(isPlay)setDropNotice("Ты чё, слепой!? Правильно давай ходи!");
   };
   const seatDrop=(seat:Seat,e:DragEvent)=>{const drag=takeDrag(e);if(view&&drag?.kind==="deck"&&mayPassDeck(view,seat))command("dealer_pass",{dealer:seat});};
   const draft=Boolean(view?.phase==="discard"&&view.my_seat===view.declarer);
@@ -498,8 +498,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const settings=<div className={styles.settingsPanel}>
     <label>Сортировка <select aria-label="Сортировка карт" value={sortMode} onChange={e=>changeSort(e.target.value==="suit"?"suit":"grouped")}><option value="grouped">По длине масти</option><option value="suit">По порядку мастей</option></select></label>
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
-    <label>Игровое поле<select value={localTableTheme} onChange={e=>changeTableTheme(e.target.value as TableTheme|"room")}><option value="room">Как в комнате</option><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Дерево</option><option value="glass">Полупрозрачное</option></select></label>
-    {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<label>Поле комнаты по умолчанию<select value={view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} onChange={e=>command("table_theme",{theme:e.target.value})}><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Дерево</option><option value="glass">Полупрозрачное</option></select></label>}
+    <label>Игровое поле<select value={localTableTheme} onChange={e=>changeTableTheme(e.target.value as TableTheme|"room")}><option value="room">Как в комнате</option><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Тёплый коричневый</option><option value="glass">Полупрозрачное</option></select></label>
+    {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<label>Поле комнаты по умолчанию<select value={view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} onChange={e=>command("table_theme",{theme:e.target.value})}><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Тёплый коричневый</option><option value="glass">Полупрозрачное</option></select></label>}
     <fieldset className={styles.backChoices}><legend>Рубашка карт</legend>{([["classic","Текущая классическая"],["ornament","Красный орнамент"],["red-blue","Красно-голубая сетка"],["green","Зелёная сетка"]] as const).map(([value,label])=><button type="button" key={value} aria-pressed={back===value} title={label} onClick={()=>changeBack(value)}><CardBackContext.Provider value={value}><CardArtwork decorative/></CardBackContext.Provider><span>{label}</span></button>)}</fieldset>
     {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
     <small>Для ручной сортировки клавиатурой: Alt + стрелка влево или вправо.</small>
@@ -534,8 +534,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
 </div>
-      <div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
-        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}<button type="button" className={styles.fullscreenToggle} aria-label="Полноэкранный режим" title="Полноэкранный режим" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>⛶</button></div>
+      <div className={styles.headerTools}><div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
+        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div><button type="button" className={styles.fullscreenToggle} aria-label="Полноэкранный режим" title="Полноэкранный режим" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>⛶</button></div>
     </header>
 
     <div className={styles.tableShell}>
@@ -558,7 +558,6 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
 
         {view && <>
           <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} collapsed={collapsed} onCollapse={changeCollapsed} settings={settings} copy={copyInvitation} leave={leaveRoom}
-            score={<Notebook view={view} profiles={profiles}/>}
             controls={<><PreferansControls view={view} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
             urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat) || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled ? openShared : undefined}
@@ -567,11 +566,13 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
               theme={localTableTheme==="room"?view.table_theme??"felt":localTableTheme} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={`${dropNotice||status|| (view.controls?.paused?"Пауза":statusNames[view.status])} · ${phaseLabel(view.phase)}${isPlay&&view.turn!=null?` · Ход: ${profiles?.[view.turn]?.name||seatNames[view.turn]}`:""}${isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat?" · Управляешь открытой рукой":""}`}
+              announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               hand={ownHand} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}
               mediaForSeat={LIVE_MEDIA_ENABLED && !archived && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
-              objects={view.presentation?.enabled ? <SharedObjects view={view} busy={busy} open={openShared}/> : undefined}
+              onScore={view.presentation?.enabled?()=>openShared("score_sheet"):undefined}
+              objects={view.presentation?.enabled ? <SharedObjects busy={busy} open={openShared}/> : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
               sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow}/>}/>
           </ImmersiveMenu>

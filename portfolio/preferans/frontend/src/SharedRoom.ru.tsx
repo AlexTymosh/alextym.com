@@ -24,9 +24,8 @@ function RadioArt(){return <svg viewBox="0 0 300 142" aria-hidden="true" classNa
   <rect x="134" y="84" width="32" height="11" fill="#191f19"/>
   <text x="150" y="121" fill="#252c25" textAnchor="middle" fontSize="10" fontWeight="bold">STEREO</text>
 </svg>}
-export function SharedObjects({view,busy,open}:{view:RoomView;busy:boolean;open:(kind:OverlayKind)=>void}){
+export function SharedObjects({busy,open}:{busy:boolean;open:(kind:OverlayKind)=>void}){
   return <div className={styles.objects}>
-    <button type="button" className={styles.paperButton} disabled={busy||!view.score} onClick={()=>open("score_sheet")} aria-label="Открыть общую пульку"><span aria-hidden="true">╲ │ ╱<br/>──○──<br/> ╱ │ ╲</span>Пулька</button>
     <button type="button" className={styles.radioButton} disabled={busy} onClick={()=>open("radio")} aria-label="Открыть магнитофон"><RadioArt/></button>
   </div>;
 }

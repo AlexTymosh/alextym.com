@@ -276,3 +276,30 @@
 .table[data-between-deals="true"] .left .deck { left:calc(100% - 1.4rem); }
 .table[data-between-deals="true"] .right .deck { right:calc(100% - 1.4rem); }
 .table[data-between-deals="true"] .bottom .deck { left:calc(100% + .3rem); top:15%; }
+
+/* PR19: table objects, stable hand arrangement and inward trick trains. */
+.table[data-theme="wood"] { background: radial-gradient(ellipse at 45% 35%,#967356 0%,#77563e 70%,#614533 100%); }
+.table .nextDeck { position:absolute; z-index:6; top:50%; left:0; transform:translate(-15%,-50%); }
+.table .nextDeck .deck { background:transparent; border:0; }
+.table .tablePaper { position:absolute; left:clamp(12px,5cqw,80px); bottom:31%; width:clamp(54px,8cqw,135px); padding:0!important; background:transparent!important; border:0!important; transform:rotate(-11deg); z-index:5; box-shadow:2px 4px 7px #0006; border-radius:2px; }
+.table .tablePaper svg { display:block; width:100%; height:auto; }
+.table .tablePaper:focus-visible { outline:3px solid #e7cb8b; }
+.table .tableScoreDrawer { z-index:16; top:50%; bottom:auto; transform:translate(-50%,-50%); }
+.table[data-playing="true"] .bottomArea { grid-template-columns:minmax(0,var(--tile-w)) minmax(0,max-content); justify-content:center; align-items:end; gap:clamp(.3rem,1.2vw,1.25rem); }
+.table .handColumn { width:auto; max-width:100%; }
+.table .handColumn .trickStack { justify-content:flex-start; }
+.table .left .seatMeta,.table .right .seatMeta { position:absolute; bottom:0; z-index:3; width:auto; }
+.table .left .seatMeta { left:calc(100% + 4px); }
+.table .right .seatMeta { right:calc(100% + 4px); }
+.table .left .trickStack,.table .right .trickStack { flex-direction:column-reverse; flex-wrap:nowrap; gap:2px; align-items:center; }
+.table .left .trickBundle,.table .right .trickBundle { --side-bundle:clamp(19px,3.9dvh,36px); width:calc(var(--side-bundle)*1.46); height:calc(var(--side-bundle)*1.05); }
+.table .left .trickBundle>span,.table .right .trickBundle>span { width:var(--side-bundle); }
+.table .left .trickBundle[data-turned="true"]>span,.table .right .trickBundle[data-turned="true"]>span { width:var(--side-bundle); }
+.table .trickBundle[data-latest="true"]>span::after { content:""; position:absolute; inset:-3px; border-radius:5px; border:2px dashed #ffdf76; pointer-events:none; animation:latestTrickBorder .85s steps(2,end) infinite; }
+@keyframes latestTrickBorder { 0%,100% { border-color:#ffdf76; box-shadow:0 0 6px #ffdf76; } 50% { border-color:#fffaed; box-shadow:0 0 2px #ffdf76; } }
+@media(prefers-reduced-motion:reduce) { .table .trickBundle[data-latest="true"]>span::after { animation:none; } }
+@media(max-height:650px) and (orientation:landscape) { .table .tablePaper { width:clamp(42px,6cqw,85px); bottom:33%; } .table .left .trickBundle,.table .right .trickBundle { --side-bundle:clamp(16px,3.5dvh,26px); } }
+.table .tableAnnouncement { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:min(86%,1000px); z-index:8; pointer-events:none; text-shadow:0 2px 6px #0009; }
+.table .left .trickBundle,.table .right .trickBundle { --side-bundle:clamp(18px,min(3.1dvh,3cqw),36px); height:calc(var(--side-bundle)*1.46); }
+.table .left .trickBundle[data-turned="true"],.table .right .trickBundle[data-turned="true"] { height:var(--side-bundle); }
+.table[data-playing="true"] .handColumn { width:calc(var(--card-w)*7.5); max-width:100%; }

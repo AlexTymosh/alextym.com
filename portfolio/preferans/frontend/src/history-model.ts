@@ -30,9 +30,9 @@ export function numeric(row: Ranking, key: SortField): number {
   if (key === "id") return 0;
   return row[key];
 }
-export function sortedRankings(rows: Ranking[], key: SortField, desc: boolean): Ranking[] {
+export function sortedRankings(rows: Ranking[], key: SortField, desc: boolean, names:Record<string,string>={}): Ranking[] {
   return [...rows].sort((a, b) => {
-    const compare = key === "id" ? a.id.localeCompare(b.id) : numeric(a, key) - numeric(b, key);
+    const compare = key === "id" ? (names[a.id]??a.id).localeCompare(names[b.id]??b.id) : numeric(a, key) - numeric(b, key);
     return (desc ? -compare : compare) || a.id.localeCompare(b.id);
   });
 }
@@ -74,9 +74,10 @@ export function isHistoryPayload(value: unknown): value is { results: Result[]; 
       safeCount(r.ledger_entry_count) && typeof r.reason === "string";
   });
 }
-export function isRankingPayload(value: unknown): value is { rankings: Ranking[] } {
+export function isRankingPayload(value: unknown): value is { rankings: Ranking[]; player_names?:Record<string,string> } {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
+  if (v.player_names !== undefined && (!v.player_names || typeof v.player_names!=="object" || Array.isArray(v.player_names) || !Object.entries(v.player_names).every(([id,name])=>/^[a-f0-9]{24}$/.test(id)&&typeof name==="string"&&name.length<=161&&!/[@\u0000-\u001f\u007f-\u009f]/.test(name)))) return false;
   return Array.isArray(v.rankings) && v.rankings.every(item => {
     if (!item || typeof item !== "object" || Array.isArray(item)) return false;
     const r = item as Record<string, unknown>;
