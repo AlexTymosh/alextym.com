@@ -1,0 +1,14 @@
+.faq { width:min(100%,900px); margin:auto; line-height:1.65; }
+.faq h1 { line-height:1.2; }
+.topic { border:1px solid #9c815c; border-radius:.6rem; margin:.55rem 0; background:#192f29; color:#f9f0dd; }
+.topic>summary,.question>summary { cursor:pointer; padding:.75rem; list-style:none; font-weight:650; }
+.topic>summary::-webkit-details-marker,.question>summary::-webkit-details-marker { display:none; }
+.topic>summary::before,.question>summary::before { content:">"; display:inline-block; margin-right:.65rem; }
+.topic[open]>summary::before,.question[open]>summary::before { transform:rotate(90deg); }
+.answers { padding:0 .75rem .65rem; }
+.question { border-top:1px solid #b6c5b64a; }
+.answer { padding:0 .75rem .7rem; }
+.paragraph { white-space:pre-line; }
+.tableWrap { overflow:auto; }
+.tableWrap table { width:100%; border-collapse:collapse; font-size:.88rem; }
+.tableWrap td,.tableWrap th { padding:.35rem; border:1px solid #b6c5b65a; text-align:left; }

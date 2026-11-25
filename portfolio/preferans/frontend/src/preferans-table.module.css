@@ -201,3 +201,39 @@
 .table [data-pointer-dragging="true"] { opacity:.35; }
 .trickField { width:min(100%,500px); min-height:calc(var(--side-w)*2.2); }
 .trickStack>span { box-shadow:1px 1px #f4f0e3,2px 2px #857b67,3px 3px #e5dcc5,4px 4px 4px #0008; }
+
+/* PR17: rail popovers, seat signals and responsive physical trick train. */
+.railDrawer { left:0; right:auto; width:min(340px,calc(100% - 12px)); max-height:80dvh; box-sizing:border-box; }
+.scoreDrawer { left:50%; right:auto; transform:translateX(-50%); width:min(640px,calc(100% - 16px)); box-sizing:border-box; }
+.table { position:relative; }
+.table[data-playing="true"] { --tile-w:clamp(120px,min(53.8dvh,27cqw),562px); --side-w:clamp(30px,min(10dvh,8cqw),95px); --card-w:clamp(36px,13.5dvh,140px); }
+.table[data-playing="true"] .tableTop { grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) minmax(0,1fr); align-items:start; position:relative; }
+.table[data-playing="true"] .bottomArea { --tile-w:clamp(90px,min(53.8dvh,28cqw),562px); --card-w:clamp(28px,min(13.5dvh,calc((100cqw - var(--tile-w) - 44px)/8)),140px); }
+.table .seatSignals { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.25rem; min-height:1.4rem; }
+.table .seatSignals:empty { visibility:hidden; }
+.table .callBubble { font-size:clamp(.65rem,1vw,.9rem); line-height:1.15; }
+.table .callBubble::before { bottom:auto; top:100%; border-bottom-color:transparent; border-top-color:#fff7dc; }
+.table .avatar[data-dealer="true"]::after { content:"D"; position:absolute; top:4px; left:4px; width:22px; height:22px; border-radius:50%; background:#fff2cc; color:#342c21; display:grid; place-items:center; font:bold 12px sans-serif; z-index:3; }
+.table .center { align-self:center; width:100%; }
+.table .trickField { width:min(100%,min(42dvh,540px)); aspect-ratio:1; min-height:0; border-radius:50%; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; padding:clamp(4px,1.3vw,20px); }
+.table .trickSpot { min-height:0; }
+.table .opponentHand { width:100%; --rival-w:min(var(--side-w),5.2cqw); }
+.table .opponentHand .rivalCard { flex:0 0 var(--rival-w); width:var(--rival-w); }
+.table .opponentHand .rivalCard+.rivalCard { margin-left:calc(var(--rival-w)*-.72); }
+.table .openHand { flex-wrap:nowrap; gap:0; }
+.table .openHand .rivalCard+.rivalCard { margin-left:calc(var(--rival-w)*-.70); }
+.table .openHand .rivalCard[data-suit-break="true"] { margin-left:calc(var(--rival-w)*-.30); }
+.table .trickStackWrap { width:100%; min-width:0; }
+.table .trickStack { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:3px; width:auto; height:auto; min-height:0; }
+.table .trickBundle { width:clamp(30px,5.2dvh,40px); height:clamp(35px,7.6dvh,58px); padding:0!important; background:transparent!important; border:0!important; position:relative; flex-shrink:0; display:grid; place-items:center; }
+.table .trickBundle>span { position:relative; display:block; width:100%; box-shadow:1px 1px #f4f0e3,2px 2px #857b67,3px 3px #e5dcc5,4px 4px 4px #0008; border-radius:5%; }
+.table .trickBundle[data-turned="true"] { width:clamp(35px,7.6dvh,58px); }
+.table .trickBundle[data-turned="true"]>span { width:clamp(30px,5.2dvh,40px); transform:rotate(90deg); }
+.table .trickBundle:disabled { opacity:1; cursor:default; }
+.table .trickBundle[data-latest="true"]:not(:disabled):hover { filter:brightness(1.15); }
+.table .trickBundle[data-latest="true"]:not(:disabled):focus-visible { outline:2px solid #f2ca71; }
+@media(max-height:650px) and (orientation:landscape) {
+ .table[data-playing="true"] { --tile-w:clamp(78px,min(37.4dvh,27cqw),250px); --side-w:clamp(25px,min(10dvh,8cqw),60px); }
+ .table[data-playing="true"] .bottomArea { --tile-w:clamp(74px,min(40.6dvh,28cqw),273px); --card-w:clamp(26px,min(12.5dvh,calc((100cqw - var(--tile-w) - 40px)/8)),81px); }
+ .table .trickField { width:min(100%,36dvh); }
+}

@@ -232,3 +232,10 @@
 .tableRoot .handsPanel { padding:0; }
 
 .tableRoot [data-pending-play="true"] { opacity:0!important; pointer-events:none; }
+
+.tableRoot .fullscreenToggle { font-size:1.25rem; line-height:1; padding:.3rem .5rem; min-width:36px; margin-left:.4rem; }
+.tableRoot .headerStatus { flex-wrap:wrap; }
+.tableRoot .backChoices { border:1px solid #bca477; border-radius:.5rem; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem; min-width:0; padding:.35rem; }
+.tableRoot .backChoices button { display:grid; place-items:center; gap:.2rem; font-size:.72rem; min-width:0; }
+.tableRoot .backChoices img { width:36px; height:auto; }
+.tableRoot .backChoices button[aria-pressed="true"] { outline:2px solid #e8ca88; }

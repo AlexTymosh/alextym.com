@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .realtime import AUTH_MS, PROTOCOL, HubError, Ticket, enabled, hub, now_ms, origin_allowed
 from .store import FirestoreRooms, StoreError
+from .publish_signal import wait_for_publish_or_frame
 from .live_relay import MAX_FRAME, LiveError, live_enabled
 
 logger = logging.getLogger(__name__)
@@ -174,6 +175,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
         connection: str | None = None
         store: FirestoreRooms | None = None
         reader: asyncio.Task | None = None
+        unsubscribe: Callable[[], None] | None = None
         close_code = 1000
         try:
             await socket.accept()
@@ -198,7 +200,13 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
             last_media_error = None
             last_auth = now_ms()
             reader = asyncio.create_task(_receive(socket))
+            wake = asyncio.Event()
+            loop = asyncio.get_running_loop()
+            unsubscribe = hub.publish_signal.subscribe(
+                room_id, lambda: loop.call_soon_threadsafe(wake.set)
+            )
             while True:
+                wake.clear()
                 at = now_ms()
                 if (
                     not enabled()
@@ -260,8 +268,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                         await _send(
                             socket, {**message, "protocol": PROTOCOL, "server_now_ms": now_ms()}
                         )
-                done, _ = await asyncio.wait({reader}, timeout=0.075)
-                if done:
+                if await wait_for_publish_or_frame(reader, wake):
                     frame = reader.result()
                     at = now_ms()
                     if isinstance(frame.get("type"), str) and frame["type"].startswith("media_"):
@@ -305,6 +312,8 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
             logger.warning("preferans.realtime.failed")
             close_code = 1011
         finally:
+            if unsubscribe is not None:
+                unsubscribe()
             if pending:
                 hub.release_handshake()
             if reader:
