@@ -41,6 +41,7 @@ from preferans.online.controls import (
 )
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
+from preferans.online.table_experience import THEMES, mark_activity
 from preferans.online.table_presentation import room_day
 from preferans.online.seat_swap import (
     ACTIONS as SWAP_ACTIONS,
@@ -127,6 +128,7 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     controls.pop("sheet_offers", None)
     controls.pop("reveal", None)
     controls.pop("revealed_cards", None)
+    mark_activity(room, game, now)
     return game
 
 
@@ -454,6 +456,7 @@ class FirestoreRooms:
                 "preset",
                 "lobby_config",
                 "ruleset_select",
+                "table_theme",
             }:
                 _member(room, uid, admin=True, owner=owner)
                 if not owner and room["admin_uid"] != uid:
@@ -745,6 +748,14 @@ class FirestoreRooms:
                 seat = room["seats"].index(uid)
                 room["lobby_setup"]["ready"][seat] = args["ready"]
                 event_data = {"seat": seat, "ready": args["ready"]}
+            elif action == "table_theme":
+                theme = args.get("theme")
+                if set(args) != {"theme"} or not isinstance(theme, str) or theme not in THEMES:
+                    raise StoreError(422, "Invalid table theme")
+                if room["status"] not in {"lobby", "playing", "between", "awaiting_settlement"}:
+                    raise StoreError(409, "Table theme cannot change in a finished room")
+                room["table_theme"] = theme
+                event_data = {"theme": theme}
             elif action == "dealer_pass":
                 setup = room.get("lobby_setup")
                 if room["status"] != "lobby" or not setup or game is not None:
@@ -922,6 +933,7 @@ class FirestoreRooms:
                     doc.collection("events").document(f"{sequence:08d}"),
                     {"sequence": sequence, "seat": None, **automatic},
                 )
+            mark_activity(room, game, now)
             room["version"] += 1
             v = room["version"]
             event = {

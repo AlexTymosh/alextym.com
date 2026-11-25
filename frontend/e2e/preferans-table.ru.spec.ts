@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { actorSeat, opponentCards, safeDirectory, safeProfiles, seatPosition, tableSeats } from "../../portfolio/preferans/frontend/src/table-model";
-import { backSvg, cardArtwork, faceSvg } from "../../portfolio/preferans/frontend/src/atlas-art";
-import { isRoomView, type RoomView, type Card, type Suit } from "../../portfolio/preferans/frontend/src/game-model.ru";
+import { backSvg, cardArtwork } from "../../portfolio/preferans/frontend/src/atlas-art";
+import { isRoomView, cardLabel, type RoomView, type Card, type Suit } from "../../portfolio/preferans/frontend/src/game-model.ru";
 
 const room: RoomView = {room_id:"a".repeat(32),version:1,status:"playing",my_seat:0,room_admin:true,game_id:"deal",occupied:[true,true,true],phase:"auction",turn:0,hand:[{suit:"S",rank:14}],hand_counts:[1,10,9]};
 test("table uses clockwise left/right positions for every seat",()=>{
@@ -24,13 +24,13 @@ test("actor ring identifies controller and freezes during pause",()=>{
   expect(actorSeat({...room,phase:"discard",declarer:2,turn:0})).toBe(2);
   expect(actorSeat({...room,controls:{paused:true,counter:null,undo:null,can_request_undo:false,adjustments:[]}})).toBeNull();
 });
-test("atlas deck has 32 unique original faces, Russian ranks, and one generic back",()=>{
-  const faces=(["S","C","D","H"] as Suit[]).flatMap(suit=>Array.from({length:8},(_,i)=>faceSvg({suit,rank:i+7})));
+test("atlas deck has 32 distinct local assets, Russian labels, and one generic back",()=>{
+  const faces=(["S","C","D","H"] as Suit[]).flatMap(suit=>Array.from({length:8},(_,i)=>cardArtwork({suit,rank:i+7})));
   expect(new Set(faces).size).toBe(32);
-  expect(faceSvg({suit:"S",rank:13})).toContain("К");
-  expect(faceSvg({suit:"H",rank:14})).toContain("Т");
+  expect(cardLabel({suit:"S",rank:13})).toContain("К");
+  expect(cardLabel({suit:"H",rank:14})).toContain("Т");
   expect(backSvg()).not.toContain("<text");
-  expect(cardArtwork({suit:"S",rank:7})).toMatch(/^data:image\/svg\+xml,/);
+  expect(cardArtwork({suit:"S",rank:7})).toBe("/preferans/atlas/7S.png");
 });
 test("profiles and directory reject untrusted fields and URLs",()=>{
   expect(safeProfiles({profiles:[{name:"Player",avatar:"https://example.invalid/a"},{name:"private@example.invalid"},null]})).toEqual([{name:"Player",avatar:null},{name:null,avatar:null},{name:null,avatar:null}]);

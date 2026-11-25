@@ -11,5 +11,5 @@ export function CardArtwork({ card, decorative = false }: { card?: Card; decorat
   // eslint-disable-next-line @next/next/no-img-element
   return <img className={styles.artwork} src={face ? cardArtwork(face) : themedBackArtwork(back)}
     alt={decorative ? "" : face ? cardLabel(face) : "Закрытая карта"} aria-hidden={decorative || undefined}
-    draggable={false} width={100} height={146} />;
+    draggable={false} width={100} height={150} />;
 }

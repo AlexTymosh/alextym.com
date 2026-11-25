@@ -260,7 +260,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                         await _send(
                             socket, {**message, "protocol": PROTOCOL, "server_now_ms": now_ms()}
                         )
-                done, _ = await asyncio.wait({reader}, timeout=0.15)
+                done, _ = await asyncio.wait({reader}, timeout=0.075)
                 if done:
                     frame = reader.result()
                     at = now_ms()

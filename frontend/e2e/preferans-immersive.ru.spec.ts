@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Card, RoomView } from "../../portfolio/preferans/frontend/src/game-model.ru";
 import { changeDraft, dealerFor, invitationId, legalDrop, matchingDrag, mayPassDeck, mayStart, type DragIntent } from "../../portfolio/preferans/frontend/src/table-interaction";
 import { orderHand } from "../../portfolio/preferans/frontend/src/interaction-model";
-import { backSvg, themedBackSvg, faceSvg } from "../../portfolio/preferans/frontend/src/atlas-art";
+import { backSvg, themedBackSvg, cardArtwork } from "../../portfolio/preferans/frontend/src/atlas-art";
 
 const room:RoomView={room_id:"a".repeat(32),game_id:"deal",version:5,status:"playing",occupied:[true,true,true],my_seat:0,room_admin:false,phase:"play",turn:1,controller:0,legal_cards:[{suit:"H",rank:14}]};
 const drag:DragIntent={kind:"card",id:"14H",owner:1,room:room.room_id,game:room.game_id,version:5};
@@ -41,7 +41,7 @@ test("card group order matches the approved reference and backs are independent"
   expect(orderHand(cards).map(c=>`${c.rank}${c.suit}`)).toEqual(["14H","13H","10H","8H","7H","14S","11S","9S","13D","10D","8D","7C"]);
   expect(themedBackSvg("classic")).toBe(backSvg());
   expect(new Set(["classic","ornament","red-blue","green"].map(t=>themedBackSvg(t as "classic"|"ornament"|"red-blue"|"green"))).size).toBe(4);
-  const faces=["S","C","D","H"].flatMap(s=>Array.from({length:8},(_,i)=>faceSvg(c(s as Card["suit"],7+i))));
+  const faces=["S","C","D","H"].flatMap(s=>Array.from({length:8},(_,i)=>cardArtwork(c(s as Card["suit"],7+i))));
   expect(new Set(faces).size).toBe(32);
 });
 

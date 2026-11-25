@@ -158,3 +158,46 @@
 @media(max-width:1100px) and (orientation:landscape) { .roomLayout { grid-template-columns:minmax(122px,160px) minmax(0,1fr); } .roomLayout[data-collapsed="true"] { grid-template-columns:42px minmax(0,1fr); } .table { --card-w:clamp(36px,12dvh,76px); --side-w:clamp(25px,8dvh,48px); --tile-w:clamp(66px,19dvh,140px); min-height:0; } .projectMenu .menuButton { min-height:32px; font-size:.7rem; } .menuDrawer { max-height:65dvh; } }
 @media(max-width:760px) and (orientation:portrait) { .roomLayout:not(.landscapeOnly),.roomLayout[data-collapsed="true"]:not(.landscapeOnly) { grid-template-columns:1fr; } .roomLayout:not(.landscapeOnly) .projectMenu { flex-direction:column; } }
 @media(prefers-reduced-motion:reduce) { .widow[data-award] .widowCards { animation:none; } }
+
+/* PR16: larger table and player tiles, stable bottom hand, local visual themes. */
+.tableScene { min-width:0; }
+.table[data-playing="true"] { display:flex; flex-direction:column; min-height:calc(100dvh - 150px); --tile-w:clamp(126px,34.5dvh,360px); --card-w:clamp(42px,10.8dvh,112px); }
+.table[data-playing="true"] .tableTop { flex:1 0 auto; min-height:clamp(210px,40dvh,470px); align-items:start; }
+.table[data-playing="true"] .bottomArea { margin-top:auto; align-items:end; grid-template-columns:minmax(0,var(--tile-w)) minmax(0,max-content); justify-content:center; gap:clamp(.3rem,1.2vw,1.25rem); padding-bottom:.35rem; }
+.table .bottom .identity { align-items:center; }
+.table .avatar { width:var(--tile-w); }
+.table .seat { position:relative; }
+.thinking { font-variant-numeric:tabular-nums; color:#fff3c7; font-size:.8rem; min-height:1.2em; }
+.seatMeta { position:relative; }
+.callBubble { position:relative; background:#fff7dc; color:#25211b; border-radius:1rem; padding:.3rem .75rem; box-shadow:0 2px 6px #0005; }
+.callBubble::before { content:""; position:absolute; bottom:100%; left:40%; border:6px solid transparent; border-bottom-color:#fff7dc; }
+.statusLine { text-align:center; color:inherit; font-size:.8rem; padding:.35rem; min-height:1.4em; }
+.trickStackWrap { position:relative; min-width:44px; }
+.trickStack { position:relative; width:50px; height:42px; padding:0!important; background:transparent!important; border:0!important; }
+.trickStack>span { position:absolute; left:8px; top:8px; width:20px; transform-origin:center; box-shadow:0 1px 2px #0008; }
+.trickStack b { position:absolute; right:0; bottom:0; background:#17382e; border-radius:50%; padding:2px 5px; color:white; }
+.trickPreview { position:absolute; display:flex; z-index:10; gap:3px; bottom:100%; left:50%; transform:translateX(-50%); padding:.3rem; background:#172f27; border:1px solid #d4b77a; border-radius:5px; }
+.trickPreview>span { width:var(--side-w); }
+.trickField[data-collecting] .tableCard { animation-duration:1.3s; }
+@keyframes preferansCollect { 0%,72% { opacity:1; transform:none; } 100% { opacity:0; transform:translate(var(--collect-x),var(--collect-y)) scale(.6); } }
+.table[data-theme="blue"] { background:radial-gradient(ellipse at 50% 38%,#355d83,#203d64 60%,#142b4a); }
+.table[data-theme="wood"] { background:repeating-linear-gradient(4deg,#624025,#795133 13px,#6d462a 17px); }
+.table[data-theme="glass"] { background:radial-gradient(ellipse at 50% 38%,#386b5780,#173c3360); backdrop-filter:blur(2px); }
+.table .artwork { aspect-ratio:2/3; }
+@media(max-width:1100px) and (orientation:landscape) { .table[data-playing="true"] { --tile-w:clamp(90px,28dvh,210px); --card-w:clamp(32px,10dvh,76px); min-height:calc(100dvh - 110px); } .table[data-playing="true"] .tableTop { min-height:clamp(145px,35dvh,300px); } }
+@media(max-height:650px) and (orientation:landscape) { .table[data-playing="true"] { --tile-w:clamp(78px,24dvh,160px); --card-w:clamp(32px,10dvh,65px); } .table[data-playing="true"] .tableTop { min-height:145px; } }
+@media(prefers-reduced-motion:reduce) { .trickField[data-collecting] .tableCard { animation:none; } }
+
+/* Geometry-based deal flight is handled by Web Animations, not two competing animations. */
+.table[data-dealing="true"] .rivalCard,.table[data-dealing="true"] .ownHand [data-card] { animation:none; }
+
+.table { container-type:inline-size; }
+.table[data-playing="true"] { min-height:var(--available-table-height,calc(100dvh - 150px)); }
+.table[data-playing="true"] .bottomArea { --tile-w:clamp(90px,min(34.5dvh,26cqw),360px); --card-w:clamp(28px,min(10.8dvh,calc((100cqw - var(--tile-w) - 50px)/8)),112px); }
+.table[data-holding-trick="true"] [data-card] { pointer-events:none; }
+@media(max-height:650px) and (orientation:landscape) { .table[data-playing="true"] .bottomArea { --tile-w:clamp(74px,min(26dvh,25cqw),175px); --card-w:clamp(26px,min(10dvh,calc((100cqw - var(--tile-w) - 40px)/8)),65px); } }
+
+.table [data-pointer-drag] { touch-action:none; }
+.table [data-pointer-dragging="true"] { opacity:.35; }
+.trickField { width:min(100%,500px); min-height:calc(var(--side-w)*2.2); }
+.trickStack>span { box-shadow:1px 1px #f4f0e3,2px 2px #857b67,3px 3px #e5dcc5,4px 4px 4px #0008; }
