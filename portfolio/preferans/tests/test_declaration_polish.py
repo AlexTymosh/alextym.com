@@ -1,4 +1,5 @@
 """Declaration-only concession and between-deal dealer projection."""
+
 from dataclasses import replace
 
 import pytest
@@ -36,7 +37,9 @@ def test_without_three_is_one_authoritative_declaration():
 @pytest.mark.parametrize("phase", [Phase.DEFENSE_FIRST, Phase.DEFENSE_SECOND, Phase.PLAY])
 def test_without_three_cannot_follow_contract_or_defense(phase):
     state = replace(
-        declaration(), phase=phase, contract=Bid.regular(7, Suit.HEARTS),
+        declaration(),
+        phase=phase,
+        contract=Bid.regular(7, Suit.HEARTS),
         defense=(None, DefenseDecision.VIST, None),
     )
     with pytest.raises(RuleViolation):
@@ -50,7 +53,14 @@ def test_concession_rejects_other_actor_missing_bid_and_lower_bid():
 
 
 def test_between_deal_projection_preserves_dealer_without_game():
-    room = {"id": "a" * 32, "seats": ["a", "b", "c"], "status": "between", "admin_uid": "a", "dealer": 0, "game_id": "old"}
+    room = {
+        "id": "a" * 32,
+        "seats": ["a", "b", "c"],
+        "status": "between",
+        "admin_uid": "a",
+        "dealer": 0,
+        "game_id": "old",
+    }
     view = seat_view(room, None, None, "b", 7)
     assert view["dealer"] == 0
     assert "hand" not in view

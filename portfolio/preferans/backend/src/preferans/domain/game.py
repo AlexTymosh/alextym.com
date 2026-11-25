@@ -200,7 +200,10 @@ def concede_without_three(state: GameState, actor: int, contract: Bid) -> GameSt
     if state.trick or state.completed_tricks or any(state.defense):
         raise RuleViolation("Defense or play has already started")
     return replace(
-        state, contract=contract, phase=Phase.FINISHED, turn=None,
+        state,
+        contract=contract,
+        phase=Phase.FINISHED,
+        turn=None,
         end_reason=EndReason.WITHOUT_THREE,
     )
 
