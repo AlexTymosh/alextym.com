@@ -71,8 +71,12 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
                     continue
                 if seat not in cached_names and len(cached_names) < 30:
                     try:
-                        snap = db.collection("portfolio_lab_profiles").document(seat).get(timeout=5.0)
-                        cached_names[seat] = profile_projection(snap.to_dict() if snap.exists else None)["name"]
+                        snap = (
+                            db.collection("portfolio_lab_profiles").document(seat).get(timeout=5.0)
+                        )
+                        cached_names[seat] = profile_projection(
+                            snap.to_dict() if snap.exists else None
+                        )["name"]
                     except Exception:
                         cached_names[seat] = None
                 if cached_names.get(seat):

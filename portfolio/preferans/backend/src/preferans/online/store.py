@@ -440,8 +440,12 @@ class FirestoreRooms:
                 _member(room, uid, admin=True, owner=owner)
                 setup = room.get("lobby_setup") if room["status"] == "lobby" else None
                 dealer = setup.get("dealer") if setup else None
-                selected = type(dealer) is int and dealer in range(3) and room["seats"][dealer] == uid
-                replay = previous and previous.get("fingerprint") == identity and uid in room["seats"]
+                selected = (
+                    type(dealer) is int and dealer in range(3) and room["seats"][dealer] == uid
+                )
+                replay = (
+                    previous and previous.get("fingerprint") == identity and uid in room["seats"]
+                )
                 if not owner and room["admin_uid"] != uid and not selected and not replay:
                     raise StoreError(403, "Room admin or selected dealer required")
             elif action in {
@@ -749,7 +753,13 @@ class FirestoreRooms:
                 if seat != setup["dealer"]:
                     raise StoreError(403, "Only the selected dealer may pass the deck")
                 target = args.get("dealer")
-                if set(args) != {"dealer"} or type(target) is not int or target not in range(3) or target == seat or room["seats"][target] is None:
+                if (
+                    set(args) != {"dealer"}
+                    or type(target) is not int
+                    or target not in range(3)
+                    or target == seat
+                    or room["seats"][target] is None
+                ):
                     raise StoreError(422, "Invalid dealer target")
                 setup["dealer"] = target
                 setup["ready"] = [False, False, False]

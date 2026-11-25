@@ -556,7 +556,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
           <button type="button" onClick={()=>window.open("/portfolio/preferans?view=history","_blank","noopener,noreferrer")}>История и рейтинг</button></>}
 
         {roomId && !view && <section className={styles.roomBar} aria-label="Комната">
-          <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{view ? statusNames[view.status] : invited ? "Приглашение" : "Подключение…"}</span></div>
+          <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{invited ? "Приглашение" : "Подключение…"}</span></div>
           <div className={styles.actions}>
             <button type="button" onClick={copyInvitation}>Скопировать приглашение</button>
             <button type="button" onClick={leaveRoom}>К выбору комнаты</button>

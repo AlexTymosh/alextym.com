@@ -21,11 +21,21 @@ def test_running_notebook_merges_corrections_in_ledger_order():
         hill=(6, 0, 0),
         pool=(2, 0, 0),
         vists=((0, 4, 0), (0, 0, 0), (0, 0, 0)),
-        entries=(entry(1, "hill", 0, 4), entry(2, "hill", 0, 6),
-                 entry(3, "pool", 0, 2), entry(4, "vist", 0, 4, 1)),
+        entries=(
+            entry(1, "hill", 0, 4),
+            entry(2, "hill", 0, 6),
+            entry(3, "pool", 0, 2),
+            entry(4, "vist", 0, 4, 1),
+        ),
     )
-    correction = {"field": "hill", "seat": 0, "against": None, "delta": -4,
-                  "game_version": 15, "ledger_sequence": 2}
+    correction = {
+        "field": "hill",
+        "seat": 0,
+        "against": None,
+        "delta": -4,
+        "game_version": 15,
+        "ledger_sequence": 2,
+    }
     result = notebook(score, {"score_sheet_adjustments": [correction], "adjustments": [correction]})
     assert result["exact"] is True
     assert result["hill"][0] == [4, 10, 6]
@@ -54,7 +64,7 @@ def test_dealer_pass_requires_current_dealer_and_new_readiness(monkeypatch):
     svc.join(rid, "b", "pr15-join-b", 0)
     svc.join(rid, "c", "pr15-join-c", 1)
     for i, uid in enumerate("abc"):
-        svc.command(rid, uid, f"pr15-ready-{i}", 2+i, "lobby_ready", {"ready": True})
+        svc.command(rid, uid, f"pr15-ready-{i}", 2 + i, "lobby_ready", {"ready": True})
     with pytest.raises(StoreError) as denied:
         svc.command(rid, "b", "pr15-denied-pass", 5, "dealer_pass", {"dealer": 0})
     assert denied.value.code == 403
@@ -65,7 +75,7 @@ def test_dealer_pass_requires_current_dealer_and_new_readiness(monkeypatch):
         svc.start(rid, "b", "pr15-early-start", 6, False)
     assert early.value.code == 409
     for i, uid in enumerate("abc"):
-        svc.command(rid, uid, f"pr15-ready-new-{i}", 6+i, "lobby_ready", {"ready": True})
+        svc.command(rid, uid, f"pr15-ready-new-{i}", 6 + i, "lobby_ready", {"ready": True})
     result = svc.start(rid, "b", "pr15-start-game", 9, False)
     assert svc.start(rid, "b", "pr15-start-game", 9, False) == result
     assert svc.view(rid, "a")["dealer"] == 1
@@ -78,16 +88,17 @@ def test_daily_number_is_transactional_and_create_retry_does_not_increment(monke
     monkeypatch.delenv("PREFERANS_REALTIME_ENABLED", raising=False)
     now = [int(datetime(2026, 11, 25, 23, 30, tzinfo=timezone.utc).timestamp() * 1000)]
     db = FakeDB()
-    svc = FirestoreRooms(db, firestore_module=SimpleNamespace(transactional=transactional),
-                         now_ms=lambda: now[0])
+    svc = FirestoreRooms(
+        db, firestore_module=SimpleNamespace(transactional=transactional), now_ms=lambda: now[0]
+    )
     first = svc.create("a", "pr15-first-room")
     assert svc.create("a", "pr15-first-room") == first
     second = svc.create("b", "pr15-second-room")
-    assert db.docs[f'preferans_rooms/{first["room_id"]}']["daily_number"] == 1
-    assert db.docs[f'preferans_rooms/{second["room_id"]}']["daily_number"] == 2
+    assert db.docs[f"preferans_rooms/{first['room_id']}"]["daily_number"] == 1
+    assert db.docs[f"preferans_rooms/{second['room_id']}"]["daily_number"] == 2
     now[0] += 3_600_000
     third = svc.create("a", "pr15-third-room")
-    assert db.docs[f'preferans_rooms/{third["room_id"]}']["daily_number"] == 1
+    assert db.docs[f"preferans_rooms/{third['room_id']}"]["daily_number"] == 1
 
 
 def test_only_declarer_receives_final_discard_and_can_open_replay():
@@ -101,8 +112,13 @@ def test_only_declarer_receives_final_discard_and_can_open_replay():
 
     game = start_game(deal(FULL_DECK, 2))
     game = replace(game, phase=Phase.DECLARE, declarer=0, discarded=game.widow)
-    room = {"id": "a"*32, "status": "playing", "seats": ["a", "b", "c"],
-            "admin_uid": "a", "game_id": "deal"}
+    room = {
+        "id": "a" * 32,
+        "status": "playing",
+        "seats": ["a", "b", "c"],
+        "admin_uid": "a",
+        "game_id": "deal",
+    }
     own = seat_view(room, game, ScoreState.new(), "a", 1)
     assert own["discard_count"] == 2 and len(own["own_discard"]) == 2
     for uid in ("b", "c", "owner"):
@@ -110,5 +126,13 @@ def test_only_declarer_receives_final_discard_and_can_open_replay():
         assert "own_discard" not in other
     control = {"presentation": initial()}
     with pytest.raises(PresentationError) as denied:
-        change(control, room, game, 1, "overlay_open", {"kind": "discard_replay", "presentation_version": 0}, 100)
+        change(
+            control,
+            room,
+            game,
+            1,
+            "overlay_open",
+            {"kind": "discard_replay", "presentation_version": 0},
+            100,
+        )
     assert denied.value.code == 403

@@ -5,9 +5,12 @@ from zoneinfo import ZoneInfo
 
 
 def room_day(at_ms: int) -> str:
-    return datetime.fromtimestamp(at_ms / 1000, timezone.utc).astimezone(
-        ZoneInfo("Europe/London")
-    ).date().isoformat()
+    return (
+        datetime.fromtimestamp(at_ms / 1000, timezone.utc)
+        .astimezone(ZoneInfo("Europe/London"))
+        .date()
+        .isoformat()
+    )
 
 
 def notebook(score, controls: dict) -> dict:
@@ -53,7 +56,13 @@ def notebook(score, controls: dict) -> dict:
         apply_corrections(entry.sequence)
     for key in keys:
         kind, i, j = key
-        final = score.hill[i] if kind == "hill" else score.pool[i] if kind == "pool" else score.vists[i][j]
+        final = (
+            score.hill[i]
+            if kind == "hill"
+            else score.pool[i]
+            if kind == "pool"
+            else score.vists[i][j]
+        )
         if current[key] != final:
             exact = False
             cells[key].append(final)
@@ -61,7 +70,13 @@ def notebook(score, controls: dict) -> dict:
     # balances. Show only authoritative totals rather than invent a history.
     if not exact:
         for kind, i, j in keys:
-            final = score.hill[i] if kind == "hill" else score.pool[i] if kind == "pool" else score.vists[i][j]
+            final = (
+                score.hill[i]
+                if kind == "hill"
+                else score.pool[i]
+                if kind == "pool"
+                else score.vists[i][j]
+            )
             cells[kind, i, j] = [final] if final else []
     return {
         "exact": exact,

@@ -80,7 +80,10 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
         if kind == "widow_replay" and not (game and game.widow_revealed > 0):
             raise PresentationError(409, "No public widow")
         if kind == "discard_replay" and not (
-            game and game.declarer == seat and len(game.discarded) == 2 and room["status"] == "playing"
+            game
+            and game.declarer == seat
+            and len(game.discarded) == 2
+            and room["status"] == "playing"
         ):
             raise PresentationError(403, "Only the declarer may review the discard")
         p["overlay"] = {
