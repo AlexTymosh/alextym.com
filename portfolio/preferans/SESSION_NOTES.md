@@ -42,3 +42,14 @@ Base: 2bc7f789e92bff14b3f1c0a998ad301b745b2204 (PR #290 merged). Place the deck 
 - Move game navigation into the host header, render ledger-based notebook thumbnail and three-seat local perspectives, align trick bundles with avatars, and expand bid choices inline with version-scoped special bid confirmation.
 - Automatically initiate unambiguous settlement from the connected administrator client; allow declarer settlement when the authoritative projection offers a real choice. Offline automatic settlement remains a separate server lifecycle concern.
 - See `docs/PR20_SHELL_AND_BIDDING.ru.md`. Full CI and three-client acceptance remain pending.
+
+## PR21 — fixed game menu, auction priority and unanimous misere offer
+
+- Replace collapsible game menu with permanent horizontal actions; move fullscreen beside account and reuse website branding.
+- Bottom-align own avatar; separate opponent trick trains; place opponent clocks at the inward top edge.
+- Fix notebook writing lanes and use an irregular oval for the target.
+- Restore usable portalled settings, cyclic options and uniform card previews.
+- Derive Here priority from the first bid/pass sequence; preserve 6-spades restriction and derive rights after undo.
+- Ordinary misere after discard supports a private-to-participants offer, two approvals or immediate rejection. The second approval settles atomically through the existing scoring engine. No fake tricks; rejection restores normal play. Legacy GameState records decode with empty votes.
+- Accept legal next-lead drops during decorative collection; no new polling or network requests.
+- Candidate package: full CI, three-client visual acceptance and latency measurement remain required. Deploy frontend and backend together; do not mix old and new game clients during a vote.

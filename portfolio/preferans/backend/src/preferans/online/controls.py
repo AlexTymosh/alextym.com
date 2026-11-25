@@ -87,7 +87,7 @@ def record_candidate(
         and len(after.completed_tricks) == len(before.completed_tricks)
     )
     eligible_bid = (
-        action == "bid" and before.phase == Phase.AUCTION and after.phase == Phase.AUCTION
+        action in {"bid", "here"} and before.phase == Phase.AUCTION and after.phase == Phase.AUCTION
     )
     control["candidate"] = (
         {

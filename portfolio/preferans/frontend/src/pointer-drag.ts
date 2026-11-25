@@ -6,7 +6,10 @@ export function attachCardPointerDrag(root: Document): () => void {
     const a=active;if(!a)return;active=null;
     if(a.ghost){
       a.ghost.remove();delete a.source.dataset.pointerDragging;
-      if(drop&&event&&a.transfer){const target=root.elementFromPoint(event.clientX,event.clientY);target?.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:a.transfer}));}
+      if(drop&&event&&a.transfer){
+        const target=root.elementFromPoint(event.clientX,event.clientY);
+        target?.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:a.transfer,clientX:event.clientX,clientY:event.clientY}));
+      }
       a.source.dispatchEvent(new DragEvent("dragend",{bubbles:true,dataTransfer:a.transfer}));
       suppressClickUntil=performance.now()+250;
     }

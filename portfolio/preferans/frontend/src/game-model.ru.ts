@@ -11,7 +11,7 @@ export type Bid = {
   suit: Suit | null;
 };
 export type Phase =
-  | "auction" | "discard" | "declare" | "defense_first" | "defense_second"
+  | "auction" | "discard" | "declare" | "misere_offer" | "defense_first" | "defense_second"
   | "defense_reconsider" | "choose_mode" | "opening_lead" | "play" | "finished";
 export type Score = {
   pool: number[]; hill: number[]; vists: number[][]; target?: number;
@@ -59,6 +59,7 @@ export type RoomView = {
   next_deal?: { after_game_id: string; deadline_ms: number | null; remaining_ms: number | null };
   hand?: Card[]; hand_counts?: number[]; legal_cards?: Card[];
   legal_bids?: Bid[]; legal_contracts?: Bid[]; can_say_here?: boolean;
+  misere_offer?: {approved:number[];can_vote:boolean};
   trick?: Array<{ owner: number; card: Card }>;
   last_trick?: Array<{ owner: number; card: Card }>;
   open_hands?: Array<{ seat: number; cards: Card[] }>;
@@ -72,7 +73,7 @@ export type RoomInvitation = {
 };
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
-  | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
+  | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode" | "misere_offer" | "misere_vote"
   | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
@@ -117,6 +118,7 @@ export function allowedToAct(view: RoomView): boolean {
   if (view.phase === "opening_lead" || view.phase === "play") {
     return view.controller === view.my_seat;
   }
+  if (view.phase === "misere_offer") return view.misere_offer?.can_vote === true;
   if (view.phase === "discard" || view.phase === "declare") {
     return view.declarer === view.my_seat;
   }
@@ -124,7 +126,7 @@ export function allowedToAct(view: RoomView): boolean {
 }
 export function phaseLabel(phase?: Phase): string {
   const labels: Record<Phase, string> = {
-    auction: "Торговля", discard: "Снос прикупа", declare: "Заказ игры",
+    auction: "Торговля", discard: "Снос прикупа", declare: "Заказ игры", misere_offer:"Предложение сыгранного мизера",
     defense_first: "Решение защиты", defense_second: "Решение защиты",
     defense_reconsider: "Повторное решение", choose_mode: "Светлая или тёмная",
     opening_lead: "Первый ход", play: "Розыгрыш", finished: "Раздача завершена",
@@ -137,6 +139,10 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if (v.misere_offer !== undefined) {
+    const offer = v.misere_offer as RoomView["misere_offer"];
+    if (v.phase!=="misere_offer" || v.status!=="playing" || !isSeat(v.my_seat) || !isSeat(v.declarer) || !offer || !Array.isArray(offer.approved) || offer.approved.length>1 || !offer.approved.every(s=>isSeat(s)&&s!==v.declarer) || typeof offer.can_vote!=="boolean" || offer.can_vote!==(v.my_seat!==v.declarer&&!offer.approved.includes(v.my_seat as number))) return false;
+  }
   if(v.winning_bid!==undefined&&v.winning_bid!==null){
     const bid=v.winning_bid as Bid;
     if(!bid||typeof bid!=="object"||!["regular","misere","misere_no_widow","ten_no_widow"].includes(bid.kind)||

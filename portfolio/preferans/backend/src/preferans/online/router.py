@@ -65,6 +65,8 @@ class Command(Mutation):
         "mode",
         "play",
         "without_three",
+        "misere_offer",
+        "misere_vote",
         "pulse",
         "counter_start",
         "undo_request",

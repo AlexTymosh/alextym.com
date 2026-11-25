@@ -24,11 +24,11 @@ export function Notebook({view, profiles, miniature=false}: {view: RoomView; pro
   });
   // Grow the entire drawing, not the font: long-running games retain every entry.
   const maxChars = Math.max(0, ...fields.flatMap(f => [f.hill,f.pool,f.lv,f.rv].map(v => v.map(n=>`. ${n}`).join(" ").length)));
-  const extra = Math.max(0, maxChars * 10 - 175);
+  const extra = Math.max(0, maxChars * 11 - 120);
   const w = 578 + extra * 2, h = 600 + extra * 2, cx = w/2, cy = h/2 - 55;
-  const inner = 142, outer = 88, innerY = h-176, outerY = h-124;
+  const inner = 156, outer = 100, innerY = h-176, outerY = h-124;
   const rows = (v:number[]) => v.map(n=>`. ${n}`).join(" ");
-  const text = (v:number[], x:number,y:number, angle=0) => <text x={x} y={y} transform={`rotate(${angle} ${x} ${y})`}>{rows(v)}</text>;
+  const text = (v:number[], x:number,y:number, angle=0, extent?:number) => <text x={x} y={y} transform={`rotate(${angle} ${x} ${y})`} textLength={extent&&v.length?Math.min(extent,rows(v).length*10.5):undefined} lengthAdjust="spacingAndGlyphs">{rows(v)}</text>;
   const left = fields[0], right = fields[1], bottom = fields[2];
   const nameY = (cy-24+16)/2;
   const nameExtent = Math.max(20,cy-64);
@@ -43,14 +43,14 @@ export function Notebook({view, profiles, miniature=false}: {view: RoomView; pro
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern></defs>
       <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
       <g stroke="#28509a" strokeWidth="2" fill="none" strokeLinejoin="round">
-        <path d={`M${cx} 16V${cy-24} M${cx-51} ${cy+24} L${inner} ${innerY} L${outer} ${outerY} L0 ${outerY+88} M${cx+51} ${cy+24} L${w-inner} ${innerY} L${w-outer} ${outerY} L${w} ${outerY+88} M${inner} 16V${innerY}H${w-inner}V16 M${outer} 16V${outerY}H${w-outer}V16 M0 ${cy}H${outer} M${w-outer} ${cy}H${w} M${cx} ${outerY}V${h}`}/>
-        <rect x={cx-51} y={cy-24} width="102" height="48"/>
+        <path d={`M${cx} 16V${cy-24} M${cx-43} ${cy+21} L${inner} ${innerY} L${outer} ${outerY} L0 ${outerY+88} M${cx+43} ${cy+21} L${w-inner} ${innerY} L${w-outer} ${outerY} L${w} ${outerY+88} M${inner} 16V${innerY}H${w-inner}V16 M${outer} 16V${outerY}H${w-outer}V16 M0 ${cy}H${outer} M${w-outer} ${cy}H${w} M${cx} ${outerY}V${h}`}/>
+        <path d={`M${cx-51} ${cy} C${cx-52} ${cy-34} ${cx+47} ${cy-34} ${cx+51} ${cy-2} C${cx+56} ${cy+32} ${cx-48} ${cy+34} ${cx-51} ${cy} Z`}/>
       </g>
       <g className={styles.ink}>
         <text x={cx} y={cy+9} textAnchor="middle" fontSize="28">{score.target??20}</text>
         <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle"><tspan x={cx}>{first}</tspan>{rest&&<tspan x={cx} dy="1.2em">{rest}</tspan>}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}</g>
-        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-35,cy+22,90)}{text(left.lv,outer-35,24,90)}</g>
-        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+35,cy-22,-90)}{text(right.lv,w-outer+35,h-40,-90)}</g>
+        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-40,cy+22,90,outerY-(cy+22)-15)}{text(left.lv,outer-40,24,90,cy-42)}</g>
+        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+40,cy-22,-90,cy-42)}{text(right.lv,w-outer+40,outerY-15,-90,outerY-cy-35)}</g>
       </g>
     </g></svg>
     {!miniature&&history?.exact===false && <p className={styles.notice}>Для старых исправлений порядок записей не сохранён. Показаны точные итоговые значения.</p>}

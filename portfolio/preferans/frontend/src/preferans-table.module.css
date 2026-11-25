@@ -194,7 +194,7 @@
 .table { container-type:inline-size; }
 .table[data-playing="true"] { min-height:var(--available-table-height,calc(100dvh - 150px)); }
 .table[data-playing="true"] .bottomArea { --tile-w:clamp(90px,min(34.5dvh,26cqw),360px); --card-w:clamp(28px,min(10.8dvh,calc((100cqw - var(--tile-w) - 50px)/8)),112px); }
-.table[data-holding-trick="true"] [data-card] { pointer-events:none; }
+/* PR21: legal next leads stay interactive during trick animation. */
 @media(max-height:650px) and (orientation:landscape) { .table[data-playing="true"] .bottomArea { --tile-w:clamp(74px,min(26dvh,25cqw),175px); --card-w:clamp(26px,min(10dvh,calc((100cqw - var(--tile-w) - 40px)/8)),65px); } }
 
 .table [data-pointer-drag] { touch-action:none; }
@@ -341,3 +341,24 @@
 .projectMenu[data-top-menu="true"] .menuButton { width:auto; min-height:32px; white-space:normal; }
 .projectMenu[data-top-menu="true"]>div { position:relative; }
 .projectMenu[data-top-menu="true"] .menuDrawer { position:absolute; z-index:50; top:100%; left:0; width:min(340px,80vw); max-height:70dvh; border:1px solid #826b47; box-shadow:0 6px 20px #0006; }
+
+/* PR21: fixed menu, separated bundles and bottom-aligned local hand. */
+.roomLayout { grid-template-columns:minmax(0,1fr); }
+.projectMenu { flex-direction:row; flex-wrap:wrap; align-items:center; }
+.projectMenu .menuButton { width:auto; }
+.projectMenu[data-top-menu="true"] .menuDrawer { padding:.6rem; width:min(360px,86vw); }
+.projectMenu[data-top-menu="true"]>div:last-of-type .menuDrawer { left:auto; right:0; }
+.table[data-playing="true"] .bottomArea { align-items:end; }
+.table .handColumn { min-height:calc(var(--tile-w) * .5625); }
+.table .handColumn .ownHand { margin-top:auto; }
+.table .handColumn>.trickStackWrap { margin-bottom:.35rem; }
+.table .left .avatarAnchor>.trickStackWrap { left:calc(100% + clamp(10px,1.4cqw,24px)); }
+.table .right .avatarAnchor>.trickStackWrap { right:calc(100% + clamp(10px,1.4cqw,24px)); }
+.table .left .avatarAnchor>.seatSignals,.table .right .avatarAnchor>.seatSignals { top:0; bottom:auto; width:max-content; max-width:18cqw; z-index:4; min-height:0; }
+.table .left .avatarAnchor>.seatSignals { left:calc(100% + 10px); }
+.table .right .avatarAnchor>.seatSignals { left:auto; right:calc(100% + 10px); justify-content:flex-end; }
+.table .left>.callBubble,.table .right>.callBubble { top:clamp(1.45rem,4dvh,2.5rem); }
+
+/* Allow a legal next lead during the previous trick's decorative collection. */
+.table[data-holding-trick="true"] .trickField { pointer-events:auto; }
+.table .trickField .tableCard { pointer-events:none; }
