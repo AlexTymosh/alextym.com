@@ -32,10 +32,10 @@ const graphLabels: Record<Metric, string> = {
 };
 const strokes = ["#d9a441", "#41a8b3", "#c7779e"];
 
-const playerLabel = (id: string) => `Игрок ${id.slice(0, 6)}`;
+const playerLabel = (id: string, names:Record<string,string>) => names[id] || `Игрок ${id.slice(0, 6)}`;
 const when = (ms: number) => new Date(ms).toLocaleString("ru-RU", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-function formatted(row: Ranking, key: SortField) {
-  if (key === "id") return playerLabel(row.id);
+function formatted(row: Ranking, key: SortField, names:Record<string,string>) {
+  if (key === "id") return playerLabel(row.id,names);
   if (key === "last_finished_at_ms") return when(row.last_finished_at_ms);
   if (key === "average_duration" && !row.timed_games) return "—";
   if (["win_rate", "average_vists", "average_duration"].includes(key)) return numeric(row, key).toFixed(1);
@@ -51,7 +51,7 @@ async function fetchJson(path: string, signal: AbortSignal): Promise<unknown> {
   return response.json();
 }
 
-function LineGraph({ results, ids, metric }: { results: Result[]; ids: string[]; metric: Metric }) {
+function LineGraph({ results, ids, metric, names }: { results: Result[]; ids: string[]; metric: Metric; names:Record<string,string> }) {
   const chronological = [...results].sort((a,b) => a.finished_at_ms - b.finished_at_ms || a.room_id.localeCompare(b.room_id));
   const series = timeline(results, ids, metric).map(points => points.map(p => ({
     x: 42 + p.index * 680 / Math.max(1, chronological.length - 1),
@@ -73,7 +73,7 @@ function LineGraph({ results, ids, metric }: { results: Result[]; ids: string[];
         {points.length > 0 && <polyline fill="none" stroke={strokes[index]} strokeWidth="3" strokeLinejoin="round"
           points={points.map(p => `${p.x},${scale(p.y)}`).join(" ")} />}
         {points.map((point, n) => <circle key={`${point.game.room_id}-${n}`} cx={point.x} cy={scale(point.y)} r="3.8"
-          fill={strokes[index]}><title>{playerLabel(ids[index])}: {point.y} · {when(point.game.finished_at_ms)}</title></circle>)}
+          fill={strokes[index]}><title>{playerLabel(ids[index],names)}: {point.y} · {when(point.game.finished_at_ms)}</title></circle>)}
       </g>)}
       <text x="42" y="246" fontSize="11" fill="currentColor">Старые партии</text>
       <text x="722" y="246" textAnchor="end" fontSize="11" fill="currentColor">Новые партии</text>
@@ -84,6 +84,7 @@ function LineGraph({ results, ids, metric }: { results: Result[]; ids: string[];
 export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const [results, setResults] = useState<Result[]>([]);
   const [rankings, setRankings] = useState<Ranking[]>([]);
+  const [names,setNames]=useState<Record<string,string>>({});
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -97,13 +98,13 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     Promise.all([fetchJson("history?limit=100", controller.signal), fetchJson("rankings", controller.signal)])
       .then(([history, rank]) => {
         if (!isHistoryPayload(history) || !isRankingPayload(rank)) throw new Error("Некорректный ответ сервера статистики.");
-        setResults(history.results); setHasMore(history.has_more); setRankings(rank.rankings); setError("");
+        setResults(history.results); setHasMore(history.has_more); setRankings(rank.rankings); setNames(rank.player_names??{}); setError("");
         setSelected(current => current.length ? current : history.results[0]?.players.map(p => p.id) ?? []);
       }).catch(exc => { if (!controller.signal.aborted) setError(exc instanceof Error ? exc.message : "История недоступна."); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [refreshKey, reload]);
-  const sorted = useMemo(() => sortedRankings(rankings, sortKey, descending), [rankings, sortKey, descending]);
+  const sorted = useMemo(() => sortedRankings(rankings, sortKey, descending,names), [rankings, sortKey, descending,names]);
   const changeSort = useCallback((key: SortField) => {
     if (key === sortKey) setDescending(previous => !previous);
     else { setSortKey(key); setDescending(key !== "id"); }
@@ -118,8 +119,7 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     {loading && <p role="status">Загружаем результаты…</p>}
     {error && <p role="alert" className={styles.alert}>{error}</p>}
     {!loading && !error && <>
-      <p className={styles.note}>Игровые имена пока представлены устойчивыми псевдонимами. Висты — итоговая нулесуммовая разница.
-        Удары рассчитаны по базовому правилу; замена голого удара на обычные ещё не подтверждается игроком.</p>
+      <p className={styles.note}>Показаны имена из профилей; при отсутствии имени используется игровой псевдоним. Висты — итоговая нулесуммовая разница.</p>
       <div className={styles.tableScroll}><table className={styles.table}>
         <caption>Общий рейтинг · {rankings.length} игроков · сортировка по любой колонке</caption>
         <thead><tr>{columns.map(column => <th scope="col" key={column.key} aria-sort={sortKey === column.key ? descending ? "descending" : "ascending" : "none"}>
@@ -127,7 +127,7 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
             {column.title}{sortKey === column.key ? descending ? " ↓" : " ↑" : ""}
           </button></th>)}</tr></thead>
         <tbody>{sorted.map(row => <tr key={row.id}>{columns.map(column =>
-          <td key={column.key}>{formatted(row, column.key)}</td>)}</tr>)}</tbody>
+          <td key={column.key}>{formatted(row, column.key,names)}</td>)}</tr>)}</tbody>
       </table></div>
       {!rankings.length && <p className={styles.note}>Завершённых партий ещё нет.</p>}
       {results.length > 0 && <>
@@ -137,10 +137,10 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
         <div className={styles.legend}>{[0, 1, 2].map(index => <label key={index}>
           <span className={styles.swatch} style={{ background: strokes[index] }} /> Игрок {index + 1}
           <select value={selected[index] ?? ""} onChange={(e: ChangeEvent<HTMLSelectElement>) => choose(index, e.target.value)}>
-            {rankings.map(row => <option key={row.id} value={row.id}>{playerLabel(row.id)}</option>)}
+            {rankings.map(row => <option key={row.id} value={row.id}>{playerLabel(row.id,names)}</option>)}
           </select></label>)}</div>
         {selected.length === 3 && new Set(selected).size === 3 ?
-          <LineGraph results={results} ids={selected} metric={metric} /> :
+          <LineGraph results={results} ids={selected} metric={metric} names={names} /> :
           <p className={styles.note}>Для графика выбери трёх разных игроков.</p>}
         {hasMore && <p className={styles.note}>График и список показывают только последние 100 партий. Рейтинг учитывает все завершённые партии.</p>}
       </>}
@@ -151,9 +151,9 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
           {game.duration_ms === null ? " продолжительность неизвестна" : ` ${(game.duration_ms / 60000).toFixed(1)} мин`}</p>
           <table><thead><tr><th>Игрок</th><th>Висты</th><th>Место</th><th>Пуля</th><th>Гора</th></tr></thead>
           <tbody>{game.players.map(player => <tr key={player.id}>
-            <td>{playerLabel(player.id)}</td><td>{player.net_vists}</td><td>{player.place ?? "Ничья"}</td>
+            <td>{playerLabel(player.id,names)}</td><td>{player.net_vists}</td><td>{player.place ?? "Ничья"}</td>
             <td>{player.pool}</td><td>{player.hill}</td></tr>)}</tbody></table>
-          {Array.isArray(game.punches)&&game.punches.length>0&&<><p>Условные удары: {game.punches.map(p=>`Игрок ${p.from+1} → ${p.to+1}: ${p.bare} голых, ${p.ordinary} обычных`).join(" · ")}</p>
+          {Array.isArray(game.punches)&&game.punches.length>0&&<><p>Условные удары: {game.punches.map(p=>`${playerLabel(game.players.find(player=>player.seat===p.from)?.id??String(p.from+1),names)} → ${playerLabel(game.players.find(player=>player.seat===p.to)?.id??String(p.to+1),names)}: ${p.bare} голых, ${p.ordinary} обычных`).join(" · ")}</p>
             {game.reason==="pool_closed"&&!game.punches_confirmed&&Array.isArray(game.punch_choices)&&game.punches.some(p=>p.bare>0)&&<a href={`/portfolio/preferans?room=${game.room_id}`}>Открыть завершённую комнату для выбора (участникам)</a>}</>}
           <p className={styles.note}>Проводок: {game.ledger_entry_count} · контрольная сумма {game.ledger_sha256.slice(0, 12)}.</p>
         </div>

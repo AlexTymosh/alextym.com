@@ -247,3 +247,10 @@
 .tableRoot .compactAction { padding:.2rem .35rem; }
 .tableRoot .compactAction p { font-size:.8rem; margin:0 0 .2rem; }
 .tableRoot .compactAction .actions { justify-content:flex-start; gap:.35rem; }
+
+/* PR19: separate fullscreen control, compact side-by-side hand and result notices. */
+.tableRoot .headerTools { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; justify-content:flex-end; }
+.tableRoot .headerTools .fullscreenToggle { margin:0; flex-shrink:0; }
+.tableRoot .handRow { justify-content:flex-start; }
+.tableRoot .sheetDrama { font-weight:900; font-size:clamp(2rem,5vw,4.15rem); line-height:1.08; color:#ffdf83; text-align:center; overflow-wrap:anywhere; }
+.tableRoot .concedeDrama { font-size:clamp(1rem,2.1vw,1.7rem); font-weight:800; text-align:center; color:#ffdf83; margin:.2rem 0; }

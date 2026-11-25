@@ -18,7 +18,8 @@ from preferans.online.views import seat_view
 
 
 class FakeSnapshot:
-    def __init__(self, payload):
+    def __init__(self, payload, document_id=None):
+        self.id = document_id
         self.exists = payload is not None
         self.value = copy.deepcopy(payload)
 
@@ -42,6 +43,13 @@ class FakeDocument:
 class FakeCollection:
     def __init__(self, db, path):
         self.db, self.path = db, path
+        self.sort_field = None
+        self.descending = False
+        self.selected = None
+
+    def select(self, fields):
+        self.selected = fields
+        return self
 
     def document(self, key):
         return FakeDocument(self.db, self.path + "/" + key)
@@ -60,10 +68,21 @@ class FakeCollection:
         rows = [
             (k, v)
             for k, v in self.db.docs.items()
-            if k.startswith(prefix) and "/" not in k[len(prefix) :] and self.sort_field in v
+            if k.startswith(prefix)
+            and "/" not in k[len(prefix) :]
+            and (self.sort_field is None or self.sort_field in v)
         ]
-        rows.sort(key=lambda pair: pair[1][self.sort_field], reverse=self.descending)
-        return iter(FakeSnapshot(v) for _, v in rows[: self.count])
+        if self.sort_field is not None:
+            rows.sort(key=lambda pair: pair[1][self.sort_field], reverse=self.descending)
+        return iter(
+            FakeSnapshot(
+                {field: v[field] for field in self.selected if field in v}
+                if self.selected is not None
+                else v,
+                k[len(prefix) :],
+            )
+            for k, v in rows[: self.count]
+        )
 
 
 class FakeTransaction:
@@ -173,7 +192,7 @@ def test_fake_query_ignores_subcollections_and_missing_order_field():
 
 def test_empty_history_and_rankings(service):
     assert service.history("member") == {"results": [], "has_more": False, "limit": 50}
-    assert service.rankings("member") == {"rankings": [], "total_players": 0}
+    assert service.rankings("member") == {"rankings": [], "total_players": 0, "player_names": {}}
 
 
 def test_secret_state_codec_roundtrip_and_reject_unknown_types():

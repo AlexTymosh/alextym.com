@@ -89,3 +89,10 @@ def test_manual_next_dealer_authorized_without_realtime(monkeypatch):
     assert denied.value.code == 403
     api.start(rid, "b", "polish-next-start", between["version"], False)
     assert api.view(rid, "b")["dealer"] == 1
+
+
+@pytest.mark.parametrize("decision", [DefenseDecision.VIST, DefenseDecision.PASS])
+def test_concession_rejects_every_defense_decision(decision):
+    state = replace(declaration(), defense=(None, decision, None))
+    with pytest.raises(RuleViolation):
+        apply_command(state, 0, "without_three", {"bid": BID})
