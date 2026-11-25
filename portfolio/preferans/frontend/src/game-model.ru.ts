@@ -2,6 +2,7 @@
 import { isPresentation, replayMoveAllowed, type Presentation } from "./presentation-model";
 import { isSeat, isSheetOffers, type SheetOffer } from "./sheet-exit-model";
 import { isSeatSwap, type SeatSwap } from "./seat-swap-model";
+import { isReleaseProjection, type Reveal, type RevealedCard, type PunchChoice } from "./release-model";
 export type Suit = "S" | "C" | "D" | "H";
 export type Card = { suit: Suit; rank: number };
 export type Bid = {
@@ -34,14 +35,16 @@ export type RoomControls = {
 };
 export type RoomView = {
   room_id: string; version: number;
-  status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed";
+  status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed" | "archived";
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
   controls?: RoomControls;
   presentation?: Presentation;
   sheet_loser?: number; sheet_offers?: SheetOffer[];
   seat_swap?: SeatSwap; seat_revision?: number;
+  can_archive?: boolean; archived_at_ms?: number;
+  reveal?: Reveal; revealed_cards?: RevealedCard[]; punch_choices?: PunchChoice[];
   last_trick_suit?: Suit | null;
-  lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number };
+  lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number; ruleset_name?: string; ruleset_parameters?: Record<string,number|number[]>; ruleset_snapshot_hash?: string };
   phase?: Phase; turn?: number | null; controller?: number | null;
   dealer?: number; first_hand?: number; is_passout?: boolean; played_tricks?: number;
   declarer?: number | null; contract?: Bid | null; high_bid?: Bid | null;
@@ -62,7 +65,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -125,6 +128,7 @@ export function phaseLabel(phase?: Phase): string {
 export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
+  if (!isReleaseProjection(v)) return false;
   if (v.seat_revision !== undefined && (!Number.isSafeInteger(v.seat_revision) || Number(v.seat_revision) < 0 || !isSeat(v.my_seat))) return false;
   if (v.seat_swap !== undefined && (v.status !== "lobby" || !isSeat(v.my_seat) || !isSeatSwap(v.seat_swap))) return false;
   if (v.sheet_loser !== undefined && (!isSeat(v.sheet_loser) || v.status !== "closed" || v.hand !== undefined || v.legal_cards !== undefined)) return false;
@@ -144,7 +148,7 @@ export function isRoomView(value: unknown): value is RoomView {
   }
   return typeof v.room_id === "string" && ROOM_ID_RE.test(v.room_id) &&
     Number.isSafeInteger(v.version) && (v.version as number) >= 0 &&
-    ["lobby", "playing", "awaiting_settlement", "between", "closed"].includes(String(v.status)) &&
+    ["lobby", "playing", "awaiting_settlement", "between", "closed", "archived"].includes(String(v.status)) &&
     Array.isArray(v.occupied) && v.occupied.length === 3 && v.occupied.every(x => typeof x === "boolean") &&
     (v.my_seat === null || [0, 1, 2].includes(v.my_seat as number)) &&
     typeof v.room_admin === "boolean";

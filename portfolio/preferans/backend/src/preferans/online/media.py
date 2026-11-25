@@ -47,6 +47,8 @@ def _empty() -> dict:
 def _seat(room: dict | None, uid: str) -> int:
     if not isinstance(room, dict) or not isinstance(room.get("seats"), list):
         raise StoreError(404, "Not found")
+    if room.get("status") == "archived":
+        raise StoreError(404, "Not found")
     seats = room["seats"]
     if len(seats) != 3 or None in seats or uid not in seats:
         raise StoreError(404, "Not found")

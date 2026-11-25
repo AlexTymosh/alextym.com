@@ -89,8 +89,9 @@ tasks:
       - git diff --check
 
   repo:cyrillic-check:
-    desc: Prevent raw Cyrillic outside .ru documentation.
+    desc: Check raw Cyrillic in tracked and new non-ignored files, and run regression tests.
     cmds:
+      - node --test scripts/check-no-raw-cyrillic.test.mjs
       - node scripts/check-no-raw-cyrillic.mjs
 
   portfolio:check:

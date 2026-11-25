@@ -2,7 +2,7 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import { safeDirectory, type RoomSummary } from "./table-model";
 import styles from "./preferans-game.module.css";
 import tableStyles from "./preferans-table.module.css";
-const names: Record<RoomSummary["status"],string> = {lobby:"Ожидание игроков",playing:"Идёт игра",awaiting_settlement:"Расчёт",between:"Между раздачами",closed:"Завершена"};
+const names: Record<RoomSummary["status"],string> = {lobby:"Ожидание игроков",playing:"Идёт игра",awaiting_settlement:"Расчёт",between:"Между раздачами",closed:"Завершена",archived:"Архивирована"};
 export function Lobby({roomInput,setRoomInput,openRoom,create,busy}: {roomInput:string;setRoomInput:(s:string)=>void;openRoom:(id:string)=>void;create:()=>void;busy:boolean}) {
   const [data,setData] = useState<ReturnType<typeof safeDirectory>>(null);
   const [reload,setReload] = useState(0);

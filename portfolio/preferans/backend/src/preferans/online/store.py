@@ -64,6 +64,9 @@ from preferans.online.sheet_exit import (
 )
 from preferans.online.realtime import CHECKPOINT_MS, HubError, enabled as realtime_enabled, hub
 
+from preferans.online import accidental_reveal, punch_choices, ruleset_catalog
+from preferans.online.pause_clock import reasons, transition
+
 ROOM_ID = re.compile(r"^[0-9a-f]{32}$")
 
 
@@ -121,6 +124,8 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     controls["candidate"] = None
     controls.pop("next_deal", None)
     controls.pop("sheet_offers", None)
+    controls.pop("reveal", None)
+    controls.pop("revealed_cards", None)
     return game
 
 
@@ -189,13 +194,20 @@ class FirestoreRooms:
         return self._mutate(room_id, uid, token, expected_version, "start", {}, owner)
 
     def command(
-        self, room_id: str, uid: str, token: str, expected_version: int, action: str, args: dict
+        self,
+        room_id: str,
+        uid: str,
+        token: str,
+        expected_version: int,
+        action: str,
+        args: dict,
+        owner: bool = False,
     ) -> dict:
         if realtime_enabled() and action == "pulse":
             if args:
                 raise StoreError(422, "Unexpected pulse arguments")
             return self.realtime_pulse(room_id, uid)
-        return self._mutate(room_id, uid, token, expected_version, action, args, False)
+        return self._mutate(room_id, uid, token, expected_version, action, args, owner)
 
     def settle(
         self, room_id: str, uid: str, token: str, expected_version: int, args: dict, owner: bool
@@ -412,7 +424,17 @@ class FirestoreRooms:
             if action == "join":
                 if uid not in room["seats"] and room["status"] != "lobby":
                     raise StoreError(409, "Room is no longer open")
-            elif action in {"start", "settle", "score_adjust", "preset", "lobby_config"}:
+            elif action == "archive":
+                if not owner:
+                    raise StoreError(403, "Owner required")
+            elif action in {
+                "start",
+                "settle",
+                "score_adjust",
+                "preset",
+                "lobby_config",
+                "ruleset_select",
+            }:
                 _member(room, uid, admin=True, owner=owner)
                 if not owner and room["admin_uid"] != uid:
                     raise StoreError(403, "Room admin required")
@@ -424,6 +446,8 @@ class FirestoreRooms:
                 return previous["response"]
             if room["version"] != expected_version:
                 raise StoreError(409, "Stale room version")
+            if room["status"] == "archived":
+                raise StoreError(409, "Archived room is read-only")
             state_record = _get(transaction, private)
             if state_record is None:
                 raise StoreError(503, "Game state unavailable")
@@ -436,7 +460,7 @@ class FirestoreRooms:
             now = self.now_ms()
             auto_events = []
             # Reconcile timers at the same authoritative timestamp as this write.
-            if action in SHEET_ACTIONS:
+            if action in SHEET_ACTIONS or action == "archive":
                 # A voluntary exit must remain possible during any pause. No
                 # implicit settlement or timer penalty is charged by this action.
                 pass
@@ -451,6 +475,7 @@ class FirestoreRooms:
                     controls.get("paused_at") is not None
                     and action not in {"score_adjust"}
                     and action not in PRESENTATION_ACTIONS
+                    and action not in accidental_reveal.ACTIONS
                     and not (action == "play" and allows_replay_move(controls))
                 ):
                     raise StoreError(409, "Game is paused for a connection or shared reason")
@@ -461,10 +486,134 @@ class FirestoreRooms:
                     raise StoreError(exc.status, exc.detail) from exc
             event_data = {}
             sheet_loser = None
+            choice_update = None
+            choice_rankings = []
+            choice_ref = None
             seat_before = room["seats"].index(uid) if uid in room["seats"] else None
-            if pending_swap(room) and action in {"start", "lobby_ready", "lobby_config", "preset"}:
+            if controls.get(
+                "reveal"
+            ) and action not in accidental_reveal.ACTIONS | SHEET_ACTIONS | {"pulse", "archive"}:
+                raise StoreError(409, "Resolve the exposed card first")
+            if pending_swap(room) and action in {
+                "start",
+                "lobby_ready",
+                "lobby_config",
+                "preset",
+                "ruleset_select",
+            }:
                 raise StoreError(409, "Resolve seat change first")
-            if action in SWAP_ACTIONS:
+            if action == "archive":
+                reason = args.get("reason")
+                if (
+                    set(args) != {"reason"}
+                    or not isinstance(reason, str)
+                    or not 5 <= len(reason.strip()) <= 180
+                    or any(ord(ch) < 32 or ord(ch) == 127 for ch in reason)
+                ):
+                    raise StoreError(422, "Archive requires a reason")
+                if (
+                    room["status"] not in {"lobby", "playing", "between", "awaiting_settlement"}
+                    or score.closed
+                ):
+                    raise StoreError(409, "Only unfinished rooms may be archived")
+                if (
+                    _get(transaction, self.db.collection("preferans_results").document(room_id))
+                    is not None
+                ):
+                    raise StoreError(409, "Result already exists")
+                room["status"] = "archived"
+                room["archived_at_ms"] = now
+                room.pop("seat_swap", None)
+                finish_sheet(controls)
+                controls.pop("reveal", None)
+                controls.pop("revealed_cards", None)
+                event_data = {"reason": reason.strip(), "archived_at_ms": now}
+            elif action in accidental_reveal.ACTIONS:
+                if not use_rt and not can_start_counter(controls, now):
+                    transition(controls, reasons(controls) | {"connection_lost"}, now)
+                try:
+                    event_data, score, redeal = accidental_reveal.change(
+                        controls, room, game, score, seat_before, action, args, now
+                    )
+                except ControlError as exc:
+                    raise StoreError(exc.status, exc.detail) from exc
+                if redeal:
+                    old_game_id = room["game_id"]
+                    game = _begin_deal(room, score, controls, now, room["dealer"])
+                    event_data = {
+                        **event_data,
+                        "old_game_id": old_game_id,
+                        "new_game_id": room["game_id"],
+                    }
+            elif action == "punch_choose":
+                if (
+                    room["status"] != "closed"
+                    or room.get("sheet_loser") is not None
+                    or not room.get("punch_choices")
+                ):
+                    raise StoreError(409, "No eligible completed result")
+                try:
+                    event_data, count = punch_choices.choose(
+                        room["punch_choices"], seat_before, args
+                    )
+                    result_ref = self.db.collection("preferans_results").document(room_id)
+                    original = _get(transaction, result_ref)
+                    if not original or original["reason"] != "pool_closed":
+                        raise ValueError("Immutable result unavailable")
+                    choice_ref = self.db.collection("preferans_punch_choices").document(room_id)
+                    choice_update = {"pairs": room["punch_choices"]}
+                    if count:
+                        for actor, side in (
+                            (event_data["from"], "given"),
+                            (seat_before, "received"),
+                        ):
+                            player = next(p for p in original["players"] if p["seat"] == actor)
+                            ref = self.db.collection("preferans_rankings").document(player["id"])
+                            ranking = _get(transaction, ref)
+                            if not ranking or ranking.get("id") != player["id"]:
+                                raise ValueError("Ranking unavailable")
+                            choice_rankings.append(
+                                (ref, punch_choices.ranking_delta(ranking, side, count))
+                            )
+                except (ValueError, KeyError, TypeError, StopIteration) as exc:
+                    raise StoreError(409, "Invalid or already recorded punishment choice") from exc
+            elif action == "ruleset_select":
+                if (
+                    room["status"] != "lobby"
+                    or game is not None
+                    or score.version != 0
+                    or "lobby_setup" not in room
+                ):
+                    raise StoreError(409, "Select rules before the first deal")
+                if set(args) != {"id", "version"}:
+                    raise StoreError(422, "Invalid ruleset selection")
+                try:
+                    template = ruleset_catalog.load(
+                        transaction, self.db, args["id"], args["version"]
+                    )
+                    rules, policy = ruleset_catalog.validated(
+                        template["id"],
+                        template["version"],
+                        template["parameters"],
+                        template["policy"],
+                    )
+                    if (
+                        rules.fingerprint() != template["sha256"]
+                        or ruleset_catalog.snapshot_hash(rules, policy) != template["snapshot_hash"]
+                    ):
+                        raise ValueError("Template hash mismatch")
+                    score = ScoreState.new(rules)
+                    controls["policy"] = policy
+                except (ValueError, TypeError, KeyError) as exc:
+                    raise StoreError(422, "Invalid template revision") from exc
+                room["ruleset_name"] = template["name"]
+                room["lobby_setup"]["ready"] = [False, False, False]
+                event_data = {
+                    "id": template["id"],
+                    "version": template["version"],
+                    "sha256": template["sha256"],
+                }
+            elif action in SWAP_ACTIONS:
                 if game is not None or score.version != 0:
                     raise StoreError(409, "Seat changes require an untouched game")
                 try:
@@ -484,6 +633,8 @@ class FirestoreRooms:
                     room["status"] = "closed"
                     room["sheet_loser"] = sheet_loser
                     finish_sheet(controls)
+                    controls.pop("reveal", None)
+                    controls.pop("revealed_cards", None)
             elif action in PRESENTATION_ACTIONS:
                 # The shared pause API uses the existing authenticated transaction.
                 # New shared actions need the realtime presence scheduler. On rollback
@@ -585,13 +736,28 @@ class FirestoreRooms:
                 ):
                     raise StoreError(422, "Invalid lobby setup")
                 room["lobby_setup"] = {"ready": [False, False, False], "dealer": args["dealer"]}
-                score = ScoreState.new(replace(score.ruleset.rules, pool_target=args["target"]))
+                if args["target"] != score.target:
+                    score = ScoreState.new(
+                        replace(
+                            score.ruleset.rules,
+                            identifier="room-custom",
+                            version=1,
+                            pool_target=args["target"],
+                        )
+                    )
+                    room.pop("ruleset_name", None)
                 event_data = {"dealer": args["dealer"], "target": args["target"]}
             elif action == "preset":
                 if room["status"] != "lobby":
                     raise StoreError(409, "Presets must be set before the first deal")
                 try:
+                    old_policy = controls.get("policy")
                     event_data = configure_policy(controls, args)
+                    if controls["policy"] != old_policy:
+                        score = ScoreState.new(
+                            replace(score.ruleset.rules, identifier="room-custom", version=1)
+                        )
+                        room.pop("ruleset_name", None)
                     if "lobby_setup" in room:
                         room["lobby_setup"]["ready"] = [False, False, False]
                 except ControlError as exc:
@@ -681,6 +847,23 @@ class FirestoreRooms:
                     raise StoreError(409, "Finished result already exists")
                 try:
                     final = final_result(room, score, now, sheet_loser=sheet_loser)
+                    final["ruleset_id"] = score.ruleset.rules.identifier
+                    final["ruleset_policy"] = dict(controls.get("policy", {}))
+                    final["ruleset_snapshot_hash"] = ruleset_catalog.snapshot_hash(
+                        score.ruleset.rules, final["ruleset_policy"]
+                    )
+                    final["ruleset_snapshot"] = encode(score.ruleset)
+                    if sheet_loser is None:
+                        pairs = punch_choices.initial(final)
+                        final["punches_confirmed"] = not pairs
+                        if pairs:
+                            room["punch_choices"] = pairs
+                            choice_ref = self.db.collection("preferans_punch_choices").document(
+                                room_id
+                            )
+                            choice_update = {"pairs": pairs}
+                    else:
+                        final["punches_confirmed"] = True
                     ranking_docs = [
                         self.db.collection("preferans_rankings").document(player["id"])
                         for player in final["players"]
@@ -714,6 +897,10 @@ class FirestoreRooms:
                 transaction.create(result_doc, final)
                 for ranking_doc, projection in zip(ranking_docs, rankings):
                     transaction.set(ranking_doc, projection)
+            if choice_ref is not None:
+                transaction.set(choice_ref, choice_update)
+                for ref, ranking in choice_rankings:
+                    transaction.set(ref, ranking)
             transaction.set(doc, room)
             transaction.set(
                 private,
@@ -832,7 +1019,11 @@ class FirestoreRooms:
             .limit(limit + 1)
         )
         snapshots = [snap.to_dict() for snap in query.stream(timeout=5.0)]
-        return {"results": snapshots[:limit], "has_more": len(snapshots) > limit, "limit": limit}
+        return {
+            "results": [self._effective_result(row) for row in snapshots[:limit]],
+            "has_more": len(snapshots) > limit,
+            "limit": limit,
+        }
 
     def rankings(self, uid: str) -> dict:
         """Materialized across ALL completed games; never derive from a page."""
@@ -860,4 +1051,18 @@ class FirestoreRooms:
         )
         if not ROOM_ID.fullmatch(room_id) or not snapshot.exists:
             raise StoreError(404, "Not found")
-        return snapshot.to_dict()
+        return self._effective_result(snapshot.to_dict())
+
+    def _effective_result(self, original: dict) -> dict:
+        if original.get("reason") != "pool_closed" or not any(
+            p["bare"] for p in original["punches"]
+        ):
+            return original
+        snap = (
+            self.db.collection("preferans_punch_choices")
+            .document(original["room_id"])
+            .get(timeout=5.0)
+        )
+        return (
+            punch_choices.effective(original, snap.to_dict()["pairs"]) if snap.exists else original
+        )

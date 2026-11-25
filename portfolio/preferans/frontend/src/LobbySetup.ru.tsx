@@ -17,7 +17,7 @@ function LobbyConfig({view,busy,command}: {view:RoomView;busy:boolean;command:(a
   const valid=Number.isInteger(numeric)&&numeric>=1&&numeric<=1000;
   return <section className={styles.panel} aria-label="Подготовка партии">
     <h3>Подготовка партии</h3>
-    <p>Пуля: {setup.target} · Сдаёт: Игрок {setup.dealer+1} · Правила: запорожские, версия {setup.ruleset_version}</p>
+    <p>Пуля: {setup.target} · Сдаёт: Игрок {setup.dealer+1} · Правила: {setup.ruleset_name ?? setup.ruleset}, версия {setup.ruleset_version}</p>
     <p>Счётчик: {view.controls?.policy?.counter_seconds ?? 180} с · штраф ×{view.controls?.policy?.counter_multiplier ?? 3} · отмена: {view.controls?.policy?.undo_seconds ?? 120} с</p>
     <p>Готовность: {setup.ready.filter(Boolean).length} из 3. {setup.ready.map((ready,i)=>`Игрок ${i+1}: ${ready?"готов":"ожидает"}`).join(" · ")}</p>
     {view.room_admin && <div className={styles.actions}>

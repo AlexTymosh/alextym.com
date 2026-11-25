@@ -7,16 +7,19 @@ import { basename, resolve } from "node:path";
 const rawCyrillicPattern = /[\u0400-\u04ff]/u;
 const maxReportedMatches = 50;
 
-const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
-  encoding: "buffer",
-})
+// Include new files before git add, while respecting Git ignore rules.
+const candidateFiles = execFileSync(
+  "git",
+  ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+  { encoding: "buffer" },
+)
   .toString("utf8")
   .split("\0")
   .filter(Boolean);
 
 const failures = [];
 
-for (const relativePath of trackedFiles) {
+for (const relativePath of new Set(candidateFiles)) {
   if (isAllowedRussianDocument(relativePath)) {
     continue;
   }
@@ -49,7 +52,7 @@ if (failures.length > 0) {
   if (failures.length > maxReportedMatches) {
     console.error(`- ...and ${failures.length - maxReportedMatches} more`);
   }
-  console.error("Use escaped Unicode strings or Russian documentation files marked with .ru.");
+  console.error("Use escaped Unicode strings or explicitly localized files marked with .ru.");
   process.exit(1);
 }
 
