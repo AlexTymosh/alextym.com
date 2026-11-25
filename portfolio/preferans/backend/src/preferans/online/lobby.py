@@ -13,7 +13,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from .store import ROOM_ID, StoreError
 
 LIMIT = 100
-STATUSES = {"lobby", "playing", "awaiting_settlement", "between", "closed"}
+STATUSES = {"lobby", "playing", "awaiting_settlement", "between", "closed", "archived"}
 AVATAR = re.compile(r"data:image/webp;base64,[A-Za-z0-9+/=]+\Z")
 
 
@@ -51,7 +51,7 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
     result: dict[str, tuple[int, dict]] = {}
     for row in [*mine[:LIMIT], *waiting[:LIMIT]]:
         room = row.to_dict()
-        if not _valid_room(room) or room["status"] == "closed":
+        if not _valid_room(room) or room["status"] in {"closed", "archived"}:
             continue
         own = uid in room["seats"]
         if not own and not (room["status"] == "lobby" and None in room["seats"]):

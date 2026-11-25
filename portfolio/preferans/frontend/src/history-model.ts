@@ -9,7 +9,7 @@ export type Player = {
 export type Result = {
   room_id: string; finished_at_ms: number; started_at_ms: number | null;
   duration_ms: number | null; active_ms: number | null; reason: string;
-  deal_count: number; ruleset_hash: string; ruleset_version: number;
+  deal_count: number; ruleset_hash: string; ruleset_version: number; ruleset_id?: string; punch_choices?: Array<{from:number;to:number;bare:number;ordinary:number;replacement:number|null}>;
   players: Player[]; punches: Array<{ from: number; to: number; bare: number; ordinary: number }>;
   punches_confirmed: boolean; ledger_entry_count: number; ledger_sha256: string;
 };

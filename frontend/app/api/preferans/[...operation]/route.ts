@@ -14,6 +14,7 @@ function response(status: number, data: object) {
 
 function upstreamPath(method: string, parts: string[]): string | null {
   if (parts.length === 1 && parts[0] === "rooms" && ["GET", "POST"].includes(method)) return "/api/preferans/rooms";
+  if (parts.length === 1 && parts[0] === "rulesets" && ["GET", "POST"].includes(method)) return "/api/preferans/rulesets";
   if (method === "GET" && parts.length === 1 && ["history", "rankings", "realtime-metrics"].includes(parts[0]))
     return `/api/preferans/${parts[0]}`;
   if (method === "GET" && parts.length === 2 && parts[0] === "results" && /^[a-f0-9]{32}$/.test(parts[1]))

@@ -109,7 +109,10 @@ def _live_room(ticket: Ticket, connection: str, at: int):
 
 def _media_receive(ticket: Ticket, connection: str, frame: dict, at: int) -> None:
     with hub.lock:
-        _live_room(ticket, connection, at).receive(ticket.seat, connection, frame, at)
+        relay = _live_room(ticket, connection, at)
+        if hub.rooms[ticket.room].views.get(ticket.uid, {}).get("status") == "archived":
+            raise LiveError("Media unavailable")
+        relay.receive(ticket.seat, connection, frame, at)
 
 
 def _media_delivery(ticket: Ticket, connection: str, at: int):

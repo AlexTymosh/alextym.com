@@ -19,6 +19,9 @@ from preferans.online.sheet_exit import current_offers
 from preferans.online.seat_swap import projection as swap_projection
 
 
+from preferans.online.ruleset_catalog import parameters, snapshot_hash
+
+
 def public_bid(bid: Bid | None) -> dict | None:
     if bid is None:
         return None
@@ -62,6 +65,28 @@ def seat_view(
         swap = swap_projection(room)
         if swap is not None:
             result["seat_swap"] = swap
+    if owner and room["status"] in {"lobby", "playing", "between", "awaiting_settlement"}:
+        result["can_archive"] = True
+    if room["status"] == "archived":
+        result["archived_at_ms"] = room["archived_at_ms"]
+        if score is not None:
+            result["score"] = {
+                "pool": list(score.pool),
+                "hill": list(score.hill),
+                "vists": [list(row) for row in score.vists],
+                "passout_level": score.passout_level,
+                "closed": score.closed,
+                "ruleset_hash": score.ruleset.sha256,
+                "target": score.target,
+            }
+        return result
+    if my_seat is not None and room["status"] == "closed" and room.get("punch_choices"):
+        result["punch_choices"] = room["punch_choices"]
+    if my_seat is not None and room["status"] == "playing":
+        if (controls or {}).get("reveal"):
+            result["reveal"] = controls["reveal"]
+        if (controls or {}).get("revealed_cards"):
+            result["revealed_cards"] = controls["revealed_cards"]
     if room["status"] == "closed" and type(room.get("sheet_loser")) is int:
         # Do not reveal any remaining cards or advertise legal actions after a technical finish.
         result["sheet_loser"] = room["sheet_loser"]
@@ -97,6 +122,11 @@ def seat_view(
                 "target": score.target,
                 "ruleset": score.ruleset.rules.identifier,
                 "ruleset_version": score.ruleset.rules.version,
+                "ruleset_name": room.get("ruleset_name", score.ruleset.rules.identifier),
+                "ruleset_parameters": parameters(score.ruleset.rules),
+                "ruleset_snapshot_hash": snapshot_hash(
+                    score.ruleset.rules, (controls or {}).get("policy", {})
+                ),
             }
         return result
     exposed = [

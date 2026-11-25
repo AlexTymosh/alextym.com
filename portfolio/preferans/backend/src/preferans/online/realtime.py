@@ -240,6 +240,8 @@ class RealtimeHub:
             version = next(iter(views.values()))["version"]
             if version < r.revision:
                 return
+            if any(view.get("status") == "archived" for view in views.values()):
+                r.live_media = LiveRelay()
             r.views = {uid: view for uid, view in views.items() if view.get("my_seat") in (0, 1, 2)}
             r.revision = version
             r.touched = at

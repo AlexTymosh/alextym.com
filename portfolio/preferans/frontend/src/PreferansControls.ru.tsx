@@ -34,7 +34,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
     return () => clearInterval(interval);
   }, []);
   const controls = view.controls;
-  if (!controls) return null;
+  if (!controls || view.status === "archived") return null;
   if (view.status === "lobby") {
     return view.room_admin ? <section className={styles.controlPanel} aria-labelledby="preferans-policy-heading">
       <h3 id="preferans-policy-heading">Параметры до начала партии</h3>

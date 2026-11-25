@@ -82,6 +82,12 @@ class Command(Mutation):
         "sheet_discard",
         "seat_swap_offer",
         "seat_swap_vote",
+        "reveal_report",
+        "reveal_propose",
+        "reveal_vote",
+        "punch_choose",
+        "archive",
+        "ruleset_select",
     ]
     args: dict[str, Any] = Field(default_factory=dict)
 
@@ -124,7 +130,7 @@ def _execute(request: Request, method: str, *args: Any, **kwargs: Any) -> dict:
     store, uid, owner = _context(request, method)
     try:
         call = getattr(store, method)
-        if method in {"start", "settle", "view", "events", "admin_adjust"}:
+        if method in {"start", "settle", "view", "events", "admin_adjust", "command"}:
             kwargs["owner"] = owner
         return call(*args, uid=uid, **kwargs)
     except StoreError as exc:
@@ -361,3 +367,37 @@ def game_rankings(request: Request) -> dict:
 @router.get("/results/{room_id}")
 def game_result(room_id: str, request: Request) -> dict:
     return _execute(request, "result", room_id)
+
+
+@router.get("/rulesets")
+def list_rulesets(request: Request) -> dict:
+    from .ruleset_catalog import list_templates
+
+    store, _, owner = _context(request, "rulesets.list")
+    try:
+        return {
+            **list_templates(store.db),
+            "can_edit": can_create_room(getattr(request.state, "portfolio_lab_role", None), owner),
+        }
+    except Exception as exc:
+        _storage_failure(request, "rulesets.list", "operation", exc)
+        raise HTTPException(503, "Rulesets unavailable") from exc
+
+
+@router.post("/rulesets")
+def save_ruleset(request: Request, body: dict[str, Any]) -> dict:
+    from .ruleset_catalog import save
+
+    if not can_create_room(
+        getattr(request.state, "portfolio_lab_role", None),
+        getattr(request.state, "preferans_owner", False),
+    ):
+        raise HTTPException(403, "Project Admin required")
+    store, uid, _ = _context(request, "rulesets.save")
+    try:
+        return {"template": save(store.db, store.fs, uid, body, store.now_ms())}
+    except ValueError as exc:
+        raise HTTPException(422, "Invalid or conflicting ruleset") from exc
+    except Exception as exc:
+        _storage_failure(request, "rulesets.save", "operation", exc)
+        raise HTTPException(503, "Rulesets unavailable") from exc

@@ -147,12 +147,14 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
       <h3>Последние партии</h3>
       <div className={styles.historyList}>{results.map(game => <details key={game.room_id} className={styles.result}>
         <summary>{when(game.finished_at_ms)} · {game.deal_count} раздач · {game.reason === "sheet_discarded" ? "Техническое поражение" : "Пуля закрыта"}</summary>
-        <div className={styles.resultBody}><p>Правила v{game.ruleset_version} · {game.ruleset_hash.slice(0, 12)} ·
+        <div className={styles.resultBody}><p>Правила {game.ruleset_id ?? ""} v{game.ruleset_version} · {game.ruleset_hash.slice(0, 12)} ·
           {game.duration_ms === null ? " продолжительность неизвестна" : ` ${(game.duration_ms / 60000).toFixed(1)} мин`}</p>
           <table><thead><tr><th>Игрок</th><th>Висты</th><th>Место</th><th>Пуля</th><th>Гора</th></tr></thead>
           <tbody>{game.players.map(player => <tr key={player.id}>
             <td>{playerLabel(player.id)}</td><td>{player.net_vists}</td><td>{player.place ?? "Ничья"}</td>
             <td>{player.pool}</td><td>{player.hill}</td></tr>)}</tbody></table>
+          {Array.isArray(game.punches)&&game.punches.length>0&&<><p>Условные удары: {game.punches.map(p=>`Игрок ${p.from+1} → ${p.to+1}: ${p.bare} голых, ${p.ordinary} обычных`).join(" · ")}</p>
+            {game.reason==="pool_closed"&&!game.punches_confirmed&&Array.isArray(game.punch_choices)&&game.punches.some(p=>p.bare>0)&&<a href={`/portfolio/preferans?room=${game.room_id}`}>Открыть завершённую комнату для выбора (участникам)</a>}</>}
           <p className={styles.note}>Проводок: {game.ledger_entry_count} · контрольная сумма {game.ledger_sha256.slice(0, 12)}.</p>
         </div>
       </details>)}</div>

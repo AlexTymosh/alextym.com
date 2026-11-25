@@ -29,6 +29,9 @@ import { BidPanel } from "./BidPanel.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { orderHand, ownCards, mayConcede, type SortMode } from "./interaction-model";
 
+import { ReleaseControls } from "./ReleaseControls.ru";
+import { RulesetEditor } from "./RulesetEditor.ru";
+
 const REALTIME_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_REALTIME_ENABLED === "true";
 const LIVE_MEDIA_ENABLED = process.env.NEXT_PUBLIC_PREFERANS_MEDIA_ENABLED === "true" && process.env.NEXT_PUBLIC_PREFERANS_LIVE_MEDIA_WS_ENABLED === "true";
 
@@ -36,7 +39,7 @@ type Mutation = { label: string; run: () => Promise<unknown> };
 const seatNames = ["Игрок 1", "Игрок 2", "Игрок 3"];
 const statusNames: Record<RoomView["status"], string> = {
   lobby: "Ожидание игроков", playing: "Идёт игра",
-  awaiting_settlement: "Подсчёт результатов", between: "Между раздачами", closed: "Партия завершена",
+  awaiting_settlement: "Подсчёт результатов", between: "Между раздачами", closed: "Партия завершена", archived: "Партия архивирована",
 };
 
 function CardFace({ card, selected, playable, onClick, onDragStart, onDragOver, onDrop }: {
@@ -122,6 +125,7 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
       </> : <p className={styles.subtle}>Ожидаем расчёт администратора.</p>}
     </section>;
   }
+  if (view.status === "archived") return <section className={styles.actionPanel}><h3>Партия архивирована</h3><p>Без игрового поражения, медалей и расчёта незакрытой пули.</p></section>;
   if (view.status === "closed") return <section className={styles.actionPanel}>
     {view.sheet_loser !== undefined ? <><h3>Листик выброшен</h3><p>{seatNames[view.sheet_loser]}: техническое поражение. Соперникам — по первому месту. Незакрытая пуля не дорассчитывается.</p></> : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
   </section>;
@@ -313,8 +317,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   }, [roomId, pollKey, updateView, rtReady]);
 
   const mySeat = view?.my_seat;
+  const archived = view?.status === "archived";
+  useEffect(() => { if (archived) { bindMedia(0, null); setRtReady(false); setRtPresence(null); } }, [archived, bindMedia]);
   useEffect(() => {
-    if (!REALTIME_ENABLED || !roomId || mySeat === null || mySeat === undefined) return;
+    if (!REALTIME_ENABLED || !roomId || mySeat === null || mySeat === undefined || archived) return;
     return connectRealtime(roomId, mySeat, {
       onMediaTransport: LIVE_MEDIA_ENABLED ? sender => { if (activeRoomRef.current === roomId) bindMedia(mySeat, sender); } : undefined,
       onMediaFrame: LIVE_MEDIA_ENABLED ? frame => { if (activeRoomRef.current === roomId) receiveMedia(frame); } : undefined,
@@ -328,18 +334,18 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         setStatus(statusMessage(403));
       },
     });
-  }, [roomId, mySeat, updateView, bindMedia, receiveMedia]);
+  }, [roomId, mySeat, updateView, bindMedia, receiveMedia, archived]);
 
   // Presence leases are server-persisted. A stale lease conservatively pauses a counter.
   // No browser clock can apply a financial penalty or decide who is online.
   useEffect(() => {
     if (!roomId || rtReady || view?.my_seat === null || view?.my_seat === undefined ||
-        (!REALTIME_ENABLED && view?.status !== "playing") || view?.status === "closed") return;
+        (!REALTIME_ENABLED && view?.status !== "playing") || view?.status === "closed" || view?.status === "archived") return;
     let stopped = false;
     async function heartbeat() {
       if (stopped) return;
       const current = viewRef.current;
-      if (!current || current.status === "closed" || (!REALTIME_ENABLED && current.status !== "playing")) return;
+      if (!current || current.status === "closed" || current.status === "archived" || (!REALTIME_ENABLED && current.status !== "playing")) return;
       try {
         const response = await sendCommand(current.room_id, newKey(), current.version, "pulse", {});
         if (!stopped && response.version > current.version) setPollKey(value => value + 1);
@@ -486,6 +492,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     </div>
   </div>;
   const actions = view && <>
+    <ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/>
+    {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
     {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
     <ActionPanel view={view} busy={busy} selectedCards={chosenCards}
       selectedCard={selectedCard} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
@@ -538,13 +546,13 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             score={<ScoreBoard view={view}/>} history={<PreferansHistory refreshKey={view.status === "closed" ? view.version : 0}/>}
             controls={<PreferansControls view={view} busy={busy} command={command} adjust={adjust}/>}
             last={<PreviousTrick view={view}/>}
-            urgent={Boolean(view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat))}
+            urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat))}
             shared={view.presentation?.enabled ? openShared : undefined}
-            media={LIVE_MEDIA_ENABLED && view.my_seat !== null
+            media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
               hand={ownHand} actions={actions} renderOpenCard={renderOpenCard}
-              mediaForSeat={LIVE_MEDIA_ENABLED && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
+              mediaForSeat={LIVE_MEDIA_ENABLED && !archived && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
               objects={view.presentation?.enabled ? <SharedObjects view={view} busy={busy} open={openShared}/> : undefined}
               onWidow={view.presentation?.enabled ? () => openShared("widow_replay") : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
