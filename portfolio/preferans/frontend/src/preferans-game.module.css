@@ -239,3 +239,11 @@
 .tableRoot .backChoices button { display:grid; place-items:center; gap:.2rem; font-size:.72rem; min-width:0; }
 .tableRoot .backChoices img { width:36px; height:auto; }
 .tableRoot .backChoices button[aria-pressed="true"] { outline:2px solid #e8ca88; }
+
+/* Stable right edge for both the initial hand and discard. */
+.tableRoot .handsPanel { width:100%; min-width:0; }
+.tableRoot .handRow,.tableRoot .discardSlots { justify-content:flex-end; }
+.tableRoot .discardSlots { margin:.2rem 0; }
+.tableRoot .compactAction { padding:.2rem .35rem; }
+.tableRoot .compactAction p { font-size:.8rem; margin:0 0 .2rem; }
+.tableRoot .compactAction .actions { justify-content:flex-start; gap:.35rem; }

@@ -58,9 +58,8 @@ export function animationBetween(previous: RoomView | null, current: RoomView): 
   return null;
 }
 export function mayConcede(view: RoomView): boolean {
-  return view.status === "playing" && view.my_seat !== null && view.declarer === view.my_seat &&
+  return view.status === "playing" && view.phase === "declare" && view.my_seat !== null && view.declarer === view.my_seat &&
     !view.controls?.paused && !view.controls?.undo &&
-    (view.contract?.kind === "regular" || view.contract?.kind === "ten_no_widow") &&
-    (view.played_tricks ?? 0) === 0 && (view.trick?.length ?? 0) === 0 &&
-    ["defense_first","defense_second","defense_reconsider","choose_mode","opening_lead","play"].includes(view.phase ?? "");
+    (view.legal_contracts ?? []).some(bid => bid.kind === "regular" || bid.kind === "ten_no_widow") &&
+    !view.defense?.some(Boolean) && (view.played_tricks ?? 0) === 0 && (view.trick?.length ?? 0) === 0;
 }

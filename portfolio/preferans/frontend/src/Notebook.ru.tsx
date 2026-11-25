@@ -28,8 +28,11 @@ export function Notebook({view, profiles}: {view: RoomView; profiles: SeatProfil
   const rows = (v:number[]) => v.map(n=>`. ${n}`).join(" ");
   const text = (v:number[], x:number,y:number, angle=0) => <text x={x} y={y} transform={`rotate(${angle} ${x} ${y})`}>{rows(v)}</text>;
   const left = fields[0], right = fields[1], bottom = fields[2];
+  const nameY = (cy-24+16)/2;
+  const nameExtent = Math.max(20,cy-64);
+  const sideName = (seat:number, x:number, rotation:number) => <text x={x} y={nameY} transform={`rotate(${rotation} ${x} ${nameY})`} textAnchor="middle" dominantBaseline="central" textLength={name(seat).length*12>nameExtent?nameExtent:undefined} lengthAdjust="spacingAndGlyphs">{name(seat)}</text>;
   return <div className={styles.wrap} aria-label="Пулька в клетку">
-    <svg viewBox={`0 0 ${w} ${h}`} className={styles.paper} style={{minWidth:`${Math.max(365,w*.595)}px`}} role="img" aria-label="Рукописная пулька">
+    <svg viewBox={`0 0 ${w} ${h}`} className={styles.paper} style={{minWidth:`${Math.max(328,w*.5355)}px`}} role="img" aria-label="Рукописная пулька">
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern></defs>
       <rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
       <g stroke="#28509a" strokeWidth="2" fill="none" strokeLinejoin="round">
@@ -39,11 +42,10 @@ export function Notebook({view, profiles}: {view: RoomView; profiles: SeatProfil
       <g className={styles.ink}>
         <text x={cx} y={cy+9} textAnchor="middle" fontSize="28">{score.target??20}</text>
         <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle">{name(bottom.seat)}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}</g>
-        <g data-score-seat={left.seat} data-score-position="left"><text x={cx-7} y={cy-70} transform={`rotate(90 ${cx-7} ${cy-70})`} textAnchor="middle">{name(left.seat)}</text>{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-35,cy+22,90)}{text(left.lv,outer-35,24,90)}</g>
-        <g data-score-seat={right.seat} data-score-position="right"><text x={cx+7} y={cy-70} transform={`rotate(-90 ${cx+7} ${cy-70})`} textAnchor="middle">{name(right.seat)}</text>{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+35,cy-22,-90)}{text(right.lv,w-outer+35,h-40,-90)}</g>
+        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-35,cy+22,90)}{text(left.lv,outer-35,24,90)}</g>
+        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+35,cy-22,-90)}{text(right.lv,w-outer+35,h-40,-90)}</g>
       </g>
     </svg>
     {history?.exact===false && <p className={styles.notice}>Для старых исправлений порядок записей не сохранён. Показаны точные итоговые значения.</p>}
-    <details><summary>Числовые записи по полям</summary>{fields.map(f=><section key={f.seat}><strong>{name(f.seat)}</strong><p>Гора: {rows(f.hill)||"0"}; пуля: {rows(f.pool)||"0"}</p><p>На {name(f.left)}: {rows(f.lv)||"0"}; на {name(f.right)}: {rows(f.rv)||"0"}</p></section>)}</details>
   </div>;
 }

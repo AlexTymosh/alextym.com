@@ -32,7 +32,8 @@ test("selected dealer may transfer only before the initial deal",()=>{
   expect(mayPassDeck({...lobby,my_seat:1},2)).toBe(false);
   expect(mayPassDeck(room,2)).toBe(false);
   expect(mayStart({...lobby,lobby_setup:{...lobby.lobby_setup!,ready:[false,true,true]}})).toBe(false);
-  expect(mayStart({...lobby,status:"between",dealer:2,lobby_setup:undefined})).toBe(false);
+  expect(mayStart({...lobby,status:"between",dealer:2,lobby_setup:undefined})).toBe(true);
+  expect(mayStart({...lobby,status:"between",dealer:0,lobby_setup:undefined})).toBe(false);
 });
 
 test("card group order matches the approved reference and backs are independent",()=>{

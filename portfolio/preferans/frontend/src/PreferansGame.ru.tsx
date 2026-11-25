@@ -31,7 +31,7 @@ import { LobbySetup } from "./LobbySetup.ru";
 import { SeatSwap } from "./SeatSwap.ru";
 import { BidPanel } from "./BidPanel.ru";
 import { DealStatus } from "./DealStatus.ru";
-import { orderHand, ownCards, mayConcede, type SortMode } from "./interaction-model";
+import { orderHand, ownCards, type SortMode } from "./interaction-model";
 
 import { ReleaseControls } from "./ReleaseControls.ru";
 import { RulesetEditor } from "./RulesetEditor.ru";
@@ -66,28 +66,6 @@ function CardFace({ card, selected, playable, pendingPlay, onClick, onDragStart,
   );
 }
 
-function ScoreBoard({ view }: { view: RoomView }) {
-  const score = view.score;
-  if (!score) return null;
-  return (
-    <section className={styles.score} aria-labelledby="preferans-score-heading">
-      <h3 id="preferans-score-heading">Пуля, гора и висты</h3>
-      <div className={styles.scoreTableWrap}>
-        <table className={styles.scoreTable}>
-          <thead><tr><th scope="col">Игрок</th><th scope="col">Пуля</th><th scope="col">Гора</th><th scope="col">Висты на других</th></tr></thead>
-          <tbody>{seatNames.map((label, seat) => <tr key={seat}>
-            <th scope="row">{label}</th>
-            <td>{score.pool[seat] ?? 0}/{score.target ?? 20}</td>
-            <td>{score.hill[seat] ?? 0}</td>
-            <td>{score.vists[seat]?.map((n, index) => index === seat ? null : `${seatNames[index]}: ${n}`).filter(Boolean).join(" · ")}</td>
-          </tr>)}</tbody>
-        </table>
-      </div>
-      <p className={styles.subtle}>Распасы: уровень {score.passout_level}. Расчёт выполняется сервером после раздачи.</p>
-    </section>
-  );
-}
-
 function ActionPanel({ view, busy, selectedCards, command,
   regularRoute, setRegularRoute, onStart, onSettle }: {
   view: RoomView; busy: boolean; selectedCards: Card[];
@@ -96,9 +74,6 @@ function ActionPanel({ view, busy, selectedCards, command,
   onStart: () => void; onSettle: () => void;
 }) {
   const myTurn = allowedToAct(view);
-  const concede = mayConcede(view) && <div className={styles.concede}><button type="button" disabled={busy} onClick={() => {
-    if (window.confirm("Признать игру без трёх? Это начислит штраф в гору без розыгрыша.")) command("without_three");
-  }}>Признать «без трёх»</button></div>;
   if (view.status === "playing" && (view.controls?.undo || (view.controls?.paused && !replayMoveAllowed(view)))) {
     return null;
   }
@@ -107,8 +82,8 @@ function ActionPanel({ view, busy, selectedCards, command,
   }
   if (view.status === "lobby" || view.status === "between") {
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
-      <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Перетащи колоду в центр или воспользуйся кнопкой раздачи.</p>
-      {(view.room_admin || (view.status==="lobby"&&view.lobby_setup?.dealer===view.my_seat)) && <button type="button" className={styles.primary} disabled={busy || !mayStart(view)} onClick={onStart}>Раздать карты</button>}
+      {view.status==="lobby"&&<p>Занято мест: {view.occupied.filter(Boolean).length} из 3.</p>}
+      {(view.room_admin || (view.my_seat!==null&&dealerFor(view)===view.my_seat)) && <button type="button" className={styles.primary} disabled={busy || !mayStart(view)} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
   if (view.status === "awaiting_settlement") {
@@ -127,23 +102,22 @@ function ActionPanel({ view, busy, selectedCards, command,
   if (view.status === "closed") return <section className={styles.actionPanel}>
     {view.sheet_loser !== undefined ? <><h3>Листик выброшен</h3><p>{seatNames[view.sheet_loser]}: техническое поражение. Соперникам — по первому месту. Незакрытая пуля не дорассчитывается.</p></> : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
   </section>;
-  if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return concede || null;
-  return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">Твоё действие</h3>
+  if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
+  return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Игровое действие">
     {view.phase === "auction" && <>
       <p>Выбери минимальную ставку. Окончательный контракт объявляется после торгов.</p>
       <BidPanel key={`${view.game_id}:auction`} view={view} busy={busy} command={command}/>
     </>}
     {view.phase === "discard" && <>
-      <p>Перетащи две карты в снос. Можно вернуть их до подтверждения. Выбрано: {selectedCards.length}/2.</p>
+      <p>Перетащи две карты в снос</p>
       <button type="button" className={styles.primary} disabled={busy || selectedCards.length !== 2}
         onClick={() => command("discard", { cards: selectedCards })}>Снести две карты</button>
     </>}
     {view.phase === "declare" && <>
-      <p>После прикупа можно повысить ставку, но нельзя изменить класс контракта.</p>
+      <p>Объяви игру</p>
       <BidPanel key={`${view.game_id}:declare`} view={view} busy={busy} command={command}/>
     </>}
     {(["defense_first", "defense_second", "defense_reconsider"] as string[]).includes(view.phase ?? "") && <>
-      <p>{view.phase === "defense_reconsider" ? "Подтверди пас или вернись на вист." : "Защитник выбирает вист или пас."}</p>
       <div className={styles.actions}>
         <button type="button" className={styles.primary} disabled={busy} onClick={() => command("defense", { decision: "vist" })}>Вист</button>
         <button type="button" disabled={busy} onClick={() => command("defense", { decision: "pass" })}>Пас</button>
@@ -159,7 +133,6 @@ function ActionPanel({ view, busy, selectedCards, command,
         <button type="button" disabled={busy} onClick={() => command("mode", { mode: "closed" })}>В тёмную</button>
       </div>
     </>}
-    {concede}
   </section>;
 }
 
@@ -600,7 +573,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
               mediaForSeat={LIVE_MEDIA_ENABLED && !archived && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
               objects={view.presentation?.enabled ? <SharedObjects view={view} busy={busy} open={openShared}/> : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
-              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} scoreTable={<ScoreBoard view={view}/>}/>}/>
+              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow}/>}/>
           </ImmersiveMenu>
         </>}
     </div>

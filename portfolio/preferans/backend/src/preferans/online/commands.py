@@ -92,14 +92,14 @@ def apply_command(state: GameState, seat: int, action: str, data: object) -> Gam
         _keys(data, {"card", "owner"})
         return play_card(state, seat, _card(data["card"]), owner=_seat(data["owner"]))
     if action == "without_three":
-        _keys(data, set())
-        return concede_without_three(state, seat)
+        _keys(data, {"bid"})
+        return concede_without_three(state, seat, _bid(data["bid"]))
     raise RuleViolation("Unsupported command")
 
 
 def redacted_action(action: str, args: dict) -> dict:
     """Public event body excludes discarded and privately played content."""
-    if action in {"bid", "declare"}:
+    if action in {"bid", "declare", "without_three"}:
         return {"bid": args["bid"]}
     if action in {"play"}:
         return {"owner": args["owner"], "card": args["card"]}
