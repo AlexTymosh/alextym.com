@@ -27,3 +27,7 @@ PR13.D слит; Owner сообщил о зелёном CI. G07: добавле�
 - G07: disclosure and post-game choice implementation candidate; full CI and multi-client acceptance pending.
 - G08: numeric versioned templates and Owner archive candidate; acceptance pending.
 - G10: real provider/load evidence, CI and Owner release decision still open. See `PR14_FINAL_WORKFLOWS.ru.md`.
+
+## PR15 — проверка обновлённого интерфейса
+
+См. [PR15_IMMERSIVE_TABLE.ru.md](PR15_IMMERSIVE_TABLE.ru.md) — новый интерфейс, контракты и критерии приёмки. Исторические этапы сохранены. PR14.C / G10 не считаются закрытыми без фактической проверки.
