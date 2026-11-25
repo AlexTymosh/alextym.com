@@ -21,3 +21,9 @@
 ## PR14.A — checkpoint, main eab5354
 
 PR13.D слит; Owner сообщил о зелёном CI. G07: добавлено добровольное завершение «выбросить листик» / адресное предложение / явное принятие или отказ; технический исход фиксируется атомарно с immutable результатом и рейтингом, без расчёта незакрытой пули. Замена условных ударов и единогласное решение о раскрытии карты ещё не реализованы. G02b и G08 открыты. G10: добавлены проверяемые процедуры и offline evaluator; actual 6/8h, Firebase Emulator, hosted checks candidate и three-device UAT ожидаются.
+
+## 2026-11-25 — final workflows candidate
+
+- G07: disclosure and post-game choice implementation candidate; full CI and multi-client acceptance pending.
+- G08: numeric versioned templates and Owner archive candidate; acceptance pending.
+- G10: real provider/load evidence, CI and Owner release decision still open. See `PR14_FINAL_WORKFLOWS.ru.md`.
