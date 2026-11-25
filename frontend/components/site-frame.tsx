@@ -26,7 +26,7 @@ export function SiteFrame({ children, navigation, footer }: Readonly<{
     <AccountSessionProvider><div className={`app-shell${fleet ? ` ${demoStyles.frame}` : ""}`}>
       {fleet && <DemoSiteBar />}
       {navigation}
-      <main className="site-main">{children}</main>
+      <main className={`site-main${pathname === "/portfolio/preferans" ? " preferans-site-main" : ""}`}>{children}</main>
       {footer}
     </div></AccountSessionProvider>
   );

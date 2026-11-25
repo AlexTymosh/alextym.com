@@ -2,12 +2,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CardArtwork } from "./CardArtwork.ru";
 import { type RoomView, suitSymbol } from "./game-model.ru";
-import { tableSeats, type SeatProfile } from "./table-model";
+import { type SeatProfile } from "./table-model";
+import { Notebook } from "./Notebook.ru";
 import { musicPosition, TRACKS, type Music, type OverlayKind, type SharedAction } from "./presentation-model";
 import styles from "./preferans-shared.module.css";
 
 export type SharedCommand=(action:SharedAction,args?:Record<string,unknown>)=>void;
-const labels:Record<OverlayKind,string>={score_sheet:"Пулька",radio:"Магнитофон",last_trick:"Последняя взятка",widow_replay:"Прикуп"};
+const labels:Record<OverlayKind,string>={score_sheet:"Пулька",radio:"Магнитофон",last_trick:"Последняя взятка",widow_replay:"Прикуп",discard_replay:"Просмотр сноса"};
 const names=(seat:number,profiles:SeatProfile[]|null)=>profiles?.[seat]?.name||`Игрок ${seat+1}`;
 function RadioArt(){return <svg viewBox="0 0 300 142" aria-hidden="true" className={styles.radioArt}>
   <rect x="95" y="4" width="110" height="22" rx="7" fill="none" stroke="#b6b4a7" strokeWidth="8"/>
@@ -28,18 +29,6 @@ export function SharedObjects({view,busy,open}:{view:RoomView;busy:boolean;open:
     <button type="button" className={styles.paperButton} disabled={busy||!view.score} onClick={()=>open("score_sheet")} aria-label="Открыть общую пульку"><span aria-hidden="true">╲ │ ╱<br/>──○──<br/> ╱ │ ╲</span>Пулька</button>
     <button type="button" disabled={busy||!view.last_trick?.length} onClick={()=>open("last_trick")}>Последняя взятка</button>
     <button type="button" className={styles.radioButton} disabled={busy} onClick={()=>open("radio")} aria-label="Открыть магнитофон"><RadioArt/></button>
-  </div>;
-}
-function ScoreSheet({view,profiles}:{view:RoomView;profiles:SeatProfile[]|null}){
-  const score=view.score;if(!score)return <p>Расчётов пока нет.</p>;
-  const seats=tableSeats(view.my_seat);
-  return <div className={styles.paper} aria-label="Пулька в клетку">
-    <svg viewBox="0 0 480 300" className={styles.lines} aria-hidden="true"><path d="M0 0L240 145L480 0 M240 145V300 M0 260L240 145L480 260" fill="none" stroke="#43617a" strokeWidth="1.5"/><circle cx="240" cy="145" r="29" fill="#f5eed5" stroke="#43617a" strokeWidth="1.5"/></svg>
-    <strong className={styles.target}>{score.target??20}</strong>
-    {(["left","right","bottom"] as const).map(pos=>{const seat=seats[pos];return <section data-score-seat={seat} data-score-position={pos} key={pos} className={`${styles.sector} ${styles[pos]}`}>
-      <strong>{names(seat,profiles)}</strong><span>Гора: {score.hill[seat]}</span><span>Пуля: {score.pool[seat]}</span>
-      {([0,1,2] as const).filter(i=>i!==seat).map(i=><span key={i}>На {names(i,profiles)}: {score.vists[seat]?.[i]??0}</span>)}
-    </section>})}
   </div>;
 }
 function useRadio(music:Music,serverNow:()=>number,enabled:boolean){
@@ -89,10 +78,11 @@ export function SharedRoom({view,profiles,busy,command,serverNow,scoreTable}:{vi
       {my!==null&&<button type="button" disabled={busy||!p.enabled} onClick={()=>command("break_ready",{break_id:p.break!.id,ready:!p.break!.ready[my]})}>{p.break.ready[my]?"Отозвать готовность":"Готов продолжить"}</button>}
     </div>}
     {p.overlay&&<section className={styles.panel} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind}>
-      <header><div><strong>{labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. Видят все игроки.</small></div><button type="button" disabled={busy} onClick={close}>Закрыть</button></header>
-      {p.overlay.kind==="score_sheet"&&<><ScoreSheet view={view} profiles={profiles}/><details><summary>Таблица расчётов</summary>{scoreTable}</details></>}
+      <header><div><strong>{labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small></div><button type="button" disabled={busy} onClick={close}>Закрыть</button></header>
+      {p.overlay.kind==="score_sheet"&&<><Notebook view={view} profiles={profiles}/><details><summary>Таблица расчётов</summary>{scoreTable}</details></>}
       {p.overlay.kind==="last_trick"&&<><div className={styles.replay}>{(view.last_trick??[]).map(play=><div key={play.owner}><span>{names(play.owner,profiles)}</span><CardArtwork card={play.card}/></div>)}</div><p>Победитель: {names(view.last_trick_winner??0,profiles)}{view.last_trick_suit?` · Масть ${suitSymbol(view.last_trick_suit)}`:""}. Следующий разрешённый ход закроет просмотр.</p></>}
       {p.overlay.kind==="widow_replay"&&<div className={styles.replay}>{(view.widow??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>)}</div>}
+      {p.overlay.kind==="discard_replay"&&<div className={styles.replay}>{view.my_seat===view.declarer&&view.my_seat===p.overlay.seat ? (view.own_discard??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>) : <p>{names(p.overlay.seat,profiles)} смотрит свои сброшенные карты.</p>}</div>}
       {p.overlay.kind==="radio"&&<div className={styles.radio}><RadioArt/><p>Тестовая мелодия {radio.display.track+1} · {Math.floor(radio.display.offset/1000)} с / 12 с</p><p>Пока только собственные тестовые звуки; коммерческие записи не включены.</p>
         <div className={styles.buttons}>{([['previous','⏮','Предыдущая'],['play','▶','Играть'],['pause','Ⅱ','Пауза музыки'],['stop','■','Стоп'],['next','⏭','Следующая']] as const).map(([action,icon,label])=><button key={action} type="button" aria-label={label} disabled={busy||!p.enabled} onClick={()=>{if(action==='play')radio.unlock();command('music',{command:action});}}>{icon}</button>)}</div>
         <label>Моя громкость <input type="range" min={0} max={1} step={.05} value={radio.volume} onChange={e=>radio.setVolume(Number(e.target.value))}/></label><label><input type="checkbox" checked={radio.muted} onChange={e=>radio.setMuted(e.target.checked)}/> Без звука</label>

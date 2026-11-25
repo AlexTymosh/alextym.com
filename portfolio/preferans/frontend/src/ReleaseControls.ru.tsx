@@ -42,7 +42,7 @@ export function ReleaseControls({view,busy,command}:{view:RoomView;busy:boolean;
         {seat!==null&&!proposal.votes[seat]&&<div className={styles.actions}>{[true,false].map(approve=><button type="button" key={String(approve)} disabled={busy||Boolean(disconnected)} onClick={()=>command("reveal_vote",{id:incident.id,proposal_id:proposal.id,approve})}>{approve?"Согласен":"Не согласен"}</button>)}</div>}
         <p>Отказ отменяет предложение, но не раскрытие. Можно предложить другое решение.</p></>}
     </section>}
-    {canReport&&reportable.length>0&&<details className={styles.panel}><summary>Случайно показал карту</summary>
+    {canReport&&reportable.length>0&&<details name="preferans-control-group" className={styles.panel}><summary>Случайно показал карту</summary>
       <label className={styles.field}>Раскрытая карта<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">Выбрать карту</option>{reportable.map(c=><option key={cardId(c)} value={cardId(c)}>{cardLabel(c)}</option>)}</select></label>
       <button type="button" disabled={busy||!card||!reportable.some(c=>cardId(c)===selected)} onClick={()=>{if(card&&window.confirm("Эту карту увидят все игроки. Начать согласование?"))command("reveal_report",{card});}}>Сообщить о раскрытии</button>
     </details>}
@@ -51,6 +51,6 @@ export function ReleaseControls({view,busy,command}:{view:RoomView;busy:boolean;
         {seat===pair.to&&pair.replacement===null?<Choice pair={pair} busy={busy} command={command}/>:<p>Игрок {pair.from+1} → игрок {pair.to+1}: {pair.bare-(pair.replacement??0)} голых, {pair.ordinary+10*(pair.replacement??0)} обычных{pair.replacement===null?" (ожидает выбора проигравшего)":" (подтверждено)"}.</p>}
       </div>)}
     </section>}
-    {view.can_archive&&<details className={styles.panel}><summary>Архивирование (Owner)</summary><p>Необратимое закрытие незавершённой комнаты без рейтинга, с сохранением истории.</p><button type="button" disabled={busy} onClick={()=>{const reason=window.prompt("Причина архивирования (5–180 символов)");if(reason&&reason.trim().length>=5&&reason.trim().length<=180&&window.confirm("Архивировать незавершённую партию?"))command("archive",{reason:reason.trim()});}}>Архивировать</button></details>}
+    {view.can_archive&&<details name="preferans-control-group" className={styles.panel}><summary>Архивирование (Owner)</summary><p>Необратимое закрытие незавершённой комнаты без рейтинга, с сохранением истории.</p><button type="button" disabled={busy} onClick={()=>{const reason=window.prompt("Причина архивирования (5–180 символов)");if(reason&&reason.trim().length>=5&&reason.trim().length<=180&&window.confirm("Архивировать незавершённую партию?"))command("archive",{reason:reason.trim()});}}>Архивировать</button></details>}
   </>;
 }

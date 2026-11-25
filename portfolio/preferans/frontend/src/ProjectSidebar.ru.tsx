@@ -2,30 +2,42 @@ import { useState, type ReactNode } from "react";
 import styles from "./preferans-table.module.css";
 import type { OverlayKind } from "./presentation-model";
 
-type Panel = "rules" | "score" | "history" | "controls" | "last" | "media";
-const labels: Record<Panel,string> = {rules:"Правила", score:"Пулька", history:"История и рейтинг", controls:"Управление",last:"Последняя взятка",media:"Связь за столом"};
-export function ProjectSidebar({ children, rules, score, history, controls, last, media, urgent, active, shared }: {
-  children: ReactNode; rules: ReactNode; score: ReactNode; history: ReactNode; controls: ReactNode;
-  last: ReactNode; media: ReactNode; urgent: boolean; active: boolean; shared?: (kind: OverlayKind) => void;
+type Panel = "score" | "controls" | "last" | "media" | "settings";
+const items: {key:Panel; label:string; icon:string}[] = [
+  {key:"score", label:"Пулька", icon:"▤"}, {key:"last", label:"Последняя взятка", icon:"▱"},
+  {key:"controls", label:"Управление игрой", icon:"☷"}, {key:"media", label:"Связь за столом", icon:"◉"},
+  {key:"settings", label:"Настройки", icon:"⚙"},
+];
+export function ProjectSidebar({children, score, controls, last, media, settings, urgent, active, shared, copy, leave, collapsed, onCollapse}: {
+  children:ReactNode; score:ReactNode; controls:ReactNode; last:ReactNode; media:ReactNode; settings:ReactNode;
+  urgent:boolean; active:boolean; shared?:(kind:OverlayKind)=>void; copy:()=>void; leave:()=>void; collapsed:boolean; onCollapse:()=>void;
 }) {
-  const [panel, setPanel] = useState<Panel | null>(null);
-  const [mediaVisited, setMediaVisited] = useState(false);
+  const [panel,setPanel] = useState<Panel|null>(null);
   const shown = urgent ? "controls" : panel;
-  const nodes = {rules,score,history,controls,last,media};
+  const nodes = {score,controls,last,media,settings};
+  const reference = (kind:"rules"|"history") => window.open(`/portfolio/preferans?view=${kind}`,"_blank","noopener,noreferrer");
+  const select = (key:Panel) => {
+    if (shared && (key==="score" || key==="last")) { setPanel(null); shared(key==="score"?"score_sheet":"last_trick"); return; }
+    if (collapsed) onCollapse();
+    setPanel(old=>old===key?null:key);
+  };
+  const action=(icon:string,label:string,run:()=>void,expanded?:boolean)=><button type="button" className={styles.menuButton} title={label} aria-label={label} aria-expanded={expanded} onClick={run}><span aria-hidden="true" className={styles.menuIcon}>{icon}</span>{!collapsed&&<span>{label}</span>}{expanded!==undefined&&!collapsed&&<span aria-hidden="true">{expanded?"⌄":"›"}</span>}</button>;
   return <>
-    {active && <div className={styles.rotatePrompt} role="status"><span aria-hidden="true">↻</span><strong>Поверни телефон</strong><p>Игровой стол работает в горизонтальной ориентации. Комната и соединение сохраняются.</p></div>}
-    <div className={`${styles.roomLayout} ${active ? styles.landscapeOnly : ""}`}>
+    {active&&<div className={styles.rotatePrompt} role="status"><span aria-hidden="true">↻</span><strong>Поверни телефон</strong><p>Игровой стол работает в горизонтальной ориентации. Комната и соединение сохраняются.</p></div>}
+    <div className={`${styles.roomLayout} ${active?styles.landscapeOnly:""}`} data-collapsed={collapsed?"true":"false"}>
       <nav className={styles.projectMenu} aria-label="Меню игры">
-        <span className={styles.menuTitle}>ЗА СТОЛОМ</span>
-        {(Object.keys(labels) as Panel[]).map(key=><button key={key} type="button" aria-expanded={shown===key}
-          onClick={()=>{if(shared && (key==="score" || key==="last")){shared(key==="score"?"score_sheet":"last_trick");return;} if(key==="media") setMediaVisited(true); setPanel(old=>old===key?null:key);}}>{labels[key]}</button>)}
-        {shared && <button type="button" onClick={()=>shared("radio")}>Магнитофон</button>}
-        <span className={styles.menuHint}>{shared ? "Общие объекты видят все игроки." : "Общие объекты требуют realtime."}</span>
+        <button type="button" className={styles.menuButton} onClick={onCollapse} aria-label={collapsed?"Развернуть меню":"Свернуть меню"} aria-expanded={!collapsed} title={collapsed?"Развернуть меню":"Свернуть меню"}><span aria-hidden="true" className={styles.menuIcon}>{collapsed?"›":"‹"}</span>{!collapsed&&<span>ЗА СТОЛОМ</span>}</button>
+        {action("▥","Правила",()=>reference("rules"))}
+        {action("♜","История и рейтинг",()=>reference("history"))}
+        {items.map(item=><div key={item.key}>
+          {action(item.icon,item.label,()=>select(item.key),shown===item.key)}
+          {!collapsed&&shown===item.key&&item.key!=="score"&&item.key!=="last"&&<section className={styles.menuDrawer} aria-label={item.label}>{nodes[item.key]}</section>}
+        </div>)}
+        {shared&&action("♫","Магнитофон",()=>{setPanel(null);shared("radio");})}
+        {action("↗","Скопировать приглашение",copy)}
+        {action("⇥","К выбору комнаты",leave)}
       </nav>
-      <div className={styles.sceneColumn}>{children}
-        {shown && shown!=="media" && <section className={styles.drawer} aria-label={labels[shown]}>{nodes[shown]}</section>}
-        {mediaVisited && <section className={styles.drawer} hidden={shown!=="media"} aria-label={labels.media}>{media}</section>}
-      </div>
+      <div className={styles.sceneColumn}>{children}{!collapsed&&(shown==="score"||shown==="last")&&<section className={styles.localDrawer} aria-label={shown==="score"?"Пулька":"Последняя взятка"}><button type="button" onClick={()=>setPanel(null)}>Закрыть</button>{nodes[shown]}</section>}{collapsed&&urgent&&<section className={styles.drawer} aria-label="Срочное решение">{controls}</section>}</div>
     </div>
   </>;
 }

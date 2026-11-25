@@ -96,7 +96,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
       </div>}
     </div>}
     <SheetExit view={view} busy={busy} command={command}/>
-    {view.room_admin && view.status !== "closed" && view.score && <details className={styles.adjustments}>
+    {view.room_admin && view.status !== "closed" && view.score && <details name="preferans-control-group" className={styles.adjustments}>
       <summary>Корректировка расчётов (только администратор)</summary>
       <p className={styles.subtle}>Только активная партия. Каждое изменение остаётся в журнале. Исправление ошибки — новая обратная операция.</p>
       <div className={styles.adjustGrid}>
@@ -118,7 +118,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
         adjust({ field, seat, against: field === "vist" ? against : null, delta, reason: reason.trim() });
       }}>Подтвердить корректировку</button>
     </details>}
-    {(controls.adjustments?.length ?? 0) > 0 && <details className={styles.adjustments}>
+    {(controls.adjustments?.length ?? 0) > 0 && <details name="preferans-control-group" className={styles.adjustments}>
       <summary>Журнал корректировок ({controls.adjustments.length} последних)</summary>
       <ol>{controls.adjustments.map((entry, index) => <li key={`${entry.game_version}-${index}`}>
         {entry.field} · {names[entry.seat]}{entry.against !== null ? ` → ${names[entry.against]}` : ""}:

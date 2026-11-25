@@ -12,7 +12,7 @@ export function SheetExit({ view, busy, command }: {
   const offers = view.sheet_offers ?? [];
   const incoming = offers.find(offer => offer.to === seat);
   const confirm = () => window.confirm("Завершить всю партию? Ты получишь техническое поражение и два условных голых удара; оба соперника — первое место. Незакрытая пуля не рассчитывается. Действие необратимо.");
-  return <details className={styles.adjustments} open={incoming ? true : undefined}>
+  return <details name="preferans-control-group" className={styles.adjustments} open={incoming ? true : undefined}>
     <summary>Выбросить листик{incoming ? " — есть предложение" : ""}</summary>
     <p>Только добровольное решение игрока. Предложение можно отклонить без штрафа. Удары — исключительно шуточные записи.</p>
     {incoming && <div className={styles.controlNote} role="group" aria-label="Предложение выбросить листик">
