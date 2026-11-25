@@ -1,4 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+const subscribeMenuSlot = () => () => {};
+const menuSlot = () => document.getElementById("preferans-menu-slot");
+const serverMenuSlot = () => null;
 import styles from "./preferans-table.module.css";
 import type { OverlayKind } from "./presentation-model";
 
@@ -12,6 +16,7 @@ export function ProjectSidebar({children, controls, media, settings, urgent, act
   urgent:boolean; active:boolean; shared?:(kind:OverlayKind)=>void; copy:()=>void; leave:()=>void; collapsed:boolean; onCollapse:()=>void;
 }) {
   const [panel,setPanel] = useState<Panel|null>(null);
+  const slot = useSyncExternalStore(subscribeMenuSlot,menuSlot,serverMenuSlot);
   useEffect(()=>{if(urgent)setPanel("controls");},[urgent]);
   const shown = panel ?? (urgent ? "controls" : null);
   const nodes = {controls,media,settings};
@@ -20,22 +25,23 @@ export function ProjectSidebar({children, controls, media, settings, urgent, act
     setPanel(old=>old===key?null:key);
   };
   const action=(icon:string,label:string,run:()=>void,expanded?:boolean)=><button type="button" className={styles.menuButton} title={label} aria-label={label} aria-expanded={expanded} onClick={run}><span aria-hidden="true" className={styles.menuIcon}>{icon}</span>{!collapsed&&<span>{label}</span>}{expanded!==undefined&&!collapsed&&<span aria-hidden="true">{expanded?"⌄":"›"}</span>}</button>;
-  return <>
-    {active&&<div className={styles.rotatePrompt} role="status"><span aria-hidden="true">↻</span><strong>Поверни телефон</strong><p>Игровой стол работает в горизонтальной ориентации. Комната и соединение сохраняются.</p></div>}
-    <div className={`${styles.roomLayout} ${active?styles.landscapeOnly:""}`} data-collapsed={collapsed?"true":"false"}>
-      <nav className={styles.projectMenu} aria-label="Меню игры">
+  const menu = <nav className={styles.projectMenu} data-top-menu={slot?"true":undefined} aria-label="Меню игры">
         <button type="button" className={styles.menuButton} onClick={onCollapse} aria-label={collapsed?"Развернуть меню":"Свернуть меню"} aria-expanded={!collapsed} title={collapsed?"Развернуть меню":"Свернуть меню"}><span aria-hidden="true" className={styles.menuIcon}>{collapsed?"›":"‹"}</span>{!collapsed&&<span>ЗА СТОЛОМ</span>}</button>
         {action("▥","Правила игры",()=>reference("rules"))}
         {action("♜","История и рейтинг",()=>reference("history"))}
         {items.map(item=><div key={item.key}>
           {action(item.icon,item.label,()=>select(item.key),shown===item.key)}
-          {!collapsed&&shown===item.key&&<section className={styles.menuDrawer} aria-label={item.label}>{nodes[item.key]}</section>}
+          {(!collapsed||slot)&&shown===item.key&&<section className={styles.menuDrawer} aria-label={item.label}>{nodes[item.key]}</section>}
         </div>)}
         {shared&&action("♫","Магнитофон",()=>{setPanel(null);shared("radio");})}
         {action("↗","Скопировать приглашение",copy)}
         {action("⇥","К выбору комнаты",leave)}
-      </nav>
-      <div className={styles.sceneColumn}>{children}{collapsed&&shown&&<section className={`${styles.localDrawer} ${styles.railDrawer}`} role="dialog" aria-label={items.find(item=>item.key===shown)?.label}><button type="button" onClick={()=>setPanel(null)}>Закрыть</button>{nodes[shown]}</section>}</div>
+  </nav>;
+  return <>
+    {active&&<div className={styles.rotatePrompt} role="status"><span aria-hidden="true">↻</span><strong>Поверни телефон</strong><p>Игровой стол работает в горизонтальной ориентации. Комната и соединение сохраняются.</p></div>}
+    <div className={`${styles.roomLayout} ${active?styles.landscapeOnly:""}`} data-collapsed={collapsed?"true":"false"} data-top-menu={slot?"true":undefined}>
+      {slot?createPortal(menu,slot):menu}
+      <div className={styles.sceneColumn}>{children}{collapsed&&!slot&&shown&&<section className={`${styles.localDrawer} ${styles.railDrawer}`} role="dialog" aria-label={items.find(item=>item.key===shown)?.label}><button type="button" onClick={()=>setPanel(null)}>Закрыть</button>{nodes[shown]}</section>}</div>
     </div>
   </>;
 }

@@ -31,6 +31,7 @@ import { SeatSwap } from "./SeatSwap.ru";
 import { BidPanel } from "./BidPanel.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { orderHand, ownCards, type SortMode } from "./interaction-model";
+import { autoSettlementAllowed } from "./table-pr20";
 
 import { ReleaseControls } from "./ReleaseControls.ru";
 import { RulesetEditor } from "./RulesetEditor.ru";
@@ -86,15 +87,16 @@ function ActionPanel({ view, busy, selectedCards, command,
     </section>;
   }
   if (view.status === "awaiting_settlement") {
-    if(!view.settlement_options?.regular_choice)return view.room_admin?<button type="button" className={styles.primary} disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} onClick={onSettle}>Рассчитать раздачу</button>:null;
+    if(view.settlement_options?.regular_choice===false)return null;
+    if(!view.settlement_options)return view.room_admin?<button type="button" className={styles.primary} disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} onClick={onSettle}>Рассчитать раздачу</button>:null;
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">Сдача завершена</h3>
       <p>Раздача ожидает начисления пули, горы и вистов.</p>
-      {view.room_admin ? <>
+      {view.my_seat===view.declarer ? <>
         {view.settlement_options?.regular_choice && <label className={styles.field}>Куда записать выигрыш
           <select value={regularRoute} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRegularRoute(e.target.value as "pool" | "hill_first")}>
             <option value="pool">Помочь соперникам</option><option value="hill_first">Сначала погасить гору</option></select></label>}
         <button type="button" disabled={busy || Boolean(view.controls?.paused || view.controls?.undo)} className={styles.primary} onClick={onSettle}>Рассчитать раздачу</button>
-      </> : <p className={styles.subtle}>Ожидаем расчёт администратора.</p>}
+      </> : <p className={styles.subtle}>Ожидаем решение заказчика.</p>}
     </section>;
   }
   if (view.status === "archived") return <section className={styles.actionPanel}><h3>Партия архивирована</h3><p>Без игрового поражения, медалей и расчёта незакрытой пули.</p></section>;
@@ -105,7 +107,6 @@ function ActionPanel({ view, busy, selectedCards, command,
   if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
   return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Игровое действие">
     {view.phase === "auction" && <>
-      <p>Выбери минимальную ставку. Окончательный контракт объявляется после торгов.</p>
       <BidPanel key={`${view.game_id}:auction`} view={view} busy={busy} command={command}/>
     </>}
     {view.phase === "discard" && <>
@@ -421,6 +422,19 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     const route = view.settlement_options?.regular_choice ? regularRoute : "pool";
     void mutate("расчёт раздачи", () => settleRoom(view.room_id, token, view.version, route, routes));
   };
+  const autoSettled = useRef<string|null>(null);
+  useEffect(()=>{
+    if(!view||!autoSettlementAllowed(view)||busy||pending)return;
+    const key=`${view.room_id}:${view.game_id}:${view.version}`;
+    if(autoSettled.current===key)return;
+    const timer=setTimeout(()=>{
+      if(inFlight.current||!autoSettlementAllowed(viewRef.current)||viewRef.current?.version!==view.version||activeRoomRef.current!==view.room_id)return;
+      autoSettled.current=key;
+      const token=newKey();
+      void mutate("расчёт раздачи",()=>settleRoom(view.room_id,token,view.version,"pool",view.settlement_options!.passout_defaults));
+    },1800);
+    return()=>clearTimeout(timer);
+  },[view,busy,pending,mutate]);
   const adjust = (value: { field: "pool" | "hill" | "vist"; seat: number;
     against: number | null; delta: number; reason: string }) => {
     if (!view) return;

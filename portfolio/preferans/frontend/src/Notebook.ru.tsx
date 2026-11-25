@@ -1,9 +1,11 @@
-import { useId } from "react";
+import { useId, useState } from "react";
+import { notebookAngle, splitPlayerName } from "./table-pr20";
 import type { RoomView } from "./game-model.ru";
 import { tableSeats, type SeatProfile } from "./table-model";
 import styles from "./preferans-notebook.module.css";
 
-export function Notebook({view, profiles}: {view: RoomView; profiles: SeatProfile[] | null}) {
+export function Notebook({view, profiles, miniature=false}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean}) {
+  const [orientation,setOrientation] = useState(0);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const score = view.score;
   if (!score) return <p>Расчётов пока нет.</p>;
@@ -31,21 +33,26 @@ export function Notebook({view, profiles}: {view: RoomView; profiles: SeatProfil
   const nameY = (cy-24+16)/2;
   const nameExtent = Math.max(20,cy-64);
   const sideName = (seat:number, x:number, rotation:number) => <text x={x} y={nameY} transform={`rotate(${rotation} ${x} ${nameY})`} textAnchor="middle" dominantBaseline="central" textLength={name(seat).length*12>nameExtent?nameExtent:undefined} lengthAdjust="spacingAndGlyphs">{name(seat)}</text>;
-  return <div className={styles.wrap} aria-label="Пулька в клетку">
-    <svg viewBox={`0 0 ${w} ${h}`} className={styles.paper} style={{minWidth:`${Math.max(328,w*.5355)}px`}} role="img" aria-label="Рукописная пулька">
+  const [first,rest] = splitPlayerName(name(bottom.seat));
+  const angle=notebookAngle(miniature?0:orientation);
+  const rotation=angle===-90?`translate(0 ${w}) rotate(-90)`:angle===90?`translate(${h} 0) rotate(90)`:undefined;
+  const Wrapper=miniature?"span":"div";
+  return <Wrapper className={miniature?styles.miniature:styles.wrap} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
+    {!miniature&&<div className={styles.rotateControls}><button type="button" aria-label="Повернуть к левому игроку" onClick={()=>setOrientation(n=>(n+1)%3)}>↶</button><button type="button" aria-label="Моя сторона" onClick={()=>setOrientation(0)}>Моя сторона</button><button type="button" aria-label="Повернуть к правому игроку" onClick={()=>setOrientation(n=>(n+2)%3)}>↷</button></div>}
+    <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} style={{minWidth:miniature?0:`${Math.max(328,(angle?h:w)*.5355)}px`}} role="img" aria-label="Рукописная пулька">
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern></defs>
-      <rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
+      <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
       <g stroke="#28509a" strokeWidth="2" fill="none" strokeLinejoin="round">
         <path d={`M${cx} 16V${cy-24} M${cx-51} ${cy+24} L${inner} ${innerY} L${outer} ${outerY} L0 ${outerY+88} M${cx+51} ${cy+24} L${w-inner} ${innerY} L${w-outer} ${outerY} L${w} ${outerY+88} M${inner} 16V${innerY}H${w-inner}V16 M${outer} 16V${outerY}H${w-outer}V16 M0 ${cy}H${outer} M${w-outer} ${cy}H${w} M${cx} ${outerY}V${h}`}/>
         <rect x={cx-51} y={cy-24} width="102" height="48"/>
       </g>
       <g className={styles.ink}>
         <text x={cx} y={cy+9} textAnchor="middle" fontSize="28">{score.target??20}</text>
-        <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle">{name(bottom.seat)}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}</g>
+        <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle"><tspan x={cx}>{first}</tspan>{rest&&<tspan x={cx} dy="1.2em">{rest}</tspan>}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}</g>
         <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-35,cy+22,90)}{text(left.lv,outer-35,24,90)}</g>
         <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+35,cy-22,-90)}{text(right.lv,w-outer+35,h-40,-90)}</g>
       </g>
-    </svg>
-    {history?.exact===false && <p className={styles.notice}>Для старых исправлений порядок записей не сохранён. Показаны точные итоговые значения.</p>}
-  </div>;
+    </g></svg>
+    {!miniature&&history?.exact===false && <p className={styles.notice}>Для старых исправлений порядок записей не сохранён. Показаны точные итоговые значения.</p>}
+  </Wrapper>;
 }

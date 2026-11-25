@@ -41,7 +41,7 @@ from preferans.online.controls import (
 )
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
-from preferans.online.table_experience import THEMES, mark_activity
+from preferans.online.table_experience import THEMES, mark_activity, settlement_options
 from preferans.online.table_presentation import room_day
 from preferans.online.seat_swap import (
     ACTIONS as SWAP_ACTIONS,
@@ -452,8 +452,9 @@ class FirestoreRooms:
                 )
                 if not owner and room["admin_uid"] != uid and not selected and not replay:
                     raise StoreError(403, "Room admin or selected dealer required")
+            elif action == "settle":
+                _member(room, uid, admin=True, owner=owner)
             elif action in {
-                "settle",
                 "score_adjust",
                 "preset",
                 "lobby_config",
@@ -719,6 +720,14 @@ class FirestoreRooms:
             elif action == "settle":
                 if room["status"] != "awaiting_settlement" or not isinstance(game, GameState):
                     raise StoreError(409, "No completed deal to settle")
+                if not owner and room["admin_uid"] != uid:
+                    if (
+                        game.declarer != room["seats"].index(uid)
+                        or not settlement_options(score, game)["regular_choice"]
+                    ):
+                        raise StoreError(
+                            403, "Room admin or declarer with settlement choice required"
+                        )
                 if controls.get("vote"):
                     raise StoreError(409, "Pending undo decision")
                 if set(args) != {"regular_route", "passout_routes"}:
