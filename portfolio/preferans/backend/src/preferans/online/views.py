@@ -163,6 +163,7 @@ def seat_view(
             "declarer": state.declarer,
             "contract": public_bid(state.contract),
             "high_bid": public_bid(state.auction.high_bid),
+            "winning_bid": public_bid(state.winning_bid),
             "auction_calls": calls,
             "last_trick_suit": state.completed_tricks[-1].effective_suit.value
             if state.completed_tricks
@@ -191,13 +192,6 @@ def seat_view(
     if my_seat is not None:
         if room["status"] == "playing" and type(room.get("activity_started_at_ms")) is int:
             result["activity_started_at_ms"] = room["activity_started_at_ms"]
-        latest = [None, None, None]
-        for trick in state.completed_tricks:
-            latest[trick.winner] = [
-                {"owner": play.owner, "card": public_card(play.card)} for play in trick.cards
-            ]
-        if any(item is not None for item in latest):
-            result["last_won_tricks"] = latest
         if room["status"] == "awaiting_settlement" and score is not None:
             result["settlement_options"] = settlement_options(score, state)
         if len(state.discarded) == 2 and room["status"] == "playing":

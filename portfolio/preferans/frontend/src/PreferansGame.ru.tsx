@@ -16,7 +16,7 @@ import { PreferansControls } from "./PreferansControls.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
 import { CardArtwork } from "./CardArtwork.ru";
-import { GameTable, PreviousTrick } from "./GameTable.ru";
+import { GameTable } from "./GameTable.ru";
 import { SharedRoom, SharedObjects, type SharedCommand } from "./SharedRoom.ru";
 import { replayMoveAllowed, type OverlayKind } from "./presentation-model";
 import { ProjectSidebar as ImmersiveMenu } from "./ProjectSidebar.ru";
@@ -174,6 +174,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const serverOffset = useRef(0);
   const serverNow = useCallback(() => Date.now() + serverOffset.current, []);
   const [status, setStatus] = useState("");
+  const [dropNotice,setDropNotice]=useState("");
+  useEffect(()=>{if(!dropNotice)return;const timer=setTimeout(()=>setDropNotice(""),3000);return()=>clearTimeout(timer);},[dropNotice]);
   const [online, setOnline] = useState(true);
   const [rtReady, setRtReady] = useState(false);
   const [rtPresence, setRtPresence] = useState<Presence[] | null>(null);
@@ -488,7 +490,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const renderOpenCard = (card: Card, seat: Seat) => {
     const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
     return <CardFace card={card} playable={playable} pendingPlay={!!localPlay&&localPlay.owner===seat&&cardId(localPlay.card)===cardId(card)}
-      onDragStart={playable?e=>beginDrag(e,"card",card,seat):undefined} onDragEnd={endDrag}
+      onDragStart={isPlay&&!busy?e=>beginDrag(e,"card",card,seat):undefined} onDragEnd={endDrag}
       onKeyDown={e=>{if(playable&&(e.key==="Enter"||e.key===" ")){e.preventDefault();playNow(card,seat);}}}/>;
   };
   const reorder = (from:string,to:string) => {
@@ -499,7 +501,11 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const tableDrop=(e:DragEvent)=>{
     const drag=takeDrag(e);if(!view||!drag)return;
     if(drag.kind==="deck"&&view.my_seat===dealerFor(view)&&mayStart(view)){start();return;}
-    const card=legalDrop(view,drag);if(card&&view.turn!=null)playNow(card,view.turn);
+    if(drag.kind!=="card")return;
+    if(isPlay&&(view.controller!==view.my_seat||view.turn!==drag.owner)){setDropNotice("Убери карту, не твой ход!");return;}
+    const card=legalDrop(view,drag);
+    if(card&&view.turn!=null)playNow(card,view.turn);
+    else if(isPlay)setDropNotice("Эту карту сейчас сыграть нельзя.");
   };
   const seatDrop=(seat:Seat,e:DragEvent)=>{const drag=takeDrag(e);if(view&&drag?.kind==="deck"&&mayPassDeck(view,seat))command("dealer_pass",{dealer:seat});};
   const draft=Boolean(view?.phase==="discard"&&view.my_seat===view.declarer);
@@ -521,8 +527,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <label>Игровое поле<select value={localTableTheme} onChange={e=>changeTableTheme(e.target.value as TableTheme|"room")}><option value="room">Как в комнате</option><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Дерево</option><option value="glass">Полупрозрачное</option></select></label>
     {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<label>Поле комнаты по умолчанию<select value={view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} onChange={e=>command("table_theme",{theme:e.target.value})}><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Дерево</option><option value="glass">Полупрозрачное</option></select></label>}
-    <label>Обложка карт<select value={back} onChange={e=>{if(isBackTheme(e.target.value))changeBack(e.target.value);}}><option value="classic">Текущая классическая</option><option value="ornament">Красный орнамент</option><option value="red-blue">Красно-голубая сетка</option><option value="green">Зелёная сетка</option></select></label>
-    <button type="button" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>Полноэкранный режим</button>
+    <fieldset className={styles.backChoices}><legend>Рубашка карт</legend>{([["classic","Текущая классическая"],["ornament","Красный орнамент"],["red-blue","Красно-голубая сетка"],["green","Зелёная сетка"]] as const).map(([value,label])=><button type="button" key={value} aria-pressed={back===value} title={label} onClick={()=>changeBack(value)}><CardBackContext.Provider value={value}><CardArtwork decorative/></CardBackContext.Provider><span>{label}</span></button>)}</fieldset>
     {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
     <small>Для ручной сортировки клавиатурой: Alt + стрелка влево или вправо.</small>
   </div>;
@@ -557,7 +562,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
 </div>
       <div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
-        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div>
+        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}<button type="button" className={styles.fullscreenToggle} aria-label="Полноэкранный режим" title="Полноэкранный режим" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>⛶</button></div>
     </header>
 
     <div className={styles.tableShell}>
@@ -582,14 +587,13 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
           <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} collapsed={collapsed} onCollapse={changeCollapsed} settings={settings} copy={copyInvitation} leave={leaveRoom}
             score={<Notebook view={view} profiles={profiles}/>}
             controls={<><PreferansControls view={view} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
-            last={<PreviousTrick view={view}/>}
             urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat) || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
-              theme={localTableTheme==="room"?view.table_theme??"felt":localTableTheme} serverNow={serverNow} pendingPlay={localPlay}
-              statusLine={`${status|| (view.controls?.paused?"Пауза":statusNames[view.status])} · ${phaseLabel(view.phase)}${isPlay&&view.turn!=null?` · Ход: ${profiles?.[view.turn]?.name||seatNames[view.turn]}`:""}${isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat?" · Управляешь открытой рукой":""}`}
+              theme={localTableTheme==="room"?view.table_theme??"felt":localTableTheme} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+              statusLine={`${dropNotice||status|| (view.controls?.paused?"Пауза":statusNames[view.status])} · ${phaseLabel(view.phase)}${isPlay&&view.turn!=null?` · Ход: ${profiles?.[view.turn]?.name||seatNames[view.turn]}`:""}${isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat?" · Управляешь открытой рукой":""}`}
               hand={ownHand} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}

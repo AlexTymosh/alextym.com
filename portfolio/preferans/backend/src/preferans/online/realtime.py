@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .live_relay import LiveRelay
+from .publish_signal import PublishSignal
 
 PROTOCOL = 1
 TICKET_MS = 30_000
@@ -109,6 +110,7 @@ class RealtimeHub:
     def __init__(self) -> None:
         self.lock = threading.RLock()
         self.commit_lock = threading.RLock()
+        self.publish_signal = PublishSignal()
         self.pending_handshakes = 0
         self.epoch = secrets.token_hex(16)
         self.rooms: dict[str, Room] = {}
@@ -246,6 +248,7 @@ class RealtimeHub:
             r.revision = version
             r.touched = at
             self.metrics["published"] += 1
+        self.publish_signal.notify(room)
 
     def fallback(self, room: str, uid: str, view: dict, at: int) -> None:
         seat = view.get("my_seat")

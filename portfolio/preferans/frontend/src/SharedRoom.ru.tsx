@@ -27,7 +27,6 @@ function RadioArt(){return <svg viewBox="0 0 300 142" aria-hidden="true" classNa
 export function SharedObjects({view,busy,open}:{view:RoomView;busy:boolean;open:(kind:OverlayKind)=>void}){
   return <div className={styles.objects}>
     <button type="button" className={styles.paperButton} disabled={busy||!view.score} onClick={()=>open("score_sheet")} aria-label="Открыть общую пульку"><span aria-hidden="true">╲ │ ╱<br/>──○──<br/> ╱ │ ╲</span>Пулька</button>
-    <button type="button" disabled={busy||!view.last_trick?.length} onClick={()=>open("last_trick")}>Последняя взятка</button>
     <button type="button" className={styles.radioButton} disabled={busy} onClick={()=>open("radio")} aria-label="Открыть магнитофон"><RadioArt/></button>
   </div>;
 }
@@ -77,7 +76,7 @@ export function SharedRoom({view,profiles,busy,command,serverNow,scoreTable}:{vi
       <p>{p.break.ready.map((v,i)=>`${names(i,profiles)}: ${v?"готов":"ожидает"}`).join(" · ")}</p>
       {my!==null&&<button type="button" disabled={busy||!p.enabled} onClick={()=>command("break_ready",{break_id:p.break!.id,ready:!p.break!.ready[my]})}>{p.break.ready[my]?"Отозвать готовность":"Готов продолжить"}</button>}
     </div>}
-    {p.overlay&&<section className={styles.panel} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind}>
+    {p.overlay&&<section className={`${styles.panel} ${p.overlay.kind==="score_sheet"?styles.scoreOverlay:""}`} role={p.overlay.kind==="score_sheet"?"dialog":undefined} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind}>
       <header><div><strong>{labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small></div><button type="button" disabled={busy} onClick={close}>Закрыть</button></header>
       {p.overlay.kind==="score_sheet"&&<><Notebook view={view} profiles={profiles}/><details><summary>Таблица расчётов</summary>{scoreTable}</details></>}
       {p.overlay.kind==="last_trick"&&<><div className={styles.replay}>{(view.last_trick??[]).map(play=><div key={play.owner}><span>{names(play.owner,profiles)}</span><CardArtwork card={play.card}/></div>)}</div><p>Победитель: {names(view.last_trick_winner??0,profiles)}{view.last_trick_suit?` · Масть ${suitSymbol(view.last_trick_suit)}`:""}. Следующий разрешённый ход закроет просмотр.</p></>}

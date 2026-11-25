@@ -37,6 +37,7 @@ export type TableTheme = "felt" | "blue" | "wood" | "glass";
 export type RoomView = {
   table_theme?: TableTheme;
   activity_started_at_ms?: number;
+  /** Legacy transport field; never used for trick replay. */
   last_won_tricks?: (Array<{owner:number;card:Card}> | null)[];
   settlement_options?: {regular_choice:boolean;passout_defaults:Array<"pool"|"hill_first"|"help">};
   room_id: string; version: number;
@@ -52,7 +53,7 @@ export type RoomView = {
   lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number; ruleset_name?: string; ruleset_parameters?: Record<string,number|number[]>; ruleset_snapshot_hash?: string };
   phase?: Phase; turn?: number | null; controller?: number | null;
   dealer?: number; first_hand?: number; is_passout?: boolean; played_tricks?: number;
-  declarer?: number | null; contract?: Bid | null; high_bid?: Bid | null;
+  declarer?: number | null; contract?: Bid | null; high_bid?: Bid | null; winning_bid?: Bid | null;
   auction_calls?: Array<{kind: "bid" | "pass" | "here"; bid: Bid | null} | null>;
   last_trick_winner?: number | null;
   next_deal?: { after_game_id: string; deadline_ms: number | null; remaining_ms: number | null };
@@ -136,6 +137,12 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if(v.winning_bid!==undefined&&v.winning_bid!==null){
+    const bid=v.winning_bid as Bid;
+    if(!bid||typeof bid!=="object"||!["regular","misere","misere_no_widow","ten_no_widow"].includes(bid.kind)||
+      !(bid.level===null||(Number.isInteger(bid.level)&&Number(bid.level)>=6&&Number(bid.level)<=10))||
+      !(bid.suit===null||["S","C","D","H"].includes(bid.suit)))return false;
+  }
   if (v.table_theme !== undefined && !["felt","blue","wood","glass"].includes(String(v.table_theme))) return false;
   if (v.activity_started_at_ms !== undefined && (!Number.isSafeInteger(v.activity_started_at_ms) || Number(v.activity_started_at_ms)<0)) return false;
   if (v.last_won_tricks !== undefined && (!isSeat(v.my_seat) || !Array.isArray(v.last_won_tricks) || v.last_won_tricks.length!==3 || !v.last_won_tricks.every(t=>t===null||(Array.isArray(t)&&t.length===3&&t.every(p=>p&&isSeat(p.owner)&&p.card&&["S","C","D","H"].includes(p.card.suit)&&Number.isInteger(p.card.rank)&&p.card.rank>=7&&p.card.rank<=14))))) return false;
