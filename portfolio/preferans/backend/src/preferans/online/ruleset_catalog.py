@@ -77,7 +77,7 @@ def base() -> dict:
     return {
         "id": BASE_ID,
         "version": 1,
-        "name": "Преферанс по-запорожски — Классический",
+        "name": "\u041f\u0440\u0435\u0444\u0435\u0440\u0430\u043d\u0441 \u043f\u043e-\u0437\u0430\u043f\u043e\u0440\u043e\u0436\u0441\u043a\u0438 — \u041a\u043b\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043a\u0438\u0439",
         "description": "",
         "parameters": parameters(Ruleset()),
         "policy": BASE_POLICY.copy(),
