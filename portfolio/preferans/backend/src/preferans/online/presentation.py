@@ -5,7 +5,7 @@ from __future__ import annotations
 from .pause_clock import reasons, transition
 
 ACTIONS = frozenset({"overlay_open", "overlay_close", "break_start", "break_ready", "music"})
-OVERLAYS = frozenset({"score_sheet", "radio", "last_trick", "widow_replay"})
+OVERLAYS = frozenset({"score_sheet", "radio", "last_trick", "widow_replay", "discard_replay"})
 TRACK_MS = 12_000
 TRACK_COUNT = 2
 
@@ -79,6 +79,13 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
             raise PresentationError(409, "No completed trick")
         if kind == "widow_replay" and not (game and game.widow_revealed > 0):
             raise PresentationError(409, "No public widow")
+        if kind == "discard_replay" and not (
+            game
+            and game.declarer == seat
+            and len(game.discarded) == 2
+            and room["status"] == "playing"
+        ):
+            raise PresentationError(403, "Only the declarer may review the discard")
         p["overlay"] = {
             "kind": kind,
             "id": rev,

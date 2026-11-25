@@ -6,7 +6,10 @@ No private game document or account email is read for either operation.
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
+
+from .realtime import enabled as realtime_enabled, hub
 
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -49,6 +52,8 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
         .stream(timeout=5.0)
     )
     result: dict[str, tuple[int, dict]] = {}
+    cached_names: dict[str, str | None] = {}
+    at = int(time.time() * 1000)
     for row in [*mine[:LIMIT], *waiting[:LIMIT]]:
         room = row.to_dict()
         if not _valid_room(room) or room["status"] in {"closed", "archived"}:
@@ -57,6 +62,25 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
         if not own and not (room["status"] == "lobby" and None in room["seats"]):
             continue
         created = room.get("created_at_ms")
+        waiting_names = []
+        # Only live, accessible lobbies. Bound extra reads per request and never
+        # disclose UIDs, avatars or account email through the directory.
+        if room["status"] == "lobby" and realtime_enabled():
+            for seat, seen in zip(room["seats"], hub.presence(room["id"], room["seats"], at)):
+                if seat is None or seen is None:
+                    continue
+                if seat not in cached_names and len(cached_names) < 30:
+                    try:
+                        snap = (
+                            db.collection("portfolio_lab_profiles").document(seat).get(timeout=5.0)
+                        )
+                        cached_names[seat] = profile_projection(
+                            snap.to_dict() if snap.exists else None
+                        )["name"]
+                    except Exception:
+                        cached_names[seat] = None
+                if cached_names.get(seat):
+                    waiting_names.append(cached_names[seat])
         result[room["id"]] = (
             created if type(created) is int else 0,
             {
@@ -64,6 +88,9 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
                 "status": room["status"],
                 "occupied": [s is not None for s in room["seats"]],
                 "mine": own,
+                "created_at_ms": created if type(created) is int and created > 0 else None,
+                "daily_number": room.get("daily_number"),
+                "waiting_names": waiting_names,
             },
         )
     rooms = [

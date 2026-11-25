@@ -1191,3 +1191,5 @@ p {
     padding: 12px;
   }
 }
+
+.site-main[data-preferans="true"] { width: 100%; max-width: none; padding: 8px 0 24px; min-width: 0; }

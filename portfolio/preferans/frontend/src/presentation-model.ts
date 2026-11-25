@@ -1,5 +1,5 @@
 import type { RoomView } from "./game-model.ru";
-export type OverlayKind = "score_sheet" | "radio" | "last_trick" | "widow_replay";
+export type OverlayKind = "score_sheet" | "radio" | "last_trick" | "widow_replay" | "discard_replay";
 export type SharedAction = "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music";
 export type Music = { track: number; playing: boolean; offset_ms: number; changed_at_ms: number };
 export type Presentation = {
@@ -14,7 +14,7 @@ export function isPresentation(x:unknown): x is Presentation {
   if (!x || typeof x!=="object") return false;
   const p=x as Presentation;
   return int(p.revision)&&typeof p.enabled==="boolean"&&int(p.server_now_ms)&&
-    (p.overlay===null || (!!p.overlay && ["score_sheet","radio","last_trick","widow_replay"].includes(p.overlay.kind)&&int(p.overlay.id)&&p.overlay.id<=p.revision&&[0,1,2].includes(p.overlay.seat)&&int(p.overlay.opened_at_ms)&&(p.overlay.game_id===null||typeof p.overlay.game_id==="string")))&&
+    (p.overlay===null || (!!p.overlay && ["score_sheet","radio","last_trick","widow_replay","discard_replay"].includes(p.overlay.kind)&&int(p.overlay.id)&&p.overlay.id<=p.revision&&[0,1,2].includes(p.overlay.seat)&&int(p.overlay.opened_at_ms)&&(p.overlay.game_id===null||typeof p.overlay.game_id==="string")))&&
     (p.break===null || (!!p.break&&int(p.break.id)&&p.break.id<=p.revision&&Array.isArray(p.break.ready)&&p.break.ready.length===3&&p.break.ready.every(v=>typeof v==="boolean")))&&
     !!p.music&&int(p.music.track)&&p.music.track<TRACKS.length&&typeof p.music.playing==="boolean"&&int(p.music.offset_ms)&&p.music.offset_ms<TRACK_MS&&int(p.music.changed_at_ms);
 }

@@ -311,6 +311,15 @@ def adjust_score(
         "game_version": version,
         "deal_id": deal_id,
     }
+    if "score_sheet_adjustments" not in control and control.get("adjustments"):
+        control["score_sheet_legacy"] = True
+    control["score_sheet_adjustments"] = [
+        *control.get("score_sheet_adjustments", []),
+        {
+            **{key: event[key] for key in ("field", "seat", "against", "delta", "game_version")},
+            "ledger_sequence": len(score.entries),
+        },
+    ]
     control["adjustments"] = [*control.get("adjustments", [])[-19:], event]
     return next_score, event
 

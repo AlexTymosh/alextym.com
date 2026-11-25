@@ -7,20 +7,23 @@ import {
   sendCommand, settleRoom, startRoom,
 } from "./room-client";
 import {
-  allowedToAct, cardId, cardLabel, moveCard,
+  allowedToAct, cardId, cardLabel,
   phaseLabel, ROOM_ID_RE, statusMessage,
   type Card, type CommandAction, type RoomInvitation, type RoomView,
 } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
 import { PreferansControls } from "./PreferansControls.ru";
-import { PreferansHistory } from "./PreferansHistory.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
 import { CardArtwork } from "./CardArtwork.ru";
 import { GameTable, PreviousTrick } from "./GameTable.ru";
 import { SharedRoom, SharedObjects, type SharedCommand } from "./SharedRoom.ru";
 import { replayMoveAllowed, type OverlayKind } from "./presentation-model";
-import { ProjectSidebar } from "./ProjectSidebar.ru";
+import { ProjectSidebar as ImmersiveMenu } from "./ProjectSidebar.ru";
+import { Deck } from "./Deck.ru";
+import { Notebook } from "./Notebook.ru";
+import { CardBackContext } from "./CardBackTheme";
+import { type BackTheme, type DragIntent, isBackTheme, legalDrop, matchingDrag, mayStart, mayPassDeck, dealerFor, changeDraft } from "./table-interaction";
 import { Lobby } from "./Lobby.ru";
 import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
 import { LobbySetup } from "./LobbySetup.ru";
@@ -42,18 +45,20 @@ const statusNames: Record<RoomView["status"], string> = {
   awaiting_settlement: "Подсчёт результатов", between: "Между раздачами", closed: "Партия завершена", archived: "Партия архивирована",
 };
 
-function CardFace({ card, selected, playable, onClick, onDragStart, onDragOver, onDrop }: {
+function CardFace({ card, selected, playable, onClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
   card: Card; selected?: boolean; playable?: boolean; onClick?: () => void;
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void;
   onDragOver?: (event: DragEvent<HTMLButtonElement>) => void;
   onDrop?: (event: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd?: ()=>void;
+  onKeyDown?: (event: import("react").KeyboardEvent<HTMLButtonElement>)=>void;
 }) {
   const red = card.suit === "D" || card.suit === "H";
   return (
     <button type="button" className={`${styles.playingCard} ${red ? styles.red : ""} ${selected ? styles.selected : ""} ${playable ? styles.playable : ""}`}
       aria-label={`${cardLabel(card)}${selected ? ", выбрана" : ""}`}
       aria-pressed={Boolean(selected)} disabled={!onClick && !onDragStart} onClick={onClick}
-      draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop}
+      draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onKeyDown={onKeyDown}
       data-card={cardId(card)}>
       <CardArtwork card={card} decorative />
     </button>
@@ -105,8 +110,8 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
   }
   if (view.status === "lobby" || view.status === "between") {
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
-      <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Новую раздачу запускает администратор комнаты.</p>
-      {view.room_admin && <button type="button" className={styles.primary} disabled={busy || Boolean(view.seat_swap) || Boolean(view.controls?.paused) || view.occupied.some(x => !x) || Boolean(view.status === "lobby" && view.lobby_setup && !view.lobby_setup.ready.every(Boolean))} onClick={onStart}>Раздать карты</button>}
+      <p>Занято мест: {view.occupied.filter(Boolean).length} из 3. Перетащи колоду в центр или воспользуйся кнопкой раздачи.</p>
+      {(view.room_admin || (view.status==="lobby"&&view.lobby_setup?.dealer===view.my_seat)) && <button type="button" className={styles.primary} disabled={busy || !mayStart(view)} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
   if (view.status === "awaiting_settlement") {
@@ -136,7 +141,7 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
       <BidPanel key={`${view.game_id}:auction`} view={view} busy={busy} command={command}/>
     </>}
     {view.phase === "discard" && <>
-      <p>Выбери две карты для скрытого сноса. Выбрано: {selectedCards.length}/2.</p>
+      <p>Перетащи две карты в снос. Можно вернуть их до подтверждения. Выбрано: {selectedCards.length}/2.</p>
       <button type="button" className={styles.primary} disabled={busy || selectedCards.length !== 2}
         onClick={() => command("discard", { cards: selectedCards })}>Снести две карты</button>
     </>}
@@ -162,11 +167,11 @@ function ActionPanel({ view, busy, selectedCards, selectedCard, command,
       </div>
     </>}
     {(view.phase === "play" || view.phase === "opening_lead") && <>
-      <p>Ходит рука {seatNames[view.turn ?? 0]}. Выбери разрешённую карту и подтверди ход.</p>
-      <button type="button" className={styles.primary} disabled={busy || !selectedCard || !(view.legal_cards ?? []).some(c => cardId(c) === cardId(selectedCard))}
+      <p>Ходит рука {seatNames[view.turn ?? 0]}. Перетащи разрешённую карту на стол.</p>
+      {selectedCard&&<button type="button" className={styles.primary} disabled={busy || !(view.legal_cards ?? []).some(c => cardId(c) === cardId(selectedCard))}
         onClick={() => selectedCard && command("play", { card: selectedCard, owner: view.turn })}>
-        Сыграть {selectedCard ? cardLabel(selectedCard) : "карту"}
-      </button>
+        Сыграть {cardLabel(selectedCard)}
+      </button>}
     </>}
     {concede}
   </section>;
@@ -187,7 +192,6 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const [rtReady, setRtReady] = useState(false);
   const [rtPresence, setRtPresence] = useState<Presence[] | null>(null);
   const [profileState, setProfileState] = useState<{ room: string; seats: string; profiles: SeatProfile[] } | null>(null);
-  const [lobbyHistory, setLobbyHistory] = useState(false);
   const occupiedKey = view ? `${view.occupied.map(v => v ? "1" : "0").join("")}:${view.seat_revision ?? 0}` : "";
   const profileRoom = view && view.my_seat !== null ? view.room_id : "";
   const profiles = profileState && profileState.room === profileRoom && profileState.seats === occupiedKey ? profileState.profiles : null;
@@ -219,7 +223,16 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   };
   const [regularRoute, setRegularRoute] = useState<"pool" | "hill_first">("pool");
   const [passoutRoutes, setPassoutRoutes] = useState<Array<"pool" | "hill_first" | "help">>(["pool", "pool", "pool"]);
-  const dragging = useRef<string | null>(null);
+  const dragging = useRef<DragIntent | null>(null);
+  const inFlight = useRef(false);
+  const [back,setBack] = useState<BackTheme>("classic");
+  const [collapsed,setCollapsed] = useState(false);
+  const [peekDiscard,setPeekDiscard] = useState(false);
+  const themeKey = preferenceScope ? `preferans:back:${preferenceScope}` : null;
+  const menuKey = preferenceScope ? `preferans:menu:${preferenceScope}` : null;
+  useEffect(()=>{try { const saved=themeKey?localStorage.getItem(themeKey):null; if(isBackTheme(saved))setBack(saved); if(menuKey)setCollapsed(localStorage.getItem(menuKey)==="collapsed"); } catch { /* Optional preference. */ }},[themeKey,menuKey]);
+  const changeBack=(value:BackTheme)=>{setBack(value);if(themeKey)try{localStorage.setItem(themeKey,value);}catch{/* Optional preference. */}};
+  const changeCollapsed=()=>{const value=!collapsed;setCollapsed(value);if(menuKey)try{localStorage.setItem(menuKey,value?"collapsed":"expanded");}catch{/* Optional preference. */}};
 
   const updateView = useCallback((next: RoomView) => {
     if (activeRoomRef.current !== next.room_id) return;
@@ -375,13 +388,14 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   }, [roomId, view?.my_seat, nextDeadline, rtReady]);
 
   useEffect(() => {
-    setSelected([]);
+    setSelected([]); setPeekDiscard(false); dragging.current=null;
   }, [view?.room_id, view?.game_id, view?.phase, view?.turn, view?.controller, view?.played_tricks]);
 
   useEffect(() => { setOrder([]); }, [view?.room_id, view?.game_id]);
 
   const mutate = useCallback(async (label: string, run: () => Promise<unknown>) => {
-    if (busy) return;
+    if (busy || inFlight.current) return;
+    inFlight.current=true;
     setBusy(true); setStatus("");
     const candidate = { label, run };
     setPending(candidate);
@@ -398,7 +412,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       setStatus(statusMessage(code));
       if ([401, 403, 404, 409, 422].includes(code)) setPending(null);
       if (code === 409) setPollKey(v => v + 1);
-    } finally { setBusy(false); }
+    } finally { inFlight.current=false; setBusy(false); }
   }, [busy, openRoom, roomId]);
 
   const create = () => {
@@ -411,7 +425,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     void mutate("вход в комнату", () => joinRoom(invited.room_id, token, invited.version));
   };
   const start = () => {
-    if (!view) return;
+    if (!view || !mayStart(view)) return;
     const token = newKey();
     void mutate("раздача карт", () => startRoom(view.room_id, token, view.version));
   };
@@ -452,12 +466,36 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     setSelected(current => isPlay ? [id] : current.includes(id)
       ? current.filter(x => x !== id) : current.length < 2 ? [...current, id] : current);
   };
+  const beginDrag=(e:DragEvent,kind:DragIntent["kind"],card?:Card,owner?:number)=>{
+    if(!view||busy){e.preventDefault();return;}
+    const scope={room:view.room_id,game:view.game_id,version:view.version};
+    if(kind==="deck") dragging.current={kind,...scope};
+    else if(card&&kind==="card"&&owner!==undefined) dragging.current={kind,...scope,id:cardId(card),owner};
+    else if(card&&kind==="discard") dragging.current={kind,...scope,id:cardId(card)};
+    else {e.preventDefault();return;}
+    e.dataTransfer.setData("text/plain","preferans");e.dataTransfer.effectAllowed="move";
+  };
+  const endDrag=()=>{dragging.current=null;};
+  const takeDrag=(e:DragEvent)=>{e.preventDefault();e.stopPropagation();const drag=dragging.current;dragging.current=null;return view&&!busy&&matchingDrag(drag,view)?drag:null;};
   const renderOpenCard = (card: Card, seat: Seat) => {
     const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
     return <CardFace card={card} selected={selected.includes(cardId(card)) && playable} playable={playable}
-      onClick={playable ? () => onCardSelect(card) : undefined}/>;
+      onClick={playable ? () => onCardSelect(card) : undefined} onDragStart={playable?e=>beginDrag(e,"card",card,seat):undefined} onDragEnd={endDrag}/>;
   };
-  const reorder = (from: string, to: string) => setOrder(moveCard(hand.map(cardId), from, to));
+  const reorder = (from:string,to:string) => {
+    const ids=hand.map(cardId), a=ids.indexOf(from), b=ids.indexOf(to);
+    if(a<0||b<0||a===b)return;
+    ids.splice(a,1);ids.splice(b,0,from);setOrder(ids);
+  };
+  const tableDrop=(e:DragEvent)=>{
+    const drag=takeDrag(e);if(!view||!drag)return;
+    if(drag.kind==="deck"&&view.my_seat===dealerFor(view)&&mayStart(view)){start();return;}
+    const card=legalDrop(view,drag);if(card)command("play",{card,owner:view.turn});
+  };
+  const seatDrop=(seat:Seat,e:DragEvent)=>{const drag=takeDrag(e);if(view&&drag?.kind==="deck"&&mayPassDeck(view,seat))command("dealer_pass",{dealer:seat});};
+  const draft=Boolean(view?.phase==="discard"&&view.my_seat===view.declarer);
+  const discardDrop=(e:DragEvent)=>{const drag=takeDrag(e);if(view&&draft&&canInteractCards&&drag?.kind==="card"&&drag.owner===view.my_seat&&hand.some(c=>cardId(c)===drag.id))setSelected(old=>changeDraft(old,drag.id,true));};
+  const handDrop=(e:DragEvent,target?:string)=>{const drag=takeDrag(e);if(!view||!drag)return;if(drag.kind==="discard"&&draft&&canInteractCards)setSelected(old=>changeDraft(old,drag.id,false));else if(drag.kind==="card"&&drag.owner===view.my_seat&&target)reorder(drag.id,target);};
   const copyInvitation = () => {
     if (!roomId) return;
     void navigator.clipboard.writeText(window.location.href).then(() => setStatus("Ссылка скопирована."))
@@ -468,31 +506,36 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if (view?.presentation) command(action, { ...args, presentation_version: view.presentation.revision });
   };
   const openShared = (kind: OverlayKind) => shared("overlay_open", {kind});
+  const visibleHand=draft?hand.filter(c=>!selected.includes(cardId(c))):hand;
+  const settings=<div className={styles.settingsPanel}>
+    <label>Сортировка <select aria-label="Сортировка карт" value={sortMode} onChange={e=>changeSort(e.target.value==="suit"?"suit":"grouped")}><option value="grouped">По длине масти</option><option value="suit">По порядку мастей</option></select></label>
+    <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
+    <label>Обложка карт<select value={back} onChange={e=>{if(isBackTheme(e.target.value))changeBack(e.target.value);}}><option value="classic">Текущая классическая</option><option value="ornament">Красный орнамент</option><option value="red-blue">Красно-голубая сетка</option><option value="green">Зелёная сетка</option></select></label>
+    <button type="button" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>Полноэкранный режим</button>
+    {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
+    <small>Для ручной сортировки клавиатурой: Alt + стрелка влево или вправо.</small>
+  </div>;
   const ownHand = view && <div className={styles.handsPanel}>
-    <div className={styles.handTitle}><h3>Твоя рука</h3>
-      <label>Сортировка <select aria-label="Сортировка карт" value={sortMode} onChange={e => changeSort(e.target.value === "suit" ? "suit" : "grouped")}>
-        <option value="grouped">По длине масти</option><option value="suit">По порядку мастей</option>
-      </select></label>
-      <button type="button" onClick={() => setOrder([])}>Автосортировка</button>
-      {isPlay && view.turn !== view.my_seat && view.controller === view.my_seat && <span>Ты управляешь открытой рукой соперника. Выбери карту на его месте.</span>}
-    </div>
-    <div className={styles.handRow} aria-label="Игровые карты">
-      {hand.map((card, index) => <div data-hand-card="true" className={styles.cardWithSort} key={cardId(card)}>
-        <CardFace card={card} selected={ownPlayable && selected.includes(cardId(card))} playable={ownPlayable && (view.phase === "discard" || legal.has(cardId(card)))}
-          onClick={ownPlayable && (view.phase === "discard" || legal.has(cardId(card))) ? () => onCardSelect(card) : undefined}
-          onDragStart={e => { dragging.current = cardId(card); e.dataTransfer.effectAllowed = "move"; }}
-          onDragOver={e => e.preventDefault()}
-          onDrop={e => { e.preventDefault(); if (dragging.current) reorder(dragging.current, cardId(card)); dragging.current = null; }} />
-        <div className={styles.sortControls}>
-          <button type="button" aria-label={`Переместить ${cardLabel(card)} влево`} disabled={index === 0} onClick={() => reorder(cardId(card), cardId(hand[index - 1]))}>‹</button>
-          <button type="button" aria-label={`Переместить ${cardLabel(card)} вправо`} disabled={index === hand.length - 1} onClick={() => reorder(cardId(card), cardId(hand[index + 1]))}>›</button>
-        </div>
+    {isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat&&<small>Ты управляешь открытой рукой соперника.</small>}
+    {draft&&<div className={styles.discardSlots} aria-label="Зона сноса" onDragOver={e=>e.preventDefault()} onDrop={discardDrop}>
+      {[0,1].map(i=>{const card=chosenCards[i];return <button key={i} type="button" className={styles.discardSlot} aria-label={card?`Вернуть карту ${cardLabel(card)} в руку`:"Место для сноса"} disabled={!card||!canInteractCards} draggable={!!card&&canInteractCards} onDragStart={e=>card&&beginDrag(e,"discard",card)} onDragEnd={endDrag} onClick={()=>card&&setSelected(old=>changeDraft(old,cardId(card),false))}>{card?<CardArtwork card={peekDiscard?card:undefined}/>:"+"}</button>;})}
+      <button type="button" aria-label="Посмотреть выбранный снос" aria-pressed={peekDiscard} onClick={()=>setPeekDiscard(v=>!v)}>◉</button>
+    </div>}
+    {!draft&&view.own_discard?.length===2&&<div className={styles.discardSlots} aria-label="Сброшенные карты">
+      {view.own_discard.map((c,i)=><button type="button" className={styles.discardSlot} key={i} aria-label="Посмотреть свой снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><CardArtwork card={!view.presentation?.enabled&&peekDiscard?c:undefined}/></button>)}
+    </div>}
+    <div className={styles.handRow} aria-label="Игровые карты" onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e)}>
+      {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
+        <CardFace card={card} selected={!draft&&ownPlayable&&selected.includes(cardId(card))} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
+          onClick={ownPlayable&&(draft||legal.has(cardId(card)))?()=>onCardSelect(card):undefined}
+          onDragStart={e=>beginDrag(e,"card",card,view.my_seat??undefined)} onDragEnd={endDrag}
+          onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e,cardId(card))}
+          onKeyDown={e=>{if(e.altKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){const target=visibleHand[index+(e.key==="ArrowLeft"?-1:1)];if(target){e.preventDefault();reorder(cardId(card),cardId(target));}}}}/>
       </div>)}
-      {!hand.length && <span className={styles.subtle}>Нет карт для отображения</span>}
+      {!visibleHand.length&&<span className={styles.subtle}>Нет карт для отображения</span>}
     </div>
   </div>;
   const actions = view && <>
-    <ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/>
     {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
     {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
     <ActionPanel view={view} busy={busy} selectedCards={chosenCards}
@@ -500,13 +543,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       passoutRoutes={passoutRoutes} setPassoutRoute={(seat, val) => setPassoutRoutes(old => old.map((v, i) => i === seat ? val : v))}
       onStart={start} onSettle={settle} />
   </>;
-  const rules = <section className={styles.panel}><h3>Правила партии</h3>
-    <p>Ставка в торговле — минимальная. После прикупа заказчик объявляет окончательный контракт.</p>
-    <p>В свой ход доступны только действия и карты, разрешённые сервером. Ходы подтверждаются отдельно.</p>
-    <p>Для отмены последнего хода нужны два согласия. Счётчик ставит соперник; задержка и штраф подтверждаются сервером.</p>
-    <p>{rtReady ? "Обновление в реальном времени." : REALTIME_ENABLED ? "Резервное обновление примерно каждые 20 секунд." : "Обновление примерно каждые 8 секунд во время игры."} Не передавай ссылку посторонним.</p>
-  </section>;
-  return <main className={`${styles.root} ${styles.tableRoot}`}>
+  return <CardBackContext.Provider value={back}><main className={`${styles.root} ${styles.tableRoot}`}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
         <p className={styles.headerSub}>Три игрока. Твои карты видишь только ты. Все решения проверяет сервер.</p></div>
@@ -514,16 +551,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div>
     </header>
 
-    {(liveMedia.state.joined || liveMedia.state.joining) && <div className={styles.actions}>
-      <button type="button" onClick={liveMedia.leave}>Отключить камеру, микрофон и звонок</button>
-    </div>}
     <div className={styles.tableShell}>
         {!roomId && <><Lobby roomInput={roomInput} setRoomInput={setRoomInput} openRoom={openRoom} create={create} busy={busy}/>
-          <button type="button" aria-expanded={lobbyHistory} onClick={() => setLobbyHistory(v => !v)}>История и рейтинг</button>
-          {lobbyHistory && <PreferansHistory/>}</>}
+          <button type="button" onClick={()=>window.open("/portfolio/preferans?view=history","_blank","noopener,noreferrer")}>История и рейтинг</button></>}
 
-        {roomId && <section className={styles.roomBar} aria-label="Комната">
-          <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{view ? statusNames[view.status] : invited ? "Приглашение" : "Подключение…"}</span></div>
+        {roomId && !view && <section className={styles.roomBar} aria-label="Комната">
+          <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{invited ? "Приглашение" : "Подключение…"}</span></div>
           <div className={styles.actions}>
             <button type="button" onClick={copyInvitation}>Скопировать приглашение</button>
             <button type="button" onClick={leaveRoom}>К выбору комнаты</button>
@@ -537,32 +570,29 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         </section>}
 
         {view && <>
-          <div className={styles.gameHead}>
-            <div><span className={styles.eyebrow}>{statusNames[view.status]}</span><h2>{phaseLabel(view.phase)}</h2>
-              <p>{view.my_seat !== null ? `Твоё место: ${profiles?.[view.my_seat]?.name || seatNames[view.my_seat]}` : "Ты наблюдаешь без доступа к чужим картам."}</p></div>
-            <div className={styles.gameBadges}><span>Версия {view.version}</span></div>
-          </div>
-          <ProjectSidebar key={view.room_id} active={view.status !== "lobby"} rules={rules}
-            score={<ScoreBoard view={view}/>} history={<PreferansHistory refreshKey={view.status === "closed" ? view.version : 0}/>}
-            controls={<PreferansControls view={view} busy={busy} command={command} adjust={adjust}/>}
+          <p className={styles.roomStatus}>{statusNames[view.status]} · {phaseLabel(view.phase)}</p>
+          <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} collapsed={collapsed} onCollapse={changeCollapsed} settings={settings} copy={copyInvitation} leave={leaveRoom}
+            score={<Notebook view={view} profiles={profiles}/>}
+            controls={<><PreferansControls view={view} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
             last={<PreviousTrick view={view}/>}
-            urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat))}
+            urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat) || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
-              hand={ownHand} actions={actions} renderOpenCard={renderOpenCard}
+              hand={ownHand} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
+              deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
+              localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}
               mediaForSeat={LIVE_MEDIA_ENABLED && !archived && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
               objects={view.presentation?.enabled ? <SharedObjects view={view} busy={busy} open={openShared}/> : undefined}
-              onWidow={view.presentation?.enabled ? () => openShared("widow_replay") : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
               sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} scoreTable={<ScoreBoard view={view}/>}/>}/>
-          </ProjectSidebar>
+          </ImmersiveMenu>
         </>}
     </div>
     {(status || pending || busy) && <div className={styles.notification} role="status" aria-live="polite">
       {busy ? "Операция выполняется…" : status}
       {!busy && pending && <button type="button" onClick={() => void mutate(pending.label, pending.run)}>Повторить операцию</button>}
     </div>}
-  </main>;
+  </main></CardBackContext.Provider>;
 }

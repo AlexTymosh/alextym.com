@@ -7,3 +7,8 @@
 .tile audio { display:none; }
 .tile button { font-size:.72rem; min-height:32px; }
 @media(max-width:900px) and (orientation:landscape) { .tile video { width:clamp(55px,9vw,100px); } }
+
+.tile { position:absolute; inset:0; justify-content:flex-end; gap:0; pointer-events:none; }
+.tile video { position:absolute; inset:0; width:100%; height:100%; aspect-ratio:16/9; border:0; border-radius:6px; object-fit:cover; }
+.tile small { z-index:1; padding:2px 4px; background:#142d25bb; border-radius:4px; }
+.tile button { pointer-events:auto; z-index:2; }

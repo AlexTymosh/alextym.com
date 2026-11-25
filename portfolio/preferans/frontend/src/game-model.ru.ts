@@ -58,6 +58,8 @@ export type RoomView = {
   open_hands?: Array<{ seat: number; cards: Card[] }>;
   widow?: Card[]; defense?: Array<string | null>; mode?: string | null;
   tricks_won?: number[]; score?: Score; end_reason?: string | null;
+  score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][]};
+  discard_count?: 2; own_discard?: Card[];
 };
 export type RoomInvitation = {
   room_id: string; version: number; status: "lobby"; occupied: boolean[];
@@ -65,7 +67,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -129,6 +131,14 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if (v.discard_count !== undefined && (v.discard_count !== 2 || v.status !== "playing" || !isSeat(v.my_seat))) return false;
+  if (v.own_discard !== undefined && (v.discard_count !== 2 || v.my_seat !== v.declarer || !Array.isArray(v.own_discard) || v.own_discard.length !== 2 || !v.own_discard.every(c=>c && typeof c === "object" && ["S","C","D","H"].includes(c.suit) && Number.isInteger(c.rank) && c.rank>=7 && c.rank<=14))) return false;
+  if (v.score_sheet !== undefined) {
+    const s = v.score_sheet as RoomView["score_sheet"];
+    const row = (x:unknown):boolean => Array.isArray(x) && x.every(n=>Number.isSafeInteger(n));
+    const rows = (x:unknown):boolean => Array.isArray(x) && x.length===3 && x.every(row);
+    if (!s || typeof s.exact!=="boolean" || !rows(s.hill) || !rows(s.pool) || !Array.isArray(s.vists) || s.vists.length!==3 || !s.vists.every(rows)) return false;
+  }
   if (v.seat_revision !== undefined && (!Number.isSafeInteger(v.seat_revision) || Number(v.seat_revision) < 0 || !isSeat(v.my_seat))) return false;
   if (v.seat_swap !== undefined && (v.status !== "lobby" || !isSeat(v.my_seat) || !isSeatSwap(v.seat_swap))) return false;
   if (v.sheet_loser !== undefined && (!isSeat(v.sheet_loser) || v.status !== "closed" || v.hand !== undefined || v.legal_cards !== undefined)) return false;

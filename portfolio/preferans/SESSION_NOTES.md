@@ -10,3 +10,11 @@ Version 2.7 | 2026-11-24 | Project only.
 ## 2026-11-25 — PR14 final workflows candidate
 
 PR14.B1 is merged in the pinned base. PR14.B2–B4 implementation candidate and PR14.C acceptance checklist: see `docs/PR14_FINAL_WORKFLOWS.ru.md`. Full CI, emulator, real-device soak and release approval remain pending. No production flags changed.
+
+## 2026-11-25 — PR15 immersive table candidate
+
+Base: `e1abf5b5de47e7582f94f37086cd1846c123e380` (PR #286 merged). One PR, logical commits. See `docs/PR15_IMMERSIVE_TABLE.ru.md` for new UI, privacy, dealer and notebook decisions. The original game engine and scoring formula remain unchanged. Installer uses exact base and unique anchors; isolated checks do not establish full CI or production acceptance. Owner must verify the full checkout, Firebase Emulator, three-client interactions, card artwork and notebook appearance. PR14.C / G10 release evidence remains pending. No remote mutation or production flag changes.
+
+## 2026-11-25 - PR15 CI corrections (PR #287)
+
+CI run 45621397635 stopped at Ruff formatting, frontend typecheck and the website shell boundary check. The patch removes unreachable room-view access in the invitation bar and preserves the static site-main class with a route-scoped data attribute for the Preferans width. Ruff formatting must be applied with uv. The Cyrillic guard passed all eight tests. Full backend tests, frontend build and browser tests are still required. No change to production flags or game rules. Local verification may use direct uv, Node, npm and Docker commands without Task.

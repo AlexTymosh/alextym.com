@@ -70,7 +70,7 @@ export function MediaSeatTile({media,seat,own}:{media:LiveMedia;seat:number;own:
   },[stream,hear]);
   if(!s.joined||!member)return null;
   const status=s.connections[seat];
-  return <div className={styles.tile} data-live-seat={seat} aria-label={`Связь: игрок ${seat+1}`}>
+  return <div className={styles.tile} data-live-seat={seat} data-has-video={showVideo?"true":"false"} aria-label={`Связь: игрок ${seat+1}`}>
     {showVideo&&<video ref={video} autoPlay muted playsInline aria-label={`Камера игрока ${seat+1}`}/>}
     {hear&&<><audio ref={audio} autoPlay />{blocked&&<button type="button" onClick={()=>{void audio.current?.play().then(()=>setBlocked(false),()=>setBlocked(true));}}>Включить звук</button>}</>}
     <small>{(own?s.audio:member.audio)?"Микрофон включён":"Микрофон выключен"}{!own&&status&&status!=="connected"?" · связь не установлена":""}</small>

@@ -5,6 +5,7 @@ export type Seat = 0 | 1 | 2;
 export type SeatProfile = { name: string | null; avatar: string | null };
 export type RoomSummary = {
   room_id: string; status: RoomView["status"]; occupied: boolean[]; mine: boolean;
+  created_at_ms?: number|null; daily_number?: number|null; waiting_names?: string[];
 };
 export const validSeat = (seat: unknown): seat is Seat => seat === 0 || seat === 1 || seat === 2;
 
@@ -61,7 +62,10 @@ export function safeDirectory(value: unknown): { rooms: RoomSummary[]; can_creat
     if (!item || typeof item !== "object" || typeof item.room_id !== "string" || !/^[a-f0-9]{32}$/.test(item.room_id) ||
       !["lobby", "playing", "awaiting_settlement", "between", "closed"].includes(item.status) ||
       !Array.isArray(item.occupied) || item.occupied.length !== 3 || !item.occupied.every((x: unknown) => typeof x === "boolean") || typeof item.mine !== "boolean") return null;
-    rooms.push({ room_id: item.room_id, status: item.status, occupied: item.occupied.slice(), mine: item.mine });
+    rooms.push({ room_id: item.room_id, status: item.status, occupied: item.occupied.slice(), mine: item.mine,
+      created_at_ms:Number.isSafeInteger(item.created_at_ms)&&item.created_at_ms>0?item.created_at_ms:null,
+      daily_number:Number.isSafeInteger(item.daily_number)&&item.daily_number>0?item.daily_number:null,
+      waiting_names:Array.isArray(item.waiting_names)?item.waiting_names.filter((x:unknown)=>typeof x==="string"&&x.length<=160&&!/[@\u0000-\u001f\u007f-\u009f]/.test(x)).slice(0,3):[] });
   }
   return { rooms, can_create: v.can_create, truncated: v.truncated };
 }

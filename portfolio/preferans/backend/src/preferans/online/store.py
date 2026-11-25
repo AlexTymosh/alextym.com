@@ -41,6 +41,7 @@ from preferans.online.controls import (
 )
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
+from preferans.online.table_presentation import room_day
 from preferans.online.seat_swap import (
     ACTIONS as SWAP_ACTIONS,
     SeatSwapError,
@@ -159,7 +160,14 @@ class FirestoreRooms:
                 if previous.get("fingerprint") != identity:
                     raise StoreError(409, "Conflicting idempotency key")
                 return previous["response"]
+            created = self.now_ms()
+            day = room_day(created)
+            daily_ref = self.db.collection("preferans_room_days").document(day)
+            daily = _get(transaction, daily_ref) or {"last": 0}
+            number = daily["last"] + 1
             room = {
+                "day": day,
+                "daily_number": number,
                 "id": room_id,
                 "admin_uid": uid,
                 "seats": [uid, None, None],
@@ -167,12 +175,13 @@ class FirestoreRooms:
                 "version": 0,
                 "game_id": None,
                 "dealer": None,
-                "created_at_ms": self.now_ms(),
+                "created_at_ms": created,
             }
             if require_ready:
                 room["lobby_setup"] = {"ready": [False, False, False], "dealer": 2}
             result = {"room_id": room_id, "version": 0, "my_seat": 0, "status": "lobby"}
             transaction.create(doc, room)
+            transaction.set(daily_ref, {"last": number})
             transaction.create(
                 private,
                 {
@@ -427,8 +436,19 @@ class FirestoreRooms:
             elif action == "archive":
                 if not owner:
                     raise StoreError(403, "Owner required")
+            elif action == "start":
+                _member(room, uid, admin=True, owner=owner)
+                setup = room.get("lobby_setup") if room["status"] == "lobby" else None
+                dealer = setup.get("dealer") if setup else None
+                selected = (
+                    type(dealer) is int and dealer in range(3) and room["seats"][dealer] == uid
+                )
+                replay = (
+                    previous and previous.get("fingerprint") == identity and uid in room["seats"]
+                )
+                if not owner and room["admin_uid"] != uid and not selected and not replay:
+                    raise StoreError(403, "Room admin or selected dealer required")
             elif action in {
-                "start",
                 "settle",
                 "score_adjust",
                 "preset",
@@ -495,6 +515,7 @@ class FirestoreRooms:
             ) and action not in accidental_reveal.ACTIONS | SHEET_ACTIONS | {"pulse", "archive"}:
                 raise StoreError(409, "Resolve the exposed card first")
             if pending_swap(room) and action in {
+                "dealer_pass",
                 "start",
                 "lobby_ready",
                 "lobby_config",
@@ -724,6 +745,25 @@ class FirestoreRooms:
                 seat = room["seats"].index(uid)
                 room["lobby_setup"]["ready"][seat] = args["ready"]
                 event_data = {"seat": seat, "ready": args["ready"]}
+            elif action == "dealer_pass":
+                setup = room.get("lobby_setup")
+                if room["status"] != "lobby" or not setup or game is not None:
+                    raise StoreError(409, "Dealer can only be passed before the first deal")
+                seat = room["seats"].index(uid)
+                if seat != setup["dealer"]:
+                    raise StoreError(403, "Only the selected dealer may pass the deck")
+                target = args.get("dealer")
+                if (
+                    set(args) != {"dealer"}
+                    or type(target) is not int
+                    or target not in range(3)
+                    or target == seat
+                    or room["seats"][target] is None
+                ):
+                    raise StoreError(422, "Invalid dealer target")
+                setup["dealer"] = target
+                setup["ready"] = [False, False, False]
+                event_data = {"from": seat, "dealer": target}
             elif action == "lobby_config":
                 if room["status"] != "lobby" or "lobby_setup" not in room:
                     raise StoreError(409, "Setup can only change before the first deal")

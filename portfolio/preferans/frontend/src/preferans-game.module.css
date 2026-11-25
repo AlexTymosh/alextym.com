@@ -199,3 +199,25 @@
   .tableRoot .handRow { gap:1px; }
   .tableRoot .sortControls button { min-height:26px; font-size:.9rem; }
 }
+
+/* PR15: width follows the viewport; card height follows available height. */
+.tableRoot { max-width:none; width:100%; box-sizing:border-box; padding:clamp(4px,1vw,16px); min-height:0; }
+.tableRoot .header { margin:0 0 .4rem; }
+.tableRoot .handRow { display:flex; flex-wrap:nowrap; justify-content:center; gap:0; padding:.5rem .15rem; }
+.tableRoot .cardWithSort { flex:0 0 var(--card-w); width:var(--card-w); position:relative; }
+.tableRoot .cardWithSort + .cardWithSort { margin-left:calc(var(--card-w)*-.62); }
+.tableRoot .cardWithSort[data-suit-break="true"] { margin-left:calc(var(--card-w)*.14); }
+.tableRoot .cardWithSort:focus-within,.tableRoot .cardWithSort:hover { z-index:3; }
+.tableRoot .cardWithSort[data-from-widow="true"] .playingCard { outline:2px dashed #f4cb7d; outline-offset:2px; }
+.tableRoot .sortControls { display:none; }
+.tableRoot .discardSlots { display:flex; align-items:center; justify-content:center; gap:.45rem; margin:.35rem 0; }
+.tableRoot .discardSlot { width:var(--side-w,50px); aspect-ratio:100/146; padding:0!important; border:1px dashed #c2d2b8; border-radius:5px; background:#173b2e; }
+.tableRoot .discardSlot img { width:100%; }
+.tableRoot .ownMediaButtons { display:flex; gap:.25rem; justify-content:center; }
+.tableRoot .ownMediaButtons button { min-width:32px; padding:.25rem .4rem; }
+.tableRoot .settingsPanel { display:grid; gap:.45rem; }
+.tableRoot .settingsPanel label { display:grid; gap:.2rem; }
+.tableRoot .settingsPanel select { max-width:100%; color:inherit; background:#20392d; }
+.tableRoot .settingsPanel button { font-size:.8rem; }
+.tableRoot .roomStatus { font-size:.78rem; margin:0; }
+@media(max-width:1000px) and (orientation:landscape) { .tableRoot .cardWithSort + .cardWithSort { margin-left:calc(var(--card-w)*-.68); } .tableRoot .cardWithSort[data-suit-break="true"] { margin-left:calc(var(--card-w)*.08); } }
