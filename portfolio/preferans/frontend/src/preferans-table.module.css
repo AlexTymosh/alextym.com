@@ -303,3 +303,41 @@
 .table .left .trickBundle,.table .right .trickBundle { --side-bundle:clamp(18px,min(3.1dvh,3cqw),36px); height:calc(var(--side-bundle)*1.46); }
 .table .left .trickBundle[data-turned="true"],.table .right .trickBundle[data-turned="true"] { height:var(--side-bundle); }
 .table[data-playing="true"] .handColumn { width:calc(var(--card-w)*7.5); max-width:100%; }
+
+/* PR20: geometry follows the avatar, independent of cards remaining. */
+.table .avatarAnchor { position:relative; width:min(100%,var(--tile-w)); display:flex; justify-content:center; }
+.table .avatarAnchor>.trickStackWrap { position:absolute; bottom:0; width:auto; z-index:3; }
+.table .left .avatarAnchor>.trickStackWrap { left:calc(100% + 4px); }
+.table .right .avatarAnchor>.trickStackWrap { right:calc(100% + 4px); }
+.table .left .seatMeta,.table .right .seatMeta { position:static; }
+.table[data-playing="true"] .bottomArea { align-items:start; }
+.table .handColumn { min-height:calc(var(--tile-w) * .5625 + 1.4rem); }
+.table .handColumn .ownHand { margin-top:auto; }
+.table .handColumn>.trickStackWrap { margin-top:0; }
+.table .seatMeta:empty { display:none; }
+.table .avatarAnchor>.seatSignals { position:absolute; bottom:100%; left:0; justify-content:flex-start; width:100%; }
+.table .bottom { padding-top:0; }
+.table { --speech-ink:#183a30; }
+.table[data-theme="blue"] { --speech-ink:#142f4b; }
+.table[data-theme="wood"] { --speech-ink:#503724; }
+.table[data-theme="glass"] { --speech-ink:#183a30; }
+.table .callBubble { font-size:clamp(1.2rem,2.4vw,2.16rem); color:var(--speech-ink); opacity:.75; }
+@media(max-height:650px) and (orientation:landscape) { .table .callBubble { font-size:clamp(.96rem,2.16vw,1.56rem); } }
+.table .left .trickStack,.table .right .trickStack { gap:0; }
+.table .left .trickBundle,.table .right .trickBundle { --side-bundle:clamp(14px,min(2.8dvh,2.8cqw),32px); }
+.table .tablePaper .miniature { display:block; width:100%; }
+/* Horizontal auction row; choices expand in the row, wrap only on small screens. */
+.table .bidGroups { justify-content:flex-start; gap:.25rem; }
+.table .bidGroups>div { display:inline-flex; align-items:center; gap:.2rem; flex-wrap:wrap; }
+.table .bidGroups button { font-size:1.25em; min-height:2.15rem; padding:.3rem .5rem; }
+.table .bidGroups button[data-bid-tone="dark"] { background:#151515; color:#fff7dc; }
+.table .bidGroups button[data-bid-tone="sky"] { background:#8bd1f4; color:#15314b; }
+.table .bidGroups button[data-confirm="true"] { outline:2px solid #eac570; }
+.table .bidGroups .bidSuits { display:inline-flex; gap:.15rem; justify-content:flex-start; }
+.table .decision .bidSuits button { min-width:1.8rem; padding:.25rem; }
+/* Menu lives in the host's center slot; other website routes are unchanged. */
+.roomLayout[data-top-menu="true"] { grid-template-columns:minmax(0,1fr); }
+.projectMenu[data-top-menu="true"] { flex-direction:row; align-items:center; flex-wrap:wrap; padding:.2rem; gap:.2rem; }
+.projectMenu[data-top-menu="true"] .menuButton { width:auto; min-height:32px; white-space:normal; }
+.projectMenu[data-top-menu="true"]>div { position:relative; }
+.projectMenu[data-top-menu="true"] .menuDrawer { position:absolute; z-index:50; top:100%; left:0; width:min(340px,80vw); max-height:70dvh; border:1px solid #826b47; box-shadow:0 6px 20px #0006; }

@@ -254,3 +254,5 @@
 .tableRoot .handRow { justify-content:flex-start; }
 .tableRoot .sheetDrama { font-weight:900; font-size:clamp(2rem,5vw,4.15rem); line-height:1.08; color:#ffdf83; text-align:center; overflow-wrap:anywhere; }
 .tableRoot .concedeDrama { font-size:clamp(1rem,2.1vw,1.7rem); font-weight:800; text-align:center; color:#ffdf83; margin:.2rem 0; }
+
+.tableRoot .compactAction { border:0; box-shadow:none; background:transparent; padding:.2rem 0; }

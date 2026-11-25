@@ -34,3 +34,11 @@ Base: 8e8aaf555e43624b1b93aa04e8bd5e9ff9818eab (PR17). Actual trick collection t
 ## PR19 table details candidate
 
 Base: 2bc7f789e92bff14b3f1c0a998ad301b745b2204 (PR #290 merged). Place the deck by the playing circle between deals, replace score menu entry with clickable notebook on table, keep own avatar beside hand and move trick trains to inward edges / above own hand. Mark only global latest trick, keep public widow visible for ten seconds after receipt on opponents' clients, display the approved humorous game notices. Ranking names are resolved from bounded name-only profile queries using existing opaque player IDs; no stored result changes or UID disclosure. Declaration-only without-three authorization unchanged. See PR19_TABLE_DETAILS.ru.md. Full CI, actual layout and three-client acceptance still pending. No changes to production flags. Format and test before staging; verify clean tree before push.
+
+## PR20 - shell and bidding refinements
+
+- Base: `a4bc01d`; previous PR19 merged as #291.
+- Replace the incomplete first PR20 installer; all transformations are preflighted before writing and restricted to the dedicated branch.
+- Move game navigation into the host header, render ledger-based notebook thumbnail and three-seat local perspectives, align trick bundles with avatars, and expand bid choices inline with version-scoped special bid confirmation.
+- Automatically initiate unambiguous settlement from the connected administrator client; allow declarer settlement when the authoritative projection offers a real choice. Offline automatic settlement remains a separate server lifecycle concern.
+- See `docs/PR20_SHELL_AND_BIDDING.ru.md`. Full CI and three-client acceptance remain pending.

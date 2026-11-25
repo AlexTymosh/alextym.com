@@ -2,3 +2,9 @@
 .paper { width: 100%; min-width: 328px; display: block; filter: drop-shadow(1px 4px 5px #0006); clip-path: polygon(0 1%,3% 0,7% 1%,11% 0,15% 1%,19% 0,23% 1%,27% 0,31% 1%,35% 0,39% 1%,43% 0,47% 1%,51% 0,55% 1%,59% 0,63% 1%,67% 0,71% 1%,75% 0,79% 1%,83% 0,87% 1%,91% 0,95% 1%,100% 0,100% 99%,95% 100%,90% 99%,85% 100%,80% 99%,75% 100%,70% 99%,65% 100%,60% 99%,55% 100%,50% 99%,45% 100%,40% 99%,35% 100%,30% 99%,25% 100%,20% 99%,15% 100%,10% 99%,5% 100%,0 99%); }
 .ink { fill: #20498f; font-family: 'Segoe Print', 'Comic Sans MS', cursive; font-size: 19px; font-style: italic; }
 .notice { font-size: .8rem; }
+
+/* PR20: same ledger projection at miniature scale. */
+.miniature { display:block; width:100%; min-width:0; pointer-events:none; }
+.miniature .paper { width:100%; min-width:0; filter:none; }
+.rotateControls { display:flex; justify-content:center; gap:.35rem; margin:0 0 .5rem; }
+.rotateControls button { min-height:32px; }

@@ -47,7 +47,7 @@ function TrickStack({view,seat,onReplay,busy}: {view:RoomView;seat:Seat;onReplay
   if(!count)return null;
   return <div className={styles.trickStackWrap} data-trick-position={seatPosition(view.my_seat,seat)??undefined} aria-label={`Взяток: ${count}`}>
     <div className={styles.trickStack} data-trick-train={seat}>
-      {trickTrain(count).map(({index,turned})=><button type="button" key={index} className={styles.trickBundle} data-turned={turned?"true":"false"} data-latest={latest&&index===count-1?"true":undefined} disabled={busy||!latest||index!==count-1} aria-label={latest&&index===count-1?"Показать последнюю взятку":"Закрытая взятка"} onClick={()=>onReplay?onReplay():setOpen(v=>!v)}><span><CardArtwork decorative/></span></button>)}
+      {trickTrain(count).map(({index,turned})=><button type="button" key={index} className={styles.trickBundle} data-turned={(seatPosition(view.my_seat,seat)==="bottom"?turned:!turned)?"true":"false"} data-latest={latest&&index===count-1?"true":undefined} disabled={busy||!latest||index!==count-1} aria-label={latest&&index===count-1?"Показать последнюю взятку":"Закрытая взятка"} onClick={()=>onReplay?onReplay():setOpen(v=>!v)}><span><CardArtwork decorative/></span></button>)}
     </div>
     {open&&cards&&!onReplay&&<div className={styles.trickPreview}>{cards.map(p=><span key={p.owner}><CardArtwork card={p.card}/></span>)}<button type="button" aria-label="Закрыть взятку" onClick={()=>setOpen(false)}>×</button></div>}
   </div>;
@@ -69,13 +69,13 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
   const opened = cards.open ? orderHand(cards.open, [], sortMode) : null;
   return <section className={`${styles.seat} ${styles[position]}`} data-seat={seat} data-position={position}
     aria-label={`${positionNames[position]}: ${profiles?.[seat]?.name || fallbackName(seat)}${own ? ", ты" : ""}`} onDragOver={e=>{if(onSeatDrop)e.preventDefault();}} onDrop={e=>onSeatDrop?.(seat,e)}>
-    <div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div>
     {speech&&<span className={styles.callBubble}>{speech}</span>}
-    <Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} />
+    <div className={styles.avatarAnchor}><div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div><Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} />
+      {position!=="bottom"&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seat}`} view={view} seat={seat} busy={busy} onReplay={onReplay}/>}
+    </div>
     {localControls}
     {deck}
     <div className={styles.seatMeta}>
-      {position!=="bottom"&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seat}`} view={view} seat={seat} busy={busy} onReplay={onReplay}/>}
       {view.revealed_cards?.filter(c=>c.seat===seat).map(c=><span key={cardId(c.card)}>Раскрыта: {cardLabel(c.card)}</span>)}
     </div>
     {!own && cards.count > 0 && <div className={`${styles.opponentHand} ${cards.open ? styles.openHand : ""}`}
@@ -171,7 +171,7 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.right} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)} deck={!between&&dealerFor(view)===seats.right?deck:undefined} onSeatDrop={onSeatDrop}/>
     </div>
     {view.score&&<button type="button" className={styles.tablePaper} aria-label="Открыть пульку" title="Пулька" disabled={busy} onClick={()=>onScore?onScore():setScoreOpen(true)}>
-      <svg viewBox="0 0 120 125" aria-hidden="true"><rect x="2" y="2" width="116" height="121" rx="1" fill="#faf7e8"/>{Array.from({length:14},(_,i)=><path key={i} d={`M${i*9} 2V123 M2 ${i*9}H118`} stroke="#a9c4d4" strokeWidth=".45"/>)}<g fill="none" stroke="#284b91" strokeWidth="1.1"><path d="M60 5V42 M49 53L23 87L2 114 M71 53L97 87L118 114 M23 5V87H97V5 M12 5V98H108V5 M2 48H12 M108 48H118 M60 98V123"/><rect x="49" y="42" width="22" height="11"/></g><text x="60" y="50" fill="#284b91" fontSize="7" textAnchor="middle">{view.score.target??20}</text></svg>
+      <Notebook view={view} profiles={profiles} miniature/>
     </button>}
     {scoreOpen&&!onScore&&view.score&&<section className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles}/><div className={styles.scoreClose}><button type="button" onClick={()=>setScoreOpen(false)}>Закрыть</button></div></section>}
     {announcement&&<div className={styles.tableAnnouncement}>{announcement}</div>}
