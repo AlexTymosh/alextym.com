@@ -282,6 +282,20 @@ Do not run ingestion against private drafts.
 
 ---
 
+## Source Language and Repository Hygiene
+
+- Use English for source code, comments and general project documentation.
+- Raw Cyrillic (U+0400-U+04FF) is allowed only in explicitly localized files
+  whose basename contains `.ru.` or ends with `.ru` (case-insensitive).
+- In other files, use Unicode escapes for required Russian runtime strings.
+  Do not rename unrelated files or bypass the checker to avoid this rule.
+- Run `task repo:cyrillic-check` after creating or editing files. It checks
+  tracked and new non-ignored files and runs the checker's regression tests.
+- Stage intended changes, including new files, before the final `task ci`.
+  Do not commit or push if repository hygiene checks fail.
+
+---
+
 ## Testing Expectations
 
 Before reporting work as complete, run the smallest relevant checks.
