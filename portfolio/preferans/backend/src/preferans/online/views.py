@@ -21,6 +21,7 @@ from preferans.online.seat_swap import projection as swap_projection
 
 from preferans.online.ruleset_catalog import parameters, snapshot_hash
 from preferans.online.table_presentation import notebook
+from preferans.online.table_experience import THEMES, settlement_options
 
 
 def public_bid(bid: Bid | None) -> dict | None:
@@ -60,6 +61,8 @@ def seat_view(
         "game_id": room.get("game_id"),
         "controls": public_controls(controls or {}, now_ms, my_seat),
     }
+    if room.get("table_theme") in THEMES:
+        result["table_theme"] = room["table_theme"]
     if my_seat is not None:
         if "seat_revision" in room:
             result["seat_revision"] = room["seat_revision"]
@@ -186,6 +189,17 @@ def seat_view(
         }
     )
     if my_seat is not None:
+        if room["status"] == "playing" and type(room.get("activity_started_at_ms")) is int:
+            result["activity_started_at_ms"] = room["activity_started_at_ms"]
+        latest = [None, None, None]
+        for trick in state.completed_tricks:
+            latest[trick.winner] = [
+                {"owner": play.owner, "card": public_card(play.card)} for play in trick.cards
+            ]
+        if any(item is not None for item in latest):
+            result["last_won_tricks"] = latest
+        if room["status"] == "awaiting_settlement" and score is not None:
+            result["settlement_options"] = settlement_options(score, state)
         if len(state.discarded) == 2 and room["status"] == "playing":
             result["discard_count"] = 2
             if my_seat == state.declarer:

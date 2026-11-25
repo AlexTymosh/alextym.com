@@ -73,6 +73,7 @@ class Command(Mutation):
         "lobby_ready",
         "lobby_config",
         "dealer_pass",
+        "table_theme",
         "overlay_open",
         "overlay_close",
         "break_start",

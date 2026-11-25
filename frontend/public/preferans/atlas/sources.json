@@ -1,0 +1,194 @@
+[
+  {
+    "file": "10C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_10_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "c7b269a9c8007952ba14f11bc3405198a470603fd2a91f8d8ad0b7e379ff094d"
+  },
+  {
+    "file": "10D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_10_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "d45010f507b00463eedb71e01bd80d3cc1195d6e58deb8b66044819f13df6b9f"
+  },
+  {
+    "file": "10H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_10_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "20e6e311108e1bb2892586df5047921318fa050030be1abebae69582178a8a12"
+  },
+  {
+    "file": "10S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_10_of_spades.svg",
+    "license": "CC0",
+    "sha256": "e93c89f7c44c5fc1efa9d493c40e5f95c5a547689894b8b823776199c402ebb9"
+  },
+  {
+    "file": "11C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_jack_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "08b91b0aade3d51fea379bff4802aa35519103337a3f4ace2375363d2337275c"
+  },
+  {
+    "file": "11D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_jack_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "73850a06d7fd42b15a4352d9b1728cf0cdb7b46f1f2cf58cd139703d4182f407"
+  },
+  {
+    "file": "11H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_jack_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "e5e71cef2abe41eb57b077f2ee132bed0da522e7bdce2d1289fcce0f84995a5f"
+  },
+  {
+    "file": "11S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_jack_of_spades.svg",
+    "license": "CC0",
+    "sha256": "2ac0b96f5a9d6ce840c1a5377b19f1b179410df8e8aadef68bb6725a75f0f55c"
+  },
+  {
+    "file": "12C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_queen_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "1d5e57a26a682a010f03b1b38a197b24598a5ab1ffd724a0a7d5128e6d68d835"
+  },
+  {
+    "file": "12D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_queen_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "7d78f19b94a5d9cb2c09918999dc1a8ba422f9df26b50a77956ef37a510f0acb"
+  },
+  {
+    "file": "12H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_queen_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "37a27ace2abbceb8e67683060b9189728f402b3bb3c0f52862e6625cebf951cf"
+  },
+  {
+    "file": "12S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_queen_of_spades.svg",
+    "license": "CC0",
+    "sha256": "d6b05fde7a8a7e592c4194a74b8369030c391df6e065134e54896cae15db8c56"
+  },
+  {
+    "file": "13C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_king_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "2ec10ff4126181e47ee0051177db20f1d083c935c17d6d3f37cec14aef9fbe8d"
+  },
+  {
+    "file": "13D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_king_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "87820b4cb0c654474df702deeaf302f8c4bdb7e741e8b9bd348c1a0d7849b832"
+  },
+  {
+    "file": "13H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_king_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "2a357fd9042f3da3491f0a1dbe680a31ffacd4ee8833590b8e3b9322d844023d"
+  },
+  {
+    "file": "13S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_king_of_spades.svg",
+    "license": "CC0",
+    "sha256": "506515b33986ed2f87c5ef8f7ddce330793b0e94c5096f0129bbd8f0eeb5533d"
+  },
+  {
+    "file": "14C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_ace_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "67eea958ef6063df42ac3b53857231ca03f7c61ebc916c24b79755cdd8748612"
+  },
+  {
+    "file": "14D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_ace_of_diamonds_2.svg",
+    "license": "CC0",
+    "sha256": "f04721e5b261eafd9dfa4fc2daaf292ade0c35a7d145267ae5e3efc2e8028ebc"
+  },
+  {
+    "file": "14H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_ace_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "40fc1b646a5c21d0ba752c0e92bdb303f1c871461d0b414c05a3843f55e5bf9e"
+  },
+  {
+    "file": "14S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_ace_of_spades.svg",
+    "license": "CC0",
+    "sha256": "1ba624fc3beea8ed922b2204e84ecf5b1f8b806d7aa1063ea4f451256d54af46"
+  },
+  {
+    "file": "7C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_7_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "72ab0a253f586c61a99e50f4a122280858e1ee75fe60de2405504aa8d7d7310d"
+  },
+  {
+    "file": "7D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_7_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "c4c8ed4dc753583334e759c0aa9842457fe1259dcc8bd2e924cb7aa99915e238"
+  },
+  {
+    "file": "7H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_7_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "302de607d7a74b9ad114da388e48c55a31e150195aa63389b3d31476e3b9b245"
+  },
+  {
+    "file": "7S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_7_of_spades.svg",
+    "license": "CC0",
+    "sha256": "633d97472e763beb13df90bde2447ab738a60f0020faab9f7de470e3bbad11ed"
+  },
+  {
+    "file": "8C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_8_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "86baaaa40c89d3d04d8d58695334a4b137eddd6b793850c3f7a9a18ef0891907"
+  },
+  {
+    "file": "8D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_8_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "eeb0a406d8fe67e2f7924dc713781be7fda6e703946d836779d84d8835e0629c"
+  },
+  {
+    "file": "8H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_8_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "9a0799f782c72312ee41f7129435e63529c3db6da32e2c0a173ff28138ba9bc8"
+  },
+  {
+    "file": "8S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_8_of_spades.svg",
+    "license": "CC0",
+    "sha256": "d450d1f00017e4475440bfc1cd50ec8d7c5899798dca11c41338bec31fc67fee"
+  },
+  {
+    "file": "9C.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_9_of_clubs.svg",
+    "license": "CC0",
+    "sha256": "739ff21ba430916dfdde165f979c035e3061394714b3b8ae37460822ed77e85c"
+  },
+  {
+    "file": "9D.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_9_of_diamonds.svg",
+    "license": "CC0",
+    "sha256": "6a4912de4fb19853a87bfba097f69d7543ba9aa301880805ded43951cc1e5f5c"
+  },
+  {
+    "file": "9H.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_9_of_hearts.svg",
+    "license": "CC0",
+    "sha256": "a47afa938ba098f684f7bd5afc5e944b3eceb7f11bf70e607963c1007525e08d"
+  },
+  {
+    "file": "9S.png",
+    "source": "https://commons.wikimedia.org/wiki/File:Atlas_deck_9_of_spades.svg",
+    "license": "CC0",
+    "sha256": "bb521ff26ba724947d788ba23eaa75e869240795d16a912741f7dee337797e1c"
+  }
+]

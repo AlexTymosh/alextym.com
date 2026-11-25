@@ -33,7 +33,12 @@ export type RoomControls = {
   adjustments: Adjustment[];
   policy?: { counter_seconds: number; counter_multiplier: number; undo_seconds: number };
 };
+export type TableTheme = "felt" | "blue" | "wood" | "glass";
 export type RoomView = {
+  table_theme?: TableTheme;
+  activity_started_at_ms?: number;
+  last_won_tricks?: (Array<{owner:number;card:Card}> | null)[];
+  settlement_options?: {regular_choice:boolean;passout_defaults:Array<"pool"|"hill_first"|"help">};
   room_id: string; version: number;
   status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed" | "archived";
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
@@ -67,7 +72,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -131,6 +136,13 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if (v.table_theme !== undefined && !["felt","blue","wood","glass"].includes(String(v.table_theme))) return false;
+  if (v.activity_started_at_ms !== undefined && (!Number.isSafeInteger(v.activity_started_at_ms) || Number(v.activity_started_at_ms)<0)) return false;
+  if (v.last_won_tricks !== undefined && (!isSeat(v.my_seat) || !Array.isArray(v.last_won_tricks) || v.last_won_tricks.length!==3 || !v.last_won_tricks.every(t=>t===null||(Array.isArray(t)&&t.length===3&&t.every(p=>p&&isSeat(p.owner)&&p.card&&["S","C","D","H"].includes(p.card.suit)&&Number.isInteger(p.card.rank)&&p.card.rank>=7&&p.card.rank<=14))))) return false;
+  if (v.settlement_options !== undefined) {
+    const s=v.settlement_options as RoomView["settlement_options"];
+    if (!s || v.status!=="awaiting_settlement" || typeof s.regular_choice!=="boolean" || !Array.isArray(s.passout_defaults) || s.passout_defaults.length!==3 || !s.passout_defaults.every(x=>["pool","hill_first","help"].includes(x))) return false;
+  }
   if (v.discard_count !== undefined && (v.discard_count !== 2 || v.status !== "playing" || !isSeat(v.my_seat))) return false;
   if (v.own_discard !== undefined && (v.discard_count !== 2 || v.my_seat !== v.declarer || !Array.isArray(v.own_discard) || v.own_discard.length !== 2 || !v.own_discard.every(c=>c && typeof c === "object" && ["S","C","D","H"].includes(c.suit) && Number.isInteger(c.rank) && c.rank>=7 && c.rank<=14))) return false;
   if (v.score_sheet !== undefined) {

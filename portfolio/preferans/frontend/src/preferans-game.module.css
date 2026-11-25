@@ -221,3 +221,14 @@
 .tableRoot .settingsPanel button { font-size:.8rem; }
 .tableRoot .roomStatus { font-size:.78rem; margin:0; }
 @media(max-width:1000px) and (orientation:landscape) { .tableRoot .cardWithSort + .cardWithSort { margin-left:calc(var(--card-w)*-.68); } .tableRoot .cardWithSort[data-suit-break="true"] { margin-left:calc(var(--card-w)*.08); } }
+
+/* PR16: remove native-drag lift and maintain fixed hand geometry. */
+.tableRoot .playingCard { touch-action:none; aspect-ratio:2/3; transition:none; }
+.tableRoot .playingCard:hover:not(:disabled),.tableRoot .playingCard.selected:hover:not(:disabled) { transform:none; }
+.tableRoot .playingCard[data-pointer-dragging="true"] { opacity:.35; }
+.tableRoot .header { margin-bottom:.2rem; }
+.tableRoot .header h1 { font-size:clamp(1.1rem,2vw,1.8rem); }
+.tableRoot .handRow { justify-content:center; padding:.45rem 0; }
+.tableRoot .handsPanel { padding:0; }
+
+.tableRoot [data-pending-play="true"] { opacity:0!important; pointer-events:none; }

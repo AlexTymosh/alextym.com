@@ -53,7 +53,7 @@ export function animationBetween(previous: RoomView | null, current: RoomView): 
   if (previous.game_id !== current.game_id && ["lobby","between"].includes(previous.status) && current.phase === "auction" && current.status === "playing") return "deal";
   if (previous.game_id && previous.game_id === current.game_id &&
       (current.played_tricks ?? 0) === (previous.played_tricks ?? 0)+1 &&
-      previous.trick?.length === 2 && !current.trick?.length && current.last_trick?.length === 3 &&
+      current.last_trick?.length === 3 &&
       [0,1,2].includes(current.last_trick_winner ?? -1)) return "trick";
   return null;
 }
