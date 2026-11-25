@@ -28,6 +28,7 @@ class Phase(str, Enum):
     AUCTION = "auction"
     DISCARD = "discard"
     DECLARE = "declare"
+    MISERE_OFFER = "misere_offer"
     DEFENSE_FIRST = "defense_first"
     DEFENSE_SECOND = "defense_second"
     DEFENSE_RECONSIDER = "defense_reconsider"
@@ -53,6 +54,7 @@ class EndReason(str, Enum):
     ALL_PASSED = "all_passed"
     HALF_VIST = "half_vist"
     WITHOUT_THREE = "without_three"
+    MISERE_ACCEPTED = "misere_accepted"
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +86,7 @@ class GameState:
     tricks_won: tuple[int, int, int] = (0, 0, 0)
     end_reason: EndReason | None = None
     half_vist_receiver: int | None = None
+    misere_votes: frozenset[int] = frozenset()
 
     @property
     def is_passout(self) -> bool:
@@ -187,6 +190,65 @@ def declare_contract(state: GameState, actor: int, contract: Bid) -> GameState:
             turn=state.first_hand,
         )
     return replace(state, phase=Phase.DEFENSE_FIRST, turn=(actor + 1) % 3)
+
+
+def offer_misere(state: GameState, actor: int) -> GameState:
+    """Open the ordinary misere hand for a single unanimous offer before play."""
+    if (
+        state.phase != Phase.DECLARE
+        or state.declarer != actor
+        or state.winning_bid != Bid.misere()
+        or len(state.discarded) != 2
+        or len(state.hands[actor]) != 10
+        or state.contract is not None
+        or state.trick
+        or state.completed_tricks
+        or any(state.tricks_won)
+        or any(state.defense)
+    ):
+        raise RuleViolation("Only an ordinary misere declarer may offer success after discard")
+    return replace(
+        state,
+        contract=Bid.misere(),
+        phase=Phase.MISERE_OFFER,
+        turn=(actor + 1) % 3,
+        misere_votes=frozenset(),
+    )
+
+
+def vote_misere(state: GameState, actor: int, approve: bool) -> GameState:
+    if (
+        state.phase != Phase.MISERE_OFFER
+        or state.declarer is None
+        or actor not in range(3)
+        or actor == state.declarer
+        or actor in state.misere_votes
+        or type(approve) is not bool
+    ):
+        raise RuleViolation("Invalid or repeated misere vote")
+    if not approve:
+        # A refusal is final; resume the usual misere opening with no declarer exposure.
+        restored = replace(
+            state,
+            phase=Phase.DECLARE,
+            turn=state.declarer,
+            contract=None,
+            misere_votes=frozenset(),
+            exposed_hands=frozenset(),
+        )
+        return declare_contract(restored, state.declarer, Bid.misere())
+    votes = state.misere_votes | {actor}
+    defenders = frozenset(range(3)) - {state.declarer}
+    if votes == defenders:
+        return replace(
+            state,
+            phase=Phase.FINISHED,
+            turn=None,
+            end_reason=EndReason.MISERE_ACCEPTED,
+            misere_votes=votes,
+            exposed_hands=frozenset(),
+        )
+    return replace(state, misere_votes=votes, turn=next(iter(defenders - votes)))
 
 
 def concede_without_three(state: GameState, actor: int, contract: Bid) -> GameState:

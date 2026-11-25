@@ -21,6 +21,13 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
     } else command(auction?"bid":"declare",{bid});
     setConfirmation(null);
   };
+  if (!auction && view.winning_bid?.kind === "misere") {
+    const misere = availableBids.find(b=>b.kind==="misere");
+    return <div className={styles.bidGroups} aria-label="Окончательный контракт">
+      <button type="button" data-bid-tone="sky" disabled={busy||!misere} onClick={()=>misere&&submit(misere)}>Мизер</button>
+      <button type="button" disabled={busy||!misere} onClick={()=>command("misere_offer")}>Предложить, что я сыграл</button>
+    </div>;
+  }
   return <div className={styles.bidPanel} aria-label={auction?"Торговля":"Окончательный контракт"}>
     {canConcede&&<button type="button" aria-pressed={concessionMode} disabled={busy} onClick={()=>{setConceding(v=>!v);setGroup(null);}}>Без трёх</button>}
     {concessionMode&&<span className={styles.concessionHint}>Выбери контракт для штрафа</span>}
@@ -28,7 +35,7 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
       {auction && <button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>{setConfirmation(null);command("pass");}}>ПАС</button>}
       {BID_GROUPS.map(key=>{
         const available=bidsInGroup(bids,key);
-        if (!available.length && (key==="misere_no_widow"||key==="ten_no_widow")) return null;
+        if (!available.length && (!auction||key==="misere_no_widow"||key==="ten_no_widow")) return null;
         const direct = key==="misere"||key==="misere_no_widow";
         const special = direct||key==="ten_no_widow";
         const needsConfirm = auction&&special;
@@ -48,7 +55,7 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
           </span>}
         </div>;
       })}
-      {auction&&canHold(view)&&<button type="button" disabled={busy} onClick={()=>command("here")}>Здесь {bidLabel(view.high_bid!)}</button>}
+      {auction&&canHold(view)&&<button type="button" disabled={busy} onClick={()=>{setConfirmation(null);setGroup(null);command("here");}}>Здесь {bidLabel(view.high_bid!)}</button>}
     </div>
 
   </div>;

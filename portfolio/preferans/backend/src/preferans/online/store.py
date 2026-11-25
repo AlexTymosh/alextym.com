@@ -18,7 +18,7 @@ from typing import Any
 
 from preferans.domain.auction import RuleViolation
 from preferans.domain.cards import deal, shuffled_deck
-from preferans.domain.game import GameState, Phase, start_game
+from preferans.domain.game import EndReason, GameState, Phase, start_game
 from preferans.domain.history import final_result, update_ranking
 from preferans.domain.ledger import ScoreState
 from preferans.domain.scoring import RewardRoute, settle_game
@@ -896,12 +896,32 @@ class FirestoreRooms:
                         if controls.get("timer") is not None:
                             stop_counter(controls)
                         if game.phase == Phase.FINISHED:
-                            room["status"] = "awaiting_settlement"
+                            if game.end_reason == EndReason.MISERE_ACCEPTED:
+                                # The second approval is the settlement authority. No admin client
+                                # or synthetic trick history is needed, and all writes stay atomic.
+                                score = settle_game(
+                                    score, game, room["game_id"], expected_version=score.version
+                                )
+                                room["status"] = "closed" if score.closed else "between"
+                                controls.pop("next_deal", None)
+                                if use_rt and not score.closed:
+                                    schedule_next_deal(controls, room["game_id"], now)
+                                controls["candidate"] = None
+                                controls["timer"] = None
+                                event_data = {
+                                    **event_data,
+                                    "score_version": score.version,
+                                    "closed": score.closed,
+                                }
+                            else:
+                                room["status"] = "awaiting_settlement"
                 except ControlError as exc:
                     raise StoreError(exc.status, exc.detail) from exc
                 except (ValueError, TypeError, KeyError) as exc:
                     raise StoreError(422, "Illegal game action") from exc
-            finalize = (action == "settle" and score.closed) or sheet_loser is not None
+            finalize = (
+                action in {"settle", "misere_vote"} and room["status"] == "closed" and score.closed
+            ) or sheet_loser is not None
             if finalize:
                 # All reads precede writes, including the immutable result and all rankings.
                 result_doc = self.db.collection("preferans_results").document(room_id)

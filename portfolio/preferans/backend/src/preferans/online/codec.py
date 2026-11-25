@@ -66,7 +66,11 @@ def decode(obj: object, depth: int = 0) -> object:
         kwargs = obj["fields"]
         if cls is None or not is_dataclass(cls) or not isinstance(kwargs, dict):
             raise ValueError("Unknown state object")
-        if set(kwargs) != {f.name for f in fields(cls)}:
+        expected = {f.name for f in fields(cls)}
+        # Explicit one-field migration for rooms created before PR21.
+        if cls is game.GameState and set(kwargs) == expected - {"misere_votes"}:
+            kwargs = {**kwargs, "misere_votes": {"$set": []}}
+        if set(kwargs) != expected:
             raise ValueError("State schema mismatch")
         return cls(**{name: decode(val, depth + 1) for name, val in kwargs.items()})
     raise ValueError("Unknown state tag")

@@ -164,10 +164,34 @@ def legal_auction_bids(state: AuctionState, actor: int) -> tuple[Bid, ...]:
     return tuple(result)
 
 
+def here_holder(state: AuctionState) -> int | None:
+    """A bid followed by the intervening player's pass grants the third seat priority.
+
+    Derive priority from the immutable event history, including after undo.
+    The first pass is decisive; no new right is created by a later pass.
+    """
+    for index, event in enumerate(state.history):
+        if event.action.kind != AuctionActionKind.PASS:
+            continue
+        if index == 0:
+            return None
+        previous = state.history[index - 1]
+        if (
+            previous.action.kind == AuctionActionKind.BID
+            and (previous.actor + 1) % 3 == event.actor
+        ):
+            return (event.actor + 1) % 3
+        return None
+    return None
+
+
 def can_say_here(state: AuctionState, actor: int) -> bool:
     return (
         state.outcome == AuctionOutcome.BIDDING
-        and actor == state.turn == state.first_hand
+        and actor == state.turn
+        and actor in state.active
+        and len(state.active) == 2
+        and actor == here_holder(state)
         and state.high_bid is not None
         and state.high_bidder != actor
         and state.high_bid != Bid.regular(6, Suit.SPADES)
@@ -200,7 +224,7 @@ def apply_auction_action(state: AuctionState, actor: int, action: AuctionAction)
         active = active - {actor}
     elif action.kind == AuctionActionKind.HERE:
         if action.bid is not None or not can_say_here(state, actor):
-            raise RuleViolation("The first hand cannot hold this bid")
+            raise RuleViolation("This player has no right to hold this bid")
         high_bidder = actor
         made_bid = made_bid | {actor}
     elif action.kind == AuctionActionKind.BID:

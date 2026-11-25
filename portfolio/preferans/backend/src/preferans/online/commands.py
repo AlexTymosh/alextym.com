@@ -16,7 +16,9 @@ from preferans.domain.game import (
     decide_defense,
     declare_contract,
     discard_cards,
+    offer_misere,
     play_card,
+    vote_misere,
 )
 
 
@@ -74,6 +76,12 @@ def apply_command(state: GameState, seat: int, action: str, data: object) -> Gam
     if action == "declare":
         _keys(data, {"bid"})
         return declare_contract(state, seat, _bid(data["bid"]))
+    if action == "misere_offer":
+        _keys(data, set())
+        return offer_misere(state, seat)
+    if action == "misere_vote":
+        _keys(data, {"approve"})
+        return vote_misere(state, seat, data["approve"])
     if action == "defense":
         _keys(data, {"decision"})
         try:
@@ -103,6 +111,6 @@ def redacted_action(action: str, args: dict) -> dict:
         return {"bid": args["bid"]}
     if action in {"play"}:
         return {"owner": args["owner"], "card": args["card"]}
-    if action in {"defense", "mode"}:
+    if action in {"defense", "mode", "misere_vote"}:
         return {k: args[k] for k in args}
     return {}

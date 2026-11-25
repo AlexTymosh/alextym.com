@@ -10,7 +10,7 @@ from __future__ import annotations
 from enum import Enum
 from copy import deepcopy
 
-from .auction import BidKind, RuleViolation
+from .auction import Bid, BidKind, RuleViolation
 from .game import DefenseDecision, EndReason, GameState, Phase
 from .ledger import EntryKind, ScoreState, _Posting
 from .play import CompletedTrick
@@ -260,6 +260,7 @@ def _check_finished(game: GameState) -> None:
         EndReason.HALF_VIST,
         EndReason.ALL_PASSED,
         EndReason.WITHOUT_THREE,
+        EndReason.MISERE_ACCEPTED,
     ):
         raise RuleViolation("Unsupported engine end reason")
     if game.end_reason == EndReason.PLAYED:
@@ -282,6 +283,15 @@ def _check_finished(game: GameState) -> None:
             raise RuleViolation("Winner counts disagree with completed trick records")
     elif game.completed_tricks or game.trick or any(game.tricks_won):
         raise RuleViolation("An unplayed deal cannot claim taken tricks")
+    if game.end_reason == EndReason.MISERE_ACCEPTED and (
+        game.is_passout
+        or game.contract != Bid.misere()
+        or game.winning_bid != Bid.misere()
+        or game.declarer not in range(3)
+        or game.misere_votes != frozenset(range(3)) - {game.declarer}
+        or len(game.discarded) != 2
+    ):
+        raise RuleViolation("Misere acceptance requires both defenders and a valid discard")
     if not game.is_passout and (game.declarer is None or game.contract is None):
         raise RuleViolation("A declarer and final contract are required")
 
@@ -354,7 +364,7 @@ def settle_game(
         assert declarer is not None and contract is not None
         _seat(declarer)
         if contract.kind in (BidKind.MISERE, BidKind.MISERE_NO_WIDOW):
-            if game.end_reason != EndReason.PLAYED:
+            if game.end_reason not in (EndReason.PLAYED, EndReason.MISERE_ACCEPTED):
                 raise RuleViolation("Misere cannot end with a concession or half-vist")
             tricks = game.tricks_won[declarer]
             if tricks:

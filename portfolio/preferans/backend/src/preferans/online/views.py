@@ -141,6 +141,14 @@ def seat_view(
         {"seat": i, "cards": [public_card(c) for c in state.hands[i]]}
         for i in sorted(state.exposed_hands)
     ]
+    if state.phase == Phase.MISERE_OFFER and my_seat is not None:
+        declarer = state.declarer
+        assert declarer is not None
+        exposed = [{"seat": declarer, "cards": [public_card(c) for c in state.hands[declarer]]}]
+        result["misere_offer"] = {
+            "approved": sorted(state.misere_votes),
+            "can_vote": my_seat != declarer and my_seat not in state.misere_votes,
+        }
     # Auction history is public. Retain only the last call per seat, never
     # serialize the state or a player's private discard.
     calls = [None, None, None]

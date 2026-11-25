@@ -29,6 +29,7 @@ import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
 import { LobbySetup } from "./LobbySetup.ru";
 import { SeatSwap } from "./SeatSwap.ru";
 import { BidPanel } from "./BidPanel.ru";
+import { CycleSetting } from "./CycleSetting.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { orderHand, ownCards, type SortMode } from "./interaction-model";
 import { autoSettlementAllowed } from "./table-pr20";
@@ -66,9 +67,9 @@ function CardFace({ card, selected, playable, pendingPlay, onClick, onDragStart,
   );
 }
 
-function ActionPanel({ view, busy, selectedCards, command,
+function ActionPanel({ view, busy, selectedCards, command, profiles,
   regularRoute, setRegularRoute, onStart, onSettle }: {
-  view: RoomView; busy: boolean; selectedCards: Card[];
+  view: RoomView; busy: boolean; selectedCards: Card[]; profiles:SeatProfile[]|null;
   command: (action: CommandAction, args?: Record<string, unknown>) => void;
   regularRoute: "pool" | "hill_first"; setRegularRoute: (x: "pool" | "hill_first") => void;
   onStart: () => void; onSettle: () => void;
@@ -104,6 +105,15 @@ function ActionPanel({ view, busy, selectedCards, command,
   if (view.status === "closed") return <section className={styles.actionPanel}>
     {view.sheet_loser !== undefined ? null : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
   </section>;
+  if (view.phase === "misere_offer") {
+    const name = profiles?.[view.declarer??-1]?.name || seatNames[view.declarer??0];
+    return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Предложение сыгранного мизера">
+      {myTurn?<div className={styles.actions}>
+        <button type="button" className={styles.primary} disabled={busy} onClick={()=>command("misere_vote",{approve:true})}>Согласен, {name} сыграл мизер.</button>
+        <button type="button" disabled={busy} onClick={()=>command("misere_vote",{approve:false})}>Да хрен там, играем!!!</button>
+      </div>:<p>Ждём согласия соперников: {view.misere_offer?.approved.length??0}/2.</p>}
+    </section>;
+  }
   if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
   return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Игровое действие">
     {view.phase === "auction" && <>
@@ -193,13 +203,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const dragging = useRef<DragIntent | null>(null);
   const inFlight = useRef(false);
   const [back,setBack] = useState<BackTheme>("classic");
-  const [collapsed,setCollapsed] = useState(false);
   const [peekDiscard,setPeekDiscard] = useState(false);
   const themeKey = preferenceScope ? `preferans:back:${preferenceScope}` : null;
-  const menuKey = preferenceScope ? `preferans:menu:${preferenceScope}` : null;
-  useEffect(()=>{try { const saved=themeKey?localStorage.getItem(themeKey):null; if(isBackTheme(saved))setBack(saved); if(menuKey)setCollapsed(localStorage.getItem(menuKey)==="collapsed"); } catch { /* Optional preference. */ }},[themeKey,menuKey]);
+  useEffect(()=>{try { const saved=themeKey?localStorage.getItem(themeKey):null; if(isBackTheme(saved))setBack(saved); } catch { /* Optional preference. */ }},[themeKey]);
   const changeBack=(value:BackTheme)=>{setBack(value);if(themeKey)try{localStorage.setItem(themeKey,value);}catch{/* Optional preference. */}};
-  const changeCollapsed=()=>{const value=!collapsed;setCollapsed(value);if(menuKey)try{localStorage.setItem(menuKey,value?"collapsed":"expanded");}catch{/* Optional preference. */}};
 
   const updateView = useCallback((next: RoomView) => {
     if (activeRoomRef.current !== next.room_id) return;
@@ -510,10 +517,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const openShared = (kind: OverlayKind) => shared("overlay_open", {kind});
   const visibleHand=draft?hand.filter(c=>!selected.includes(cardId(c))):hand;
   const settings=<div className={styles.settingsPanel}>
-    <label>Сортировка <select aria-label="Сортировка карт" value={sortMode} onChange={e=>changeSort(e.target.value==="suit"?"suit":"grouped")}><option value="grouped">По длине масти</option><option value="suit">По порядку мастей</option></select></label>
+    <CycleSetting<SortMode> label="Сортировка карт" value={sortMode} options={[["grouped","По длине масти"],["suit","По порядку мастей"]]} onChange={changeSort}/>
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
-    <label>Игровое поле<select value={localTableTheme} onChange={e=>changeTableTheme(e.target.value as TableTheme|"room")}><option value="room">Как в комнате</option><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Тёплый коричневый</option><option value="glass">Полупрозрачное</option></select></label>
-    {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<label>Поле комнаты по умолчанию<select value={view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} onChange={e=>command("table_theme",{theme:e.target.value})}><option value="felt">Зелёное сукно</option><option value="blue">Синее сукно</option><option value="wood">Тёплый коричневый</option><option value="glass">Полупрозрачное</option></select></label>}
+    <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"],["glass","Полупрозрачное"]]} onChange={changeTableTheme}/>
+    {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"],["glass","Полупрозрачное"]]} onChange={theme=>command("table_theme",{theme})}/>}
     <fieldset className={styles.backChoices}><legend>Рубашка карт</legend>{([["classic","Текущая классическая"],["ornament","Красный орнамент"],["red-blue","Красно-голубая сетка"],["green","Зелёная сетка"]] as const).map(([value,label])=><button type="button" key={value} aria-pressed={back===value} title={label} onClick={()=>changeBack(value)}><CardBackContext.Provider value={value}><CardArtwork decorative/></CardBackContext.Provider><span>{label}</span></button>)}</fieldset>
     {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
     <small>Для ручной сортировки клавиатурой: Alt + стрелка влево или вправо.</small>
@@ -540,7 +547,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const actions = view && <>
     {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
     {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
-    <ActionPanel view={view} busy={busy} selectedCards={chosenCards}
+    <ActionPanel view={view} busy={busy} selectedCards={chosenCards} profiles={profiles}
       command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
       onStart={start} onSettle={settle} />
   </>;
@@ -549,7 +556,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
 </div>
       <div className={styles.headerTools}><div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
-        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div><button type="button" className={styles.fullscreenToggle} aria-label="Полноэкранный режим" title="Полноэкранный режим" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>⛶</button></div>
+        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div></div>
     </header>
 
     <div className={styles.tableShell}>
@@ -571,7 +578,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         </section>}
 
         {view && <>
-          <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} collapsed={collapsed} onCollapse={changeCollapsed} settings={settings} copy={copyInvitation} leave={leaveRoom}
+          <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation} leave={leaveRoom}
             controls={<><PreferansControls view={view} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
             urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat) || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled ? openShared : undefined}

@@ -256,3 +256,14 @@
 .tableRoot .concedeDrama { font-size:clamp(1rem,2.1vw,1.7rem); font-weight:800; text-align:center; color:#ffdf83; margin:.2rem 0; }
 
 .tableRoot .compactAction { border:0; box-shadow:none; background:transparent; padding:.2rem 0; }
+
+/* PR21: menu content is portalled outside tableRoot. */
+.settingsPanel { display:grid; gap:.75rem; padding:.35rem; min-width:0; }
+.cycleSetting { display:grid; gap:.3rem; }
+.cycleSetting>div { display:grid; grid-template-columns:2.1rem minmax(0,1fr) 2.1rem; align-items:center; gap:.25rem; text-align:center; }
+.cycleSetting>div>span { background:#203f35; padding:.5rem .2rem; border-radius:.3rem; }
+.cycleSetting button { min-height:36px; font-size:1.25rem; }
+.backChoices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; border:1px solid #826b47; border-radius:.5rem; min-width:0; padding:.5rem; }
+.backChoices button { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.3rem; min-width:0; text-align:center; font-size:.75rem; }
+.backChoices button img,.tableRoot .backChoices button img { display:block; width:clamp(48px,7vw,80px); height:auto; aspect-ratio:2/3; object-fit:contain; flex:none; }
+.backChoices button[aria-pressed="true"] { outline:2px solid #e8ca88; }
