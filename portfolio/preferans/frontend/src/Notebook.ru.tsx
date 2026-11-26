@@ -4,7 +4,7 @@ import type { RoomView, NotebookMark } from "./game-model.ru";
 import { tableSeats, type SeatProfile } from "./table-model";
 import styles from "./preferans-notebook.module.css";
 
-export function Notebook({view, profiles, miniature=false, title, controls}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean; title?:string; controls?:ReactNode}) {
+export function Notebook({view, profiles, miniature=false, title, sheetExit, onClose, closeDisabled=false}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean; title?:string; sheetExit?:ReactNode; onClose?:()=>void; closeDisabled?:boolean}) {
   const [orientation,setOrientation] = useState(0);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const score = view.score;
@@ -52,8 +52,13 @@ export function Notebook({view, profiles, miniature=false, title, controls}: {vi
   const total=(seat:number,x:number,y:number,rotation=0)=>final&&<text data-final-net={seat} x={x} y={y} transform={`rotate(${rotation} ${x} ${y})`} textAnchor="middle" fill="#b51524" fontSize="21" fontWeight="bold">{signed(final.net[seat])}</text>;
   const Wrapper=miniature?"span":"div";
   return <Wrapper className={miniature?styles.miniature:styles.wrap} style={{"--paper-ratio":(angle?h:w)/(angle?w:h)} as CSSProperties} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
+    {!miniature&&<div className={styles.paperToolbar}>
+      <div className={styles.paperExit}>{sheetExit}</div>
+      <div className={styles.rotateControls}><button type="button" aria-label="Повернуть к левому игроку" onClick={()=>setOrientation(n=>(n+1)%3)}>↶</button><button type="button" aria-label="Моя сторона" onClick={()=>setOrientation(0)}>Моя сторона</button><button type="button" aria-label="Повернуть к правому игроку" onClick={()=>setOrientation(n=>(n+2)%3)}>↷</button></div>
+      {onClose&&<button type="button" className={styles.paperClose} aria-label="Закрыть пульку" title="Закрыть пульку" disabled={closeDisabled} onClick={onClose}>×</button>}
+    </div>}
     {!miniature&&title&&<p className={styles.paperTitle}>{title}</p>}
-    {!miniature&&<div className={styles.rotateControls}><button type="button" aria-label="Повернуть к левому игроку" onClick={()=>setOrientation(n=>(n+1)%3)}>↶</button><button type="button" aria-label="Моя сторона" onClick={()=>setOrientation(0)}>Моя сторона</button><button type="button" aria-label="Повернуть к правому игроку" onClick={()=>setOrientation(n=>(n+2)%3)}>↷</button></div>}
+    <span className={miniature?styles.miniatureBody:styles.paperBody}>
     <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} role="img" aria-label="Рукописная пулька">
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern></defs>
       <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
@@ -68,7 +73,7 @@ export function Notebook({view, profiles, miniature=false, title, controls}: {vi
         <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+40,cy-22,-90,cy-42)}{text(right.lv,w-outer+40,outerY-15,-90,outerY-cy-35)}{total(right.seat,cx+42,nameY,-90)}{circle(right.seat,right.right,w-25,cy/2,-90)}{circle(right.seat,right.left,w-25,(cy+outerY)/2,-90)}</g>
       </g>
     </g></svg>
+    </span>
     {!miniature&&history?.exact===false && <p className={styles.notice}>Для старых исправлений порядок записей не сохранён. Показаны точные итоговые значения.</p>}
-    {!miniature&&controls&&<footer className={styles.paperControls}>{controls}</footer>}
   </Wrapper>;
 }

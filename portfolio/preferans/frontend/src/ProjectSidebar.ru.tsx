@@ -11,9 +11,9 @@ const items: {key:Panel; label:string; icon:string}[] = [
   {key:"controls", label:"Управление игрой", icon:"☷"}, {key:"media", label:"Связь за столом", icon:"◉"},
   {key:"settings", label:"Настройки", icon:"⚙"},
 ];
-export function ProjectSidebar({children, controls, media, settings, urgent, active, shared, copy, leave}: {
+export function ProjectSidebar({children, controls, media, settings, urgent, active, shared, copy}: {
   children:ReactNode; controls:ReactNode; media:ReactNode; settings:ReactNode;
-  urgent:boolean; active:boolean; shared?:(kind:OverlayKind)=>void; copy:()=>void; leave:()=>void;
+  urgent:boolean; active:boolean; shared?:(kind:OverlayKind)=>void; copy:()=>void;
 }) {
   const [panel,setPanel] = useState<Panel|null>(()=>urgent?"controls":null);
   const menuRef=useRef<HTMLElement>(null);
@@ -41,7 +41,6 @@ export function ProjectSidebar({children, controls, media, settings, urgent, act
         </div>)}
         {shared&&action("♫","Магнитофон",()=>{setPanel(null);shared("radio");})}
         {action("↗","Скопировать приглашение",copy)}
-        {action("⇥","К выбору комнаты",leave)}
         {action("▥","Правила игры",()=>reference("rules"))}
         {action("♜","История и рейтинг",()=>reference("history"))}
   </nav>;

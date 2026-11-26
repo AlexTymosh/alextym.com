@@ -90,3 +90,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Add signed pair and net settlement annotations from the existing server arithmetic, and auto-open normal completed sheets once per room.
 - Move routine status messages to the center field; retain action controls and card interactions.
 - Diagnose PR24 vertical regression: furniture padding and larger action controls add to the min-content height. Height rollback is an explicit separate installer option pending approval. Full browser and CI acceptance required.
+
+## PR26 - Notebook toolbar and bottom alignment
+
+- Move the voluntary sheet exit and rotation controls to the paper toolbar; use a labelled red close icon and a dash-dot tear line. Keep the entire SVG ledger, annotation colours, and final settlement unchanged.
+- Remove the two PR24 furniture bottom padding rules that survived the PR25 merge. Dock the radio beside the local hand in the bottom grid and reserve horizontal space instead of vertical space. Refit when the host header changes height.
+- Render radio in a compact dedicated shared overlay; suppress the local notebook while a shared overlay is active. Keep shared pause, playback and authorization semantics unchanged.
+- Move room-return navigation to the host header slot and retain the existing leave-room callback. No new backend calls or provider settings.
+- Reduce activity ring stroke from 5 to 3.5 and set opacity to 0.5. Full CI and three-player visual acceptance remain release gates.

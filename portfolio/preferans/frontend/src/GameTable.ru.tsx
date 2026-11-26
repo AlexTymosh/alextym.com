@@ -22,7 +22,7 @@ function ActivityRing({since,now}: {since:number|undefined;now:()=>number}) {
   useEffect(()=>{const timer=setInterval(()=>setAt(now()),250);return()=>clearInterval(timer);},[now,since]);
   const progress=activityProgress(since,at);
   return <svg className={styles.activityRing} viewBox="0 0 160 90" preserveAspectRatio="none" aria-hidden="true">
-    {progress>0&&<path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeDasharray="100 100" strokeDashoffset={100-progress}/>}
+    {progress>0&&<path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3.5" strokeOpacity="0.5" strokeLinecap="round" strokeDasharray="100 100" strokeDashoffset={100-progress}/>}
   </svg>;
 }
 
@@ -181,7 +181,10 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     const el=tableRef.current;if(!el)return;
     const fit=()=>el.style.setProperty("--available-table-height",`${Math.max(220,window.innerHeight-el.getBoundingClientRect().top-34)}px`);
     fit();window.addEventListener("resize",fit);document.addEventListener("fullscreenchange",fit);
-    return()=>{window.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
+    const header=document.querySelector(".preferans-site-bar");
+    const observer=header&&typeof ResizeObserver!=="undefined"?new ResizeObserver(fit):null;
+    if(header&&observer)observer.observe(header);
+    return()=>{observer?.disconnect();window.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
   },[inLobby]);
   return <div className={styles.tableScene}><section ref={tableRef} data-furniture={objects?"true":undefined} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
@@ -192,8 +195,8 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     {view.score&&<button type="button" className={styles.tablePaper} aria-label="Открыть пульку" title="Пулька" disabled={busy} onClick={()=>onScore?onScore():setScoreOpen(true)}>
       <Notebook view={view} profiles={profiles} miniature/>
     </button>}
-    {(showFinal||(scoreOpen&&!onScore))&&view.score&&<section className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles} title={view.final_settlement?"Закончили!":`${profiles?.[view.my_seat??-1]?.name||fallbackName(view.my_seat??0)} смотрит листик`} controls={<>{sheetExit}<button type="button" onClick={closeScore}>Закрыть</button></>}/></section>}
-    {objects}
+    {(showFinal||(scoreOpen&&!onScore))&&view.score&&!view.presentation?.overlay&&<section className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles} title={view.final_settlement?"Закончили!":`${profiles?.[view.my_seat??-1]?.name||fallbackName(view.my_seat??0)} смотрит листик`} sheetExit={sheetExit} onClose={closeScore}/></section>}
+    {inLobby&&objects}
     {sharedPanel}
     {claimPanel}
     {!onReplay&&localReplay===replayId&&view.last_trick?.length===3&&<section className={styles.localReplay} role="dialog" aria-label="Последняя взятка"><strong>{profiles?.[view.my_seat??-1]?.name||fallbackName(view.my_seat??0)} смотрит последнюю взятку</strong><div className={styles.localReplayCards}>{view.last_trick.map(p=><div key={p.owner}><span>{profiles?.[p.owner]?.name||fallbackName(p.owner)}</span><CardArtwork card={p.card}/></div>)}</div><button type="button" onClick={()=>setLocalReplay(null)}>Закрыть</button></section>}
@@ -206,6 +209,7 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
         {claimButton&&<div className={styles.claimButton}>{claimButton}</div>}
         {view.my_seat!==null&&<div className={styles.ownHand} data-own-hand="true" data-claim-hidden={view.claim?.status==="pending"&&view.claim.seat===view.my_seat?"true":undefined}>{hand}</div>}
       </div>}
+      {!inLobby&&objects&&<div className={styles.bottomFurniture} data-radio-dock="true">{objects}</div>}
       {inLobby && <p className={styles.lobbyHint}>Занято мест: {view.occupied.filter(Boolean).length} из 3</p>}
     </div>
   </section></div>;

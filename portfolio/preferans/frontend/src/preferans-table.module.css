@@ -401,8 +401,6 @@
 .claimCards { animation:claimReveal .3s ease-out both; }
 @keyframes claimReveal { from { opacity:.3; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .claimCards { animation:none; } }
-.table[data-furniture="true"] .bottomArea { padding-bottom:clamp(64px,10cqw,126px); }
-@media(max-height:650px) and (orientation:landscape) { .table[data-furniture="true"] .bottomArea { padding-bottom:clamp(52px,7.5cqw,88px); } }
 .claimVotes,.localReplayCards { display:flex; justify-content:center; gap:.4rem; }
 .claimVotes button:first-child { background:#315b3d; }
 .claimVotes button:last-child { background:#71332d; }
@@ -430,3 +428,25 @@
 
 .table .fieldStatus [data-passout-status="true"] { font-size:clamp(1.25rem,3cqw,2.25rem); }
 .table .fieldStatus[data-has-cards="true"] [data-passout-status="true"] { font-size:1.15em; }
+
+/* PR26: reserve horizontal, never vertical, space for the radio. */
+.table[data-playing="true"] .bottomArea { padding-bottom:0; }
+.table[data-playing="true"][data-furniture="true"] .bottomArea {
+ --bottom-gap:clamp(4px,1cqw,16px);
+ --radio-w:clamp(82px,17cqw,273px);
+ --break-reserve:clamp(92px,8cqw,132px);
+ --tile-w:clamp(64px,min(53.8dvh,26cqw),562px);
+ --card-w:clamp(18px,min(13.5dvh,calc((100cqw - var(--tile-w) - var(--radio-w) - var(--break-reserve) - 2 * var(--bottom-gap))/8)),140px);
+ box-sizing:border-box; width:100%; padding-inline-start:var(--break-reserve);
+ grid-template-columns:minmax(0,var(--tile-w)) minmax(0,1fr) minmax(0,var(--radio-w));
+ gap:var(--bottom-gap); align-items:end;
+}
+.table[data-playing="true"][data-furniture="true"] .handColumn { width:100%; min-width:0; }
+.table .bottomFurniture { width:100%; min-width:0; align-self:end; }
+@media(max-height:650px) and (orientation:landscape) {
+ .table[data-playing="true"][data-furniture="true"] .bottomArea {
+  --tile-w:clamp(64px,min(40.6dvh,26cqw),273px);
+  --radio-w:clamp(82px,15cqw,188px);
+  --card-w:clamp(18px,min(12.5dvh,calc((100cqw - var(--tile-w) - var(--radio-w) - var(--break-reserve) - 2 * var(--bottom-gap))/8)),81px);
+ }
+}
