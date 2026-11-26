@@ -119,3 +119,12 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Apply context-sensitive claim vote copy and replace the discard-phase widow outline with a small vertical yellow label.
 - Use locally bundled CC0 photographic diffuse maps for pine, fabric and retro vinyl; tint a plain weave for two solid options and use transparent optical layers for glass. Reuse CycleSetting and preserve local transparency.
 - Asset provenance is recorded. No external runtime image requests or new backend calls. Full CI and live three-player acceptance remain release gates.
+
+## PR30 - Misere agreement and notebook accounting
+
+- Extend misere success proposals to play and both defenders; pre-approve the initiating defender, never ask the declarer to vote, retain actual trick history.
+- Require a closed own pool before hill payment; stage mandatory passout pool credits, reject illegal routes in the domain.
+- Add server-derived distributed hill projection and visual arithmetic, wrapped notebook rows, closing marks and local zoom. Preserve underlying ledger and final ranking arithmetic.
+- Move repeated corrections and final confirmation to the notebook; move remaining controls into settings. Published results remain immutable after explicit confirmation.
+- Retire accidental-reveal commands and UI, clean legacy active pauses without deleting historical entries.
+- Full integration CI and three-player browser acceptance pending. No additional polling or billing changes.

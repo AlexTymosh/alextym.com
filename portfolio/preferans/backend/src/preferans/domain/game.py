@@ -98,6 +98,8 @@ class GameState:
     end_reason: EndReason | None = None
     half_vist_receiver: int | None = None
     misere_votes: frozenset[int] = frozenset()
+    misere_resume_turn: int | None = None
+    misere_refused_at: int | None = None
     claim: TrickClaim | None = None
 
     @property
@@ -208,27 +210,50 @@ def declare_contract(state: GameState, actor: int, contract: Bid) -> GameState:
     return replace(state, phase=Phase.DEFENSE_FIRST, turn=(actor + 1) % 3)
 
 
-def offer_misere(state: GameState, actor: int) -> GameState:
-    """Open the ordinary misere hand for a single unanimous offer before play."""
-    if (
-        state.phase != Phase.DECLARE
-        or state.declarer != actor
-        or state.winning_bid != Bid.misere()
-        or len(state.discarded) != 2
-        or len(state.hands[actor]) != 10
-        or state.contract is not None
-        or state.trick
-        or state.completed_tricks
-        or any(state.tricks_won)
-        or any(state.defense)
+def can_offer_misere(state: GameState, actor: int) -> bool:
+    if type(actor) is not int or actor not in range(3) or state.declarer is None:
+        return False
+    if state.claim_pending or state.tricks_won[state.declarer] or state.winning_bid is None:
+        return False
+    if state.winning_bid.kind not in (BidKind.MISERE, BidKind.MISERE_NO_WIDOW):
+        return False
+    if len(state.discarded) != (2 if state.winning_bid.uses_widow else 0):
+        return False
+    if state.misere_refused_at is not None and state.misere_refused_at >= len(
+        state.completed_tricks
     ):
-        raise RuleViolation("Only an ordinary misere declarer may offer success after discard")
+        return False
+    if state.phase == Phase.DECLARE:
+        return (
+            actor == state.declarer
+            and state.contract is None
+            and not state.trick
+            and not state.completed_tricks
+            and len(state.hands[actor]) == 10
+        )
+    return (
+        state.phase == Phase.PLAY
+        and state.is_misere
+        and state.turn is not None
+        and len(state.completed_tricks) < 10
+    )
+
+
+def offer_misere(state: GameState, actor: int) -> GameState:
+    """Declarer offers success; a defender's offer is their own approval."""
+    if not can_offer_misere(state, actor):
+        raise RuleViolation("Misere success cannot be offered now")
+    defenders = frozenset(range(3)) - {state.declarer}
+    votes = frozenset({actor}) if actor in defenders else frozenset()
     return replace(
         state,
-        contract=Bid.misere(),
+        contract=state.winning_bid,
         phase=Phase.MISERE_OFFER,
-        turn=(actor + 1) % 3,
-        misere_votes=frozenset(),
+        turn=next(
+            i for i in ((state.declarer + 1) % 3, (state.declarer + 2) % 3) if i not in votes
+        ),
+        misere_votes=votes,
+        misere_resume_turn=state.turn if state.phase == Phase.PLAY else None,
     )
 
 
@@ -236,6 +261,7 @@ def vote_misere(state: GameState, actor: int, approve: bool) -> GameState:
     if (
         state.phase != Phase.MISERE_OFFER
         or state.declarer is None
+        or type(actor) is not int
         or actor not in range(3)
         or actor == state.declarer
         or actor in state.misere_votes
@@ -243,7 +269,17 @@ def vote_misere(state: GameState, actor: int, approve: bool) -> GameState:
     ):
         raise RuleViolation("Invalid or repeated misere vote")
     if not approve:
-        # A refusal is final; resume the usual misere opening with no declarer exposure.
+        if state.misere_resume_turn is not None:
+            return replace(
+                state,
+                phase=Phase.PLAY,
+                turn=state.misere_resume_turn,
+                misere_votes=frozenset(),
+                misere_resume_turn=None,
+                misere_refused_at=len(state.completed_tricks),
+            )
+        # Legacy declaration-time offers have no previous play turn.
+        contract = state.contract
         restored = replace(
             state,
             phase=Phase.DECLARE,
@@ -251,8 +287,9 @@ def vote_misere(state: GameState, actor: int, approve: bool) -> GameState:
             contract=None,
             misere_votes=frozenset(),
             exposed_hands=frozenset(),
+            misere_refused_at=len(state.completed_tricks),
         )
-        return declare_contract(restored, state.declarer, Bid.misere())
+        return declare_contract(restored, state.declarer, contract)
     votes = state.misere_votes | {actor}
     defenders = frozenset(range(3)) - {state.declarer}
     if votes == defenders:
@@ -262,7 +299,11 @@ def vote_misere(state: GameState, actor: int, approve: bool) -> GameState:
             turn=None,
             end_reason=EndReason.MISERE_ACCEPTED,
             misere_votes=votes,
+            misere_resume_turn=None,
             exposed_hands=frozenset(),
+            hands=((), (), ()),
+            trick=(),
+            claim=None,
         )
     return replace(state, misere_votes=votes, turn=next(iter(defenders - votes)))
 

@@ -21,11 +21,11 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
     } else command(auction?"bid":"declare",{bid});
     setConfirmation(null);
   };
-  if (!auction && view.winning_bid?.kind === "misere") {
-    const misere = availableBids.find(b=>b.kind==="misere");
+  if (!auction && (view.winning_bid?.kind === "misere"||view.winning_bid?.kind === "misere_no_widow")) {
+    const misere = availableBids.find(b=>b.kind===view.winning_bid?.kind);
     return <div className={styles.bidGroups} aria-label="Окончательный контракт">
-      <button type="button" data-bid-tone="sky" disabled={busy||!misere} onClick={()=>misere&&submit(misere)}>Мизер</button>
-      <button type="button" disabled={busy||!misere} onClick={()=>command("misere_offer")}>Предложить, что я сыграл</button>
+      <button type="button" data-bid-tone="sky" disabled={busy||!misere} onClick={()=>misere&&submit(misere)}>{misere?bidLabel(misere):"Мизер"}</button>
+      <button type="button" disabled={busy||!misere} onClick={()=>command("misere_offer")}>Показать карты и предложить что я сыграл</button>
     </div>;
   }
   return <div className={styles.bidPanel} aria-label={auction?"Торговля":"Окончательный контракт"}>

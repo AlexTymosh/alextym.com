@@ -87,3 +87,14 @@ def synchronize(
     control["rt_epoch"] = epoch
     control["rt_checkpoint_ms"] = at
     return events
+
+
+def retire_reveal(control: dict, at: int) -> bool:
+    """One-way legacy cleanup; do not remove unrelated pause reasons or postings."""
+    changed = "reveal" in control or "revealed_cards" in control
+    control.pop("reveal", None)
+    control.pop("revealed_cards", None)
+    if "accidental_reveal" in reasons(control):
+        transition(control, reasons(control) - {"accidental_reveal"}, at)
+        changed = True
+    return changed

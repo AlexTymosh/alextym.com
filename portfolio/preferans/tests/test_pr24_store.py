@@ -45,7 +45,8 @@ def test_two_seat_choices_cannot_be_bypassed_or_spoofed(monkeypatch):
     assert finished["status"] == "awaiting_settlement"
     assert finished["played_tricks"] == 0 and finished["tricks_won"] == [0, 0, 10]
     assert finished["last_trick"] == []
-    assert finished["settlement_options"]["passout_pending"] == [1]
+    assert finished["settlement_options"]["passout_pending"] == [0]
+    assert finished["settlement_options"]["passout_choices"][1] == []
     with pytest.raises(StoreError) as denied:
         api.settle(
             rid,
@@ -58,7 +59,8 @@ def test_two_seat_choices_cannot_be_bypassed_or_spoofed(monkeypatch):
     assert denied.value.code == 409
     with pytest.raises(StoreError):
         command(api, rid, "a", "pr24-spoof", "passout_reward", {"route": "pool", "seat": 1})
-    command(api, rid, "b", "pr24-reward-b", "passout_reward", {"route": "pool"})
+    with pytest.raises(StoreError):
+        command(api, rid, "b", "pr24-reward-b", "passout_reward", {"route": "hill_first"})
     assert api.view(rid, "a")["settlement_options"]["passout_pending"] == [0]
     command(api, rid, "a", "pr24-reward-a", "passout_reward", {"route": "help"})
     final = api.view(rid, "a")

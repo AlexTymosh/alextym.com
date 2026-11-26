@@ -237,13 +237,14 @@ def test_without_three_after_first_play_forbidden():
         concede_without_three(game, 0, Bid.regular(7, Suit.HEARTS))
 
 
-def test_regular_hill_first_is_all_or_nothing_before_pool():
+def test_regular_hill_first_requires_closed_pool():
     start = ledger(hill=(3, 0, 0))
     game = played(8, (8, 1, 1))
-    actual = settle(game, points=start, regular_route=RewardRoute.HILL_FIRST)
-    assert actual.hill == (0, 0, 0)
-    assert actual.pool == (3, 0, 0)
-    assert settle(game, points=start, regular_route=RewardRoute.POOL).pool[0] == 6
+    with pytest.raises(RuleViolation):
+        settle(game, points=start, regular_route=RewardRoute.HILL_FIRST)
+    actual = settle(game, points=start, regular_route=RewardRoute.POOL)
+    assert actual.hill == (3, 0, 0)
+    assert actual.pool == (6, 0, 0)
 
 
 def test_assistance_prefers_fuller_unclosed_pool():
@@ -336,16 +337,18 @@ def test_passout_bonus_closed_pool_mandatory_hill_then_help():
     assert state.vists[0][1:] == (5, 5)
 
 
-def test_passout_bonus_insufficient_pool_can_pay_hill():
+def test_passout_bonus_insufficient_pool_cannot_pay_hill():
     game = passouts((0, 4, 6), level=7)
     start = ledger(pool=(10, 20, 20), hill=(2, 0, 0), passout=7)
-    state = settle(
-        game,
-        points=start,
-        passout_routes=(RewardRoute.HILL_FIRST, RewardRoute.POOL, RewardRoute.POOL),
-    )
-    assert state.hill[0] == 0
-    assert state.pool[0] == 10
+    with pytest.raises(RuleViolation):
+        settle(
+            game,
+            points=start,
+            passout_routes=(RewardRoute.HILL_FIRST, RewardRoute.POOL, RewardRoute.POOL),
+        )
+    state = settle(game, points=start)
+    assert state.hill[0] == 2
+    assert state.pool[0] == 12
 
 
 def test_two_passout_zero_players_receive_simultaneous_bonuses():
@@ -406,16 +409,18 @@ def test_confirmed_automatic_win_resets_passout_streak():
     assert state.passout_level == 6
 
 
-def test_confirmed_hill_first_surplus_goes_to_own_open_pool():
+def test_open_pool_receives_full_passout_bonus():
     game = passouts((0, 4, 6), level=8)
     start = ledger(pool=(15, 20, 20), hill=(1, 0, 0), passout=8)
-    out = settle(
-        game,
-        points=start,
-        passout_routes=(RewardRoute.HILL_FIRST, RewardRoute.POOL, RewardRoute.POOL),
-    )
-    assert out.hill[0] == 0
-    assert out.pool[0] == 17
+    with pytest.raises(RuleViolation):
+        settle(
+            game,
+            points=start,
+            passout_routes=(RewardRoute.HILL_FIRST, RewardRoute.POOL, RewardRoute.POOL),
+        )
+    out = settle(game, points=start)
+    assert out.hill[0] == 1
+    assert out.pool[0] == 18
 
 
 def test_simultaneous_help_has_no_seat_priority_for_indivisible_pool_point():

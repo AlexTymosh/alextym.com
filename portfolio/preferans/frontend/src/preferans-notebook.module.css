@@ -45,3 +45,16 @@
 .historyNav p { margin:.2rem 0; font-weight:700; overflow-wrap:anywhere; }
 .historyNav ul { list-style:none; margin:.15rem 0; padding:0; max-height:4.2rem; overflow:auto; }
 .historyNav li { overflow-wrap:anywhere; }
+
+/* PR30: local zoom and repeated accounting; never enlarge the modal itself. */
+.zoomControls { display:flex; justify-content:center; gap:.25rem; margin:.25rem 0; }
+.zoomControls button { min-width:28px; }
+.paperViewport { display:block; width:100%; max-height:calc(max(112px,80dvh - 7rem)); overflow:auto; overscroll-behavior:contain; }
+.paperViewport[data-zoomed="true"] .paper { width:calc(100% * var(--paper-zoom,1)); height:auto; max-width:none; max-height:none; min-width:0; }
+.miniatureCanvas { display:block; width:100%; }
+.accountingActions { font-size:.8rem; margin:.25rem 0; }
+.accountingActions details { border:1px dashed #20498f88; padding:.3rem; }
+.accountingActions details div { grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr)); }
+.accountingActions select,.accountingActions input { color:#20498f; background:#fbf9ee; max-width:100%; }
+.accountingActions summary { cursor:pointer; font-weight:700; }
+@media(max-height:650px) and (orientation:landscape) { .paperViewport { max-height:calc(max(90px,75dvh - 6rem)); } }

@@ -50,7 +50,7 @@ function useRadio(music:Music,serverNow:()=>number,enabled:boolean){
   };
   return {audio,display,volume,setVolume,muted,setMuted,blocked,unlock,needsGesture:!unlocked,failed,setFailed};
 }
-export function SharedRoom({view,profiles,busy,command,serverNow,sheetExit}:{view:RoomView;profiles:SeatProfile[]|null;busy:boolean;command:SharedCommand;serverNow:()=>number;sheetExit?:ReactNode}){
+export function SharedRoom({view,profiles,busy,command,serverNow,sheetExit,scoreAdjustment}:{view:RoomView;profiles:SeatProfile[]|null;busy:boolean;command:SharedCommand;serverNow:()=>number;sheetExit?:ReactNode;scoreAdjustment?:ReactNode}){
   const p=view.presentation!;const radio=useRadio(p.music,serverNow,p.enabled);
   const close=()=>p.overlay&&command("overlay_close",{overlay_id:p.overlay.id});
   const my=view.my_seat;
@@ -65,7 +65,7 @@ export function SharedRoom({view,profiles,busy,command,serverNow,sheetExit}:{vie
     </div>}
     {p.overlay&&<section className={`${styles.panel} ${p.overlay.kind==="score_sheet"?styles.scoreOverlay:p.overlay.kind==="last_trick"?styles.lastTrickOverlay:p.overlay.kind==="radio"?styles.radioOverlay:""}`} role={p.overlay.kind==="score_sheet"||p.overlay.kind==="last_trick"||p.overlay.kind==="radio"?"dialog":undefined} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind}>
       {p.overlay.kind!=="score_sheet"&&<header><div><strong>{p.overlay.kind==="last_trick"?`${names(p.overlay.seat,profiles)} смотрит последнюю взятку`:labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small></div><button type="button" disabled={busy} onClick={close}>Закрыть</button></header>}
-      {p.overlay.kind==="score_sheet"&&<Notebook view={view} profiles={profiles} title={`${names(p.overlay.seat,profiles)} смотрит листик`} sheetExit={sheetExit} onClose={close} closeDisabled={busy}/>}
+      {p.overlay.kind==="score_sheet"&&<Notebook view={view} profiles={profiles} title={`${names(p.overlay.seat,profiles)} смотрит листик`} sheetExit={sheetExit} scoreAdjustment={scoreAdjustment} onClose={close} closeDisabled={busy}/>}
       {p.overlay.kind==="last_trick"&&<><div className={styles.replay}>{(view.last_trick??[]).map(play=><div key={play.owner}><span>{names(play.owner,profiles)}</span><CardArtwork card={play.card}/></div>)}</div><p>Победитель: {names(view.last_trick_winner??0,profiles)}{view.last_trick_suit?` · Масть ${suitSymbol(view.last_trick_suit)}`:""}. Следующий разрешённый ход закроет просмотр.</p></>}
       {p.overlay.kind==="widow_replay"&&<div className={styles.replay}>{(view.widow??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>)}</div>}
       {p.overlay.kind==="discard_replay"&&<div className={styles.replay}>{view.my_seat===view.declarer&&view.my_seat===p.overlay.seat ? (view.own_discard??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>) : <p>{names(p.overlay.seat,profiles)} смотрит свои сброшенные карты.</p>}</div>}

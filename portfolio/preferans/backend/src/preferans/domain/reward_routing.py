@@ -89,12 +89,8 @@ def passout_options(score, game, selected=None):
             if gap < amount and score.hill[i] > 0:
                 defaults[i] = "hill_first"
         else:
-            if score.hill[i] > 0:
-                choose(i, ["pool", "hill_first"])
-            paid = min(amount, score.hill[i]) if defaults[i] == "hill_first" else 0
-            pool[i] += amount - paid
-    # Do not display a speculative recipient while the other zero-trick player
-    # can still change the priority by choosing their own pool or hill.
+            pool[i] += amount
+    # Stage mandatory own-pool credits before computing help priorities.
     if not pending:
         for i in range(3):
             if i in blocked:

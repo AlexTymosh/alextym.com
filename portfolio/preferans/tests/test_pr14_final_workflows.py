@@ -16,83 +16,18 @@ def ready_presence(api, rid):
         do(api, rid, uid, f"presence-pr14-{uid}", "pulse", {})
 
 
-def report(api, rid):
-    card = api.view(rid, "a")["hand"][0]
-    do(api, rid, "a", "reveal-report-01", "reveal_report", {"card": card})
-    incident = api.view(rid, "b")["reveal"]
-    assert incident["card"] == card
-    assert api.view(rid, "b")["hand"] != api.view(rid, "a")["hand"]
-    assert "accidental_reveal" in api.view(rid, "c")["controls"]["pause_reasons"]
-    return incident
-
-
-def propose(api, rid, incident, decision, amount=None, key="proposal-pr14-01"):
-    do(
-        api,
-        rid,
-        "a",
-        key,
-        "reveal_propose",
-        {"id": incident["id"], "decision": decision, "amount": amount},
-    )
-    return api.view(rid, "b")["reveal"]["proposal"]
-
-
-def vote(api, rid, uid, incident, proposal, approve=True):
-    return do(
-        api,
-        rid,
-        uid,
-        f"vote-pr14-{uid}-{proposal['id']}",
-        "reveal_vote",
-        {"id": incident["id"], "proposal_id": proposal["id"], "approve": approve},
-    )
-
-
-def test_reveal_rejection_then_agreed_penalty(monkeypatch):
+def test_retired_reveal_commands_are_rejected_without_storage_changes(monkeypatch):
     api, rid = setup(monkeypatch)
     ready_presence(api, rid)
-    with pytest.raises(store.StoreError):
-        do(
-            api,
-            rid,
-            "b",
-            "not-own-card-01",
-            "reveal_report",
-            {"card": api.view(rid, "a")["hand"][0]},
-        )
-    initial = api.view(rid, "a")
-    incident = report(api, rid)
-    with pytest.raises(store.StoreError):
-        do(api, rid, "a", "blocked-pass-01", "pass", {})
-    p = propose(api, rid, incident, "redeal")
-    vote(api, rid, "b", incident, p, False)
-    assert api.view(rid, "a")["reveal"]["proposal"] is None
-    p = propose(api, rid, incident, "penalty", 6, "proposal-pr14-02")
-    vote(api, rid, "b", incident, p)
-    assert api.view(rid, "a")["score"] == initial["score"]
-    vote(api, rid, "c", incident, p)
-    after = api.view(rid, "a")
-    assert "reveal" not in after
-    assert after["score"]["hill"][0] == initial["score"]["hill"][0] + 6
-    assert after["game_id"] == initial["game_id"]
-    assert after["revealed_cards"][0]["card"] == incident["card"]
-
-
-@pytest.mark.parametrize("decision", ["continue", "redeal"])
-def test_unanimous_resolution_preserves_score(monkeypatch, decision):
-    api, rid = setup(monkeypatch)
-    ready_presence(api, rid)
-    initial = api.view(rid, "a")
-    incident = report(api, rid)
-    p = propose(api, rid, incident, decision)
-    vote(api, rid, "b", incident, p)
-    vote(api, rid, "c", incident, p)
-    after = api.view(rid, "a")
-    assert after["score"] == initial["score"]
-    assert after["dealer"] == initial["dealer"]
-    assert (after["game_id"] != initial["game_id"]) == (decision == "redeal")
-    assert "reveal" not in after
+    before = deepcopy(api.db.docs)
+    for action, args in (
+        ("reveal_report", {"card": api.view(rid, "a")["hand"][0]}),
+        ("reveal_propose", {}),
+        ("reveal_vote", {}),
+    ):
+        with pytest.raises(store.StoreError):
+            do(api, rid, "a", "retired-" + action, action, args)
+    assert api.db.docs == before
 
 
 def test_punch_choice_keeps_result_and_updates_both_rankings_once(monkeypatch):

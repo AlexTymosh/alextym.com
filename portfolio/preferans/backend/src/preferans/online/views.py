@@ -10,10 +10,12 @@ from preferans.domain.auction import (
 )
 from preferans.domain.cards import Card
 from preferans.domain.claims import can_claim, claim_voters
-from preferans.domain.game import GameState, Phase, legal_play_cards
+from preferans.domain.game import GameState, Phase, can_offer_misere, legal_play_cards
 from preferans.domain.ledger import ScoreState
-from preferans.domain.settlement import net_results, pairwise_results
+from preferans.domain.settlement import final_hill_vists, net_results, pairwise_results
 from preferans.online.controls import public_controls
+from preferans.online.pause_clock import retire_reveal, reasons
+from copy import deepcopy
 from preferans.online.deal_flow import projection as next_deal_projection
 from preferans.online.presentation import projection as presentation_projection
 from preferans.online.realtime import enabled as realtime_enabled
@@ -50,6 +52,13 @@ def seat_view(
     controls: dict | None = None,
     now_ms: int = 0,
 ) -> dict:
+    if controls and (
+        "reveal" in controls
+        or "revealed_cards" in controls
+        or "accidental_reveal" in reasons(controls)
+    ):
+        controls = deepcopy(controls)
+        retire_reveal(controls, now_ms)
     seats = room["seats"]
     my_seat = seats.index(uid) if uid in seats else None
     result = {
@@ -83,6 +92,7 @@ def seat_view(
                 "pairs": [list(row) for row in pairwise_results(score)],
                 "net": list(net_results(score)),
             }
+            result["final_hill_vists"] = list(final_hill_vists(score))
     if (
         owner
         and not (score and score.closed)
@@ -104,11 +114,6 @@ def seat_view(
         return result
     if my_seat is not None and room["status"] == "closed" and room.get("punch_choices"):
         result["punch_choices"] = room["punch_choices"]
-    if my_seat is not None and room["status"] == "playing":
-        if (controls or {}).get("reveal"):
-            result["reveal"] = controls["reveal"]
-        if (controls or {}).get("revealed_cards"):
-            result["revealed_cards"] = controls["revealed_cards"]
     if room["status"] == "closed" and type(room.get("sheet_loser")) is int:
         # Do not reveal any remaining cards or advertise legal actions after a technical finish.
         result["sheet_loser"] = room["sheet_loser"]
@@ -178,10 +183,16 @@ def seat_view(
         }
     if my_seat is not None:
         if (
+            room["status"] == "playing"
+            and can_offer_misere(state, my_seat)
+            and (controls or {}).get("paused_at") is None
+            and not (controls or {}).get("vote")
+        ):
+            result["can_offer_misere"] = True
+        if (
             can_claim(state, my_seat)
             and not (controls or {}).get("paused_at")
             and not (controls or {}).get("vote")
-            and not (controls or {}).get("reveal")
         ):
             result["can_claim"] = True
         claim = state.claim

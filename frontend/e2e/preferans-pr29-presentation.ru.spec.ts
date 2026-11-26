@@ -26,7 +26,7 @@ test("passout widow stays on the preceding frame until collection ends",()=>{
 });
 
 test("claim labels distinguish passouts, both miseres and other claimants",()=>{
-  expect(claimVoteLabels(base,0)).toEqual({approve:"так ему и надо!",reject:"я четный или тупой - я против!"});
+  expect(claimVoteLabels(base,0)).toEqual({approve:"так ему и надо!",reject:"Я против! (отэто я гоню...)"});
   for(const kind of ["misere","misere_no_widow"] as const){
     const view:RoomView={...base,is_passout:false,declarer:1,contract:{kind,level:null,suit:null}};
     expect(claimVoteLabels(view,1)).toEqual({approve:"Шикарно всунули!",reject:"Я туплю - я против!"});

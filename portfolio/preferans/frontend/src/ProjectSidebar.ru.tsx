@@ -6,19 +6,19 @@ const serverMenuSlot = () => null;
 import styles from "./preferans-table.module.css";
 import type { OverlayKind } from "./presentation-model";
 
-type Panel = "controls" | "media" | "settings";
+type Panel = "media" | "settings";
 const items: {key:Panel; label:string; icon:string}[] = [
-  {key:"controls", label:"Управление игрой", icon:"☷"}, {key:"media", label:"Связь за столом", icon:"◉"},
+  {key:"media", label:"Связь за столом", icon:"◉"},
   {key:"settings", label:"Настройки", icon:"⚙"},
 ];
-export function ProjectSidebar({children, controls, media, settings, urgent, active, shared, copy}: {
-  children:ReactNode; controls:ReactNode; media:ReactNode; settings:ReactNode;
+export function ProjectSidebar({children, media, settings, urgent, active, shared, copy}: {
+  children:ReactNode; media:ReactNode; settings:ReactNode;
   urgent:boolean; active:boolean; shared?:(kind:OverlayKind)=>void; copy:()=>void;
 }) {
-  const [panel,setPanel] = useState<Panel|null>(()=>urgent?"controls":null);
+  const [panel,setPanel] = useState<Panel|null>(()=>urgent?"settings":null);
   const menuRef=useRef<HTMLElement>(null);
   const slot = useSyncExternalStore(subscribeMenuSlot,menuSlot,serverMenuSlot);
-  useEffect(()=>{if(urgent)setPanel("controls");},[urgent]);
+  useEffect(()=>{if(urgent)setPanel("settings");},[urgent]);
   useEffect(()=>{
     if(!panel)return;
     const outside=(event:PointerEvent)=>{if(event.target instanceof Node&&!menuRef.current?.contains(event.target))setPanel(null);};
@@ -28,7 +28,7 @@ export function ProjectSidebar({children, controls, media, settings, urgent, act
     return()=>{document.removeEventListener("pointerdown",outside,true);document.removeEventListener("keydown",escape);};
   },[panel]);
   const shown = panel;
-  const nodes = {controls,media,settings};
+  const nodes = {media,settings};
   const reference = (kind:"rules"|"history") => window.open(`/portfolio/preferans?view=${kind}`,"_blank","noopener,noreferrer");
   const select = (key:Panel) => {
     setPanel(old=>old===key?null:key);
