@@ -4,7 +4,7 @@ import { bidLabel, cardId, cardLabel, type Card, type RoomView, type TableTheme 
 import type { Presence } from "./realtime-client";
 import { actorSeat, opponentCards, seatPosition, tableSeats, type Seat, type SeatProfile } from "./table-model";
 import styles from "./preferans-table.module.css";
-import { animationBetween, orderHand, replayWidow, visibleWidow, type SortMode } from "./interaction-model";
+import { animationBetween, orderHand, passoutWidowFrame, replayWidow, visibleWidow, type SortMode } from "./interaction-model";
 import { dealerFor } from "./table-interaction";
 import { animateDeal, animateArrival, animateCollection, DEAL_DURATION_MS, TRICK_DURATION_MS } from "./table-motion";
 import { latestTrickSeat, trickTrain, opponentWidowCards } from "./table-refinements";
@@ -100,10 +100,11 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
 }
 
 function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, pendingPlay, deck, statusLine, announcement }: { statusLine:ReactNode; announcement?:ReactNode; pendingPlay?:{owner:number;card:Card}|null; view: RoomView; collecting: boolean; onWidow?: () => void; onField?: () => void; onTableDrop?: (e:DragEvent)=>void; award?: string; deck?:ReactNode }) {
-  const widow = view.phase==="discard"&&!award?{count:0,cards:[]}:visibleWidow(view);
-  const publicWidow = replayWidow(view);
+  const frame=passoutWidowFrame(view,collecting);
+  const widow = view.phase==="discard"&&!award?{count:0,cards:[]}:visibleWidow(frame.view);
+  const publicWidow = replayWidow(frame.view);
   const [replay,setReplay] = useState(false);
-  const showReplay = replay && publicWidow.length > 0;
+  const showReplay = !frame.held && replay && publicWidow.length > 0;
   const opponentWidow = opponentWidowCards(view);
   const shown = collecting ? view.last_trick ?? [] : [...(view.trick ?? []), ...(pendingPlay&&!(view.trick??[]).some(p=>p.owner===pendingPlay.owner)?[pendingPlay]:[])];
   const names = tableSeats(view.my_seat);
@@ -159,16 +160,16 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     if (kind && document.visibilityState === "visible" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       if(timer.current) clearTimeout(timer.current);
       setAnimation({kind,game:view.game_id,count:view.played_tricks??0,from:kind==="dealer"?seatPosition(view.my_seat,before?.lobby_setup?.dealer??-1)??undefined:undefined});
-      timer.current=setTimeout(()=>setAnimation(null),kind==="deal"?DEAL_DURATION_MS:kind==="widow"?850:kind==="trick"?TRICK_DURATION_MS:650);
+      timer.current=kind==="trick"&&view.is_passout?undefined:setTimeout(()=>setAnimation(null),kind==="deal"?DEAL_DURATION_MS:kind==="widow"?850:kind==="trick"?TRICK_DURATION_MS:650);
     }
     if(before?.game_id===view.game_id&&before&&view.version>before.version&&tableRef.current&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
       const play=view.trick?.at(-1);
-      if(play&&view.my_seat!==before.controller&&play.owner!==view.my_seat&&(view.trick?.length??0)>(before.trick?.length??0))animateArrival(tableRef.current,play.owner);
+      if(play&&!(view.is_passout&&tableRef.current.dataset.holdingTrick==="true")&&view.my_seat!==before.controller&&play.owner!==view.my_seat&&(view.trick?.length??0)>(before.trick?.length??0))animateArrival(tableRef.current,play.owner);
     }
   },[view]);
   useEffect(()=>()=>{if(timer.current) clearTimeout(timer.current);},[]);
   const active=animation&&animation.game===view.game_id&&animation.count===(view.played_tricks??0)?animation.kind:null;
-  const collecting=active==="trick" && !(view.trick?.length) && !pendingPlay;
+  const collecting=active==="trick" && (Boolean(view.is_passout)||(!(view.trick?.length)&&!pendingPlay));
   const dealing=active==="deal";
   const animationSeat=view.last_trick_winner;
   const currentDealer=view.dealer;
@@ -176,8 +177,8 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     const table=tableRef.current;
     if(!table)return;
     if(dealing&&currentDealer!==undefined)return animateDeal(table,currentDealer);
-    if(collecting&&animationSeat!=null)return animateCollection(table,animationSeat);
-  },[dealing,collecting,animationSeat,currentDealer]);
+    if(collecting&&animationSeat!=null)return animateCollection(table,animationSeat,view.is_passout?()=>setAnimation(null):undefined);
+  },[dealing,collecting,animationSeat,currentDealer,view.is_passout,view.game_id,view.played_tricks]);
   useLayoutEffect(()=>{
     const el=tableRef.current;if(!el)return;
     const fit=()=>{

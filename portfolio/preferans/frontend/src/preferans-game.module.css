@@ -208,7 +208,8 @@
 .tableRoot .cardWithSort + .cardWithSort { margin-left:calc(var(--card-w)*-.62); }
 .tableRoot .cardWithSort[data-suit-break="true"] { margin-left:calc(var(--card-w)*.14); }
 .tableRoot .cardWithSort:focus-within,.tableRoot .cardWithSort:hover { z-index:3; }
-.tableRoot .cardWithSort[data-from-widow="true"] .playingCard { outline:2px dashed #f4cb7d; outline-offset:2px; }
+.tableRoot .cardWithSort[data-from-widow="true"] .playingCard { position:relative; }
+.widowLabel { position:absolute; left:4%; bottom:5%; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; padding:.22em .12em; font:700 clamp(5px,calc(var(--card-w,65px)*.105),13px)/1 system-ui,sans-serif; background:#f7cf5a; color:#362604; border-radius:2px; pointer-events:none; z-index:1; }
 .tableRoot .sortControls { display:none; }
 .tableRoot .discardSlots { display:flex; align-items:center; justify-content:center; gap:.45rem; margin:.35rem 0; }
 .tableRoot .discardSlot { width:var(--side-w,50px); aspect-ratio:100/146; padding:0!important; border:1px dashed #c2d2b8; border-radius:5px; background:#173b2e; }
