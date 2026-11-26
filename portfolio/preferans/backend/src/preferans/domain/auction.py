@@ -148,6 +148,8 @@ def legal_auction_bids(state: AuctionState, actor: int) -> tuple[Bid, ...]:
     for bid in BID_ORDER:
         if bid.ordinal <= threshold:
             continue
+        if actor in state.misere_bidders and bid.kind != BidKind.MISERE_NO_WIDOW:
+            continue
         if bid.kind == BidKind.REGULAR and bid.level is not None:
             if bid.level < state.minimum_level:
                 continue
@@ -195,6 +197,7 @@ def can_say_here(state: AuctionState, actor: int) -> bool:
         state.outcome == AuctionOutcome.BIDDING
         and actor == state.turn
         and actor in state.active
+        and actor not in state.misere_bidders
         and len(state.active) == 2
         and actor == here_holder(state)
         and state.high_bid is not None
@@ -239,7 +242,7 @@ def apply_auction_action(state: AuctionState, actor: int, action: AuctionAction)
         high = action.bid
         high_bidder = actor
         made_bid = made_bid | {actor}
-        if action.bid is not None and action.bid.kind == BidKind.MISERE:
+        if action.bid is not None and action.bid.kind in (BidKind.MISERE, BidKind.MISERE_NO_WIDOW):
             misere_bidders = misere_bidders | {actor}
     else:
         raise RuleViolation("Unknown auction action")

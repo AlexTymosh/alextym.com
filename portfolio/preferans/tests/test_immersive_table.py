@@ -8,12 +8,16 @@ from preferans.online.table_presentation import notebook, room_day
 
 
 def test_running_notebook_merges_corrections_in_ledger_order():
+    from preferans.domain.ledger import EntryKind, LedgerEntry
+
     def entry(seq, kind, actor, amount, against=None):
-        return SimpleNamespace(
+        return LedgerEntry(
             sequence=seq,
-            kind=SimpleNamespace(value=kind),
+            deal_id="deal-1" if seq <= 2 else "deal-2",
+            kind=EntryKind(kind),
             actor=actor,
             amount=amount,
+            reason="test_posting",
             against=against,
         )
 

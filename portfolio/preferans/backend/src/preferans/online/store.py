@@ -42,7 +42,7 @@ from preferans.online.controls import (
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
 from preferans.online.views import seat_view
 from preferans.online.table_experience import THEMES, mark_activity, settlement_options
-from preferans.online.table_presentation import room_day
+from preferans.online.table_presentation import remember_deal, room_day
 from preferans.online.seat_swap import (
     ACTIONS as SWAP_ACTIONS,
     SeatSwapError,
@@ -133,8 +133,9 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     return game
 
 
-def _after_settlement(room, score, controls, now, use_rt):
+def _after_settlement(room, score, controls, now, use_rt, game):
     """One transition for regular settlement and an accepted misere."""
+    remember_deal(controls, room["game_id"], game)
     if score.closed:
         room["status"] = "awaiting_settlement"
         room["final_review"] = True
@@ -670,6 +671,8 @@ class FirestoreRooms:
                         or ruleset_catalog.snapshot_hash(rules, policy) != template["snapshot_hash"]
                     ):
                         raise ValueError("Template hash mismatch")
+                    if not 2 <= rules.pool_target <= 40 or rules.pool_target % 2:
+                        raise ValueError("Room pool target must be even and between 2 and 40")
                     score = ScoreState.new(rules)
                     controls["policy"] = policy
                 except (ValueError, TypeError, KeyError) as exc:
@@ -736,6 +739,8 @@ class FirestoreRooms:
                     raise StoreError(409, "Room is not ready")
                 if score.closed:
                     raise StoreError(409, "Game is already closed")
+                if room["status"] == "lobby" and (not 2 <= score.target <= 40 or score.target % 2):
+                    raise StoreError(422, "Room pool target must be even and between 2 and 40")
                 if (
                     use_rt
                     and room["status"] == "between"
@@ -815,7 +820,7 @@ class FirestoreRooms:
                     )
                 except (RuleViolation, ValueError, TypeError) as exc:
                     raise StoreError(422, "Invalid settlement") from exc
-                _after_settlement(room, score, controls, now, use_rt)
+                _after_settlement(room, score, controls, now, use_rt, game)
                 event_data = {"score_version": score.version, "closed": score.closed}
             elif action == "lobby_ready":
                 if room["status"] != "lobby" or "lobby_setup" not in room or None in room["seats"]:
@@ -860,7 +865,8 @@ class FirestoreRooms:
                     or type(args["dealer"]) is not int
                     or args["dealer"] not in range(3)
                     or type(args["target"]) is not int
-                    or not 1 <= args["target"] <= 1000
+                    or not 2 <= args["target"] <= 40
+                    or args["target"] % 2 != 0
                 ):
                     raise StoreError(422, "Invalid lobby setup")
                 room["lobby_setup"] = {"ready": [False, False, False], "dealer": args["dealer"]}
@@ -971,7 +977,7 @@ class FirestoreRooms:
                                 score = settle_game(
                                     score, game, room["game_id"], expected_version=score.version
                                 )
-                                _after_settlement(room, score, controls, now, use_rt)
+                                _after_settlement(room, score, controls, now, use_rt, game)
                                 event_data = {
                                     **event_data,
                                     "score_version": score.version,

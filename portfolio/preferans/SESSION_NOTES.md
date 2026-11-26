@@ -105,3 +105,10 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Exempt second place with no negative reconciled pair balance from received punches; preserve existing net-distance formula otherwise. Allow direct misere-without-widow over another player's ordinary misere.
 - Use a bounded table height, symmetric bottom rails, optional overhead round table, local 75% default transparency, horizontal calls, enlarged bare claim cards and notebook controls/totals. No additional periodic Firestore requests.
 - Full CI and actual authenticated three-player acceptance are required.
+
+## PR28 - Notebook history and stable table geometry
+
+- Persist public contract metadata with each settlement; group ledger history and mark every posting of the latest step red. Add local read-only history navigation.
+- Lock misere bidders into the misere family, preserve rival direct overbid. Bound new room pool targets to even 2–40, including template selection. Add room-member-only email fallback and guarded double click.
+- Reserve a fixed maximum hand envelope, bound viewport including ancestor padding, position widow inside enlarged field, add independent local table materials and opacity.
+- Full CI and actual three-player viewport acceptance required.

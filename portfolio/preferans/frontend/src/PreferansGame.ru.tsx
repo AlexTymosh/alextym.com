@@ -53,8 +53,8 @@ const statusNames: Record<RoomView["status"], string> = {
   awaiting_settlement: "Подсчёт результатов", between: "Между раздачами", closed: "Партия завершена", archived: "Партия архивирована",
 };
 
-function CardFace({ card, selected, playable, pendingPlay, onClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
-  card: Card; selected?: boolean; playable?: boolean; pendingPlay?:boolean; onClick?: () => void;
+function CardFace({ card, selected, playable, pendingPlay, onClick, onDoubleClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
+  card: Card; selected?: boolean; playable?: boolean; pendingPlay?:boolean; onClick?: () => void; onDoubleClick?:()=>void;
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void;
   onDragOver?: (event: DragEvent<HTMLButtonElement>) => void;
   onDrop?: (event: DragEvent<HTMLButtonElement>) => void;
@@ -65,7 +65,7 @@ function CardFace({ card, selected, playable, pendingPlay, onClick, onDragStart,
   return (
     <button type="button" className={`${styles.playingCard} ${red ? styles.red : ""} ${selected ? styles.selected : ""} ${playable ? styles.playable : ""}`}
       aria-label={`${cardLabel(card)}${selected ? ", выбрана" : ""}`}
-      aria-pressed={Boolean(selected)} disabled={!onClick && !onDragStart} onClick={onClick}
+      aria-pressed={Boolean(selected)} disabled={!onClick && !onDragStart && !onDoubleClick} onClick={onClick} onDoubleClick={onDoubleClick}
       draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onKeyDown={onKeyDown}
       data-card={cardId(card)} data-pending-play={pendingPlay?"true":undefined}>
       <CardArtwork card={card} decorative />
@@ -209,6 +209,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const changeTransparency=(value:number)=>{setTransparency(value);if(transparencyKey)try{localStorage.setItem(transparencyKey,String(value));}catch{/* Optional preference. */}};
   const selectedTheme=localTableTheme==="room"?view?.table_theme??"felt":localTableTheme;
   const opacity=effectiveOpacity(selectedTheme,transparency);
+  const surfaceKey=preferenceScope?`preferans:surface:${preferenceScope}`:null;
+  const [surface,setSurface]=useState<"pine"|"cloth"|"plastic"|"green"|"blue"|"glass">("pine");
+  const [tableTransparency,setTableTransparency]=useState(0);
+  useEffect(()=>{if(surfaceKey)try{const raw=localStorage.getItem(surfaceKey);if(raw==="pine"||raw==="cloth"||raw==="plastic"||raw==="green"||raw==="blue"||raw==="glass")setSurface(raw);else setSurface("pine");setTableTransparency(parseTransparency(localStorage.getItem(surfaceKey+":opacity"))??0);}catch{/* Optional preference. */}},[surfaceKey]);
   const roundKey=preferenceScope?`preferans:round-table:${preferenceScope}`:null;
   const [roundTable,setRoundTable]=useState(true);
   useEffect(()=>{if(roundKey)try{setRoundTable(localStorage.getItem(roundKey)!=="off");}catch{/* Optional preference. */}},[roundKey]);
@@ -505,6 +509,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
     return <CardFace card={card} playable={playable} pendingPlay={!!localPlay&&localPlay.owner===seat&&cardId(localPlay.card)===cardId(card)}
       onDragStart={isPlay&&!busy?e=>beginDrag(e,"card",card,seat):undefined} onDragEnd={endDrag}
+      onDoubleClick={playable?()=>playNow(card,seat):undefined}
       onKeyDown={e=>{if(playable&&(e.key==="Enter"||e.key===" ")){e.preventDefault();playNow(card,seat);}}}/>;
   };
   const reorder = (from:string,to:string) => {
@@ -541,7 +546,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
     <label><input type="checkbox" checked={roundTable} onChange={e=>changeRoundTable(e.target.checked)}/> Круглый стол (вид сверху)</label>
-    <label className={styles.transparencySetting}>Прозрачность: {Math.round((1-opacity)*100)}% <input type="range" min={0} max={75} step={5} value={Math.round((1-opacity)*100)} onChange={e=>changeTransparency(Number(e.target.value))}/></label>
+    <label>Поверхность круглого стола<select value={surface} onChange={e=>{const value=e.target.value as typeof surface;setSurface(value);if(surfaceKey)try{localStorage.setItem(surfaceKey,value);}catch{/* Optional preference. */}}}><option value="pine">Сосна</option><option value="cloth">Скатерть</option><option value="plastic">Советский пластик</option><option value="green">Зелёная</option><option value="blue">Синяя</option><option value="glass">Стекло</option></select></label>
+    <label>Прозрачность стола: {tableTransparency}% <input type="range" min={0} max={75} step={5} value={tableTransparency} onChange={e=>{const value=Number(e.target.value);setTableTransparency(value);if(surfaceKey)try{localStorage.setItem(surfaceKey+":opacity",String(value));}catch{/* Optional preference. */}}}/></label>
+    <label className={styles.transparencySetting}>Прозрачность поля: {Math.round((1-opacity)*100)}% <input type="range" min={0} max={75} step={5} value={Math.round((1-opacity)*100)} onChange={e=>changeTransparency(Number(e.target.value))}/></label>
     {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme==="glass"?"felt":view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={theme=>command("table_theme",{theme})}/>}
     <fieldset className={styles.backChoices}><legend>Рубашка карт</legend>{([["classic","Текущая классическая"],["ornament","Красный орнамент"],["red-blue","Красно-голубая сетка"],["green","Зелёная сетка"]] as const).map(([value,label])=><button type="button" key={value} aria-pressed={back===value} title={label} onClick={()=>changeBack(value)}><CardBackContext.Provider value={value}><CardArtwork decorative/></CardBackContext.Provider><span>{label}</span></button>)}</fieldset>
     {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
@@ -559,11 +566,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
         <CardFace card={card} selected={false} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
           onClick={ownPlayable&&draft?()=>onCardSelect(card):undefined}
+          onDoubleClick={isPlay&&ownPlayable&&legal.has(cardId(card))?()=>{if(view.my_seat!==null)playNow(card,view.my_seat);}:undefined}
           onDragStart={e=>beginDrag(e,"card",card,view.my_seat??undefined)} onDragEnd={endDrag}
           onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e,cardId(card))}
           onKeyDown={e=>{if(isPlay&&ownPlayable&&legal.has(cardId(card))&&(e.key==="Enter"||e.key===" ")){e.preventDefault();if(view.my_seat!=null)playNow(card,view.my_seat);return;}if(e.altKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){const target=visibleHand[index+(e.key==="ArrowLeft"?-1:1)];if(target){e.preventDefault();reorder(cardId(card),cardId(target));}}}}/>
       </div>)}
-      {!visibleHand.length&&<span className={styles.subtle}>Нет карт для отображения</span>}
+      {!visibleHand.length&&view.status==="playing"&&<span className={styles.subtle}>Нет карт для отображения</span>}
     </div>
   </div>;
   const playerName=(seat:number)=>profiles?.[seat]?.name||seatNames[seat]||"Игрок";
@@ -591,13 +599,13 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   })();
   const actions = view && <>
     {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
-    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
+    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} profiles={profiles} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
     <ActionPanel view={view} busy={busy} selectedCards={chosenCards} profiles={profiles}
       command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
       onStart={start} onSettle={settle} />
   </>;
   return <CardBackContext.Provider value={back}><main className={`${styles.root} ${styles.tableRoot}`}>
-    <header className={`${styles.header} ${styles.compactHeader}`}>
+    <header data-preferans-game-header="true" className={`${styles.header} ${styles.compactHeader}`}>
       <p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p>
       <div className={styles.headerTools}><div className={styles.headerStatus} data-offline={!online&&!rtReady?"true":undefined}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
         {rtReady ? "Обновление в реальном времени" : online ? "Резервная связь" : "Переподключение"}</div></div>
@@ -628,7 +636,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
-              theme={selectedTheme} roundTable={roundTable} surfaceOpacity={opacity} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+              theme={selectedTheme} roundTable={roundTable} tableSurface={surface} tableOpacity={1-tableTransparency/100} surfaceOpacity={opacity} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               claimPanel={<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/>}

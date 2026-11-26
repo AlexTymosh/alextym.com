@@ -54,13 +54,13 @@ export function RulesetEditor({view,busy,command}:{view:RoomView;busy:boolean;co
     {t&&<><p>{t.description}</p><p>Хеш снимка: {t.snapshot_hash.slice(0,12)}</p>
       <dl>{Object.entries(t.parameters).map(([k,v])=><div key={k}><dt>{labels[k]}</dt><dd>{Array.isArray(v)?v.join(" / "):v}{templates[0]&&JSON.stringify(v)!==JSON.stringify(templates[0].parameters[k])?" (отличается от базового)":""}</dd></div>)}
       {Object.entries(t.policy).map(([k,v])=><div key={k}><dt>{policyLabels[k as keyof Policy]}</dt><dd>{v}{templates[0]&&v!==templates[0].policy[k as keyof Policy]?" (отличается от базового)":""}</dd></div>)}</dl>
-      {view.room_admin&&<button type="button" disabled={busy||Boolean(view.seat_swap)||loading} onClick={()=>command("ruleset_select",{id:t.id,version:t.version})}>Применить к комнате и сбросить готовность</button>}
+      {view.room_admin&&<button type="button" disabled={busy||Boolean(view.seat_swap)||loading||Number(t.parameters.pool_target)<2||Number(t.parameters.pool_target)>40||Number(t.parameters.pool_target)%2!==0} onClick={()=>command("ruleset_select",{id:t.id,version:t.version})}>Применить к комнате и сбросить готовность</button>}
       {canEdit&&<button type="button" disabled={loading} onClick={()=>{copyId.current=null;setDraft({...t,parameters:{...t.parameters},policy:{...t.policy}});}}>Редактировать / копировать шаблон</button>}
     </>}
     {draft&&canEdit&&<div className={styles.field}>
       <label>Название<input value={draft.name} maxLength={80} onChange={e=>setDraft({...draft,name:e.target.value})}/></label>
       <label>Описание<textarea value={draft.description} maxLength={240} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
-      {Object.entries(draft.parameters).map(([k,v])=><fieldset key={k}><legend>{labels[k]}</legend>{(Array.isArray(v)?v:[v]).map((n,i)=><label key={i}>{Array.isArray(v)?(6+i):labels[k]}<input type="number" min={1} max={k==="pool_target"?1000:100} step={1} value={n} onChange={e=>setParameter(k,Array.isArray(v)?i:null,Number(e.target.value))}/></label>)}</fieldset>)}
+      {Object.entries(draft.parameters).map(([k,v])=><fieldset key={k}><legend>{labels[k]}</legend>{(Array.isArray(v)?v:[v]).map((n,i)=><label key={i}>{Array.isArray(v)?(6+i):labels[k]}<input type="number" min={k==="pool_target"?2:1} max={k==="pool_target"?40:100} step={k==="pool_target"?2:1} value={n} onChange={e=>setParameter(k,Array.isArray(v)?i:null,Number(e.target.value))}/></label>)}</fieldset>)}
       {(Object.keys(policyLabels) as (keyof Policy)[]).map(k=><label key={k}>{policyLabels[k]}<input type="number" min={1} value={draft.policy[k]} onChange={e=>setDraft({...draft,policy:{...draft.policy,[k]:Number(e.target.value)}})}/></label>)}
       <button type="button" disabled={loading||!draft.name.trim()} onClick={()=>void save(true)}>Сохранить как шаблон</button>
       {draft.id!=="zaporizhzhia-classic"&&<button type="button" disabled={loading||!draft.name.trim()} onClick={()=>void save(false)}>Сохранить новую версию</button>}

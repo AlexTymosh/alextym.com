@@ -50,7 +50,8 @@ export function safeProfiles(value: unknown): SeatProfile[] | null {
     if (!p || typeof p !== "object") return { name: null, avatar: null };
     const name = typeof p.name === "string" && p.name.length <= 160 && !/[@\u0000-\u001f\u007f-\u009f]/.test(p.name) ? p.name : null;
     const avatar = typeof p.avatar === "string" && p.avatar.length <= 133_400 && /^data:image\/webp;base64,[A-Za-z0-9+/=]+$/.test(p.avatar) ? p.avatar : null;
-    return { name, avatar };
+    const email = typeof p.email === "string" && p.email.length<=254 && /^[^@\s\u0000-\u001f]+@[^@\s\u0000-\u001f]+$/.test(p.email)?p.email:null;
+    return { name:name||email, avatar };
   });
 }
 export function safeDirectory(value: unknown): { rooms: RoomSummary[]; can_create: boolean; truncated: boolean } | null {

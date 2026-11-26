@@ -13,6 +13,21 @@ def room_day(at_ms: int) -> str:
     )
 
 
+def remember_deal(controls: dict, deal_id: str, game) -> None:
+    contract = game.contract
+    controls.setdefault("score_sheet_deals", {})[deal_id] = {
+        "declarer": game.declarer,
+        "contract": {
+            "kind": contract.kind.value,
+            "level": contract.level,
+            "suit": contract.suit.value if contract.suit is not None else None,
+        }
+        if contract is not None
+        else None,
+        "passout": game.passout_level if game.is_passout else None,
+    }
+
+
 def notebook(score, controls: dict) -> dict:
     """Project immutable ledger entries; never guess missing legacy corrections.
 
@@ -26,18 +41,23 @@ def notebook(score, controls: dict) -> dict:
     current = dict.fromkeys(keys, 0)
     exact = not controls.get("score_sheet_legacy", False)
     marks = []
-    latest = None
+    steps = []
+    group = None
 
-    def record(key, delta, manual=False):
-        nonlocal exact, latest
+    def record(key, delta, group_key, metadata, reason, manual=False):
+        nonlocal exact, group
         if key not in current:
             exact = False
             return
         current[key] += delta
         cells[key].append(current[key])
-        latest = {"field": key[0], "seat": key[1], "against": key[2], "index": len(cells[key]) - 1}
+        mark = {"field": key[0], "seat": key[1], "against": key[2], "index": len(cells[key]) - 1}
+        if group != group_key:
+            steps.append({**metadata, "entries": []})
+            group = group_key
+        steps[-1]["entries"].append({**mark, "delta": delta, "reason": reason})
         if manual:
-            marks.append({**latest, "manual": True})
+            marks.append({**mark, "manual": True})
 
     corrections = controls.get("score_sheet_adjustments", [])
     legacy = controls.get("adjustments", [])
@@ -51,13 +71,28 @@ def notebook(score, controls: dict) -> dict:
     def apply_corrections(sequence):
         for item in by_sequence.get(sequence, []):
             key = (item["field"], item["seat"], item["against"])
-            record(key, item["delta"], manual=True)
+            record(
+                key,
+                item["delta"],
+                ("manual", item["game_version"]),
+                {"kind": "manual"},
+                "manual",
+                manual=True,
+            )
 
     apply_corrections(0)
     for entry in score.entries:
         kind = entry.kind.value
         key = ("hill" if kind == "hill_payment" else kind, entry.actor, entry.against)
-        record(key, -entry.amount if kind == "hill_payment" else entry.amount)
+        penalty = entry.reason in {"counter_180s", "accidental_reveal"}
+        metadata = controls.get("score_sheet_deals", {}).get(entry.deal_id, {})
+        record(
+            key,
+            -entry.amount if kind == "hill_payment" else entry.amount,
+            ("penalty", entry.sequence) if penalty else ("deal", entry.deal_id),
+            {"kind": "penalty" if penalty else "deal", **({} if penalty else metadata)},
+            entry.reason,
+        )
         apply_corrections(entry.sequence)
     for key in keys:
         kind, i, j = key
@@ -83,16 +118,19 @@ def notebook(score, controls: dict) -> dict:
                 else score.vists[i][j]
             )
             cells[kind, i, j] = [final] if final else []
-    if exact and latest is not None:
-        for mark in marks:
-            if all(mark[k] == latest[k] for k in latest):
-                mark["latest"] = True
-                break
-        else:
-            marks.append({**latest, "latest": True})
+    if exact and steps:
+        for entry in steps[-1]["entries"]:
+            latest = {k: entry[k] for k in ("field", "seat", "against", "index")}
+            for mark in marks:
+                if all(mark[k] == latest[k] for k in latest):
+                    mark["latest"] = True
+                    break
+            else:
+                marks.append({**latest, "latest": True})
     return {
         "exact": exact,
         "marks": marks if exact else [],
+        "steps": steps if exact else [],
         "hill": [cells["hill", i, None] for i in range(3)],
         "pool": [cells["pool", i, None] for i in range(3)],
         "vists": [[cells.get(("vist", i, j), []) for j in range(3)] for i in range(3)],
