@@ -47,7 +47,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
       const label=cell.kind==="pool"?poolEntryText(values,i,score.target??20):String(n);
       return {label:`. ${label}`,manual:!!mark?.manual,latest:!!mark?.latest,underline:!!distributed&&cell.kind==="hill"&&i===values.length-1};
     });
-    const rows=packNotebookRows(tokens,176);
+    const rows=packNotebookRows(tokens,cell.kind==="hill"?232:176);
     if(distributed&&cell.kind==="vist"&&cell.against!==undefined){
       const before=score.vists[cell.seat][cell.against], extra=distributed[cell.against];
       if(before||extra) rows.push(vistEquation(before,extra));
@@ -59,7 +59,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const rowHeight=25;
   const outer=Math.max(100, 66+(vistRows-1)*rowHeight+(final?28:0));
   const inner=outer+Math.max(56,20+poolRows*rowHeight);
-  const w=Math.max(578,2*inner+Math.max(266,220+(hillRows-1)*58)+(finalPunches.length?154:0),2*outer+440);
+  const w=Math.max(578,2*inner+Math.max(288,242+(hillRows-1)*58)+(finalPunches.length?154:0),2*outer+440);
   const h=Math.max(w+22,2*(inner+160+hillRows*rowHeight));
   const cx=w/2,cy=h/2-55,innerY=h-inner-20,outerY=h-outer-24;
   const slope=(innerY-cy-21)/(cx-inner-43);
@@ -69,9 +69,10 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     const direction=kind==="vist"?1:-1;
     return <g transform={`translate(${x} ${y}) rotate(${angle})`}>{rows.map((row,index)=>{
       const widths=row.map(t=>t.label.length*9.5+(t.manual?112:0)+7);
-      const scale=Math.min(1,extent/Math.max(1,widths.reduce((a,b)=>a+b,0)));
-      let offset=0;
       const indent=kind==="hill"?index*(angle===0?Math.ceil(rowHeight/slope)+2:angle===-90?Math.ceil(rowHeight*slope)+2:0):0;
+      const available=kind==="hill"?Math.max(24,extent-(angle===0?2*indent:index*(Math.ceil(rowHeight*slope)+2))):extent;
+      const scale=Math.min(1,available/Math.max(1,widths.reduce((a,b)=>a+b,0)));
+      let offset=0;
       return <g key={index} transform={`translate(${indent} ${direction*index*rowHeight}) scale(${scale} 1)`}>{row.map((token,i)=>{
         const start=offset;offset+=widths[i];const labelWidth=Math.max(1,token.label.length*9.5);
         const color=token.latest?"#b51524":token.manual?"#87620b":undefined;
@@ -148,9 +149,9 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
       </g>
       <g className={styles.ink}>
         <text x={cx} y={cy+9} textAnchor="middle" fontSize="28">{score.target??20}</text>
-        <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle"><tspan x={cx}>{first}</tspan>{rest&&<tspan x={cx} dy="1.2em">{rest}</tspan>}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}{total(bottom.seat,cx,cy+(rest?103:82))}{circle(bottom.seat,bottom.left,(outer+cx)/2,h-25)}{circle(bottom.seat,bottom.right,(w-outer+cx)/2,h-25)}</g>
-        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-18,cy+22,90,outerY-(cy+22)-15)}{text(left.lv,outer-18,24,90,cy-42)}{total(left.seat,cx-49,nameY,90)}{circle(left.seat,left.left,25,cy/2,90)}{circle(left.seat,left.right,25,(cy+outerY)/2,90)}</g>
-        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-Math.ceil(11*slope)-18,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+18,cy-22,-90,cy-42)}{text(right.lv,w-outer+18,outerY-15,-90,outerY-cy-35)}{total(right.seat,cx+49,nameY,-90)}{circle(right.seat,right.right,w-25,cy/2,-90)}{circle(right.seat,right.left,w-25,(cy+outerY)/2,-90)}</g>
+        <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle"><tspan x={cx}>{first}</tspan>{rest&&<tspan x={cx} dy="1.2em">{rest}</tspan>}</text>{text(bottom.hill,inner+24,innerY-12,0,Math.min(232,w-2*inner-48))}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}{total(bottom.seat,cx,cy+(rest?103:82))}{circle(bottom.seat,bottom.left,(outer+cx)/2,h-25)}{circle(bottom.seat,bottom.right,(w-outer+cx)/2,h-25)}</g>
+        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,20,90,Math.min(232,innerY-Math.ceil(11*slope)-36))}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-18,cy+22,90,outerY-(cy+22)-15)}{text(left.lv,outer-18,24,90,cy-42)}{total(left.seat,cx-49,nameY,90)}{circle(left.seat,left.left,25,cy/2,90)}{circle(left.seat,left.right,25,(cy+outerY)/2,90)}</g>
+        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-Math.ceil(11*slope)-14,-90,Math.min(232,innerY-Math.ceil(11*slope)-36))}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+18,cy-22,-90,cy-42)}{text(right.lv,w-outer+18,outerY-15,-90,outerY-cy-35)}{total(right.seat,cx+49,nameY,-90)}{circle(right.seat,right.right,w-25,cy/2,-90)}{circle(right.seat,right.left,w-25,(cy+outerY)/2,-90)}</g>
         {finalPunches.map(punchBadge)}
       </g>
     </g></svg>

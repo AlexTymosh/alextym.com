@@ -644,3 +644,34 @@
 .table[data-center-choice="true"] .trickField .fieldStatus { inset:10% 5%; z-index:8; }
 .table .trickBundle[data-awarded="true"] { opacity:.82; }
 .table .openHand button[data-defense-raised="true"] { transform:translateY(-18%)!important; }
+
+/* PR33 — rival alarm and a local, server-timestamped discard joke. */
+.table .avatar .counterAlarm { position:absolute; right:5px; bottom:5px; z-index:8; width:clamp(22px,3.2cqw,38px); height:clamp(22px,3.2cqw,38px); min-height:0; padding:3px; display:grid; place-items:center; color:#f6e9c7; background:#153a30dd; border:1px solid #d6bd80; border-radius:50%; }
+.table .avatar .counterAlarm svg { width:100%; height:100%; border-radius:0; }
+.table .avatar .counterAlarm:disabled { opacity:.32; cursor:default; }
+.table .avatar .counterAlarm:not(:disabled):hover { background:#836337; }
+.table .counterDisplay { display:grid; justify-items:center; gap:.35rem; width:100%; }
+.table .counterDigits { font-family:ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums; font-size:clamp(1.3rem,5cqh,3.5rem); font-weight:800; letter-spacing:.08em; color:#ffdf90; background:#13251e; border:1px solid #bcab7c; padding:.12em .32em; border-radius:.22em; }
+.table .counterDisplay small { font-size:.85em; }
+.table .trickField .fieldStatus:has(.counterDisplay) { inset:26% 10% 9%; z-index:6; }
+.table .counterDisplay { text-shadow:0 1px 3px #000,0 2px 4px #000; }
+.table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --rail:clamp(0px,17.55cqw,310.5px); }
+@media(max-height:650px) and (orientation:landscape) { .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --rail:clamp(0px,17.55cqw,calc(var(--play-height)*.34)); } }
+.table[data-gag-active="true"] [data-table-actions],.table[data-gag-active="true"] .claimButton { visibility:hidden; pointer-events:none; }
+.table[data-gag-fake="true"] .seat>.callBubble,.table[data-gag-fake="true"] .opponentHand,.table[data-gag-fake="true"] .ownHand,.table[data-gag-fake="true"] .widow,.table[data-gag-fake="true"] .fieldStatus { visibility:hidden; }
+.table[data-hide-flight="true"] .tablePaper { animation:liftForHide 1.4s var(--gag-paper-offset,0ms) ease-in-out both; }
+.table[data-gag-fake="true"] .tablePaper { animation:liftForRedeal 5.6s var(--gag-paper-offset,0ms) ease-in-out both; }
+@keyframes liftForHide {0%,100%{transform:rotate(-11deg)} 25%,75%{transform:translateY(-25%) rotate(-20deg);}}
+@keyframes liftForRedeal {0%,70%,100%{transform:rotate(-11deg)} 78%,91%{transform:translateY(-25%) rotate(-20deg)}}
+.table .gagScene { position:absolute; inset:0; z-index:4; pointer-events:none; }
+.table .gagScene>span { position:absolute; display:block; width:clamp(15px,3.5cqw,56px); aspect-ratio:2/3; transform:translate(-50%,-50%); }
+.table .gagScene img { display:block; width:100%; height:100%; }
+.table .gagHideCard { left:var(--from-x); top:var(--from-y); animation:gagHide 1.4s var(--gag-offset) both ease-in-out; }
+@keyframes gagHide {0%{opacity:1} 65%{opacity:1;left:var(--paper-x,9%);top:var(--paper-y,62%);} 95%,100%{left:var(--paper-x,9%);top:var(--paper-y,62%);opacity:0}}
+.table .gagDealCard { left:50%;top:42%; animation:gagDeal .7s var(--deal-delay) both ease-out,gagReturn .8s var(--return-delay) forwards ease-in; }
+@keyframes gagDeal {0%{left:50%;top:42%;opacity:0} 12%{opacity:1} 100%{left:var(--to-x);top:var(--to-y);opacity:1}}
+@keyframes gagReturn {0%{left:var(--to-x);top:var(--to-y);opacity:1} 90%{opacity:1} 100%{left:50%;top:42%;opacity:0}}
+.table .gagFoundCard {left:var(--paper-x,9%);top:var(--paper-y,62%);animation:gagFound 5.6s var(--gag-offset) both ease-in-out;}
+@keyframes gagFound {0%,75%{opacity:0} 79%{opacity:1;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:var(--paper-y,62%)} 91%{opacity:1;left:50%;top:42%} 100%{opacity:0;left:50%;top:42%}}
+.table .gagMessage { position:absolute; left:50%;top:45%;transform:translate(-50%,-50%);width:min(65%,620px);font-size:clamp(.85rem,2cqw,1.65rem);text-align:center;color:#fff0ce;text-shadow:0 2px 5px #000; }
+@media(prefers-reduced-motion:reduce) { .table .gagScene>span { display:none; } .table[data-hide-flight="true"] .tablePaper,.table[data-gag-fake="true"] .tablePaper { animation:none; } }

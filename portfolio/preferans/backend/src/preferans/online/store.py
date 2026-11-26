@@ -24,8 +24,10 @@ from preferans.domain.ledger import ScoreState
 from preferans.domain.scoring import RewardRoute, settle_game
 from preferans.online.codec import decode, encode
 from preferans.online.commands import apply_command, redacted_action
+from preferans.online import discard_gag
 from preferans.online.controls import (
     ControlError,
+    acting_seat,
     adjust_score,
     can_start_counter,
     configure_policy,
@@ -116,6 +118,9 @@ def _get(tx: Any, ref: Any) -> dict | None:
 
 
 def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer: int):
+    previous_game_id = room.get("game_id")
+    previous = controls.get("score_sheet_deals", {}).get(previous_game_id, {})
+    controls["previous_passout"] = previous.get("passout")
     game = start_game(deal(shuffled_deck(), dealer), score.passout_level)
     room["dealer"] = dealer
     room["game_id"] = uuid.uuid4().hex
@@ -130,6 +135,8 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     controls.pop("reveal", None)
     controls.pop("revealed_cards", None)
     mark_activity(room, game, now)
+    if discard_gag.begin(controls, previous_game_id, room["game_id"], now):
+        room["activity_started_at_ms"] = now + discard_gag.GAG_TOTAL_MS
     return game
 
 
@@ -910,14 +917,22 @@ class FirestoreRooms:
                 if room["status"] != "playing" or not isinstance(game, GameState):
                     raise StoreError(409, "No active deal")
                 seat = room["seats"].index(uid)
+                if action != "pulse" and discard_gag.active(controls, room.get("game_id"), now):
+                    raise StoreError(409, "Wait for the redeal presentation")
                 try:
                     if action == "pulse":
                         if args:
                             raise ControlError(422, "Unexpected pulse arguments")
                         event_data = pulse(controls, seat, now)
                     elif action == "counter_start":
-                        if args:
-                            raise ControlError(422, "Unexpected counter arguments")
+                        if args and (
+                            set(args) != {"target"}
+                            or type(args["target"]) is not int
+                            or args["target"] != acting_seat(game)
+                        ):
+                            raise ControlError(
+                                422, "Counter target must be the current decision maker"
+                            )
                         if not can_start_counter(controls, now):
                             raise ControlError(409, "Other players are not online")
                         event_data = start_counter(controls, game, score, seat, now)
@@ -941,6 +956,14 @@ class FirestoreRooms:
                             raise ControlError(409, "Game is paused for a vote or connection")
                         before = game
                         game = apply_command(game, seat, action, args)
+                        if action == "discard":
+                            discard_gag.record_discard(
+                                controls,
+                                room["game_id"],
+                                seat,
+                                now,
+                                args.get("hide_under_sheet") is True,
+                            )
                         if replay_move:
                             close_after_move(controls, now)
                         event_data = redacted_action(action, args)

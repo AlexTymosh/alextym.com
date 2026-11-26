@@ -286,3 +286,8 @@
 /* A raised defense cue is independent of drag and playable-card state. */
 .tableRoot .playingCard[data-defense-raised="true"]:not([data-pointer-dragging="true"]){transform:translateY(-18%)!important;}
 .tableRoot .playingCard[data-defense-raised="true"]:focus-visible{outline-offset:2px;}
+
+/* Compact undo request stays near the hand; the vote itself is on the field. */
+.undoPanel[data-undo-vote] { gap:.35rem; padding:.4rem; max-height:100%; overflow:auto; }
+.undoPanel:not([data-undo-vote]) { background:transparent; padding:0; border:0; gap:0; align-items:flex-start; }
+.undoPanel:not([data-undo-vote]) button { padding:.25rem .45rem; min-height:24px; font-size:.78rem; }

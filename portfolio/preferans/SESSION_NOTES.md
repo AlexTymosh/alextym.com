@@ -143,3 +143,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Project final notebook punch awards from the same placement outcome as the rating, including second-place exemption and existing bare replacement choices. Snapshot new normal final awards in the existing room transaction; do not rewrite history or add storage operations. Older rooms without a snapshot use the current formula and persisted bare-pair choices.
 - Render red filled badges with white labels and directed arrows across the three notebook sector borders. Final review remains provisional, past ledger steps do not show final badges, and rotation/zoom share the existing SVG.
 - Full repository CI and three-client visual acceptance remain required. No polling, provider configuration or billing changes.
+
+## PR33 - Counter, status copy and hidden discard joke
+
+- Show only newly awarded tricks; derive auction messages from the server passout level, previous completed passout and current calls.
+- Widen hill entry packing without changing ledger values, order, marks or settlement. Increase symmetric furniture rail width with a short-screen cap.
+- Move the counter to opponent avatar alarms, keep undo request/votes outside the menu and lobby policy in settings. Countdown follows server deadline and freezes on pause; custom policy multiplier is displayed accurately.
+- Optional hide-under-sheet discard stores only presentation metadata after a valid discard. The next start consumes it once, generates exactly one fresh authoritative 32-card deck, and shares a timestamp for a fake 30-back deal, complaint, recovery and real deal animation. The fake deal never creates cards, a result, a score change or another dealer rotation. Gameplay commands wait for the 9.5-second scene; no additional Firestore operations or recurring polling.
+- Full repository CI and three-client visual acceptance remain required.
