@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
 import { type CommandAction, type RoomView } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
-import { SheetExit } from "./SheetExit.ru";
 
 const names = ["Игрок 1", "Игрок 2", "Игрок 3"];
 type AdjustRequest = { field: "pool" | "hill" | "vist"; seat: number; against: number | null;
@@ -95,7 +94,6 @@ export function PreferansControls({ view, busy, command, adjust }: {
         <button type="button" disabled={busy} onClick={() => command("undo_vote", { approve: false })}>Отказать</button>
       </div>}
     </div>}
-    <SheetExit view={view} busy={busy} command={command}/>
     {view.room_admin && view.status !== "closed" && view.score && <details name="preferans-control-group" className={styles.adjustments}>
       <summary>Корректировка расчётов (только администратор)</summary>
       <p className={styles.subtle}>Только активная партия. Каждое изменение остаётся в журнале. Исправление ошибки — новая обратная операция.</p>

@@ -120,7 +120,7 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     {error && <p role="alert" className={styles.alert}>{error}</p>}
     {!loading && !error && <>
       <p className={styles.note}>Показаны имена из профилей; при отсутствии имени используется игровой псевдоним. Висты — итоговая нулесуммовая разница.</p>
-      <div className={styles.tableScroll}><table className={styles.table}>
+      {rankings.length>0&&<div className={styles.tableScroll}><table className={styles.table}>
         <caption>Общий рейтинг · {rankings.length} игроков · сортировка по любой колонке</caption>
         <thead><tr>{columns.map(column => <th scope="col" key={column.key} aria-sort={sortKey === column.key ? descending ? "descending" : "ascending" : "none"}>
           <button type="button" onClick={() => changeSort(column.key)}>
@@ -128,7 +128,7 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
           </button></th>)}</tr></thead>
         <tbody>{sorted.map(row => <tr key={row.id}>{columns.map(column =>
           <td key={column.key}>{formatted(row, column.key,names)}</td>)}</tr>)}</tbody>
-      </table></div>
+      </table></div>}
       {!rankings.length && <p className={styles.note}>Завершённых партий ещё нет.</p>}
       {results.length > 0 && <>
         <div className={styles.chartHead}><h3>Динамика трёх участников</h3>
@@ -144,7 +144,7 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
           <p className={styles.note}>Для графика выбери трёх разных игроков.</p>}
         {hasMore && <p className={styles.note}>График и список показывают только последние 100 партий. Рейтинг учитывает все завершённые партии.</p>}
       </>}
-      <h3>Последние партии</h3>
+      {results.length>0&&<h3>Последние партии</h3>}
       <div className={styles.historyList}>{results.map(game => <details key={game.room_id} className={styles.result}>
         <summary>{when(game.finished_at_ms)} · {game.deal_count} раздач · {game.reason === "sheet_discarded" ? "Техническое поражение" : "Пуля закрыта"}</summary>
         <div className={styles.resultBody}><p>Правила {game.ruleset_id ?? ""} v{game.ruleset_version} · {game.ruleset_hash.slice(0, 12)} ·

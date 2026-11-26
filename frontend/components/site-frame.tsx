@@ -28,7 +28,7 @@ export function SiteFrame({ children, navigation, footer }: Readonly<{
       {fleet && <DemoSiteBar />}
       {pathname === "/portfolio/preferans" ? <PreferansSiteBar /> : navigation}
       <main className="site-main" data-preferans={pathname === "/portfolio/preferans" ? "true" : undefined}>{children}</main>
-      {footer}
+      {pathname !== "/portfolio/preferans" && footer}
     </div></AccountSessionProvider>
   );
 }

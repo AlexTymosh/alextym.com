@@ -2,46 +2,24 @@
 
 from __future__ import annotations
 
-import copy
-
 import pytest
 
-from preferans.online.sheet_exit import SheetExitError, change, current_offers, finish
+from preferans.online.sheet_exit import SheetExitError, change, finish
 
 
 def room():
     return {"status": "playing", "seats": ["a", "b", "c"], "game_id": "deal-a", "version": 4}
 
 
-def test_offer_refusal_and_only_recipient_can_accept():
-    r, c = room(), {"timer": {"deadline_ms": 200}, "vote": None}
-    e, loser = change(c, r, 0, "sheet_offer", {"target": 1})
-    assert e == {"id": 5, "from": 0, "to": 1} and loser is None
-    before = copy.deepcopy(c)
-    for seat in (0, 2):
-        with pytest.raises(SheetExitError):
-            change(c, r, seat, "sheet_reply", {"offer_id": 5, "accept": True})
-        assert c == before
-    event, loser = change(c, r, 1, "sheet_reply", {"offer_id": 5, "accept": False})
-    assert event["accepted"] is False and loser is None
-    assert current_offers(c, r) == [] and c["timer"] == before["timer"]
+@pytest.mark.parametrize(
+    "action,args",
+    [("sheet_offer", {"target": 1}), ("sheet_reply", {"offer_id": 5, "accept": True})],
+)
+def test_retired_proposals_cannot_finish_a_party(action, args):
+    controls = {"sheet_offers": [{"id": 5, "from": 0, "to": 1, "game_id": "deal-a"}]}
     with pytest.raises(SheetExitError):
-        change(c, r, 1, "sheet_reply", {"offer_id": 5, "accept": True})
-
-
-def test_offer_bound_to_deal_and_cannot_be_overwritten():
-    r, c = room(), {}
-    change(c, r, 0, "sheet_offer", {"target": 1})
-    with pytest.raises(SheetExitError):
-        change(c, r, 2, "sheet_offer", {"target": 1})
-    r.update(game_id="deal-b", version=7)
-    assert current_offers(c, r) == []
-    with pytest.raises(SheetExitError):
-        change(c, r, 1, "sheet_reply", {"offer_id": 5, "accept": True})
-    event, loser = change(c, r, 2, "sheet_offer", {"target": 1})
-    assert event["id"] == 8 and loser is None
-    event, loser = change(c, r, 1, "sheet_reply", {"offer_id": 8, "accept": True})
-    assert event["source"] == "accepted" and loser == 1
+        change(controls, room(), 1, action, args)
+    assert len(controls["sheet_offers"]) == 1
 
 
 @pytest.mark.parametrize("seat", [0, 1, 2])

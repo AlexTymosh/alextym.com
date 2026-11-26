@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 const subscribeMenuSlot = () => () => {};
 const menuSlot = () => document.getElementById("preferans-menu-slot");
@@ -15,17 +15,26 @@ export function ProjectSidebar({children, controls, media, settings, urgent, act
   children:ReactNode; controls:ReactNode; media:ReactNode; settings:ReactNode;
   urgent:boolean; active:boolean; shared?:(kind:OverlayKind)=>void; copy:()=>void; leave:()=>void;
 }) {
-  const [panel,setPanel] = useState<Panel|null>(null);
+  const [panel,setPanel] = useState<Panel|null>(()=>urgent?"controls":null);
+  const menuRef=useRef<HTMLElement>(null);
   const slot = useSyncExternalStore(subscribeMenuSlot,menuSlot,serverMenuSlot);
   useEffect(()=>{if(urgent)setPanel("controls");},[urgent]);
-  const shown = panel ?? (urgent ? "controls" : null);
+  useEffect(()=>{
+    if(!panel)return;
+    const outside=(event:PointerEvent)=>{if(event.target instanceof Node&&!menuRef.current?.contains(event.target))setPanel(null);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setPanel(null);};
+    document.addEventListener("pointerdown",outside,true);
+    document.addEventListener("keydown",escape);
+    return()=>{document.removeEventListener("pointerdown",outside,true);document.removeEventListener("keydown",escape);};
+  },[panel]);
+  const shown = panel;
   const nodes = {controls,media,settings};
   const reference = (kind:"rules"|"history") => window.open(`/portfolio/preferans?view=${kind}`,"_blank","noopener,noreferrer");
   const select = (key:Panel) => {
     setPanel(old=>old===key?null:key);
   };
   const action=(icon:string,label:string,run:()=>void,expanded?:boolean)=><button type="button" className={styles.menuButton} title={label} aria-label={label} aria-expanded={expanded} onClick={run}><span aria-hidden="true" className={styles.menuIcon}>{icon}</span><span>{label}</span>{expanded!==undefined&&<span aria-hidden="true">{expanded?"⌄":"›"}</span>}</button>;
-  const menu = <nav className={styles.projectMenu} data-top-menu={slot?"true":undefined} aria-label="Меню игры">
+  const menu = <nav ref={menuRef} className={styles.projectMenu} data-top-menu={slot?"true":undefined} aria-label="Меню игры">
         {items.map(item=><div key={item.key}>
           {action(item.icon,item.label,()=>select(item.key),shown===item.key)}
           {shown===item.key&&<section className={styles.menuDrawer} aria-label={item.label}>{nodes[item.key]}</section>}

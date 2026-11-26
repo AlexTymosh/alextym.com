@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type DragEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type DragEvent, type CSSProperties } from "react";
 import { CardArtwork } from "./CardArtwork.ru";
 import { bidLabel, cardId, cardLabel, type Card, type RoomView, type TableTheme } from "./game-model.ru";
 import type { Presence } from "./realtime-client";
@@ -10,23 +10,35 @@ import { animateDeal, animateArrival, animateCollection, DEAL_DURATION_MS, TRICK
 import { latestTrickSeat, trickTrain, opponentWidowCards } from "./table-refinements";
 import { Notebook } from "./Notebook.ru";
 import { WidowDisplay } from "./WidowDisplay.ru";
+import { activityProgress } from "./table-details";
 
 const positionNames = { left: "Слева", right: "Справа", bottom: "Перед собой" };
 const statuses = { online: "В игре", reconnecting: "Переподключение", offline: "Отключён", unknown: "Связь неизвестна" };
 const fallbackName = (seat: number) => `Игрок ${seat + 1}`;
 
-function Avatar({ seat, profile, active, presence, occupied, own, media, dealer }: {
-  seat: Seat; profile?: SeatProfile; active: boolean; presence?: Presence; occupied: boolean; own: boolean; media?: ReactNode; dealer: boolean;
+function ActivityRing({since,now}: {since:number|undefined;now:()=>number}) {
+  const [at,setAt]=useState(()=>now());
+  useEffect(()=>{const timer=setInterval(()=>setAt(now()),250);return()=>clearInterval(timer);},[now,since]);
+  const progress=activityProgress(since,at);
+  return <svg className={styles.activityRing} viewBox="0 0 160 90" preserveAspectRatio="none" aria-hidden="true">
+    <rect x="3" y="3" width="154" height="84" rx="6" pathLength="100" fill="none" stroke="currentColor" strokeOpacity=".22" strokeWidth="4" vectorEffect="non-scaling-stroke"/>
+    <rect x="3" y="3" width="154" height="84" rx="6" pathLength="100" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray={`${progress} 100`} vectorEffect="non-scaling-stroke"/>
+  </svg>;
+}
+
+function Avatar({ seat, profile, active, presence, occupied, own, media, dealer, since, now }: {
+  seat: Seat; profile?: SeatProfile; active: boolean; presence?: Presence; occupied: boolean; own: boolean; media?: ReactNode; dealer: boolean; since?:number; now:()=>number;
 }) {
   const name = occupied ? profile?.name || fallbackName(seat) : "Свободное место";
   const link = occupied ? presence || "unknown" : "unknown";
   return <div className={styles.identity}>
-    <div className={`${styles.avatar} ${active ? styles.activeAvatar : ""}`} title={name+(own?" (ты)":"")} aria-label={name} data-turn={active ? "true" : "false"} data-dealer={dealer?"true":undefined}>
+    <div className={`${styles.avatar} ${active ? styles.activeAvatar : ""}`} title={name+(own?" (ты)":"")} aria-label={name} data-turn={active ? "true" : "false"} data-dealer={dealer?"true":undefined} data-connection={link}>
       {profile?.avatar && occupied ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={profile.avatar} alt="" width={64} height={64} draggable={false} />
       ) : <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#263e39"/><circle cx="32" cy="24" r="11" fill="#d5c5a2"/><path d="M12 55c1-14 10-21 20-21s19 7 20 21" fill="#d5c5a2"/></svg>}
       {media}
+      {active&&<ActivityRing since={since} now={now}/>}
       {occupied && <span className={styles.connectionDot} data-presence={link} title={statuses[link]} />}
     </div>
 
@@ -52,8 +64,8 @@ function TrickStack({view,seat,onReplay,busy}: {view:RoomView;seat:Seat;onReplay
     {open&&cards&&!onReplay&&<div className={styles.trickPreview}>{cards.map(p=><span key={p.owner}><CardArtwork card={p.card}/></span>)}<button type="button" aria-label="Закрыть взятку" onClick={()=>setOpen(false)}>×</button></div>}
   </div>;
 }
-function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, deck, localControls, onSeatDrop, serverNow, sortMode, onReplay, busy }: {
-  view: RoomView; seat: Seat; profiles: SeatProfile[] | null; presence: Presence[] | null; serverNow:()=>number; sortMode:SortMode; onReplay?:()=>void; busy:boolean;
+function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, deck, localControls, onSeatDrop, serverNow, sortMode, onReplay, busy, localConnected }: {
+  view: RoomView; seat: Seat; profiles: SeatProfile[] | null; presence: Presence[] | null; serverNow:()=>number; sortMode:SortMode; onReplay?:()=>void; busy:boolean; localConnected:boolean;
   renderOpenCard: (card: Card, seat: Seat) => ReactNode; media?: ReactNode; deck?: ReactNode; localControls?: ReactNode; onSeatDrop?: (seat:Seat,e:DragEvent)=>void;
 }) {
   const own = view.my_seat === seat;
@@ -70,7 +82,7 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
   return <section className={`${styles.seat} ${styles[position]}`} data-seat={seat} data-position={position}
     aria-label={`${positionNames[position]}: ${profiles?.[seat]?.name || fallbackName(seat)}${own ? ", ты" : ""}`} onDragOver={e=>{if(onSeatDrop)e.preventDefault();}} onDrop={e=>onSeatDrop?.(seat,e)}>
     {speech&&<span className={styles.callBubble}>{speech}</span>}
-    <div className={styles.avatarAnchor}><div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div><Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} />
+    <div className={styles.avatarAnchor}><div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div><Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={own?(localConnected?"online":"reconnecting"):presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} since={view.activity_started_at_ms} now={serverNow} />
       {position!=="bottom"&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seat}`} view={view} seat={seat} busy={busy} onReplay={onReplay}/>}
     </div>
     {localControls}
@@ -109,16 +121,15 @@ function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, p
           {played && <span className={styles.tableCard}><CardArtwork card={played.card}/></span>}
         </div>;
       })}
-      {!shown.length && <span className={styles.fieldHint}>{view.status === "lobby" ? "Сбор игроков" : "Игровое поле"}</span>}
+      {!shown.length && <span className={styles.fieldHint} data-passout={view.is_passout&&view.status==="playing"?"true":undefined}>{view.status === "lobby" ? "Сбор игроков" : view.is_passout&&view.status==="playing" ? "Распасы" : "Игровое поле"}</span>}
       {onField && <button type="button" className={styles.closeSharedField} onClick={onField}>Закрыть общий просмотр</button>}
     </div>
-    {view.is_passout && <p className={styles.contract}>Распасы</p>}
   </div>;
 }
 
-export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement}: {
+export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected}: {
   view: RoomView; profiles: SeatProfile[] | null; presence: Presence[] | null;
-  theme:TableTheme;serverNow:()=>number;statusLine:string;sortMode:SortMode;onReplay?:()=>void;onScore?:()=>void;announcement?:ReactNode;busy:boolean;pendingPlay?:{owner:number;card:Card}|null;
+  theme:TableTheme;localConnected:boolean;surfaceOpacity:number;sheetExit?:ReactNode;serverNow:()=>number;statusLine:string;sortMode:SortMode;onReplay?:()=>void;onScore?:()=>void;announcement?:ReactNode;busy:boolean;pendingPlay?:{owner:number;card:Card}|null;
   hand: ReactNode; actions: ReactNode; renderOpenCard: (card: Card, seat: Seat) => ReactNode;
   objects?: ReactNode; sharedPanel?: ReactNode; onWidow?: () => void; onField?: () => void;
   mediaForSeat?: (seat: Seat) => ReactNode;
@@ -164,22 +175,22 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     fit();window.addEventListener("resize",fit);document.addEventListener("fullscreenchange",fit);
     return()=>{window.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
   },[inLobby]);
-  return <div className={styles.tableScene}><section ref={tableRef} data-theme={theme} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
+  return <div className={styles.tableScene}><section ref={tableRef} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
-      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.left} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={!between&&dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
+      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.left} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={!between&&dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
       <CenterCards pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}`} deck={between?deck:undefined} view={view} collecting={collecting} onWidow={onWidow} onField={onField} onTableDrop={onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>
-      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.right} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)} deck={!between&&dealerFor(view)===seats.right?deck:undefined} onSeatDrop={onSeatDrop}/>
+      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.right} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)} deck={!between&&dealerFor(view)===seats.right?deck:undefined} onSeatDrop={onSeatDrop}/>
     </div>
     {view.score&&<button type="button" className={styles.tablePaper} aria-label="Открыть пульку" title="Пулька" disabled={busy} onClick={()=>onScore?onScore():setScoreOpen(true)}>
       <Notebook view={view} profiles={profiles} miniature/>
     </button>}
-    {scoreOpen&&!onScore&&view.score&&<section className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles}/><div className={styles.scoreClose}><button type="button" onClick={()=>setScoreOpen(false)}>Закрыть</button></div></section>}
+    {scoreOpen&&!onScore&&view.score&&<section className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles}/><div className={styles.scoreClose}>{sheetExit}<button type="button" onClick={()=>setScoreOpen(false)}>Закрыть</button></div></section>}
     {announcement&&<div className={styles.tableAnnouncement}>{announcement}</div>}
     {objects}
     {sharedPanel}
     {inLobby&&<div className={styles.decision} data-table-actions="true">{actions}</div>}
     <div className={styles.bottomArea}>
-      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.bottom} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.bottom)} deck={!between&&dealerFor(view)===seats.bottom?deck:undefined} onSeatDrop={onSeatDrop} localControls={localControls}/>
+      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={onReplay} busy={busy} view={view} seat={seats.bottom} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.bottom)} deck={!between&&dealerFor(view)===seats.bottom?deck:undefined} onSeatDrop={onSeatDrop} localControls={localControls}/>
       {!inLobby&&<div className={styles.handColumn}>
         {view.my_seat!==null&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seats.bottom}`} view={view} seat={seats.bottom} busy={busy} onReplay={onReplay}/>}
         <div className={styles.decision} data-table-actions="true">{actions}</div>

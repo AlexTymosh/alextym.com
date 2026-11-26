@@ -8,7 +8,7 @@ type ProjectOverview = {
 
 export const projectOverviews: Readonly<Partial<Record<string, ProjectOverview>>> = {
   preferans: {
-    focus: "A familiar card table, shared house rules, and three friends — wherever they are.",
+    focus: "Private beta: a familiar card table, shared house rules, and three friends — wherever they are.",
     challenge: "Recreate a personal three-player Preferans variant with its own bidding hierarchy, misere, whist, settlement rules and traditions, while keeping player hands private and access invitation-only.",
     approach: "The project separates a deterministic Python game engine and auditable scoring from authenticated online rooms. The React interface uses server-projected game state; optional peer-to-peer media and consent-based local recording remain feature-gated pending acceptance testing.",
     highlights: [

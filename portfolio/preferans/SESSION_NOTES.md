@@ -68,3 +68,12 @@ Base: 2bc7f789e92bff14b3f1c0a998ad301b745b2204 (PR #290 merged). Place the deck 
 - Resolve account data and owner status before constructing JSX; retain distinct unavailable and unauthenticated outcomes.
 - Keep the existing settings error boundary and authorization checks.
 - Run frontend lint, typecheck and full local CI before merging.
+
+## PR23 - Private beta table and lobby
+
+- Retire directed sheet proposals; retain explicit voluntary finish and historical outcomes.
+- Move voluntary exit to both notebook overlays.
+- Add local activity progress, connection indicators and independent table transparency.
+- Add bounded seated-player directory names and local room age; show history by default.
+- Update beta labels, radio placement, passout widow display and outside-click menu dismissal.
+- Production and Firebase configuration unchanged. Full CI and three-player visual acceptance remain pending.

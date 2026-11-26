@@ -1,6 +1,6 @@
 # Zaporizhzhia Preferans — portfolio module
 
-**Status: PR 1–9 merged. PR #278 fixes Firestore transaction reads and adds diagnostics. Production readiness still requires real UAT and outstanding house-rule workflows.**
+**Status: private beta. Real three-player acceptance, realtime latency and provider quota measurements remain release gates. Earlier PR sections below describe historical milestones.**
 
 - Project ID: `preferans`
 - Private route: `/portfolio/preferans`

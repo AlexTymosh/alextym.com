@@ -97,6 +97,7 @@ def test_directory_exposes_only_own_or_joinable_rooms():
         "created_at_ms": 1,
         "daily_number": None,
         "waiting_names": [],
+        "player_names": [None, None, None],
     }
     assert not result["can_create"] and not result["truncated"]
     assert "seats" not in str(result) and "email" not in str(result)
@@ -135,3 +136,33 @@ def test_profile_allowlist_and_membership():
         )["avatar"]
         is None
     )
+
+
+def test_directory_profile_budget_and_safe_names(monkeypatch):
+    monkeypatch.delenv("PREFERANS_REALTIME_ENABLED", raising=False)
+    rows = [
+        {"id": f"{i:032x}", "status": "lobby", "seats": ["me", f"guest-{i}", None]}
+        for i in range(40)
+    ]
+    reads = []
+
+    def document(uid):
+        def get(timeout):
+            reads.append(uid)
+            record = {"first_name": "Player", "last_name": uid, "email": "private@example.invalid"}
+            return SimpleNamespace(exists=True, to_dict=lambda: record)
+
+        return SimpleNamespace(get=get)
+
+    def collection(name):
+        if name == "preferans_rooms":
+            return Query(rows)
+        assert name == "portfolio_lab_profiles"
+        return SimpleNamespace(document=document)
+
+    result = directory(SimpleNamespace(collection=collection), "me", admin=False)
+    assert len(reads) == 30 and len(set(reads)) == 30
+    assert all(room["player_names"][0] == "Player me" for room in result["rooms"])
+    assert all(room["player_names"][2] is None for room in result["rooms"])
+    assert "private@example.invalid" not in str(result)
+    assert any(room["player_names"][1] is None for room in result["rooms"])

@@ -1,6 +1,6 @@
 /** Public, allow-listed types only. No Firestore game state or Firebase credentials. */
 import { isPresentation, replayMoveAllowed, type Presentation } from "./presentation-model";
-import { isSeat, isSheetOffers, type SheetOffer } from "./sheet-exit-model";
+import { isSeat } from "./sheet-exit-model";
 import { isSeatSwap, type SeatSwap } from "./seat-swap-model";
 import { isReleaseProjection, type Reveal, type RevealedCard, type PunchChoice } from "./release-model";
 export type Suit = "S" | "C" | "D" | "H";
@@ -45,7 +45,7 @@ export type RoomView = {
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
   controls?: RoomControls;
   presentation?: Presentation;
-  sheet_loser?: number; sheet_offers?: SheetOffer[];
+  sheet_loser?: number;
   seat_swap?: SeatSwap; seat_revision?: number;
   can_archive?: boolean; archived_at_ms?: number;
   reveal?: Reveal; revealed_cards?: RevealedCard[]; punch_choices?: PunchChoice[];
@@ -74,7 +74,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode" | "misere_offer" | "misere_vote"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_offer" | "sheet_reply" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -167,7 +167,6 @@ export function isRoomView(value: unknown): value is RoomView {
   if (v.seat_revision !== undefined && (!Number.isSafeInteger(v.seat_revision) || Number(v.seat_revision) < 0 || !isSeat(v.my_seat))) return false;
   if (v.seat_swap !== undefined && (v.status !== "lobby" || !isSeat(v.my_seat) || !isSeatSwap(v.seat_swap))) return false;
   if (v.sheet_loser !== undefined && (!isSeat(v.sheet_loser) || v.status !== "closed" || v.hand !== undefined || v.legal_cards !== undefined)) return false;
-  if (v.sheet_offers !== undefined && (!isSheetOffers(v.sheet_offers) || !isSeat(v.my_seat) || !["playing", "between", "awaiting_settlement"].includes(String(v.status)))) return false;
   if (v.presentation !== undefined && (!isPresentation(v.presentation) || v.my_seat === null)) return false;
   if (v.next_deal !== undefined) {
     const clock = v.next_deal as Record<string, unknown> | null;

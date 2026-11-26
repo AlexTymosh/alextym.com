@@ -40,7 +40,8 @@ export function visibleWidow(view: RoomView): { count: number; cards: Card[] } {
   if (view.phase === "auction") return {count:2,cards:[]};
   if (view.phase === "discard") return {count:Math.min(2,view.widow?.length ?? 0),cards:(view.widow ?? []).slice(0,2)};
   if (view.is_passout && (view.played_tricks ?? 0) < 2) {
-    return {count:1,cards:(view.widow ?? []).slice(view.played_tricks ?? 0,(view.played_tricks ?? 0)+1)};
+    const index=view.played_tricks ?? 0;
+    return {count:index===0?2:1,cards:(view.widow ?? []).slice(index,index+1)};
   }
   return {count:0,cards:[]};
 }

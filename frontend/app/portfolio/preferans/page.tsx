@@ -8,8 +8,8 @@ import { currentLabSession, requireLabProjectPage } from "../../../lib/portfolio
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Zaporizhzhia Preferans — Private Demo" },
-  description: "A private three-player Preferans project under development.",
+  title: { absolute: "Zaporizhzhia Preferans — Private Beta" },
+  description: "A private three-player Preferans game in beta.",
   robots: { index: false, follow: false },
 };
 

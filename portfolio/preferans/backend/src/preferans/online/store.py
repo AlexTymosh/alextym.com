@@ -214,6 +214,8 @@ class FirestoreRooms:
         args: dict,
         owner: bool = False,
     ) -> dict:
+        if action in {"sheet_offer", "sheet_reply"}:
+            raise StoreError(422, "Sheet proposals are no longer supported")
         if realtime_enabled() and action == "pulse":
             if args:
                 raise StoreError(422, "Unexpected pulse arguments")

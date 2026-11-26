@@ -91,6 +91,8 @@ def test_three_player_room_passout_from_lobby_to_settlement():
         assert actor in (0, 1, 2)
         service.command(rid, uid[actor], f"pass-000{index}", current["version"], "pass", {})
     assert service.view(rid, uid[0])["is_passout"] is True
+    for player in uid:
+        assert len(service.view(rid, player)["widow"]) == 1
     for index in range(30):
         current = service.view(rid, uid[0])
         assert current["phase"] == "play"

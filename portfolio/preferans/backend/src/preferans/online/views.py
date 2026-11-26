@@ -15,7 +15,6 @@ from preferans.online.controls import public_controls
 from preferans.online.deal_flow import projection as next_deal_projection
 from preferans.online.presentation import projection as presentation_projection
 from preferans.online.realtime import enabled as realtime_enabled
-from preferans.online.sheet_exit import current_offers
 from preferans.online.seat_swap import projection as swap_projection
 
 
@@ -107,10 +106,6 @@ def seat_view(
                 "target": score.target,
             }
         return result
-    if my_seat is not None:
-        offers = current_offers(controls or {}, room)
-        if offers:
-            result["sheet_offers"] = offers
     if my_seat is not None and room["status"] in {"playing", "between", "awaiting_settlement"}:
         shared = presentation_projection(controls or {}, realtime_enabled(), now_ms)
         if shared is not None:
