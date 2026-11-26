@@ -42,6 +42,26 @@ def ranking_delta(ranking: dict, side: str, count: int) -> dict:
     return result
 
 
+def _replace_award(award: dict, count: int) -> None:
+    award["bare"] -= count
+    award["ordinary"] += 10 * count
+
+
+def notebook_awards(awards: list[dict], pairs: list[dict]) -> list[dict]:
+    """Read-only awards with the room's authoritative replacement choices.
+
+    Old rooms may not have a final snapshot. Stored bare-pair choices still
+    contain their original awards, so retain them even in that fallback.
+    """
+    by_pair = {(award["from"], award["to"]): dict(award) for award in awards}
+    for choice in pairs:
+        key = choice["from"], choice["to"]
+        award = {field: choice[field] for field in ("from", "to", "bare", "ordinary")}
+        _replace_award(award, choice["replacement"] or 0)
+        by_pair[key] = award
+    return list(by_pair.values())
+
+
 def effective(result: dict, pairs: list[dict]) -> dict:
     """Read-side projection, never mutate the immutable stored result."""
     view = deepcopy(result)
@@ -51,8 +71,7 @@ def effective(result: dict, pairs: list[dict]) -> dict:
             continue
         winner, loser = choice["from"], choice["to"]
         award = next(p for p in view["punches"] if p["from"] == winner and p["to"] == loser)
-        award["bare"] -= count
-        award["ordinary"] += 10 * count
+        _replace_award(award, count)
         for player in view["players"]:
             if player["seat"] == winner:
                 player["bare_given"] -= count

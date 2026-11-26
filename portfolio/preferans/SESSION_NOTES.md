@@ -136,3 +136,10 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Extend the WS lease/stale threshold from 35/38s to 90/75s, ping on returning to the foreground, log only fixed disconnect stages/codes, and explain pause reasons. Real connection loss and authorization checks remain enforced. Production logs are needed to confirm the reported periodic pause.
 - Show all awarded trick bundles without fabricated replay cards. Keep the real last-trick replay, center reward choices, move call bubbles left and animate the original unsorted packet order before visual sorting.
 - Full CI and three-player visual acceptance are required; see PR31_PLAY_AND_CUES.ru.md.
+
+## PR32 - Sorted misere offer and final punch annotations
+
+- Sort the declarer's visible offer cards using the viewer's current automatic hand preference; show explicit defender vote progress and waiting names. Existing two-defender consent, defender-initiated preapproval, rejection and card privacy are retained.
+- Project final notebook punch awards from the same placement outcome as the rating, including second-place exemption and existing bare replacement choices. Snapshot new normal final awards in the existing room transaction; do not rewrite history or add storage operations. Older rooms without a snapshot use the current formula and persisted bare-pair choices.
+- Render red filled badges with white labels and directed arrows across the three notebook sector borders. Final review remains provisional, past ledger steps do not show final badges, and rotation/zoom share the existing SVG.
+- Full repository CI and three-client visual acceptance remain required. No polling, provider configuration or billing changes.

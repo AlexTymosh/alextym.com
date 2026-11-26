@@ -42,7 +42,15 @@ def test_misere_offer_transaction_settles_once_without_admin(monkeypatch):
     first = api.command(
         rid, defenders[0], "pr21-vote-first", v["version"], "misere_vote", {"approve": True}
     )
-    assert api.view(rid, defenders[1])["score"]["pool"] == [0, 0, 0]
+    waiting = api.view(rid, defenders[1])
+    assert waiting["score"]["pool"] == [0, 0, 0]
+    assert waiting["phase"] == "misere_offer" and waiting["status"] == "playing"
+    assert waiting["misere_offer"] == {
+        "approved": [api.view(rid, defenders[0])["my_seat"]],
+        "can_vote": True,
+    }
+    assert not api.view(rid, defenders[0])["misere_offer"]["can_vote"]
+    assert not api.view(rid, uid)["misere_offer"]["can_vote"]
     with pytest.raises(StoreError) as stale:
         api.command(
             rid, defenders[1], "pr21-vote-stale", v["version"], "misere_vote", {"approve": True}

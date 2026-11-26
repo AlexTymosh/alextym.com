@@ -995,6 +995,7 @@ class FirestoreRooms:
                     )
                     final["ruleset_snapshot"] = encode(score.ruleset)
                     if sheet_loser is None:
+                        room["final_punches"] = [dict(award) for award in final["punches"]]
                         pairs = punch_choices.initial(final)
                         final["punches_confirmed"] = not pairs
                         if pairs:
