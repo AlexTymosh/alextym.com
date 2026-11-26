@@ -1,6 +1,6 @@
 """Bounded lobby directory and room-member-only profile projection.
 
-No private game document or account email is read for either operation.
+No private game document is read. Account email is an optional room-member-only fallback; the directory never reads it.
 """
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ def profile_projection(record: object) -> dict:
     return {"name": " ".join(p for p in parts if p) or None, "avatar": avatar}
 
 
-def room_profiles(db: Any, room_id: str, uid: str) -> dict:
+def room_profiles(db: Any, room_id: str, uid: str, *, email_lookup=None) -> dict:
     if not ROOM_ID.fullmatch(room_id) or not uid or "/" in uid:
         raise StoreError(404, "Not found")
     snapshot = db.collection("preferans_rooms").document(room_id).get(timeout=5.0)
@@ -148,5 +148,14 @@ def room_profiles(db: Any, room_id: str, uid: str) -> dict:
         if seat is not None:
             snap = db.collection("portfolio_lab_profiles").document(seat).get(timeout=5.0)
             record = snap.to_dict() if snap.exists else None
-        profiles.append(profile_projection(record))
+        profile = profile_projection(record)
+        if seat is not None and not profile["name"] and email_lookup is not None:
+            email = email_lookup(seat)
+            if (
+                isinstance(email, str)
+                and len(email) <= 254
+                and re.fullmatch(r"[^@\s\x00-\x1f]+@[^@\s\x00-\x1f]+", email)
+            ):
+                profile["email"] = email
+        profiles.append(profile)
     return {"profiles": profiles}

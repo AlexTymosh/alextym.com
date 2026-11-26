@@ -36,7 +36,7 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
       {BID_GROUPS.filter(key=>key!=="ten_no_widow").map(key=>{
         const available=bidsInGroup(bids,key);
         const totus=key==="10"?bidsInGroup(bids,"ten_no_widow"):[];
-        if (!available.length&&!totus.length && (!auction||key==="misere_no_widow")) return null;
+        if (!available.length&&!totus.length && (!auction||key==="misere_no_widow"||["misere","misere_no_widow"].includes(view.auction_calls?.[view.my_seat??-1]?.bid?.kind??""))) return null;
         const direct = key==="misere"||key==="misere_no_widow";
         const special = direct;
         const needsConfirm = auction&&special;

@@ -155,7 +155,7 @@ def test_versioned_ruleset_selection_and_archive(monkeypatch):
         "expected_version": 0,
         "name": "Test template",
         "description": "",
-        "parameters": {**initial["parameters"], "pool_target": 25},
+        "parameters": {**initial["parameters"], "pool_target": 26},
         "policy": initial["policy"],
     }
     v1 = ruleset_catalog.save(db, fs, "owner", body, 1000)
@@ -172,13 +172,13 @@ def test_versioned_ruleset_selection_and_archive(monkeypatch):
     api.join(rid, "b", "join-final-b", 0)
     api.join(rid, "c", "join-final-c", 1)
     do(api, rid, "a", "select-final-01", "ruleset_select", {"id": v1["id"], "version": 1})
-    assert api.view(rid, "a")["lobby_setup"]["target"] == 25
+    assert api.view(rid, "a")["lobby_setup"]["target"] == 26
     for uid in "abc":
         do(api, rid, uid, f"ready-final-{uid}", "lobby_ready", {"ready": True})
     version = api.view(rid, "a")["version"]
     api.start(rid, "a", "start-final-01", version, False)
     view = api.view(rid, "a")
-    assert view["score"]["target"] == 25
+    assert view["score"]["target"] == 26
     with pytest.raises(store.StoreError) as exc:
         do(api, rid, "a", "archive-denied-01", "archive", {"reason": "Test archive"})
     assert exc.value.code == 403

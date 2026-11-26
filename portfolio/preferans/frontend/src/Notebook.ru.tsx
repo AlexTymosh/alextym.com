@@ -1,16 +1,22 @@
 import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { notebookAngle, splitPlayerName } from "./table-pr20";
-import type { RoomView, NotebookMark } from "./game-model.ru";
+import { bidLabel, type RoomView, type NotebookMark } from "./game-model.ru";
+import { notebookAt } from "./notebook-history";
 import { tableSeats, type SeatProfile } from "./table-model";
 import styles from "./preferans-notebook.module.css";
 
 export function Notebook({view, profiles, miniature=false, title, sheetExit, onClose, closeDisabled=false, reviewAction}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean; title?:string; sheetExit?:ReactNode; onClose?:()=>void; closeDisabled?:boolean; reviewAction?:ReactNode}) {
   const [orientation,setOrientation] = useState(0);
+  const [stepIndex,setStepIndex] = useState<number|null>(null);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const score = view.score;
   if (!score) return <p>Расчётов пока нет.</p>;
   const seats = tableSeats(view.my_seat);
-  const history = view.score_sheet;
+  const steps = view.score_sheet?.steps ?? [];
+  const cursor = miniature||stepIndex===null?steps.length:Math.min(stepIndex,steps.length);
+  const past = cursor<steps.length;
+  const history = past?notebookAt(view.score_sheet!,cursor):view.score_sheet;
+  const step = steps[cursor-1];
   const name = (seat:number) => profiles?.[seat]?.name || `Игрок ${seat+1}`;
   const cellMarks=new Map<number[],NotebookMark[]>();
   const vals = (kind: "hill" | "pool" | "vist", seat: number, against?: number) => {
@@ -39,7 +45,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const [first,rest] = splitPlayerName(name(bottom.seat));
   const angle=notebookAngle(miniature?0:orientation);
   const rotation=angle===-90?`translate(0 ${w}) rotate(-90)`:angle===90?`translate(${h} 0) rotate(90)`:undefined;
-  const final=view.final_settlement;
+  const final=past?undefined:view.final_settlement;
   const signed=(n:number)=>n>0?`+${n}`:n<0?`−${Math.abs(n)}`:"0";
   const circle=(seat:number,against:number,x:number,y:number,rotation=0)=>{
     if(!final)return null;
@@ -57,12 +63,18 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const Wrapper=miniature?"span":"div";
   return <Wrapper className={miniature?styles.miniature:styles.wrap} style={{"--paper-ratio":(angle?h:w)/(angle?w:h)} as CSSProperties} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
     {!miniature&&<div className={styles.paperToolbar}>
-      <div className={styles.paperExit}>{sheetExit}</div>
+      <div className={styles.paperExit}>{!past&&sheetExit}</div>
       <div className={styles.rotateControls}><button type="button" aria-label="Повернуть к левому игроку" onClick={()=>setOrientation(n=>(n+1)%3)}>↶</button><button type="button" aria-label="Моя сторона" onClick={()=>setOrientation(0)}>Моя сторона</button><button type="button" aria-label="Повернуть к правому игроку" onClick={()=>setOrientation(n=>(n+2)%3)}>↷</button></div>
       {onClose&&<button type="button" className={styles.paperClose} aria-label="Закрыть пульку" title="Закрыть пульку" disabled={closeDisabled} onClick={onClose}>×</button>}
     </div>}
     {!miniature&&title&&<p className={styles.paperTitle}>{title}</p>}
-    {!miniature&&reviewAction&&<div className={styles.reviewAction}>{reviewAction}</div>}
+    {!miniature&&!past&&reviewAction&&<div className={styles.reviewAction}>{reviewAction}</div>}
+    {!miniature&&steps.length>0&&<div className={styles.historyNav} aria-label="История записей">
+      <div><button type="button" aria-label="Предыдущая запись" disabled={cursor===0} onClick={()=>setStepIndex(cursor-1)}>←</button><strong>Запись {cursor} / {steps.length}</strong><button type="button" aria-label="Следующая запись" disabled={cursor===steps.length} onClick={()=>setStepIndex(cursor+1===steps.length?null:cursor+1)}>→</button><button type="button" onClick={()=>setStepIndex(null)} disabled={!past}>Последняя</button></div>
+      <p>{step?step.kind==="manual"?"Ручная корректировка":step.kind==="penalty"?"Штраф":step.passout?`Распасы ${step.passout}`:step.contract&&step.declarer!=null?`${name(step.declarer)} · ${bidLabel(step.contract)}`:"Раздача (контракт не сохранён)":"Начало записей"}</p>
+      {step&&<ul>{step.entries.map((e,i)=><li key={i}>{name(e.seat)} · {e.field==="hill"?"Гора":e.field==="pool"?"Пуля":`Висты на ${name(e.against!)}`} {signed(e.delta)}</li>)}</ul>}
+      {past&&<small>Просмотр истории. Расчёты не изменяются.</small>}
+    </div>}
     <span className={miniature?styles.miniatureBody:styles.paperBody}>
     {!miniature&&<span className={styles.scissors} aria-hidden="true">✁</span>}
     <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} role="img" aria-label="Рукописная пулька">

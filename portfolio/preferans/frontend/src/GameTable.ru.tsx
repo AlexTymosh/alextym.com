@@ -107,15 +107,16 @@ function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, p
   const opponentWidow = opponentWidowCards(view);
   const shown = collecting ? view.last_trick ?? [] : [...(view.trick ?? []), ...(pendingPlay&&!(view.trick??[]).some(p=>p.owner===pendingPlay.owner)?[pendingPlay]:[])];
   const names = tableSeats(view.my_seat);
-  return <div className={styles.center}>
-    {opponentWidow?<WidowDisplay cards={opponentWidow} onReplay={onWidow}/>:<div className={styles.widow} data-widow-zone="true" aria-label="Прикуп" data-award={award}>
+  const widowNode=<>{opponentWidow?<WidowDisplay cards={opponentWidow} onReplay={onWidow}/>:<div className={styles.widow} data-widow-zone="true" aria-label="Прикуп" data-award={award}>
       {widow.count > 0 && <><div className={styles.widowCards}>
         {Array.from({length:showReplay?publicWidow.length:widow.count},(_,i)=><span key={i} className={styles.tableCard}><CardArtwork card={(showReplay?publicWidow:widow.cards)[i]}/></span>)}
       </div></>}
       {widow.count === 0 && publicWidow.length > 0 && <><div className={styles.widowCards}>{Array.from({length:2},(_,i)=><span className={styles.widowGhost} key={i}>{showReplay&&publicWidow[i]&&<CardArtwork card={publicWidow[i]}/>}</span>)}</div><button type="button" className={styles.widowEye} aria-label={showReplay?"Скрыть прикуп":"Показать прикуп"} title="Показать прикуп" aria-expanded={showReplay} onClick={()=>{setReplay(v=>!v);if(onWidow&&!showReplay)onWidow();}}>◉</button></>}
-    </div>}
+    </div>}</>;
+  return <div className={styles.center}>
     {deck&&<div className={styles.nextDeck} aria-label="Колода для новой раздачи">{deck}</div>}
     <div className={styles.trickField} data-play-field="true" aria-label="Текущая взятка" onDragOver={e=>{if(onTableDrop)e.preventDefault();}} onDrop={onTableDrop} data-collecting={collecting ? seatPosition(view.my_seat, view.last_trick_winner ?? -1) ?? undefined : undefined}>
+      {widowNode}
       {(["left","right","bottom"] as const).map(position => {
         const played = shown.find(p=>p.owner===names[position]);
         return <div key={position} className={`${styles.trickSpot} ${styles[`trick_${position}`]}`} data-trick-seat={names[position]}>
@@ -128,9 +129,9 @@ function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, p
   </div>;
 }
 
-export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected, claimPanel, claimButton, roundTable, finalReviewAction, handCount, handBreaks}: {
+export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected, claimPanel, claimButton, roundTable, tableSurface, tableOpacity, finalReviewAction, handCount, handBreaks}: {
   view: RoomView; profiles: SeatProfile[] | null; presence: Presence[] | null;
-  claimPanel?:ReactNode;claimButton?:ReactNode;roundTable:boolean;finalReviewAction?:ReactNode;handCount:number;handBreaks:number;
+  claimPanel?:ReactNode;claimButton?:ReactNode;roundTable:boolean;tableSurface:string;tableOpacity:number;finalReviewAction?:ReactNode;handCount:number;handBreaks:number;
   theme:TableTheme;localConnected:boolean;surfaceOpacity:number;sheetExit?:ReactNode;serverNow:()=>number;statusLine:ReactNode;sortMode:SortMode;onReplay?:()=>void;onScore?:()=>void;announcement?:ReactNode;busy:boolean;pendingPlay?:{owner:number;card:Card}|null;
   hand: ReactNode; actions: ReactNode; renderOpenCard: (card: Card, seat: Seat) => ReactNode;
   objects?: ReactNode; sharedPanel?: ReactNode; onWidow?: () => void; onField?: () => void;
@@ -179,14 +180,25 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
   },[dealing,collecting,animationSeat,currentDealer]);
   useLayoutEffect(()=>{
     const el=tableRef.current;if(!el)return;
-    const fit=()=>el.style.setProperty("--available-table-height",`${Math.max(160,(window.visualViewport?.height??window.innerHeight)-el.getBoundingClientRect().top-18)}px`);
-    fit();window.addEventListener("resize",fit);document.addEventListener("fullscreenchange",fit);
+    const fit=()=>{
+      const viewport=window.visualViewport;
+      let reserve=2;
+      for(let parent=el.parentElement;parent&&parent!==document.body;parent=parent.parentElement){
+        const css=getComputedStyle(parent);
+        reserve+=(parseFloat(css.paddingBottom)||0)+(parseFloat(css.borderBottomWidth)||0)+(parseFloat(css.marginBottom)||0);
+      }
+      const top=el.getBoundingClientRect().top+window.scrollY;
+      el.style.setProperty("--available-table-height",`${Math.max(1,Math.floor((viewport?.height??window.innerHeight)+(viewport?.offsetTop??0)-top-reserve))}px`);
+    };
+    fit();window.addEventListener("resize",fit);window.visualViewport?.addEventListener("resize",fit);document.addEventListener("fullscreenchange",fit);
     const header=document.querySelector(".preferans-site-bar");
-    const observer=header&&typeof ResizeObserver!=="undefined"?new ResizeObserver(fit):null;
+    const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(fit):null;
     if(header&&observer)observer.observe(header);
-    return()=>{observer?.disconnect();window.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
+    const gameHeader=document.querySelector("[data-preferans-game-header]");
+    if(gameHeader&&observer)observer.observe(gameHeader);
+    return()=>{observer?.disconnect();window.removeEventListener("resize",fit);window.visualViewport?.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
   },[inLobby]);
-  return <div className={styles.tableScene}><section ref={tableRef} data-furniture={objects?"true":undefined} data-round-table={roundTable?"true":undefined} data-claim-pending={view.claim?.status==="pending"?"true":undefined} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
+  return <div className={styles.tableScene}><section ref={tableRef} data-furniture={objects?"true":undefined} data-round-table={roundTable?"true":undefined} data-table-surface={tableSurface} data-claim-pending={view.claim?.status==="pending"?"true":undefined} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity,"--table-opacity":tableOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={active==="deal"?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true">
     <div className={styles.tableTop}>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.left} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={!between&&dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
       <CenterCards statusLine={statusLine} announcement={announcement} pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}`} deck={between?deck:undefined} view={view} collecting={collecting} onWidow={onWidow} onField={onField} onTableDrop={onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>

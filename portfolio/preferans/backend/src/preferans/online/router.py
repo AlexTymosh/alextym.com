@@ -195,7 +195,17 @@ def profiles(room_id: str, request: Request) -> dict:
         raise HTTPException(403, "Game participation required")
     store, uid, _ = _context(request, "profiles")
     try:
-        return room_profiles(store.db, room_id, uid)
+
+        def email_lookup(seat):
+            from firebase_admin import auth, get_app
+
+            try:
+                return auth.get_user(seat, app=get_app("portfolio-lab")).email
+            except Exception:
+                # Optional display fallback; never log account identifiers.
+                return None
+
+        return room_profiles(store.db, room_id, uid, email_lookup=email_lookup)
     except StoreError as exc:
         raise HTTPException(exc.code, exc.detail) from exc
     except Exception as exc:

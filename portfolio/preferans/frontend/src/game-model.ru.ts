@@ -37,6 +37,7 @@ export type RoomControls = {
 export type TableTheme = "felt" | "blue" | "wood" | "glass";
 export type RewardRoute = "pool"|"hill_first"|"help";
 export type NotebookMark = {field:"hill"|"pool"|"vist";seat:number;against:number|null;index:number;manual?:boolean;latest?:boolean};
+export type NotebookStep = {kind:"deal"|"manual"|"penalty";declarer?:number|null;contract?:Bid|null;passout?:number|null;entries:(NotebookMark&{delta:number;reason:string})[]};
 export type RoomView = {
   table_theme?: TableTheme;
   activity_started_at_ms?: number;
@@ -71,7 +72,7 @@ export type RoomView = {
   tricks_won?: number[]; score?: Score; end_reason?: string | null;
   final_settlement?: {pairs:number[][];net:number[]};
   final_review?: true;
-  score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[]};
+  score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[];steps?:NotebookStep[]};
   discard_count?: 2; own_discard?: Card[];
 };
 export type RoomInvitation = {
@@ -189,6 +190,13 @@ export function isRoomView(value: unknown): value is RoomView {
   }
   if(v.score_sheet!==undefined){
     const s=v.score_sheet as NonNullable<RoomView["score_sheet"]>;
+    if(s.steps!==undefined&&(!Array.isArray(s.steps)||!s.steps.every(step=>step&&["deal","manual","penalty"].includes(step.kind)&&
+      (step.declarer==null||isSeat(step.declarer))&&(step.passout==null||[6,7,8].includes(step.passout))&&
+      (step.contract==null||(typeof step.contract==="object"&&["regular","misere","misere_no_widow","ten_no_widow"].includes(step.contract.kind)&&
+        (step.contract.level===null||[6,7,8,9,10].includes(step.contract.level))&&(step.contract.suit===null||["S","C","D","H"].includes(step.contract.suit))))&&
+      Array.isArray(step.entries)&&step.entries.length>0&&step.entries.every(m=>m&&["hill","pool","vist"].includes(m.field)&&isSeat(m.seat)&&
+        (m.field==="vist"?isSeat(m.against)&&m.against!==m.seat:m.against===null)&&Number.isSafeInteger(m.index)&&m.index>=0&&
+        m.index<(m.field==="vist"?s.vists[m.seat]?.[m.against!]??[]:s[m.field][m.seat]??[]).length&&Number.isSafeInteger(m.delta)&&typeof m.reason==="string"))))return false;
     if(s.marks!==undefined&&(!Array.isArray(s.marks)||!s.marks.every(m=>m&&["hill","pool","vist"].includes(m.field)&&isSeat(m.seat)&&(m.field==="vist"?isSeat(m.against)&&m.against!==m.seat:m.against===null)&&Number.isSafeInteger(m.index)&&m.index>=0&&m.index<(m.field==="vist"?s.vists[m.seat]?.[m.against!]??[]:s[m.field][m.seat]??[]).length&&(m.manual===undefined||m.manual===true)&&(m.latest===undefined||m.latest===true))))return false;
   }
   if (v.seat_revision !== undefined && (!Number.isSafeInteger(v.seat_revision) || Number(v.seat_revision) < 0 || !isSeat(v.my_seat))) return false;

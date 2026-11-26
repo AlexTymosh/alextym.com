@@ -572,3 +572,45 @@
 @media(max-width:1000px) and (orientation:landscape) {
  .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --hand-units:max(1,calc(1 + (var(--hand-count,12) - 1)*.32 + var(--hand-breaks,3)*.76)); }
 }
+
+/* PR28: invariant local-player anchor, a bounded central drop target and table materials. */
+.table[data-playing="true"] { overflow:clip; }
+.table[data-playing="true"] .bottomArea,
+.table[data-playing="true"][data-furniture="true"] .bottomArea {
+  /* 12 cards and three suit gaps are the maximum possible hand, even during discard. */
+  --hand-units:7.46;
+  max-height:52%;
+  min-height:0;
+}
+@media(max-width:1000px) and (orientation:landscape) {
+  .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --hand-units:6.8; }
+}
+.table[data-playing="true"] .bottomArea>.handColumn { min-width:0; }
+.table[data-playing="true"] .handColumn>.decision { max-height:calc(var(--play-height)*.19); }
+.table[data-playing="true"] .center { container-type:size; justify-content:center; }
+.table[data-playing="true"] .trickField {
+  width:min(100%,calc(var(--play-height)*.5635),100cqh,776.25px);
+  height:auto; aspect-ratio:1; flex:none; max-height:100%;
+  isolation:isolate;
+}
+.table .trickField .widow { position:absolute; top:0; left:50%; transform:translateX(-50%); min-height:0; z-index:4; }
+.table .trickField .widow .tableCard,.table .trickField .widow .widowGhost { width:min(calc(var(--side-w)*1.2),12cqh); }
+.table .trickField .widowEye { position:relative; z-index:5; }
+.table .trickField .fieldStatus { inset:26% 14% 14%; }
+.table .trickField .fieldStatus[data-has-cards="true"] { inset:26% 35% 51%; }
+.table[data-round-table="true"][data-table-surface] .trickField {
+  background:transparent; border:clamp(4px,1cqh,12px) solid #a87d48;
+  box-shadow:0 4px 12px #1118; outline:1px solid #efcc9170;
+}
+.table[data-round-table="true"][data-table-surface] .trickField::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1; pointer-events:none;
+  background:var(--material); opacity:var(--table-opacity,1); box-shadow:inset 0 0 20px #2f201b45;
+}
+.table[data-table-surface="pine"] { --material:repeating-linear-gradient(4deg,#c99654 0 1px,#dfb676 2px 6px,#eac68e 7px 14px,#d4a265 15px 17px,#e5bc80 18px 33px); }
+.table[data-table-surface="cloth"] { --material:repeating-linear-gradient(0deg,#c74c4b55 0 12px,#fff8dc77 12px 24px),repeating-linear-gradient(90deg,#c74c4b88 0 12px,#fff8dcaa 12px 24px),#f4e9cf; }
+.table[data-table-surface="plastic"] { --material:repeating-linear-gradient(125deg,#c9bca5 0 1px,#b5a48c 2px 3px,#e5d9c4 4px 8px,#d4c6af 9px 17px); }
+.table[data-table-surface="green"] { --material:#32674c; }
+.table[data-table-surface="blue"] { --material:#355d83; }
+.table[data-table-surface="glass"] { --material:linear-gradient(128deg,transparent 12%,#fff5 15%,transparent 23% 69%,#fff3 72%,transparent 77%),radial-gradient(circle at 25% 25%,#60584ccc 0 5%,transparent 6%),radial-gradient(circle at 75% 25%,#60584ccc 0 5%,transparent 6%),radial-gradient(circle at 25% 75%,#60584ccc 0 5%,transparent 6%),radial-gradient(circle at 75% 75%,#60584ccc 0 5%,transparent 6%),linear-gradient(145deg,#bedde44d,#647f8a44); }
+.table[data-round-table="true"][data-table-surface="glass"] .trickField { border-color:#b4d5d7a8; }
+.table[data-round-table="true"][data-table-surface] .fieldStatus { text-shadow:0 1px 3px #000,0 2px 5px #000; }
