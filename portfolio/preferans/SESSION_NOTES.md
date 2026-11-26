@@ -112,3 +112,10 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Lock misere bidders into the misere family, preserve rival direct overbid. Bound new room pool targets to even 2–40, including template selection. Add room-member-only email fallback and guarded double click.
 - Reserve a fixed maximum hand envelope, bound viewport including ancestor padding, position widow inside enlarged field, add independent local table materials and opacity.
 - Full CI and actual three-player viewport acceptance required.
+
+## PR29 - Passout motion, claim copy and photographic table materials
+
+- Retain the previous public widow frame through actual trick-collection completion, including fast subsequent card actions. Server game rules and hidden-card projections remain unchanged.
+- Apply context-sensitive claim vote copy and replace the discard-phase widow outline with a small vertical yellow label.
+- Use locally bundled CC0 photographic diffuse maps for pine, fabric and retro vinyl; tint a plain weave for two solid options and use transparent optical layers for glass. Reuse CycleSetting and preserve local transparency.
+- Asset provenance is recorded. No external runtime image requests or new backend calls. Full CI and live three-player acceptance remain release gates.

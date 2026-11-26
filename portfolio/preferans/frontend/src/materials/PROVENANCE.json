@@ -1,0 +1,34 @@
+{
+  "pine": {
+    "asset": "wood_table",
+    "source": "https://polyhaven.com/a/wood_table",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table/wood_table_diff_1k.jpg",
+    "license": "CC0-1.0",
+    "size": 987969,
+    "md5": "45af5766b300f7e940ee8984c5fabd4f"
+  },
+  "cloth": {
+    "asset": "gingham_check",
+    "source": "https://polyhaven.com/a/gingham_check",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gingham_check/gingham_check_diff_1k.jpg",
+    "license": "CC0-1.0",
+    "size": 965725,
+    "md5": "1cc0d71b5e1b85134d4c7879debe10a4"
+  },
+  "plastic": {
+    "asset": "old_linoleum_flooring_01",
+    "source": "https://polyhaven.com/a/old_linoleum_flooring_01",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/old_linoleum_flooring_01/old_linoleum_flooring_01_diff_1k.jpg",
+    "license": "CC0-1.0",
+    "size": 677917,
+    "md5": "b122e9dd56eb16d10d27c80cf61b4200"
+  },
+  "plain": {
+    "asset": "terlenka",
+    "source": "https://polyhaven.com/a/terlenka",
+    "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/terlenka/terlenka_diff_1k.jpg",
+    "license": "CC0-1.0",
+    "size": 691195,
+    "md5": "202624e89023d9ace2845b372015490c"
+  }
+}

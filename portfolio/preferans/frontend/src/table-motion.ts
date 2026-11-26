@@ -33,12 +33,13 @@ export function animateDeal(table:HTMLElement, dealer:number):()=>void {
   }));
   return ()=>animations.forEach(animation=>animation.cancel());
 }
-export function animateCollection(table:HTMLElement,winner:number):()=>void {
+export function animateCollection(table:HTMLElement,winner:number,onFinished?:()=>void):()=>void {
   const target=table.querySelector<HTMLElement>(`[data-trick-train="${winner}"] [data-latest="true"]`);
-  if(!target)return ()=>{};
+  if(!target){onFinished?.();return ()=>{};}
   const destination=target.getBoundingClientRect();
   const cards=Array.from(table.querySelectorAll<HTMLElement>("[data-play-field] [data-trick-seat] > span"));
   const animations:Animation[]=[];
+  const cleanups:(()=>void)[]=[];
   cards.forEach(card=>{
     if(typeof card.animate!=="function")return;
     // A fixed-position clone uses viewport coordinates and is not affected by rotated trick spots.
@@ -54,8 +55,16 @@ export function animateCollection(table:HTMLElement,winner:number):()=>void {
     const cleanup=()=>{clone.remove();card.style.visibility="";};
     // Keep the original card hidden until the animation state is cleared.
     animation.onfinish=()=>clone.remove();animation.oncancel=cleanup;
+    cleanups.push(cleanup);
   });
-  return ()=>animations.forEach(animation=>animation.cancel());
+  let cancelled=false;
+  if(onFinished)void Promise.allSettled(animations.map(animation=>animation.finished)).then(()=>{if(!cancelled)onFinished();});
+  return ()=>{
+    cancelled=true;
+    // Restore synchronously, before a new collection can hide these same elements.
+    animations.forEach(animation=>{animation.onfinish=null;animation.oncancel=null;animation.cancel();});
+    cleanups.forEach(cleanup=>cleanup());
+  };
 }
 export function animateArrival(table:HTMLElement, seat:number):void {
   const source=table.querySelector<HTMLElement>(`[data-seat="${seat}"] [data-turn]`);

@@ -46,6 +46,12 @@ export function visibleWidow(view: RoomView): { count: number; cards: Card[] } {
   }
   return {count:0,cards:[]};
 }
+/** During collection, retain the passout widow as it looked before this trick. */
+export function passoutWidowFrame(view:RoomView, collecting:boolean):{view:RoomView;held:boolean} {
+  const count=view.played_tricks??0;
+  if(!collecting||!view.is_passout||count<1||count>2)return {view,held:false};
+  return {view:{...view,played_tricks:count-1,widow:(view.widow??[]).slice(0,count)},held:true};
+}
 export function replayWidow(view: RoomView): Card[] {
   return (view.widow ?? []).slice(0,2);
 }

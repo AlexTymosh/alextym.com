@@ -53,8 +53,8 @@ const statusNames: Record<RoomView["status"], string> = {
   awaiting_settlement: "Подсчёт результатов", between: "Между раздачами", closed: "Партия завершена", archived: "Партия архивирована",
 };
 
-function CardFace({ card, selected, playable, pendingPlay, onClick, onDoubleClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
-  card: Card; selected?: boolean; playable?: boolean; pendingPlay?:boolean; onClick?: () => void; onDoubleClick?:()=>void;
+function CardFace({ card, selected, playable, pendingPlay, fromWidow, onClick, onDoubleClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
+  card: Card; selected?: boolean; playable?: boolean; pendingPlay?:boolean; fromWidow?:boolean; onClick?: () => void; onDoubleClick?:()=>void;
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void;
   onDragOver?: (event: DragEvent<HTMLButtonElement>) => void;
   onDrop?: (event: DragEvent<HTMLButtonElement>) => void;
@@ -64,11 +64,12 @@ function CardFace({ card, selected, playable, pendingPlay, onClick, onDoubleClic
   const red = card.suit === "D" || card.suit === "H";
   return (
     <button type="button" className={`${styles.playingCard} ${red ? styles.red : ""} ${selected ? styles.selected : ""} ${playable ? styles.playable : ""}`}
-      aria-label={`${cardLabel(card)}${selected ? ", выбрана" : ""}`}
+      aria-label={`${cardLabel(card)}${selected ? ", выбрана" : ""}${fromWidow?", прикуп":""}`}
       aria-pressed={Boolean(selected)} disabled={!onClick && !onDragStart && !onDoubleClick} onClick={onClick} onDoubleClick={onDoubleClick}
       draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onKeyDown={onKeyDown}
       data-card={cardId(card)} data-pending-play={pendingPlay?"true":undefined}>
       <CardArtwork card={card} decorative />
+      {fromWidow&&<span className={styles.widowLabel} aria-hidden="true">прикуп</span>}
     </button>
   );
 }
@@ -546,7 +547,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
     <label><input type="checkbox" checked={roundTable} onChange={e=>changeRoundTable(e.target.checked)}/> Круглый стол (вид сверху)</label>
-    <label>Поверхность круглого стола<select value={surface} onChange={e=>{const value=e.target.value as typeof surface;setSurface(value);if(surfaceKey)try{localStorage.setItem(surfaceKey,value);}catch{/* Optional preference. */}}}><option value="pine">Сосна</option><option value="cloth">Скатерть</option><option value="plastic">Советский пластик</option><option value="green">Зелёная</option><option value="blue">Синяя</option><option value="glass">Стекло</option></select></label>
+    <CycleSetting<typeof surface> label="Поверхность круглого стола" value={surface} options={[["pine","Сосна"],["cloth","Скатерть"],["plastic","Советский пластик"],["green","Зелёная"],["blue","Синяя"],["glass","Стекло"]]} onChange={value=>{setSurface(value);if(surfaceKey)try{localStorage.setItem(surfaceKey,value);}catch{/* Optional preference. */}}}/>
     <label>Прозрачность стола: {tableTransparency}% <input type="range" min={0} max={75} step={5} value={tableTransparency} onChange={e=>{const value=Number(e.target.value);setTableTransparency(value);if(surfaceKey)try{localStorage.setItem(surfaceKey+":opacity",String(value));}catch{/* Optional preference. */}}}/></label>
     <label className={styles.transparencySetting}>Прозрачность поля: {Math.round((1-opacity)*100)}% <input type="range" min={0} max={75} step={5} value={Math.round((1-opacity)*100)} onChange={e=>changeTransparency(Number(e.target.value))}/></label>
     {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme==="glass"?"felt":view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={theme=>command("table_theme",{theme})}/>}
@@ -564,7 +565,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     </div>}
     <div className={styles.handRow} aria-label="Игровые карты" onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e)}>
       {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
-        <CardFace card={card} selected={false} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
+        <CardFace card={card} selected={false} fromWidow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
           onClick={ownPlayable&&draft?()=>onCardSelect(card):undefined}
           onDoubleClick={isPlay&&ownPlayable&&legal.has(cardId(card))?()=>{if(view.my_seat!==null)playNow(card,view.my_seat);}:undefined}
           onDragStart={e=>beginDrag(e,"card",card,view.my_seat??undefined)} onDragEnd={endDrag}
