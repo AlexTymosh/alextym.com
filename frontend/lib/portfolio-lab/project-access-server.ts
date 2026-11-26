@@ -9,6 +9,7 @@ import { getLabAdminAuth, getOwnerUid, isLabEnabled, LAB_SESSION_COOKIE } from "
 import { getLabAdmissionDecision } from "./lab-admission-server";
 import { projectGrantRole, projectRoleAllows, type ProjectRole } from "./project-grants";
 import { labProjects } from "./project-catalog";
+import { firebaseQuota } from "./firestore-quota";
 
 export async function labSession(cookie?: string): Promise<DecodedIdToken | null> {
   if (!isLabEnabled() || !getOwnerUid() || !cookie) return null;
@@ -26,8 +27,8 @@ export async function labProjectRole(uid: string, projectId: string): Promise<Pr
   if (!labProjects.some((project) => project.id === projectId)) return null;
   if (uid === getOwnerUid()) return "Admin";
   const auth = await getLabAdminAuth();
-  const grant = await getFirestore(auth.app).collection("portfolio_lab_projects").doc(projectId)
-    .collection("grants").doc(uid).get();
+  const grant = await firebaseQuota.run(() => getFirestore(auth.app).collection("portfolio_lab_projects").doc(projectId)
+    .collection("grants").doc(uid).get());
   return projectGrantRole(uid, projectId, grant.data(), Date.now());
 }
 
@@ -40,7 +41,7 @@ export async function labProjectAccess(cookie: string | undefined, projectId: st
 
 export async function requireLabProjectPage(projectId: string) {
   if (!isLabEnabled()) return;
-  const session = await currentLabSession().catch(() => null);
+  const session = await currentLabSession().catch(() => redirect("/settings"));
   if (!session) redirect("/sign-in");
   const role = await labProjectRole(session.uid, projectId).catch(() => null);
   if (!role) redirect("/settings");

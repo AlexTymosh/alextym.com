@@ -211,3 +211,13 @@ def test_quick_reconnect_with_other_pause_never_resumes_counter():
     assert reasons(c) == {"break"}
     assert c["timer"]["remaining_ms"] == 60_000
     assert c["timer"]["deadline_ms"] is None
+
+
+def test_failed_sync_has_retry_floor(runtime):
+    seat(runtime, 0)
+    assert runtime.due(ROOM, START)
+    runtime.synced(ROOM, START, False)
+    assert not runtime.due(ROOM, START + 4_999)
+    assert runtime.due(ROOM, START + 5_000)
+    runtime.synced(ROOM, START + 5_000, True, (True, False, False))
+    assert not runtime.due(ROOM, START + 5_001)

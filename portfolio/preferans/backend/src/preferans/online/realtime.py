@@ -101,6 +101,7 @@ class Room:
     last_sync: int = 0
     signature: tuple[bool, ...] | None = None
     syncing: bool = False
+    retry_sync_at: int = 0
     loss_generation: int = 0
     handled_generation: int = 0
     live_media: LiveRelay = field(default_factory=LiveRelay)
@@ -351,7 +352,7 @@ class RealtimeHub:
         """Coalesce reconciliation; quiet healthy rooms do not read Firestore."""
         with self.lock:
             r = self.rooms.get(room)
-            if not r or r.syncing:
+            if not r or r.syncing or at < r.retry_sync_at:
                 return False
             signature = tuple(s == "online" for s in self.statuses(room, at))
             view = next(iter(r.views.values()), {})
@@ -401,7 +402,9 @@ class RealtimeHub:
                 if success:
                     r.signature = signature
                     r.last_sync = at
+                    r.retry_sync_at = 0
                 else:
+                    r.retry_sync_at = at + 5_000
                     self.metrics["sync_failures"] += 1
 
 

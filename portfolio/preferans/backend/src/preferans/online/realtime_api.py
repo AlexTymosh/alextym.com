@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .realtime import AUTH_MS, PROTOCOL, HubError, Ticket, enabled, hub, now_ms, origin_allowed
 from .store import FirestoreRooms, StoreError
+from .quota_guard import quota
 from .publish_signal import wait_for_publish_or_frame
 from .live_relay import MAX_FRAME, LiveError, live_enabled
 
@@ -81,6 +82,7 @@ def _revalidate(ticket: Ticket, connection: str, verify: Callable[[str], tuple[s
 
 
 def _sync(store: FirestoreRooms, ticket: Ticket) -> None:
+    quota.require_available()
     at = now_ms()
     if not hub.due(ticket.room, at):
         return
@@ -89,6 +91,9 @@ def _sync(store: FirestoreRooms, ticket: Ticket) -> None:
     try:
         store.sync_realtime(ticket.room, ticket.uid)
         ok = True
+    except Exception as exc:
+        quota.record_failure(exc)
+        raise
     finally:
         hub.synced(ticket.room, now_ms(), ok, signature)
 
@@ -189,6 +194,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
             ):
                 raise HubError("Invalid authentication")
             ticket = hub.redeem(auth["ticket"], room_id, origin, now_ms())
+            quota.require_available()
             store, connection = await run_in_threadpool(_connect, ticket, verify)
             hub.release_handshake()
             pending = False
@@ -214,6 +220,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                     or not hub.current(ticket, connection, at)
                 ):
                     raise HubError("Connection expired")
+                quota.require_available()
                 if at - last_auth >= AUTH_MS:
                     await run_in_threadpool(_revalidate, ticket, connection, verify)
                     last_auth = now_ms()
@@ -300,14 +307,17 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
         except WebSocketDisconnect:
             pass
         except HTTPException as exc:
+            quota.record_failure(exc)
             close_code = (
                 4401 if exc.status_code == 401 else 4403 if exc.status_code in (403, 404) else 1011
             )
         except StoreError as exc:
+            quota.record_failure(exc)
             close_code = 4403 if exc.code in (403, 404) else 1011
-        except (HubError, asyncio.TimeoutError, RuntimeError, ValueError):
-            close_code = 4408
-        except Exception:
+        except (HubError, asyncio.TimeoutError, RuntimeError, ValueError) as exc:
+            close_code = 1011 if quota.record_failure(exc) else 4408
+        except Exception as exc:
+            quota.record_failure(exc)
             # Never log credential, frame contents, room state or provider traceback.
             logger.warning("preferans.realtime.failed")
             close_code = 1011

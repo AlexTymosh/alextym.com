@@ -5,6 +5,7 @@ import os
 from fastapi import HTTPException, Request
 
 from app.security.project_grants import require_project_access
+from preferans.online.quota_guard import quota
 
 
 def require_preferans_member(request: Request) -> None:
@@ -13,7 +14,22 @@ def require_preferans_member(request: Request) -> None:
         or os.getenv("PREFERANS_ROOMS_ENABLED") != "true"
     ):
         raise HTTPException(404, "Not found")
-    identity = require_project_access(request, "preferans")
+    if quota.retry_after():
+        raise HTTPException(
+            503,
+            "Storage temporarily unavailable",
+            headers={"Retry-After": str(quota.retry_after())},
+        )
+    try:
+        identity = require_project_access(request, "preferans")
+    except Exception as exc:
+        if quota.record_failure(exc):
+            raise HTTPException(
+                503,
+                "Storage temporarily unavailable",
+                headers={"Retry-After": str(max(1, quota.retry_after()))},
+            ) from exc
+        raise
     request.state.preferans_uid = identity["uid"]
     request.state.preferans_owner = (
         identity["uid"] == os.getenv("PORTFOLIO_LAB_OWNER_UID", "").strip()

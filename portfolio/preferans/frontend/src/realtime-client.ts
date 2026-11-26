@@ -1,5 +1,6 @@
 /** Bounded, versioned room transport. HTTP remains the only game-command channel. */
 import { isRoomView, ROOM_ID_RE, type RoomView } from "./game-model.ru";
+import { gameCooldown } from "./transport-budget";
 
 import { isMediaEnvelope, parseLiveFrame, type LiveFrame, type LiveSender } from "./live-media-model";
 
@@ -83,10 +84,11 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
   function schedule() {
     if (disposed || denied || retry) return;
     callbacks.onReady(false);
-    retry = setTimeout(() => { retry = undefined; void start(); }, retryDelay(attempts++));
+    retry = setTimeout(() => { retry = undefined; void start(); }, Math.max(retryDelay(attempts++), gameCooldown.remaining()));
   }
   async function start() {
     if (disposed || denied || socket) return;
+    if (gameCooldown.remaining()) { schedule(); return; }
     abort = new AbortController();
     const controller = abort;
     const timeout = setTimeout(() => controller.abort(), 25_000);
@@ -99,7 +101,7 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
       if (disposed) return;
       if ([401, 403].includes(response.status)) { failAccess(); return; }
       if (response.status === 404) { callbacks.onReady(false); return; }
-      if (!response.ok) { schedule(); return; }
+      if (!response.ok) { gameCooldown.observe(response.status, response.headers.get("Retry-After")); schedule(); return; }
       const data = await response.json() as Record<string, unknown>;
       const url = validSocketUrl(data.ws_url, room);
       if (!url || data.protocol !== REALTIME_PROTOCOL || typeof data.ticket !== "string" || !/^[A-Za-z0-9_-]{32,128}$/.test(data.ticket)) { schedule(); return; }

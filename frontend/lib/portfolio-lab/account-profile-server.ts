@@ -3,15 +3,17 @@ import "server-only";
 import { cache } from "react";
 import { getFirestore } from "firebase-admin/firestore";
 import { getLabAdminAuth } from "./firebase-server";
+import { firebaseQuota } from "./firestore-quota";
 import { getLabLinkedProviders } from "./lab-admission-server";
 import { isLabOAuthProvider } from "./admission-policy";
 import { providerPhotoUrl, type AccountProfile } from "./account-profile";
 
 export const getAccountProfile = cache(async (uid: string): Promise<AccountProfile> => {
+  firebaseQuota.requireAvailable();
   const auth = await getLabAdminAuth();
   const [user, document, approved] = await Promise.all([
     auth.getUser(uid),
-    getFirestore(auth.app).collection("portfolio_lab_profiles").doc(uid).get(),
+    firebaseQuota.run(() => getFirestore(auth.app).collection("portfolio_lab_profiles").doc(uid).get()),
     getLabLinkedProviders(uid),
   ]);
   const stored = document.data();
