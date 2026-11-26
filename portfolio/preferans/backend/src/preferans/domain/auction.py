@@ -195,6 +195,7 @@ def can_say_here(state: AuctionState, actor: int) -> bool:
         and state.high_bid is not None
         and state.high_bidder != actor
         and state.high_bid != Bid.regular(6, Suit.SPADES)
+        and state.high_bid.kind not in (BidKind.MISERE, BidKind.MISERE_NO_WIDOW)
     )
 
 

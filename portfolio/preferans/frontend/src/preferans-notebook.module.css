@@ -8,3 +8,12 @@
 .miniature .paper { width:100%; min-width:0; filter:none; }
 .rotateControls { display:flex; justify-content:center; gap:.35rem; margin:0 0 .5rem; }
 .rotateControls button { min-height:32px; }
+
+/* PR25: fit the drawing to the available space, independently of ledger length. */
+.wrap { box-sizing:border-box; width:min(100%,551px,calc(max(112px,80dvh - 7rem) * var(--paper-ratio,1))); min-width:0; max-height:100%; overflow:visible; padding:.35rem .45rem .5rem; background-color:#fbf9ee; background-image:linear-gradient(#b4ccdb77 1px,transparent 1px),linear-gradient(90deg,#b4ccdb77 1px,transparent 1px); background-size:13px 13px; color:#20498f; box-shadow:1px 5px 15px #0007; border-radius:2px; clip-path:polygon(0 .5%,5% 0,10% .5%,15% 0,20% .5%,25% 0,30% .5%,35% 0,40% .5%,45% 0,50% .5%,55% 0,60% .5%,65% 0,70% .5%,75% 0,80% .5%,85% 0,90% .5%,95% 0,100% .5%,100% 99.5%,95% 100%,90% 99.5%,85% 100%,80% 99.5%,75% 100%,70% 99.5%,65% 100%,60% 99.5%,55% 100%,50% 99.5%,45% 100%,40% 99.5%,35% 100%,30% 99.5%,25% 100%,20% 99.5%,15% 100%,10% 99.5%,5% 100%,0 99.5%); }
+.wrap .paper { display:block; width:100%; max-width:100%; min-width:0; height:auto; max-height:calc(max(112px,80dvh - 7rem)); filter:none; clip-path:none; }
+.wrap button { color:#20498f!important; background:#fbf9ee!important; border:1px solid #20498f88!important; font-size:clamp(.7rem,1.1vw,.85rem); min-height:30px; padding:.2rem .35rem; }
+.paperTitle { margin:.1rem 0 .25rem; text-align:center; font-weight:700; overflow-wrap:anywhere; }
+.paperControls { display:flex; justify-content:space-between; flex-wrap:wrap; gap:.35rem; margin-top:.35rem; }
+.paperControls>button:last-child { margin-left:auto; }
+@media(max-height:650px) and (orientation:landscape) { .wrap { width:min(100%,551px,calc(max(90px,75dvh - 6rem) * var(--paper-ratio,1))); } .wrap .paper { max-height:calc(max(90px,75dvh - 6rem)); } }

@@ -7,8 +7,7 @@ export function ClaimPanel({view,profiles,busy,command}:{view:RoomView;profiles:
   const c=view.claim;
   if(!c)return null;
   const name=(seat:number)=>profiles?.[seat]?.name||`Игрок ${seat+1}`;
-  if(c.status==="rejected")return <p className={styles.claimNotice} role="status">{name(c.rejected_by!)} не согласен</p>;
-  if(c.status==="accepted")return <p className={styles.claimNotice} role="status">{name(c.seat)}: присуждено взяток — {c.awarded}</p>;
+  if(c.status!=="pending")return null;
   const vote=view.my_seat!==null&&c.voters.includes(view.my_seat)&&!c.approved.includes(view.my_seat);
   return <section className={styles.claimPanel} role="dialog" aria-label="Все мои">
     <strong>{name(c.seat)} говорит, что все взятки его</strong>

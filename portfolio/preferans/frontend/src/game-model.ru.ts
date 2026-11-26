@@ -69,6 +69,7 @@ export type RoomView = {
   open_hands?: Array<{ seat: number; cards: Card[] }>;
   widow?: Card[]; defense?: Array<string | null>; mode?: string | null;
   tricks_won?: number[]; score?: Score; end_reason?: string | null;
+  final_settlement?: {pairs:number[][];net:number[]};
   score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[]};
   discard_count?: 2; own_discard?: Card[];
 };
@@ -144,6 +145,12 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if(v.final_settlement!==undefined){
+    const f=v.final_settlement as RoomView["final_settlement"];
+    const triple=(x:unknown):x is number[]=>Array.isArray(x)&&x.length===3&&x.every(Number.isSafeInteger);
+    if(v.status!=="closed"||v.sheet_loser!==undefined||!isSeat(v.my_seat)||!f||!triple(f.net)||!Array.isArray(f.pairs)||f.pairs.length!==3||!f.pairs.every(triple))return false;
+    if(!f.pairs.every((row,i)=>row[i]===0&&row.every((n,j)=>n===-f.pairs[j][i])&&row.reduce((sum,n)=>sum+n,0)===f.net[i]))return false;
+  }
   if(v.claim!==undefined&&!validClaim(v.claim,v))return false;
   if(v.can_claim!==undefined&&(v.can_claim!==true||!isSeat(v.my_seat)||v.status!=="playing"||!["play","opening_lead","choose_mode"].includes(String(v.phase))))return false;
   if (v.misere_offer !== undefined) {

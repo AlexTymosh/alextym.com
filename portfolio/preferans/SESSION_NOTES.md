@@ -81,3 +81,12 @@ Base: 2bc7f789e92bff14b3f1c0a998ad301b745b2204 (PR #290 merged). Place the deck 
 ## PR24 candidate — consensual remaining tricks and outcome-based reward routing
 
 Owner confirmed the current rules change without a new ruleset version. Claims require the explicitly agreed voters; accepted claims award only the remaining count and retain actual played trick records. Rejection restores play, and another offer becomes available after a completed trick. Outcome hill penalties block priority help (including passouts); counters and manual adjustments do not. Passout reward decisions are authenticated seat choices and gate settlement. UI refinements, notebook marks, FAQ and regression tests included. Full repository CI and three-device UAT remain required. No cloud configuration or billing changes.
+
+## PR25 - Notebook and table feedback
+
+- Fit paper by available width and height without changing existing notebook entry colors or ledger logic; show both overlays as paper with controls.
+- Reject holding either misere bid in the authoritative auction and UI.
+- During a misere offer, only defenders see each other's hand as well as the declarer's; no new persistent exposure state.
+- Add signed pair and net settlement annotations from the existing server arithmetic, and auto-open normal completed sheets once per room.
+- Move routine status messages to the center field; retain action controls and card interactions.
+- Diagnose PR24 vertical regression: furniture padding and larger action controls add to the min-content height. Height rollback is an explicit separate installer option pending approval. Full browser and CI acceptance required.
