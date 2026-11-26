@@ -53,3 +53,18 @@ Base: 2bc7f789e92bff14b3f1c0a998ad301b745b2204 (PR #290 merged). Place the deck 
 - Ordinary misere after discard supports a private-to-participants offer, two approvals or immediate rejection. The second approval settles atomically through the existing scoring engine. No fake tricks; rejection restores normal play. Legacy GameState records decode with empty votes.
 - Accept legal next-lead drops during decorative collection; no new polling or network requests.
 - Candidate package: full CI, three-client visual acceptance and latency measurement remain required. Deploy frontend and backend together; do not mix old and new game clients during a vote.
+
+## PR22 - Firestore quota incident and transport resilience (2026-11-25)
+
+- Production Vercel environment lacked both realtime enable flags; HTTP fallback was the active transport. Preview and Production had the same Firebase project ID.
+- Logs showed RESOURCE_EXHAUSTED on settings. Firestore Usage showed 54k reads / 8.2k writes over 24 hours; exact daily quota counter and attribution require provider verification.
+- Preserve uncached admission/grant checks, authoritative Firestore transactions and seat-specific WebSocket projections. No change to game rules, scores or persistent state.
+- Add bounded HTTP fallback, shared process-local quota cooldowns, Retry-After forwarding, and a reconciliation retry floor. Settings fail closed with an unavailable message instead of a misleading sign-in redirect on admission failure.
+- Production activation is a separate configuration step; see docs/PR22_QUOTA_RECOVERY.ru.md. Do not declare the incident resolved before a measured three-client test and quota verification.
+- No paid plan, credential, deployment, database, IAM or production environment changes are made by the installer.
+
+### PR22 settings layout lint correction
+
+- Resolve account data and owner status before constructing JSX; retain distinct unavailable and unauthenticated outcomes.
+- Keep the existing settings error boundary and authorization checks.
+- Run frontend lint, typecheck and full local CI before merging.

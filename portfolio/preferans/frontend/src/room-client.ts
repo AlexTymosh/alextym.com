@@ -1,5 +1,7 @@
 import { ROOM_ID_RE, type CommandAction, type RoomInvitation, type RoomView, isInvitation, isRoomView } from "./game-model.ru";
 
+import { gameCooldown } from "./transport-budget";
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = "ApiError"; Object.setPrototypeOf(this, ApiError.prototype); }
 }
@@ -9,6 +11,7 @@ const prefix = "/api/preferans/rooms";
 const timeoutMs = 30_000;
 
 async function request(path: string, method: "GET" | "POST", payload?: object): Promise<unknown> {
+  if (gameCooldown.remaining()) throw new ApiError(503, "Game service cooling down");
   const response = await fetch(prefix + path, {
     method,
     credentials: "same-origin",
@@ -18,7 +21,10 @@ async function request(path: string, method: "GET" | "POST", payload?: object): 
     signal: AbortSignal.timeout(timeoutMs),
   });
   const body = await response.json().catch(() => null);
-  if (!response.ok) throw new ApiError(response.status, "Game API request failed");
+  if (!response.ok) {
+    gameCooldown.observe(response.status, response.headers.get("Retry-After"));
+    throw new ApiError(response.status, "Game API request failed");
+  }
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new ApiError(502, "Invalid API response");
   return body;
 }

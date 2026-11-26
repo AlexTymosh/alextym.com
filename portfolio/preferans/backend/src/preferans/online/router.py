@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .store import FirestoreRooms, StoreError
+from .quota_guard import quota
 from .media import MediaRooms
 from .lobby import can_create_room, directory, room_profiles
 from .realtime import (
@@ -40,6 +41,12 @@ def _storage_failure(request: Request, operation: str, stage: str, exc: Exceptio
     if exc.__cause__ is not None:
         diagnostic["cause_type"] = type(exc.__cause__).__name__
     logger.error(json.dumps(diagnostic, sort_keys=True))
+    if quota.record_failure(exc):
+        raise HTTPException(
+            503,
+            "Storage temporarily unavailable",
+            headers={"Retry-After": str(max(1, quota.retry_after()))},
+        ) from exc
 
 
 class Strict(BaseModel):
@@ -119,6 +126,12 @@ def _context(request: Request, operation: str) -> tuple[FirestoreRooms, str, boo
     owner = getattr(request.state, "preferans_owner", False)
     if not isinstance(uid, str) or not uid or type(owner) is not bool:
         raise HTTPException(403, "Access denied")
+    if quota.retry_after():
+        raise HTTPException(
+            503,
+            "Storage temporarily unavailable",
+            headers={"Retry-After": str(quota.retry_after())},
+        )
     try:
         from firebase_admin import firestore, get_app
 
@@ -353,7 +366,7 @@ def realtime_metrics(request: Request) -> dict:
     with hub.lock:
         return {
             "scope": "process-local-estimates",
-            "metrics": dict(hub.metrics),
+            "metrics": {**hub.metrics, **quota.metrics()},
             "active_rooms": len(hub.rooms),
         }
 

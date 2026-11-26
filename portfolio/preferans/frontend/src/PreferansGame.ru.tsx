@@ -33,6 +33,7 @@ import { CycleSetting } from "./CycleSetting.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { orderHand, ownCards, type SortMode } from "./interaction-model";
 import { autoSettlementAllowed } from "./table-pr20";
+import { fallbackDelay, gameCooldown } from "./transport-budget";
 
 import { ReleaseControls } from "./ReleaseControls.ru";
 import { RulesetEditor } from "./RulesetEditor.ru";
@@ -259,8 +260,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     let timer: ReturnType<typeof setTimeout> | undefined;
     let errors = 0;
     async function tick() {
-      let nextMs = 3_000;
+      let nextMs = fallbackDelay(viewRef.current?.status, document.visibilityState === "hidden", errors);
       try {
+        if (gameCooldown.remaining()) { setOnline(false); setStatus(statusMessage(503)); return; }
         const result = await roomView(roomId, viewRef.current?.version);
         if (stopped) return;
         if (!("unchanged" in result)) {
@@ -270,7 +272,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         }
         setOnline(true);
         errors = 0;
-        nextMs = viewRef.current?.status === "playing" ? 4_000 : REALTIME_ENABLED ? 20_000 : 12_000;
+        nextMs = fallbackDelay(viewRef.current?.status, document.visibilityState === "hidden");
+        if (viewRef.current?.status === "archived") stopped = true;
       } catch (error) {
         if (stopped) return;
         if (error instanceof ApiError && error.status === 404 && !viewRef.current) {
@@ -292,10 +295,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             return;
           }
         }
-        nextMs = Math.min(30_000, 8_000 * 2 ** Math.min(errors, 3));
+        nextMs = fallbackDelay(viewRef.current?.status, document.visibilityState === "hidden", Math.max(1, errors));
       } finally {
         if (!stopped) {
-          timer = setTimeout(tick, document.visibilityState === "hidden" ? Math.max(15_000, nextMs) : nextMs);
+          timer = setTimeout(tick, Math.max(nextMs, gameCooldown.remaining(), document.visibilityState === "hidden" ? 60_000 : 0));
         }
       }
     }
@@ -329,10 +332,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if (!roomId || rtReady || view?.my_seat === null || view?.my_seat === undefined ||
         (!REALTIME_ENABLED && view?.status !== "playing") || view?.status === "closed" || view?.status === "archived") return;
     let stopped = false;
+    let inProgress = false;
     async function heartbeat() {
-      if (stopped) return;
+      if (stopped || inProgress || gameCooldown.remaining()) return;
       const current = viewRef.current;
       if (!current || current.status === "closed" || current.status === "archived" || (!REALTIME_ENABLED && current.status !== "playing")) return;
+      inProgress = true;
       try {
         const response = await sendCommand(current.room_id, newKey(), current.version, "pulse", {});
         if (!stopped && response.version > current.version) setPollKey(value => value + 1);
@@ -340,7 +345,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         // Other players can update the room between our view and heartbeat.
         // The next ordinary poll fetches the new version; never guess it here.
         if (!stopped && error instanceof ApiError && error.status === 409) setPollKey(v => v + 1);
-      }
+      } finally { inProgress = false; }
     }
     void heartbeat();
     const interval = setInterval(() => { void heartbeat(); }, 45_000);
@@ -556,7 +561,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
 </div>
       <div className={styles.headerTools}><div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
-        {rtReady ? "Обновление в реальном времени" : online ? (REALTIME_ENABLED ? "Резервная связь" : "Связь активна") : "Переподключение"}</div></div>
+        {rtReady ? "Обновление в реальном времени" : online ? "Резервная связь" : "Переподключение"}</div></div>
     </header>
 
     <div className={styles.tableShell}>

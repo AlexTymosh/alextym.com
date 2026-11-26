@@ -95,3 +95,27 @@ def test_domain_failures_keep_their_status(client, monkeypatch, caplog, code):
     assert len(records) == (1 if code == 503 else 0)
     if records:
         assert json.loads(records[0].getMessage())["stage"] == "state"
+
+
+def test_quota_stops_followup_storage_calls(client, monkeypatch):
+    from google.api_core.exceptions import ResourceExhausted
+    from preferans.online.quota_guard import QuotaCircuit
+
+    circuit = QuotaCircuit(lambda: 100.0)
+    monkeypatch.setattr(api, "quota", circuit)
+    calls = []
+
+    def exhausted(*_args, **_kwargs):
+        calls.append(True)
+        raise ResourceExhausted("private quota metadata")
+
+    monkeypatch.setattr(FirestoreRooms, "history", exhausted)
+    first = client.get("/preferans/history")
+    second = client.get("/preferans/history")
+    for response in (first, second):
+        assert response.status_code == 503
+        assert response.json() == {"detail": "Storage temporarily unavailable"}
+        assert response.headers["Retry-After"] == "120"
+        assert "private quota metadata" not in response.text
+    assert calls == [True]
+    assert circuit.metrics()["quota_trips"] == 1

@@ -42,3 +42,21 @@ def test_granted_identity_is_attached_only_after_host_verification(monkeypatch):
     require_preferans_member(request)
     assert request.state.preferans_uid == "guest"
     assert request.state.preferans_owner is False
+
+
+def test_open_quota_circuit_prevents_auth_reads(monkeypatch):
+    from preferans.online.quota_guard import QuotaCircuit
+
+    circuit = QuotaCircuit(lambda: 100.0)
+    exhausted = type("ResourceExhausted", (Exception,), {})
+    circuit.record_failure(exhausted())
+    monkeypatch.setenv("PORTFOLIO_LAB_ENABLED", "true")
+    monkeypatch.setenv("PREFERANS_ROOMS_ENABLED", "true")
+    monkeypatch.setattr("app.security.preferans_access.quota", circuit)
+    verify = Mock(side_effect=AssertionError("Unexpected authorization lookup"))
+    monkeypatch.setattr("app.security.preferans_access.require_project_access", verify)
+    with pytest.raises(HTTPException) as error:
+        require_preferans_member(Mock())
+    assert error.value.status_code == 503
+    assert error.value.headers == {"Retry-After": "120"}
+    verify.assert_not_called()

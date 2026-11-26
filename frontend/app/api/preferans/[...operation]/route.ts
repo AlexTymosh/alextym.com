@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isLabEnabled, LAB_SESSION_COOKIE } from "../../../../lib/portfolio-lab/firebase-server";
 import { labProjectAccess } from "../../../../lib/portfolio-lab/project-access-server";
+import { firebaseQuota, QUOTA_DETAIL } from "../../../../lib/portfolio-lab/firestore-quota";
 import { hasSameOrigin } from "../../../../lib/portfolio-lab/session-origin";
 import { workforceBackendOrigin } from "../../../../lib/portfolio-lab/workforce-password-server";
 import { hasLabJsonContent, readLabJson } from "../../../../lib/portfolio-lab/request-json";
@@ -8,8 +9,14 @@ import { hasLabJsonContent, readLabJson } from "../../../../lib/portfolio-lab/re
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function response(status: number, data: object) {
-  return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
+function response(status: number, data: object, retryAfter?: number) {
+  const headers = new Headers({ "Cache-Control": "no-store" });
+  if (retryAfter) headers.set("Retry-After", String(retryAfter));
+  return NextResponse.json(data, { status, headers });
+}
+
+function quotaResponse() {
+  return response(503, { detail: QUOTA_DETAIL }, Math.max(1, firebaseQuota.remaining()));
 }
 
 function upstreamPath(method: string, parts: string[]): string | null {
@@ -42,10 +49,12 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
   }
   const session = request.cookies.get(LAB_SESSION_COOKIE)?.value;
   if (!session) return response(401, { detail: "Sign in required" });
+  if (firebaseQuota.remaining()) return quotaResponse();
   try {
     const access = await labProjectAccess(session, "preferans", request.method, path);
     if (access.status !== 200) return response(access.status, { detail: "Project access denied" });
-  } catch {
+  } catch (error) {
+    if (firebaseQuota.observe(error)) return quotaResponse();
     return response(503, { detail: "Access unavailable" });
   }
 
@@ -88,6 +97,11 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ ope
     const data: unknown = await upstream.json();
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       return response(502, { detail: "Invalid upstream response" });
+    }
+    if (upstream.status === 503 && (data as { detail?: unknown }).detail === QUOTA_DETAIL) {
+      const retry = upstream.headers.get("Retry-After");
+      firebaseQuota.open(retry && /^\d{1,4}$/.test(retry) ? Number(retry) : undefined);
+      return quotaResponse();
     }
     if (isRealtime && upstream.ok) {
       const ticket = data as Record<string, unknown>;

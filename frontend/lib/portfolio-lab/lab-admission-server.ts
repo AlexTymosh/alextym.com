@@ -4,6 +4,7 @@ import type { App } from "firebase-admin/app";
 import type { DecodedIdToken, UserRecord } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getLabAdminAuth, getOwnerUid } from "./firebase-server";
+import { firebaseQuota } from "./firestore-quota";
 import {
   isLabOAuthProvider,
   labAdmissionDecision,
@@ -19,7 +20,7 @@ export function getLabIdentityDocument(uid: string, app: App) {
 
 export async function getLabLinkedProviders(uid: string) {
   const auth = await getLabAdminAuth();
-  const record = (await getLabIdentityDocument(uid, auth.app).get()).data();
+  const record = (await firebaseQuota.run(() => getLabIdentityDocument(uid, auth.app).get())).data();
   if (record?.status !== "active" || record.uid !== uid) return [];
 
   const bindings = labOAuthBindings(record);
@@ -67,7 +68,7 @@ export async function getLabAdmissionDecision(claims: DecodedIdToken) {
   if (provider !== "password" && !isLabOAuthProvider(provider)) return "denied" as const;
   if (claims.uid === ownerUid && provider === "password") return "allowed" as const;
   const auth = await getLabAdminAuth();
-  const document = await getLabIdentityDocument(claims.uid, auth.app).get();
+  const document = await firebaseQuota.run(() => getLabIdentityDocument(claims.uid, auth.app).get());
   const decision = decideLabAdmission(claims, ownerUid, document.data());
   if (decision !== "allowed" || provider === "password") return decision;
   try {
