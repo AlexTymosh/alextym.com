@@ -278,6 +278,14 @@ def _check_finished(game: GameState) -> None:
             )
     elif game.completed_tricks or game.trick or any(game.tricks_won):
         raise RuleViolation("An unplayed deal cannot claim taken tricks")
+    if game.end_reason == EndReason.WITHOUT_THREE and (
+        game.is_passout
+        or game.winning_bid is None
+        or game.contract != game.winning_bid
+        or game.winning_bid.kind not in (BidKind.REGULAR, BidKind.TEN_NO_WIDOW)
+        or any(game.defense)
+    ):
+        raise RuleViolation("Without-three requires the winning bid and no defense decisions")
     if not game.is_passout and (game.declarer is None or game.contract is None):
         raise RuleViolation("A declarer and final contract are required")
 

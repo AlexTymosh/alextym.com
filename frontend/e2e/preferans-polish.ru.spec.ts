@@ -13,17 +13,17 @@ test("next dealer can start without bypassing automatic countdown",()=>{
   expect(mayStart({...between,next_deal:{after_game_id:"deal",deadline_ms:1000,remaining_ms:null}})).toBe(false);
 });
 test("without three is only a declaration option",()=>{
-  const view:RoomView={...base,phase:"declare",declarer:1,legal_contracts:[{kind:"regular",level:7,suit:"H"}]};
+  const view:RoomView={...base,phase:"declare",declarer:1,winning_bid:{kind:"regular",level:7,suit:"H"},legal_contracts:[{kind:"regular",level:7,suit:"H"}]};
   expect(mayConcede(view)).toBe(true);
   expect(mayConcede({...view,phase:"defense_first"})).toBe(false);
   expect(mayConcede({...view,phase:"play"})).toBe(false);
-  expect(mayConcede({...view,legal_contracts:[{kind:"misere",level:null,suit:null}]})).toBe(false);
+  expect(mayConcede({...view,winning_bid:{kind:"misere",level:null,suit:null}})).toBe(false);
 });
 test("motion uses actual geometry rather than fixed directional offsets",()=>{
   const a={left:100,top:100,width:60,height:90} as DOMRect;
   const b={left:400,top:270,width:40,height:60} as DOMRect;
   expect(flightDelta(a,b)).toEqual({x:290,y:155});
-  expect(DEAL_DURATION_MS).toBe(3300);
+  expect(DEAL_DURATION_MS).toBe(3650);
   expect(TRICK_DURATION_MS).toBeGreaterThan(1300);
 });
 test("collection travels to the winning bundle and clears clones",async({page})=>{

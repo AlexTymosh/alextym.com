@@ -16,6 +16,8 @@ import { PreferansControls } from "./PreferansControls.ru";
 import { ScoreAdjustment } from "./ScoreAdjustment.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
+import { canHint, sharedHint, hintKey, hintScope, type HintSender } from "./defense-hints";
+import { pauseMessage, awardedMessage } from "./play-status.ru";
 import { CardArtwork } from "./CardArtwork.ru";
 import { GameTable } from "./GameTable.ru";
 import { SharedRoom, SharedObjects, type SharedCommand } from "./SharedRoom.ru";
@@ -55,8 +57,9 @@ const statusNames: Record<RoomView["status"], string> = {
   awaiting_settlement: "Подсчёт результатов", between: "Между раздачами", closed: "Партия завершена", archived: "Партия архивирована",
 };
 
-function CardFace({ card, selected, playable, pendingPlay, fromWidow, onClick, onDoubleClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
+function CardFace({ card, selected, playable, pendingPlay, fromWidow, raised, onHint, onClick, onDoubleClick, onDragStart, onDragOver, onDrop, onDragEnd, onKeyDown }: {
   card: Card; selected?: boolean; playable?: boolean; pendingPlay?:boolean; fromWidow?:boolean; onClick?: () => void; onDoubleClick?:()=>void;
+  raised?:boolean; onHint?:()=>void;
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void;
   onDragOver?: (event: DragEvent<HTMLButtonElement>) => void;
   onDrop?: (event: DragEvent<HTMLButtonElement>) => void;
@@ -64,11 +67,16 @@ function CardFace({ card, selected, playable, pendingPlay, fromWidow, onClick, o
   onKeyDown?: (event: import("react").KeyboardEvent<HTMLButtonElement>)=>void;
 }) {
   const red = card.suit === "D" || card.suit === "H";
+  const clickTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const cancelHint=()=>{if(clickTimer.current!==null)clearTimeout(clickTimer.current);clickTimer.current=null;};
+  useEffect(()=>()=>{if(clickTimer.current!==null)clearTimeout(clickTimer.current);},[]);
   return (
     <button type="button" className={`${styles.playingCard} ${red ? styles.red : ""} ${selected ? styles.selected : ""} ${playable ? styles.playable : ""}`}
       aria-label={`${cardLabel(card)}${selected ? ", выбрана" : ""}${fromWidow?", прикуп":""}`}
-      aria-pressed={Boolean(selected)} disabled={!onClick && !onDragStart && !onDoubleClick} onClick={onClick} onDoubleClick={onDoubleClick}
-      draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onKeyDown={onKeyDown}
+      aria-pressed={Boolean(selected||raised)} disabled={!onClick && !onHint && !onDragStart && !onDoubleClick} data-defense-raised={raised?"true":undefined} data-defense-hintable={onHint?"true":undefined}
+      onClick={onHint?e=>{cancelHint();if(e.detail<2)clickTimer.current=setTimeout(()=>{clickTimer.current=null;onHint();},350);}:onClick}
+      onDoubleClick={onDoubleClick?()=>{cancelHint();onDoubleClick();}:undefined}
+      draggable={Boolean(onDragStart)} onDragStart={onDragStart?e=>{cancelHint();onDragStart(e);}:undefined} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onKeyDown={onKeyDown}
       data-card={cardId(card)} data-pending-play={pendingPlay?"true":undefined}>
       <CardArtwork card={card} decorative />
       {fromWidow&&<span className={styles.widowLabel} aria-hidden="true">прикуп</span>}
@@ -112,7 +120,7 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
       {view.my_seat===view.declarer ? <>
         {view.settlement_options?.regular_choice && <label className={styles.field}>Куда записать выигрыш
           <select value={regularRoute} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRegularRoute(e.target.value as "pool" | "hill_first")}>
-            <option value="pool">Помочь соперникам</option><option value="hill_first">Сначала погасить гору</option></select></label>}
+            <option value="pool">Записать соперникам в пулю</option><option value="hill_first">Списать с горы</option></select></label>}
         <button type="button" disabled={busy || Boolean(view.controls?.paused || view.controls?.undo)} className={styles.primary} onClick={onSettle}>Рассчитать раздачу</button>
       </> : null}
     </section>;
@@ -154,6 +162,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const liveMedia = useLiveMedia();
   const {bind: bindMedia, receive: receiveMedia} = liveMedia;
   const [view, setView] = useState<RoomView | null>(null);
+  const hintSender=useRef<{room:string;send:HintSender}|null>(null);
+  const [localHints,setLocalHints]=useState<{scope:string;keys:string[]}>({scope:"",keys:[]});
   const [invited, setInvited] = useState<RoomInvitation | null>(null);
   const viewRef = useRef<RoomView | null>(null);
   const serverOffset = useRef(0);
@@ -325,6 +335,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   useEffect(() => {
     if (!REALTIME_ENABLED || !roomId || mySeat === null || mySeat === undefined || archived) return;
     return connectRealtime(roomId, mySeat, {
+      onHintTransport: sender=>{if(activeRoomRef.current===roomId)hintSender.current=sender?{room:roomId,send:sender}:null;},
       onMediaTransport: LIVE_MEDIA_ENABLED ? sender => { if (activeRoomRef.current === roomId) bindMedia(mySeat, sender); } : undefined,
       onMediaFrame: LIVE_MEDIA_ENABLED ? frame => { if (activeRoomRef.current === roomId) receiveMedia(frame); } : undefined,
       onClock: at => { if (activeRoomRef.current === roomId) serverOffset.current = at - Date.now(); },
@@ -500,9 +511,17 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     setPendingPlay({room:view.room_id,game:view.game_id,version:view.version,owner,card});
     command("play",{card,owner});
   };
+  const raised=(card:Card,owner:number)=>Boolean(view&&canHint(view,owner,card)&&(view.defense_hints?.some(mark=>mark.owner===owner&&cardId(mark.card)===cardId(card))||localHints.scope===hintScope(view)&&localHints.keys.includes(hintKey(owner,card))));
+  const toggleHint=(card:Card,owner:number)=>{
+    // A delayed single click must not act on a newer deal or turn.
+    if(!view||viewRef.current?.version!==view.version||viewRef.current?.game_id!==view.game_id||viewRef.current?.room_id!==view.room_id||!canHint(view,owner,card))return;
+    const key=hintKey(owner,card),scope=hintScope(view);
+    if(view.game_id&&sharedHint(view,owner,card)&&hintSender.current?.room===view.room_id&&hintSender.current.send({game_id:view.game_id,version:view.version,owner,card,raised:!raised(card,owner)}))return;
+    setLocalHints(old=>{const keys=old.scope===scope?old.keys:[];return {scope,keys:keys.includes(key)?keys.filter(k=>k!==key):[...keys,key]};});
+  };
   const renderOpenCard = (card: Card, seat: Seat) => {
     const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
-    return <CardFace card={card} playable={playable} pendingPlay={!!localPlay&&localPlay.owner===seat&&cardId(localPlay.card)===cardId(card)}
+    return <CardFace card={card} playable={playable} raised={raised(card,seat)} onHint={view&&canHint(view,seat,card)?()=>toggleHint(card,seat):undefined} pendingPlay={!!localPlay&&localPlay.owner===seat&&cardId(localPlay.card)===cardId(card)}
       onDragStart={isPlay&&!busy?e=>beginDrag(e,"card",card,seat):undefined} onDragEnd={endDrag}
       onDoubleClick={playable?()=>playNow(card,seat):undefined}
       onKeyDown={e=>{if(playable&&(e.key==="Enter"||e.key===" ")){e.preventDefault();playNow(card,seat);}}}/>;
@@ -560,7 +579,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     </div>}
     <div className={styles.handRow} aria-label="Игровые карты" onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e)}>
       {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
-        <CardFace card={card} selected={false} fromWidow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
+        <CardFace card={card} selected={false} raised={view.my_seat!==null&&raised(card,view.my_seat)} onHint={view.my_seat!==null&&canHint(view,view.my_seat,card)?()=>toggleHint(card,view.my_seat!):undefined} fromWidow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
           onClick={ownPlayable&&draft?()=>onCardSelect(card):undefined}
           onDoubleClick={isPlay&&ownPlayable&&legal.has(cardId(card))?()=>{if(view.my_seat!==null)playNow(card,view.my_seat);}:undefined}
           onDragStart={e=>beginDrag(e,"card",card,view.my_seat??undefined)} onDragEnd={endDrag}
@@ -577,14 +596,13 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if(view.final_review)return "Проверьте итоговые расчёты";
     if(view.status==="closed")return "Закончили!";
     if(view.status==="archived")return "Партия архивирована";
-    if(view.controls?.paused)return "Пауза";
+    if(view.controls?.paused)return pauseMessage(view,rtPresence,playerName);
     if(view.claim?.status==="rejected")return `${playerName(view.claim.rejected_by!)} не согласен`;
-    if(view.claim?.status==="accepted")return `${playerName(view.claim.seat)}: присуждено взяток — ${view.claim.awarded}`;
     if(view.status==="lobby")return `Сбор игроков · ${view.occupied.filter(Boolean).length} из 3`;
-    if(view.status==="between")return view.next_deal&&REALTIME_ENABLED?<DealStatus view={view}/>:"Новая раздача";
+    if(view.status==="between")return <>{awardedMessage(view,playerName)}{view.next_deal&&REALTIME_ENABLED?<DealStatus view={view}/>:"Новая раздача"}</>;
     if(view.status==="awaiting_settlement"){
       const waiting=view.settlement_options?.passout_pending??[];
-      return waiting.length?`${waiting.map(playerName).join(", ")} ${waiting.length===1?"думает":"думают"} списать с горы или записать в пулю`:view.settlement_options?.regular_choice?`${playerName(view.declarer??0)} думает списать с горы или записать в пулю`:"Подсчёт результатов";
+      return <>{awardedMessage(view,playerName)}<span>{waiting.length?`${waiting.map(playerName).join(", ")} ${waiting.length===1?"решает":"решают"} куда записать выигрыш`:view.settlement_options?.regular_choice?`${playerName(view.declarer??0)} решает куда записать — снять с горы или записать соперникам в пулю`:"Подсчёт результатов"}</span></>;
     }
     if(view.phase==="misere_offer")return `Мизер · ждём согласия ${view.misere_offer?.approved.length??0}/2`;
     if(view.phase==="discard"&&view.my_seat===view.declarer)return "Перетащи две карты в снос";

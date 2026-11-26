@@ -6,19 +6,15 @@ import styles from "./preferans-table.module.css";
 const labels: Record<BidGroup,string> = {"6":"6","7":"7","8":"8","9":"9","10":"10",misere:"МИЗЕР",misere_no_widow:"МИЗЕР БЕЗ ПРИКУПА",ten_no_widow:"Тотус без прикупа!"};
 export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;command:(action:CommandAction,args?:Record<string,unknown>)=>void}) {
   const auction = view.phase === "auction";
-  const [conceding,setConceding] = useState(false);
   const canConcede = mayConcede(view);
-  const concessionMode = canConcede && conceding;
   const availableBids = auction ? view.legal_bids ?? [] : view.legal_contracts ?? [];
-  const bids = concessionMode ? availableBids.filter(b => b.kind === "regular" || b.kind === "ten_no_widow") : availableBids;
+  const bids = availableBids;
   const [group,setGroup] = useState<BidGroup|null>(null);
   const options = group ? bidsInGroup(bids,group) : [];
   const [confirmation,setConfirmation] = useState<{group:BidGroup;version:number}|null>(null);
   const confirmed = confirmation?.version===view.version?confirmation.group:null;
   const submit = (bid:Bid) => {
-    if (concessionMode) {
-      if (window.confirm(`Без трёх: ${bidLabel(bid)}?`)) command("without_three",{bid});
-    } else command(auction?"bid":"declare",{bid});
+    command(auction?"bid":"declare",{bid});
     setConfirmation(null);
   };
   if (!auction && (view.winning_bid?.kind === "misere"||view.winning_bid?.kind === "misere_no_widow")) {
@@ -29,8 +25,7 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
     </div>;
   }
   return <div className={styles.bidPanel} aria-label={auction?"Торговля":"Окончательный контракт"}>
-    {canConcede&&<button type="button" aria-pressed={concessionMode} disabled={busy} onClick={()=>{setConceding(v=>!v);setGroup(null);}}>Без трёх</button>}
-    {concessionMode&&<span className={styles.concessionHint}>Выбери контракт для штрафа</span>}
+    {canConcede&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(`Ты уверен, что хочешь объявить «Без трёх» (${bidLabel(view.winning_bid!)})?`))command("without_three");}}>Без трёх</button>}
     <div className={styles.bidGroups}>
       {auction && <button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>{setConfirmation(null);command("pass");}}>ПАС</button>}
       {BID_GROUPS.filter(key=>key!=="ten_no_widow").map(key=>{

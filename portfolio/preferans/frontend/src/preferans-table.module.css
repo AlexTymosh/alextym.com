@@ -635,3 +635,12 @@
 
 .table .claimButton { display:flex; flex-wrap:wrap; gap:.3rem; justify-content:flex-start; }
 .table .claimButton button { max-width:100%; white-space:normal; }
+
+/* PR31: speech within the left edge of each avatar. */
+.table .seat>.callBubble,.table .left>.callBubble,.table .right>.callBubble,.table .bottom>.callBubble { left:clamp(5px,1cqw,12px); right:auto; transform:none; text-align:left; }
+.table .fieldStatus section { width:100%; min-width:0; background:#16352be8; border:1px solid #ad976a; border-radius:.65rem; padding:.55rem; }
+.table .fieldStatus select,.table .fieldStatus input,.table .fieldStatus label,.table .fieldStatus section { pointer-events:auto; }
+.table .fieldStatus select { width:100%; color:#fff4db; background:#193a30; }
+.table[data-center-choice="true"] .trickField .fieldStatus { inset:10% 5%; z-index:8; }
+.table .trickBundle[data-awarded="true"] { opacity:.82; }
+.table .openHand button[data-defense-raised="true"] { transform:translateY(-18%)!important; }

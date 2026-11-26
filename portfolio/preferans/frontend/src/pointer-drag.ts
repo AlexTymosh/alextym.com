@@ -7,8 +7,15 @@ export function attachCardPointerDrag(root: Document): () => void {
     if(a.ghost){
       a.ghost.remove();delete a.source.dataset.pointerDragging;
       if(drop&&event&&a.transfer){
-        const target=root.elementFromPoint(event.clientX,event.clientY);
-        target?.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:a.transfer,clientX:event.clientX,clientY:event.clientY}));
+        const dx=event.clientX-a.x,dy=event.clientY-a.y;
+        const lift=a.source.dataset.defenseHintable==="true"&&dy<=-8&&dy>=-Math.min(35,a.rect.height*.35)&&Math.abs(dx)<=14;
+        if(lift){
+          // A short lift is only a visual cue; never send a game-play drop.
+          a.source.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,detail:1}));
+        }else{
+          const target=root.elementFromPoint(event.clientX,event.clientY);
+          target?.dispatchEvent(new DragEvent("drop",{bubbles:true,cancelable:true,dataTransfer:a.transfer,clientX:event.clientX,clientY:event.clientY}));
+        }
       }
       a.source.dispatchEvent(new DragEvent("dragend",{bubbles:true,dataTransfer:a.transfer}));
       suppressClickUntil=performance.now()+250;

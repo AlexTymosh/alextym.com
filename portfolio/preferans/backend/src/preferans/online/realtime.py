@@ -19,7 +19,7 @@ from .publish_signal import PublishSignal
 
 PROTOCOL = 1
 TICKET_MS = 30_000
-WS_LEASE_MS = 35_000
+WS_LEASE_MS = 90_000
 HTTP_LEASE_MS = 100_000
 AUTH_MS = 60_000
 CHECKPOINT_MS = 60_000
@@ -105,6 +105,8 @@ class Room:
     loss_generation: int = 0
     handled_generation: int = 0
     live_media: LiveRelay = field(default_factory=LiveRelay)
+    defense_hints: dict = field(default_factory=dict)
+    defense_hint_scope: tuple[str, int] | None = None
 
 
 class RealtimeHub:
@@ -229,6 +231,8 @@ class RealtimeHub:
                 r.leases.clear()
                 r.views.clear()
                 r.live_media = LiveRelay()
+                r.defense_hints.clear()
+                r.defense_hint_scope = None
                 r.loss_generation += 1
                 r.signature = None
                 r.touched = at

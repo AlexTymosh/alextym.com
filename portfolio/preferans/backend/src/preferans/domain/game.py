@@ -308,14 +308,17 @@ def vote_misere(state: GameState, actor: int, approve: bool) -> GameState:
     return replace(state, misere_votes=votes, turn=next(iter(defenders - votes)))
 
 
-def concede_without_three(state: GameState, actor: int, contract: Bid) -> GameState:
-    """Announce a legal contract and concede atomically, before defense starts."""
-    if state.phase != Phase.DECLARE or state.declarer != actor:
+def concede_without_three(state: GameState, actor: int, contract: Bid | None = None) -> GameState:
+    """Concede the winning auction bid, without declaring another contract."""
+    if state.phase != Phase.DECLARE or state.declarer != actor or state.is_passout:
         raise RuleViolation("Without-three concession is only allowed during declaration")
-    if contract.kind not in (BidKind.REGULAR, BidKind.TEN_NO_WIDOW):
+    winning = state.winning_bid
+    if winning is None or winning.kind not in (BidKind.REGULAR, BidKind.TEN_NO_WIDOW):
         raise RuleViolation("Misere cannot be conceded without three")
-    if state.winning_bid is None or contract not in legal_final_contracts(state.winning_bid):
-        raise RuleViolation("Invalid final contract")
+    # Legacy clients may send the exact winning bid; an alternative is forbidden.
+    if contract is not None and contract != winning:
+        raise RuleViolation("Without-three must use the winning auction bid")
+    contract = winning
     if state.trick or state.completed_tricks or any(state.defense):
         raise RuleViolation("Defense or play has already started")
     return replace(

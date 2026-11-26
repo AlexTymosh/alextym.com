@@ -40,7 +40,7 @@ from preferans.online.controls import (
     vote_undo,
 )
 from preferans.online.deal_flow import due as next_deal_due, schedule as schedule_next_deal
-from preferans.online.views import seat_view
+from preferans.online.views import public_bid, seat_view
 from preferans.online.table_experience import THEMES, mark_activity, settlement_options
 from preferans.online.table_presentation import remember_deal, room_day
 from preferans.online.seat_swap import (
@@ -944,6 +944,8 @@ class FirestoreRooms:
                         if replay_move:
                             close_after_move(controls, now)
                         event_data = redacted_action(action, args)
+                        if action == "without_three":
+                            event_data = {"bid": public_bid(game.contract)}
                         record_candidate(
                             controls,
                             before,
@@ -955,9 +957,12 @@ class FirestoreRooms:
                         if controls.get("timer") is not None:
                             stop_counter(controls)
                         if game.phase == Phase.FINISHED:
-                            if game.end_reason == EndReason.MISERE_ACCEPTED:
-                                # The second approval is the settlement authority. No admin client
-                                # or synthetic trick history is needed, and all writes stay atomic.
+                            if game.end_reason in (
+                                EndReason.MISERE_ACCEPTED,
+                                EndReason.WITHOUT_THREE,
+                            ):
+                                # Unambiguous terminal outcomes settle in the same transaction.
+                                # No defense phase, reward selection, or separate admin command.
                                 score = settle_game(
                                     score, game, room["game_id"], expected_version=score.version
                                 )
