@@ -72,12 +72,22 @@ def seat_view(
             result["seat_swap"] = swap
     if score is not None and my_seat is not None and room["status"] != "lobby":
         result["score_sheet"] = notebook(score, controls or {})
-        if room["status"] == "closed" and score.closed and room.get("sheet_loser") is None:
+        if (
+            score.closed
+            and room["status"] in {"closed", "awaiting_settlement"}
+            and room.get("sheet_loser") is None
+        ):
+            if room["status"] == "awaiting_settlement":
+                result["final_review"] = True
             result["final_settlement"] = {
                 "pairs": [list(row) for row in pairwise_results(score)],
                 "net": list(net_results(score)),
             }
-    if owner and room["status"] in {"lobby", "playing", "between", "awaiting_settlement"}:
+    if (
+        owner
+        and not (score and score.closed)
+        and room["status"] in {"lobby", "playing", "between", "awaiting_settlement"}
+    ):
         result["can_archive"] = True
     if room["status"] == "archived":
         result["archived_at_ms"] = room["archived_at_ms"]
@@ -113,7 +123,11 @@ def seat_view(
                 "target": score.target,
             }
         return result
-    if my_seat is not None and room["status"] in {"playing", "between", "awaiting_settlement"}:
+    if (
+        my_seat is not None
+        and not (score and score.closed)
+        and room["status"] in {"playing", "between", "awaiting_settlement"}
+    ):
         shared = presentation_projection(controls or {}, realtime_enabled(), now_ms)
         if shared is not None:
             result["presentation"] = shared
@@ -240,7 +254,7 @@ def seat_view(
     if my_seat is not None:
         if room["status"] == "playing" and type(room.get("activity_started_at_ms")) is int:
             result["activity_started_at_ms"] = room["activity_started_at_ms"]
-        if room["status"] == "awaiting_settlement" and score is not None:
+        if room["status"] == "awaiting_settlement" and score is not None and not score.closed:
             result["settlement_options"] = settlement_options(
                 score, state, (controls or {}).get("passout_choices")
             )

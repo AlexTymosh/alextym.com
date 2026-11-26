@@ -450,3 +450,125 @@
   --card-w:clamp(18px,min(12.5dvh,calc((100cqw - var(--tile-w) - var(--radio-w) - var(--break-reserve) - 2 * var(--bottom-gap))/8)),81px);
  }
 }
+
+/* PR27: a bounded viewport, symmetric furniture rails and a local overhead table. */
+.table[data-playing="true"] {
+  --play-height:var(--available-table-height,calc(100dvh - 150px));
+  --tile-w:clamp(48px,min(43cqw,27cqw,calc(var(--play-height)*.43)),562px);
+  --side-w:clamp(20px,min(8cqw,calc(var(--play-height)*.115)),95px);
+  box-sizing:border-box;
+  height:var(--play-height);
+  min-height:0;
+  max-height:var(--play-height);
+  gap:clamp(2px,.5cqw,8px);
+}
+.table[data-playing="true"] .tableTop {
+  flex:1 1 0;
+  min-height:0;
+  grid-template-rows:minmax(0,1fr);
+}
+.table[data-playing="true"] .center { min-height:0; height:100%; }
+.table[data-playing="true"] .trickField {
+  width:min(100%,calc(var(--play-height)*.49),675px);
+  max-height:100%;
+  flex-shrink:1;
+  min-height:0;
+}
+/* All appearance stays on the drop target; no change to card DnD or hit testing. */
+.table[data-round-table="true"] .trickField {
+  --rim:clamp(5px,1cqw,14px);
+  border:var(--rim) solid #8b5f39;
+  outline:1px solid #e2bb8070;
+  outline-offset:-2px;
+  background:radial-gradient(circle at 42% 30%,#517c57 0%,#315a3e 62%,#23432e 100%);
+  box-shadow:0 6px 16px #07110e99,inset 0 0 0 2px #d4b17b,inset 0 7px 22px #102a1a88;
+}
+.table[data-round-table="true"][data-theme="blue"] .trickField { background:radial-gradient(circle at 42% 30%,#547a9d,#294965 65%,#192f47); }
+.table[data-round-table="true"][data-theme="wood"] .trickField { background:radial-gradient(circle at 42% 30%,#ae8964,#815e42 62%,#65452f); }
+/* Horizontal speech is anchored inside its own avatar column, not in a tiny grid remainder. */
+.table .seat>.callBubble,.table .left>.callBubble,.table .right>.callBubble,.table .bottom>.callBubble {
+  position:absolute;
+  writing-mode:horizontal-tb;
+  text-orientation:mixed;
+  top:clamp(6px,1cqw,14px);
+  bottom:auto;
+  left:50%;
+  right:auto;
+  transform:translateX(-50%);
+  display:block;
+  width:max-content;
+  min-width:0;
+  max-width:calc(100% - 10px);
+  white-space:normal;
+  overflow-wrap:normal;
+  word-break:normal;
+  text-wrap:balance;
+  font-size:clamp(.75rem,1.6cqw,1.6rem);
+  padding:.38em .62em;
+  line-height:1.15;
+  background:rgb(247 232 197 / .76);
+  color:#183a30;
+  border:1px solid #ddc591a0;
+  z-index:7;
+  pointer-events:none;
+}
+.table .seat>.callBubble::before { display:none; }
+/* Equal side rails keep the avatar + local hand centred regardless of the radio. */
+.table[data-playing="true"] .bottomArea,
+.table[data-playing="true"][data-furniture="true"] .bottomArea {
+  --bottom-gap:clamp(3px,.8cqw,12px);
+  --rail:clamp(0px,13cqw,230px);
+  --group-width:calc(100cqw - 2 * var(--rail) - 3 * var(--bottom-gap));
+  --hand-units:max(1,calc(1 + (var(--hand-count,12) - 1)*.38 + var(--hand-breaks,3)*.76));
+  --hand-w:min(calc(var(--group-width) - var(--tile-w)),max(calc(var(--card-w)*var(--hand-units)),min(110px,calc(var(--group-width) - var(--tile-w)))));
+  --tile-w:clamp(40px,min(25cqw,calc(var(--play-height)*.43),calc(var(--group-width)*.36)),562px);
+  --card-w:clamp(12px,min(13.5dvh,calc(var(--play-height)*.18),calc((var(--group-width) - var(--tile-w))/var(--hand-units))),140px);
+  flex:0 0 auto;
+  box-sizing:border-box;
+  width:100%;
+  max-height:52%;
+  padding:0;
+  margin-top:auto;
+  grid-template-columns:minmax(0,1fr) minmax(0,var(--tile-w)) minmax(0,var(--hand-w)) minmax(0,1fr);
+  gap:var(--bottom-gap);
+  align-items:end;
+  justify-content:center;
+}
+.table[data-playing="true"] .bottomArea>.bottom { grid-column:2; grid-row:1; align-self:end; }
+.table[data-playing="true"] .bottomArea>.handColumn,
+.table[data-playing="true"][data-furniture="true"] .bottomArea>.handColumn {
+  grid-column:3; grid-row:1;
+  width:100%; min-width:0; min-height:0; max-height:100%;
+  overflow:visible; align-self:end;
+}
+.table[data-playing="true"] .handColumn .decision { flex:0 1 auto; min-height:0; max-height:calc(var(--play-height)*.19); overflow:auto; scrollbar-width:thin; }
+.table[data-playing="true"] .handColumn .ownHand { flex:0 0 auto; }
+.table .bottomFurniture { grid-column:4; grid-row:1; align-self:end; justify-self:end; max-width:var(--rail); }
+.table .claimButton { justify-content:flex-start; }
+/* Cards are a bare shared presentation on the playing surface, not a green dialog. */
+.table .claimPanel {
+  top:53%; width:min(94%,1250px); max-width:calc(100% - 16px);
+  padding:0; border:0; border-radius:0; background:transparent; box-shadow:none;
+  text-shadow:0 1px 4px #000,0 2px 6px #000;
+  pointer-events:none;
+}
+.table[data-claim-pending="true"] .fieldStatus { visibility:hidden; }
+.table .claimPanel strong,.table .claimPanel p { overflow-wrap:break-word; margin:0; }
+.table .claimPanel .claimCards { flex-wrap:nowrap; gap:clamp(1px,.3cqw,5px); }
+.table .claimPanel .claimCards>span { width:min(9%,112.5px,calc(var(--play-height)*.22)); min-width:0; max-width:none; flex:0 1 auto; }
+.table .claimVotes { pointer-events:auto; }
+.table .claimVotes button { text-shadow:none; }
+@media(max-height:650px) and (orientation:landscape) {
+  .table[data-playing="true"] { --tile-w:clamp(40px,min(27cqw,calc(var(--play-height)*.38)),273px); --side-w:clamp(16px,min(8cqw,calc(var(--play-height)*.105)),60px); }
+  .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea {
+    --tile-w:clamp(36px,min(25cqw,calc(var(--play-height)*.38),calc(var(--group-width)*.36)),273px);
+    --card-w:clamp(12px,min(12.5dvh,calc(var(--play-height)*.17),calc((var(--group-width) - var(--tile-w))/var(--hand-units))),81px);
+  }
+  .table .claimPanel { top:50%; }
+  .table .claimPanel .claimCards>span { width:min(9%,75px,calc(var(--play-height)*.22)); }
+  .table .claimPanel .claimVotes button { min-height:26px; padding:.15rem .4rem; }
+}
+
+@media(max-width:1000px) and (orientation:landscape) {
+ .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --hand-units:max(1,calc(1 + (var(--hand-count,12) - 1)*.32 + var(--hand-breaks,3)*.76)); }
+}

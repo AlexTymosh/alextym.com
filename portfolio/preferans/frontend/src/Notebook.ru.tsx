@@ -4,7 +4,7 @@ import type { RoomView, NotebookMark } from "./game-model.ru";
 import { tableSeats, type SeatProfile } from "./table-model";
 import styles from "./preferans-notebook.module.css";
 
-export function Notebook({view, profiles, miniature=false, title, sheetExit, onClose, closeDisabled=false}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean; title?:string; sheetExit?:ReactNode; onClose?:()=>void; closeDisabled?:boolean}) {
+export function Notebook({view, profiles, miniature=false, title, sheetExit, onClose, closeDisabled=false, reviewAction}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean; title?:string; sheetExit?:ReactNode; onClose?:()=>void; closeDisabled?:boolean; reviewAction?:ReactNode}) {
   const [orientation,setOrientation] = useState(0);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const score = view.score;
@@ -49,7 +49,11 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
       <text fill="#b51524" fontSize="17" textAnchor="middle" dominantBaseline="central">{amount}</text>
     </g>;
   };
-  const total=(seat:number,x:number,y:number,rotation=0)=>final&&<text data-final-net={seat} x={x} y={y} transform={`rotate(${rotation} ${x} ${y})`} textAnchor="middle" fill="#b51524" fontSize="21" fontWeight="bold">{signed(final.net[seat])}</text>;
+  const total=(seat:number,x:number,y:number,rotation=0)=>{
+    if(!final)return null;
+    const amount=signed(final.net[seat]);
+    return <g data-final-net={seat} transform={`translate(${x} ${y}) rotate(${rotation})`}><ellipse rx={Math.max(30,amount.length*7.8+10)} ry="18" fill="#fbf9ee" stroke="#b51524" strokeWidth="2.4"/><text fill="#b51524" fontSize="23.8" fontWeight="bold" textAnchor="middle" dominantBaseline="central">{amount}</text></g>;
+  };
   const Wrapper=miniature?"span":"div";
   return <Wrapper className={miniature?styles.miniature:styles.wrap} style={{"--paper-ratio":(angle?h:w)/(angle?w:h)} as CSSProperties} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
     {!miniature&&<div className={styles.paperToolbar}>
@@ -58,7 +62,9 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
       {onClose&&<button type="button" className={styles.paperClose} aria-label="Закрыть пульку" title="Закрыть пульку" disabled={closeDisabled} onClick={onClose}>×</button>}
     </div>}
     {!miniature&&title&&<p className={styles.paperTitle}>{title}</p>}
+    {!miniature&&reviewAction&&<div className={styles.reviewAction}>{reviewAction}</div>}
     <span className={miniature?styles.miniatureBody:styles.paperBody}>
+    {!miniature&&<span className={styles.scissors} aria-hidden="true">✁</span>}
     <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} role="img" aria-label="Рукописная пулька">
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern></defs>
       <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
@@ -69,8 +75,8 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
       <g className={styles.ink}>
         <text x={cx} y={cy+9} textAnchor="middle" fontSize="28">{score.target??20}</text>
         <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle"><tspan x={cx}>{first}</tspan>{rest&&<tspan x={cx} dy="1.2em">{rest}</tspan>}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}{total(bottom.seat,cx,cy+(rest?103:82))}{circle(bottom.seat,bottom.left,(outer+cx)/2,h-25)}{circle(bottom.seat,bottom.right,(w-outer+cx)/2,h-25)}</g>
-        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-40,cy+22,90,outerY-(cy+22)-15)}{text(left.lv,outer-40,24,90,cy-42)}{total(left.seat,cx-42,nameY,90)}{circle(left.seat,left.left,25,cy/2,90)}{circle(left.seat,left.right,25,(cy+outerY)/2,90)}</g>
-        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+40,cy-22,-90,cy-42)}{text(right.lv,w-outer+40,outerY-15,-90,outerY-cy-35)}{total(right.seat,cx+42,nameY,-90)}{circle(right.seat,right.right,w-25,cy/2,-90)}{circle(right.seat,right.left,w-25,(cy+outerY)/2,-90)}</g>
+        <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-40,cy+22,90,outerY-(cy+22)-15)}{text(left.lv,outer-40,24,90,cy-42)}{total(left.seat,cx-49,nameY,90)}{circle(left.seat,left.left,25,cy/2,90)}{circle(left.seat,left.right,25,(cy+outerY)/2,90)}</g>
+        <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-30,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+40,cy-22,-90,cy-42)}{text(right.lv,w-outer+40,outerY-15,-90,outerY-cy-35)}{total(right.seat,cx+49,nameY,-90)}{circle(right.seat,right.right,w-25,cy/2,-90)}{circle(right.seat,right.left,w-25,(cy+outerY)/2,-90)}</g>
       </g>
     </g></svg>
     </span>

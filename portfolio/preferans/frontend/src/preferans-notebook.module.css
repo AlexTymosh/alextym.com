@@ -29,3 +29,12 @@
 .miniatureBody { display:block; min-width:0; }
 @media(pointer:coarse) { .wrap .paperToolbar button:not(.paperClose) { min-height:24px; font-size:.62rem; } .wrap .paperToolbar .paperClose { font-size:1.4rem; } }
 @media(max-height:650px) and (orientation:landscape) { .wrap { width:min(100%,551px,calc(max(90px,75dvh - 6rem) * var(--paper-ratio,1))); } .wrap .paper { max-height:calc(max(90px,75dvh - 6rem)); } }
+
+/* PR27: 30% larger toolbar targets and a scissors mark on the existing cut line. */
+.wrap .paperToolbar button:not(.paperClose) { font-size:clamp(.546rem,.858vw,.663rem); min-height:23.4px; padding:.156rem .273rem; }
+.wrap .paperToolbar .paperClose { width:31.2px; height:31.2px; min-height:31.2px; min-width:31.2px; font-size:1.82rem; }
+.paperBody { position:relative; }
+.scissors { position:absolute; top:0; left:clamp(12px,8%,48px); transform:translateY(-50%); background:#fbf9ee; padding:0 .2rem; color:#62717d; font-size:1.05rem; line-height:1; z-index:1; pointer-events:none; }
+.reviewAction { text-align:center; margin:.3rem 0 .5rem; }
+.wrap .reviewAction button { font-size:.86rem; font-weight:700; min-height:32px; }
+@media(pointer:coarse) { .wrap .paperToolbar button:not(.paperClose) { min-height:31.2px; font-size:.806rem; } }

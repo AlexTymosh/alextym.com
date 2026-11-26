@@ -15,6 +15,7 @@ test("surface opacity is independent from theme and old glass preference remains
   expect(parseTransparency("35")).toBe(35);
   for(const bad of [null,"","NaN","100","-5","12"])expect(parseTransparency(bad)).toBeNull();
   expect(effectiveOpacity("glass",null)).toBe(.5);
+  expect(effectiveOpacity("felt",null)).toBe(.25);
   expect(effectiveOpacity("blue",40)).toBe(.6);
   expect(effectiveOpacity("wood",0)).toBe(1);
 });

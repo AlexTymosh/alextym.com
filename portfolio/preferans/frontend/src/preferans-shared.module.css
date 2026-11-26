@@ -35,3 +35,22 @@
 [data-radio-dock="true"] .objects { position:static; width:100%; margin:0; display:block; }
 [data-radio-dock="true"] .radioButton { display:block; width:100%; min-height:0!important; margin:0; }
 @media(max-height:650px) and (orientation:landscape) { .panel.radioOverlay { width:min(320px,calc(100% - 16px)); } }
+
+/* PR27: shared panels must never contribute to the playing field's intrinsic height. */
+.shared { position:absolute; inset:0; display:block; pointer-events:none; min-height:0; }
+.shared>audio { display:none; }
+.shared>button,.shared>.panel,.shared>.breakPanel,.shared>p { pointer-events:auto; }
+.shared>.panel:not(.scoreOverlay):not(.lastTrickOverlay):not(.radioOverlay) {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:16;
+  width:max-content; max-width:calc(100% - 16px); max-height:calc(100% - 16px); overflow:auto;
+}
+.shared>.breakPanel {
+  position:absolute; z-index:14; left:8px; bottom:8px; width:min(320px,42%);
+  max-height:45%; overflow:auto; font-size:clamp(.65rem,1.05cqw,.9rem);
+}
+.shared>.breakPanel p { margin:.25rem 0; }
+.shared>button:not(.breakButton),.shared>p {
+  position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:10;
+  max-width:85%; margin:0; background:#203a30d9; padding:.25rem .5rem;
+}
+.shared>p { top:40px; }

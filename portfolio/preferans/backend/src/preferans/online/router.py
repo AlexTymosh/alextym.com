@@ -98,6 +98,7 @@ class Command(Mutation):
         "reveal_propose",
         "reveal_vote",
         "punch_choose",
+        "final_confirm",
         "archive",
         "ruleset_select",
     ]

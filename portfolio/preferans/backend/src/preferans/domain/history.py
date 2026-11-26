@@ -16,6 +16,7 @@ from .settlement import (
     discard_sheet_placements,
     net_results,
     pair_punishments,
+    pairwise_results,
     placements,
 )
 
@@ -27,11 +28,16 @@ def public_player_id(uid: str) -> str:
     return hashlib.sha256(("preferans-result-v1:\0" + uid).encode()).hexdigest()[:24]
 
 
-def placement_outcome(results: tuple[int, int, int], *, sheet_loser: int | None = None) -> dict:
+def placement_outcome(
+    results: tuple[int, int, int],
+    *,
+    sheet_loser: int | None = None,
+    pairs: tuple[tuple[int, ...], ...] | None = None,
+) -> dict:
     """Competition ranks; only a top pair receives two golds; a triple tie none."""
     if sheet_loser is None:
         ranks = placements(results)
-        punches = pair_punishments(results)
+        punches = pair_punishments(results, pairs=pairs)
     else:
         ranks = discard_sheet_placements(sheet_loser)
         punches = discard_sheet_penalties(sheet_loser)
@@ -70,7 +76,11 @@ def final_result(
     if start is not None and (type(start) is not int or start > finished_ms or start < 0):
         raise ValueError("Invalid server-recorded start time")
     values = net_results(score) if sheet_loser is None else (0, 0, 0)
-    outcome = placement_outcome(values, sheet_loser=sheet_loser)
+    outcome = placement_outcome(
+        values,
+        sheet_loser=sheet_loser,
+        pairs=pairwise_results(score) if sheet_loser is None else None,
+    )
     punches = outcome["punches"]
     entries = score.entries
     players = []

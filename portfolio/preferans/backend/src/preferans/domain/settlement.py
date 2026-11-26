@@ -65,14 +65,28 @@ def placements(results: tuple[int, int, int]) -> tuple[int | None, int | None, i
 
 
 def pair_punishments(
-    results: tuple[int, int, int], *, prefer_bare: bool = True
+    results: tuple[int, int, int],
+    *,
+    prefer_bare: bool = True,
+    pairs: tuple[tuple[int, ...], ...] | None = None,
 ) -> tuple[PairPunishment, ...]:
     """One ordinary unit per started 50, per unordered pair.
 
     prefer_bare is only a display-default proposal; the eventual loser may
     elect ten ordinary units in place of each bare punch in PR 7.
     """
-    placements(results)  # Validate the triple, including all-tied values.
+    ranks = placements(results)
+    exempt = set()
+    if pairs is not None:
+        if (
+            len(pairs) != 3
+            or any(len(row) != 3 for row in pairs)
+            or any(type(n) is not int for row in pairs for n in row)
+            or any(sum(row) != results[i] for i, row in enumerate(pairs))
+            or any(pairs[i][j] != -pairs[j][i] for i in range(3) for j in range(3))
+        ):
+            raise ValueError("Invalid pairwise settlement")
+        exempt = {i for i in range(3) if ranks[i] == 2 and all(n >= 0 for n in pairs[i])}
     awards = []
     for i in range(3):
         for j in range(i + 1, 3):
@@ -80,6 +94,8 @@ def pair_punishments(
             if difference == 0:
                 continue
             winner, loser = (i, j) if results[i] > results[j] else (j, i)
+            if loser in exempt:
+                continue
             units = (difference + 49) // 50
             bare, ordinary = divmod(units, 10) if prefer_bare else (0, units)
             awards.append(PairPunishment(winner, loser, difference, units, bare, ordinary))

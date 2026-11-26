@@ -70,6 +70,7 @@ export type RoomView = {
   widow?: Card[]; defense?: Array<string | null>; mode?: string | null;
   tricks_won?: number[]; score?: Score; end_reason?: string | null;
   final_settlement?: {pairs:number[][];net:number[]};
+  final_review?: true;
   score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[]};
   discard_count?: 2; own_discard?: Card[];
 };
@@ -79,7 +80,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode" | "misere_offer" | "misere_vote" | "claim_offer" | "claim_vote" | "passout_reward"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "archive" | "ruleset_select";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "final_confirm" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -145,10 +146,11 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if(v.final_review!==undefined&&(v.final_review!==true||v.status!=="awaiting_settlement"||v.final_settlement===undefined||v.settlement_options!==undefined||!v.score||typeof v.score!=="object"||(v.score as Score).closed!==true))return false;
   if(v.final_settlement!==undefined){
     const f=v.final_settlement as RoomView["final_settlement"];
     const triple=(x:unknown):x is number[]=>Array.isArray(x)&&x.length===3&&x.every(Number.isSafeInteger);
-    if(v.status!=="closed"||v.sheet_loser!==undefined||!isSeat(v.my_seat)||!f||!triple(f.net)||!Array.isArray(f.pairs)||f.pairs.length!==3||!f.pairs.every(triple))return false;
+    if((v.status!=="closed"&&v.final_review!==true)||v.sheet_loser!==undefined||!isSeat(v.my_seat)||!f||!triple(f.net)||!Array.isArray(f.pairs)||f.pairs.length!==3||!f.pairs.every(triple))return false;
     if(!f.pairs.every((row,i)=>row[i]===0&&row.every((n,j)=>n===-f.pairs[j][i])&&row.reduce((sum,n)=>sum+n,0)===f.net[i]))return false;
   }
   if(v.claim!==undefined&&!validClaim(v.claim,v))return false;

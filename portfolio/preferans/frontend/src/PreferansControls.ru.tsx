@@ -70,7 +70,7 @@ export function PreferansControls({ view, profiles, busy, command, adjust }: {
   const after = before === undefined ? null : before + delta;
   const validAdjustment = Number.isSafeInteger(delta) && delta !== 0 && Math.abs(delta) <= 1000 &&
     reason.trim().length >= 5 && reason.trim().length <= 180 && after !== null && after >= 0 &&
-    (field !== "pool" || after <= (view.score?.target ?? 20)) &&
+    (field !== "pool" || (!view.final_review && after <= (view.score?.target ?? 20))) &&
     (field !== "vist" || seat !== against);
   return <section className={styles.controlPanel} aria-labelledby="preferans-controls-heading">
     <h3 id="preferans-controls-heading">Управление игрой</h3>
@@ -98,10 +98,10 @@ export function PreferansControls({ view, profiles, busy, command, adjust }: {
     </div>}
     {view.room_admin && view.status !== "closed" && view.score && <details name="preferans-control-group" className={styles.adjustments}>
       <summary>Корректировка расчётов (только администратор)</summary>
-      <p className={styles.subtle}>Только активная партия. Каждое изменение остаётся в журнале. Исправление ошибки — новая обратная операция.</p>
+      <p className={styles.subtle}>До подтверждения итогов. Каждое изменение остаётся в журнале. Исправление ошибки — новая обратная операция.</p>
       <div className={styles.adjustGrid}>
         <label>Запись <select value={field} onChange={(e: ChangeEvent<HTMLSelectElement>) => setField(e.target.value as AdjustRequest["field"])}>
-          <option value="hill">Гора</option><option value="pool">Пуля</option><option value="vist">Висты</option>
+          <option value="hill">Гора</option><option value="pool" disabled={!!view.final_review}>Пуля</option><option value="vist">Висты</option>
         </select></label>
         <label>Игрок <select value={seat} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSeat(Number(e.target.value))}>
           {names.map((name, i) => <option key={i} value={i}>{name}</option>)}

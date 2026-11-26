@@ -133,6 +133,24 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     return game
 
 
+def _after_settlement(room, score, controls, now, use_rt):
+    """One transition for regular settlement and an accepted misere."""
+    if score.closed:
+        room["status"] = "awaiting_settlement"
+        room["final_review"] = True
+        finish_sheet(controls)
+        controls.pop("reveal", None)
+        controls.pop("revealed_cards", None)
+        controls.pop("passout_choices", None)
+    else:
+        room["status"] = "between"
+        controls.pop("next_deal", None)
+        if use_rt:
+            schedule_next_deal(controls, room["game_id"], now)
+        controls["candidate"] = None
+        controls["timer"] = None
+
+
 class FirestoreRooms:
     def __init__(self, db: Any, *, firestore_module: Any = None, now_ms=None):
         self.db = db
@@ -316,7 +334,11 @@ class FirestoreRooms:
                 raise StoreError(404, "Not found")
             _member(room, uid)
             result = {"room_id": room_id, "version": room["version"], "status": room["status"]}
-            if room["status"] not in {"playing", "between", "awaiting_settlement"}:
+            if room.get("final_review") or room["status"] not in {
+                "playing",
+                "between",
+                "awaiting_settlement",
+            }:
                 return result
             with hub.lock:
                 hub.metrics["sync_reads"] += 1
@@ -459,6 +481,7 @@ class FirestoreRooms:
                 _member(room, uid, admin=True, owner=owner)
             elif action in {
                 "score_adjust",
+                "final_confirm",
                 "preset",
                 "lobby_config",
                 "ruleset_select",
@@ -486,10 +509,13 @@ class FirestoreRooms:
             if not isinstance(score, ScoreState):
                 raise StoreError(503, "Scoring state unavailable")
             controls = state_record.get("controls") or fresh()
+            review = room["status"] == "awaiting_settlement" and score.closed
+            if review and action not in {"score_adjust", "final_confirm"}:
+                raise StoreError(409, "Confirm or correct the final settlement first")
             now = self.now_ms()
             auto_events = []
             # Reconcile timers at the same authoritative timestamp as this write.
-            if action in SHEET_ACTIONS or action == "archive":
+            if review or action in SHEET_ACTIONS or action == "archive":
                 # A voluntary exit must remain possible during any pause. No
                 # implicit settlement or timer penalty is charged by this action.
                 pass
@@ -538,7 +564,13 @@ class FirestoreRooms:
                 "ruleset_select",
             }:
                 raise StoreError(409, "Resolve seat change first")
-            if action == "archive":
+            if action == "final_confirm":
+                if not review or args:
+                    raise StoreError(409, "No final settlement awaiting confirmation")
+                room["status"] = "closed"
+                room.pop("final_review", None)
+                event_data = {"score_version": score.version}
+            elif action == "archive":
                 reason = args.get("reason")
                 if (
                     set(args) != {"reason"}
@@ -783,12 +815,7 @@ class FirestoreRooms:
                     )
                 except (RuleViolation, ValueError, TypeError) as exc:
                     raise StoreError(422, "Invalid settlement") from exc
-                room["status"] = "closed" if score.closed else "between"
-                controls.pop("next_deal", None)
-                if use_rt and not score.closed:
-                    schedule_next_deal(controls, room["game_id"], now)
-                controls["candidate"] = None
-                controls["timer"] = None
+                _after_settlement(room, score, controls, now, use_rt)
                 event_data = {"score_version": score.version, "closed": score.closed}
             elif action == "lobby_ready":
                 if room["status"] != "lobby" or "lobby_setup" not in room or None in room["seats"]:
@@ -870,6 +897,8 @@ class FirestoreRooms:
                     raise StoreError(403, "Room admin required")
                 if set(args) != {"field", "seat", "against", "delta", "reason"}:
                     raise StoreError(422, "Invalid adjustment")
+                if review and args["field"] == "pool":
+                    raise StoreError(422, "Final review allows hill and vist corrections only")
                 controls.pop("passout_choices", None)
                 try:
                     score, event_data = adjust_score(
@@ -942,12 +971,7 @@ class FirestoreRooms:
                                 score = settle_game(
                                     score, game, room["game_id"], expected_version=score.version
                                 )
-                                room["status"] = "closed" if score.closed else "between"
-                                controls.pop("next_deal", None)
-                                if use_rt and not score.closed:
-                                    schedule_next_deal(controls, room["game_id"], now)
-                                controls["candidate"] = None
-                                controls["timer"] = None
+                                _after_settlement(room, score, controls, now, use_rt)
                                 event_data = {
                                     **event_data,
                                     "score_version": score.version,
@@ -960,7 +984,7 @@ class FirestoreRooms:
                 except (ValueError, TypeError, KeyError) as exc:
                     raise StoreError(422, "Illegal game action") from exc
             finalize = (
-                action in {"settle", "misere_vote"} and room["status"] == "closed" and score.closed
+                action == "final_confirm" and room["status"] == "closed" and score.closed
             ) or sheet_loser is not None
             if finalize:
                 # All reads precede writes, including the immutable result and all rankings.

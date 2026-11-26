@@ -154,10 +154,15 @@ def legal_auction_bids(state: AuctionState, actor: int) -> tuple[Bid, ...]:
         if bid.kind == BidKind.MISERE and actor in state.made_bid:
             continue
         if bid.kind == BidKind.MISERE_NO_WIDOW and not (
-            actor in state.misere_bidders
-            and state.high_bid is not None
-            and state.high_bid.kind == BidKind.REGULAR
-            and state.high_bid.level == 9
+            state.high_bid is not None
+            and (
+                state.high_bid.kind == BidKind.MISERE
+                or (
+                    actor in state.misere_bidders
+                    and state.high_bid.kind == BidKind.REGULAR
+                    and state.high_bid.level == 9
+                )
+            )
         ):
             continue
         result.append(bid)
