@@ -25,3 +25,13 @@
 
 /* The sheet is the visible overlay, not a green card behind it. */
 .panel.scoreOverlay { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; width:min(576px,calc(100% - 16px)); max-height:min(90dvh,calc(100% - 12px)); overflow:auto; scrollbar-width:thin; }
+
+/* PR26: a separate, content-sized radio dialog and a bottom-row dock. */
+.panel.radioOverlay { position:absolute; z-index:17; top:50%; left:50%; transform:translate(-50%,-50%); width:min(420px,calc(100% - 16px)); max-height:min(84dvh,calc(100% - 16px)); overflow:auto; box-sizing:border-box; }
+.radioOverlay header { flex-wrap:wrap; }
+.radioOverlay .radio { width:100%; max-width:none; min-width:0; }
+.radioOverlay .buttons { flex-wrap:wrap; }
+.radioOverlay input[type="range"] { min-width:0; width:100%; }
+[data-radio-dock="true"] .objects { position:static; width:100%; margin:0; display:block; }
+[data-radio-dock="true"] .radioButton { display:block; width:100%; min-height:0!important; margin:0; }
+@media(max-height:650px) and (orientation:landscape) { .panel.radioOverlay { width:min(320px,calc(100% - 16px)); } }

@@ -278,3 +278,6 @@
 .tableRoot .compactHeader .eyebrow { margin:0; }
 .root button.confirmAdjustment { display:block; margin-top:.65rem; background:#e3c674; color:#172a20; font-weight:700; border:2px solid #f4df9d; }
 .root button.confirmAdjustment:disabled { opacity:.65; }
+
+/* Cards share the lower edge with the radio dock. */
+.tableRoot [data-own-hand="true"] .handRow { padding-bottom:0; }

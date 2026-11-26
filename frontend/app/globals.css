@@ -1211,3 +1211,13 @@ p {
 /* Preferans compact toolbar. */
 .preferans-site-divider { color:#a99d86; padding-inline:.2rem; }
 .preferans-fullscreen span { font-size:.8rem; }
+
+/* Preferans room return uses the same visual language as Fullscreen. */
+.preferans-site-navigation { display:flex; align-items:center; gap:.35rem; min-width:0; flex-wrap:wrap; }
+#preferans-room-return-slot:empty { display:none; }
+.preferans-site-room-return { display:inline-flex; align-items:center; gap:.25rem; }
+.preferans-site-room-return button { display:inline-flex; align-items:center; gap:.3rem; background:transparent; color:inherit; border:1px solid #826b47; border-radius:.35rem; padding:.25rem .55rem; cursor:pointer; font-size:.8rem; white-space:nowrap; }
+.preferans-site-room-return button:hover { background:#826b4733; }
+.preferans-site-room-return button:focus-visible { outline:2px solid #ddbb75; outline-offset:2px; }
+.preferans-site-room-return svg { flex-shrink:0; }
+@media(max-width:1100px) { .preferans-site-room-return button { font-size:.72rem; padding:.25rem .35rem; } }

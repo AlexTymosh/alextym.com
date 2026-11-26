@@ -20,6 +20,7 @@ import { GameTable } from "./GameTable.ru";
 import { SharedRoom, SharedObjects, type SharedCommand } from "./SharedRoom.ru";
 import { replayMoveAllowed, type OverlayKind } from "./presentation-model";
 import { ProjectSidebar as ImmersiveMenu } from "./ProjectSidebar.ru";
+import { RoomReturn } from "./RoomReturn.ru";
 import { Deck } from "./Deck.ru";
 import { attachCardPointerDrag } from "./pointer-drag";
 import { CardBackContext } from "./CardBackTheme";
@@ -595,6 +596,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         {rtReady ? "Обновление в реальном времени" : online ? "Резервная связь" : "Переподключение"}</div></div>
     </header>
 
+    {roomId&&<RoomReturn onReturn={leaveRoom}/>}
     <div className={styles.tableShell}>
         {!roomId && <><Lobby openRoom={openRoom} create={create} busy={busy}/><PreferansHistory/></>}
 
@@ -602,7 +604,6 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
           <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{invited ? "Приглашение" : "Подключение…"}</span></div>
           <div className={styles.actions}>
             <button type="button" onClick={copyInvitation}>Скопировать приглашение</button>
-            <button type="button" onClick={leaveRoom}>К выбору комнаты</button>
           </div>
         </section>}
 
@@ -613,7 +614,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         </section>}
 
         {view && <>
-          <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation} leave={leaveRoom}
+          <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation}
             controls={<><PreferansControls view={view} profiles={profiles} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
             urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled&&view.claim?.status!=="pending" ? openShared : undefined}
