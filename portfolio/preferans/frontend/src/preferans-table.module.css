@@ -362,3 +362,23 @@
 /* Allow a legal next lead during the previous trick's decorative collection. */
 .table[data-holding-trick="true"] .trickField { pointer-events:auto; }
 .table .trickField .tableCard { pointer-events:none; }
+
+/* PR23: local activity progress and independent table surface transparency. */
+.table { background:radial-gradient(ellipse at 50% 38%,rgb(56 107 87 / var(--surface-opacity,1)) 0%,rgb(37 82 66 / var(--surface-opacity,1)) 58%,rgb(23 60 51 / var(--surface-opacity,1)) 100%); }
+.table[data-theme="blue"] { background:radial-gradient(ellipse at 50% 38%,rgb(53 93 131 / var(--surface-opacity,1)),rgb(32 61 100 / var(--surface-opacity,1)) 60%,rgb(20 43 74 / var(--surface-opacity,1))); }
+.table[data-theme="wood"] { background:radial-gradient(ellipse at 45% 35%,rgb(150 115 86 / var(--surface-opacity,1)) 0%,rgb(119 86 62 / var(--surface-opacity,1)) 70%,rgb(97 69 51 / var(--surface-opacity,1)) 100%); }
+.table .activeAvatar { outline:none; box-shadow:none; }
+.table .avatar .activityRing { position:absolute; inset:0; width:100%; height:100%; z-index:4; color:#f2ca71; border-radius:0; pointer-events:none; }
+.table .avatar[data-connection="reconnecting"],.table .avatar[data-connection="offline"] { outline:4px solid #f04444; outline-offset:2px; }
+.table .connectionDot { right:5px; top:5px; bottom:auto; width:18px; height:18px; z-index:5; border-color:#542525; }
+.table .connectionDot[data-presence="online"] { background:#ff4545; animation:connectedBlink 1.4s ease-in-out infinite; }
+.table .connectionDot[data-presence="reconnecting"],.table .connectionDot[data-presence="offline"] { background:#f04444; }
+@keyframes connectedBlink { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+@media(prefers-reduced-motion:reduce) { .table .connectionDot[data-presence="online"] { animation:none; } }
+.table .fieldHint[data-passout="true"] { font-size:2.25rem; font-weight:700; }
+.scoreClose { justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
+.scoreClose>button:last-child { margin-left:auto; }
+.roomItem .roomEnter { flex:1; text-align:left; background:transparent; border:0; padding:.4rem; min-width:0; }
+.roomEnter span,.roomEnter strong { display:block; overflow-wrap:anywhere; }
+.roomItem .roomLink { flex-shrink:0; }
+.roomItem:focus-within { border-color:#e3c67a; }

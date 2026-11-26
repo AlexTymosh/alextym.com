@@ -91,31 +91,17 @@ def test_voluntary_finish_atomic_rankings_and_idempotency(monkeypatch):
     assert api.db.docs == saved
 
 
-def test_refusal_third_party_and_accepted_offer(monkeypatch):
+def test_retired_offer_commands_do_not_change_storage(monkeypatch):
     api, rid = setup(monkeypatch)
-    before = api.view(rid, "a")
-    do(api, rid, "a", "exit-offer-001", "sheet_offer", {"target": 1})
-    offer = api.view(rid, "b")["sheet_offers"][0]
     saved = copy.deepcopy(api.db.docs)
-    with pytest.raises(store.StoreError):
-        do(
-            api,
-            rid,
-            "c",
-            "exit-fake-reply",
-            "sheet_reply",
-            {"offer_id": offer["id"], "accept": True},
-        )
+    for action, args in (
+        ("sheet_offer", {"target": 1}),
+        ("sheet_reply", {"offer_id": 5, "accept": True}),
+    ):
+        with pytest.raises(store.StoreError) as exc:
+            do(api, rid, "b", "retired-offer-001", action, args)
+        assert exc.value.code == 422
     assert api.db.docs == saved
-    do(api, rid, "b", "exit-refuse-001", "sheet_reply", {"offer_id": offer["id"], "accept": False})
-    after = api.view(rid, "a")
-    assert after["score"] == before["score"] and after["hand"] == before["hand"]
-    assert after["game_id"] == before["game_id"] and "sheet_offers" not in after
-    do(api, rid, "c", "exit-offer-002", "sheet_offer", {"target": 1})
-    offer = api.view(rid, "b")["sheet_offers"][0]
-    before_score = decode(api.db.docs[f"preferans_rooms/{rid}/private/current"]["score"])
-    do(api, rid, "b", "exit-accept-002", "sheet_reply", {"offer_id": offer["id"], "accept": True})
-    check_final(api, rid, 1, before_score)
 
 
 def test_failed_final_commit_does_not_create_result(monkeypatch):

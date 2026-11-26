@@ -4,3 +4,10 @@
 
 .scoreOverlay { width:min(576px,calc(100% - 16px)); }
 .scoreClose { display:flex; justify-content:flex-end; margin-top:.4rem; }
+
+/* PR23: right-hand radio and score sheet actions. */
+.objects { position:absolute; right:clamp(12px,5cqw,80px); bottom:31%; margin:0; z-index:5; }
+.radioButton { width:clamp(98px,15.6cqw,182px); }
+.scoreClose { justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
+.scoreClose>button:last-child { margin-left:auto; }
+@media(max-height:650px) and (orientation:landscape) { .objects { bottom:33%; } .radioButton { width:clamp(72px,11cqw,125px); } }

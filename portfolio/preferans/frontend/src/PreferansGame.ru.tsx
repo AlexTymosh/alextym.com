@@ -25,6 +25,9 @@ import { attachCardPointerDrag } from "./pointer-drag";
 import { CardBackContext } from "./CardBackTheme";
 import { type BackTheme, type DragIntent, isBackTheme, legalDrop, matchingDrag, mayStart, mayPassDeck, dealerFor, changeDraft } from "./table-interaction";
 import { Lobby } from "./Lobby.ru";
+import { PreferansHistory } from "./PreferansHistory.ru";
+import { SheetExit } from "./SheetExit.ru";
+import { effectiveOpacity, parseTransparency } from "./table-details";
 import { safeProfiles, type Seat, type SeatProfile } from "./table-model";
 import { LobbySetup } from "./LobbySetup.ru";
 import { SeatSwap } from "./SeatSwap.ru";
@@ -152,7 +155,6 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const [roomId, setRoomId] = useState("");
   const liveMedia = useLiveMedia();
   const {bind: bindMedia, receive: receiveMedia} = liveMedia;
-  const [roomInput, setRoomInput] = useState("");
   const [view, setView] = useState<RoomView | null>(null);
   const [invited, setInvited] = useState<RoomInvitation | null>(null);
   const viewRef = useRef<RoomView | null>(null);
@@ -198,6 +200,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const [regularRoute, setRegularRoute] = useState<"pool" | "hill_first">("pool");
   const [localTableTheme,setLocalTableTheme] = useState<TableTheme | "room">("room");
   const tableKey = preferenceScope ? `preferans:table:${preferenceScope}` : null;
+  const transparencyKey=preferenceScope?`preferans:transparency:${preferenceScope}`:null;
+  const [transparency,setTransparency]=useState<number|null>(null);
+  useEffect(()=>{if(transparencyKey)try{setTransparency(parseTransparency(localStorage.getItem(transparencyKey)));}catch{/* Optional preference. */}},[transparencyKey]);
+  const changeTransparency=(value:number)=>{setTransparency(value);if(transparencyKey)try{localStorage.setItem(transparencyKey,String(value));}catch{/* Optional preference. */}};
+  const selectedTheme=localTableTheme==="room"?view?.table_theme??"felt":localTableTheme;
+  const opacity=effectiveOpacity(selectedTheme,transparency);
   useEffect(()=>{if(tableKey)try{const saved=localStorage.getItem(tableKey);if(saved==="felt"||saved==="blue"||saved==="wood"||saved==="glass")setLocalTableTheme(saved);else setLocalTableTheme("room");}catch{/* Optional preference. */}},[tableKey]);
   const changeTableTheme=(theme:TableTheme|"room")=>{setLocalTableTheme(theme);if(tableKey)try{localStorage.setItem(tableKey,theme);}catch{/* Optional preference. */}};
   useEffect(()=>attachCardPointerDrag(document),[]);
@@ -222,7 +230,6 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     const fromUrl = url.searchParams.get("room");
     const initial = fromUrl && ROOM_ID_RE.test(fromUrl) ? fromUrl : "";
     activeRoomRef.current = initial;
-    setRoomInput(initial);
     setRoomId(initial);
   }, []);
 
@@ -234,7 +241,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     setProfileState(null);
     setView(null); setInvited(null); setSelected([]); setOrder([]);
     setRtReady(false); setRtPresence(null);
-    setStatus(""); setRoomInput(id); setRoomId(id);
+    setStatus(""); setRoomId(id);
     const url = new URL(window.location.href);
     url.searchParams.set("room", id);
     window.history.replaceState({}, "", url);
@@ -246,7 +253,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     viewRef.current = null;
     activeRoomRef.current = "";
     setProfileState(null);
-    setRoomId(""); setRoomInput(""); setView(null); setInvited(null); setSelected([]); setStatus("");
+    setRoomId(""); setView(null); setInvited(null); setSelected([]); setStatus("");
     setRtReady(false); setRtPresence(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("room");
@@ -316,7 +323,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       onMediaFrame: LIVE_MEDIA_ENABLED ? frame => { if (activeRoomRef.current === roomId) receiveMedia(frame); } : undefined,
       onClock: at => { if (activeRoomRef.current === roomId) serverOffset.current = at - Date.now(); },
       onView: next => { if (activeRoomRef.current === roomId) { updateView(next); setOnline(true); } },
-      onReady: ready => { if (activeRoomRef.current === roomId) { setRtReady(ready); if (!ready) setRtPresence(null); } },
+      onReady: ready => { if (activeRoomRef.current === roomId) { setRtReady(ready); if (!ready) { setRtPresence(null); setOnline(false); } } },
       onPresence: value => { if (activeRoomRef.current === roomId) setRtPresence(value); },
       onDenied: () => {
         if (activeRoomRef.current !== roomId) return;
@@ -524,8 +531,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const settings=<div className={styles.settingsPanel}>
     <CycleSetting<SortMode> label="Сортировка карт" value={sortMode} options={[["grouped","По длине масти"],["suit","По порядку мастей"]]} onChange={changeSort}/>
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
-    <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"],["glass","Полупрозрачное"]]} onChange={changeTableTheme}/>
-    {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"],["glass","Полупрозрачное"]]} onChange={theme=>command("table_theme",{theme})}/>}
+    <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
+    <label className={styles.transparencySetting}>Прозрачность: {Math.round((1-opacity)*100)}% <input type="range" min={0} max={75} step={5} value={Math.round((1-opacity)*100)} onChange={e=>changeTransparency(Number(e.target.value))}/></label>
+    {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme==="glass"?"felt":view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={theme=>command("table_theme",{theme})}/>}
     <fieldset className={styles.backChoices}><legend>Рубашка карт</legend>{([["classic","Текущая классическая"],["ornament","Красный орнамент"],["red-blue","Красно-голубая сетка"],["green","Зелёная сетка"]] as const).map(([value,label])=><button type="button" key={value} aria-pressed={back===value} title={label} onClick={()=>changeBack(value)}><CardBackContext.Provider value={value}><CardArtwork decorative/></CardBackContext.Provider><span>{label}</span></button>)}</fieldset>
     {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
     <small>Для ручной сортировки клавиатурой: Alt + стрелка влево или вправо.</small>
@@ -560,13 +568,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
 </div>
-      <div className={styles.headerTools}><div className={styles.headerStatus}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
+      <div className={styles.headerTools}><div className={styles.headerStatus} data-offline={!online&&!rtReady?"true":undefined}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
         {rtReady ? "Обновление в реальном времени" : online ? "Резервная связь" : "Переподключение"}</div></div>
     </header>
 
     <div className={styles.tableShell}>
-        {!roomId && <><Lobby roomInput={roomInput} setRoomInput={setRoomInput} openRoom={openRoom} create={create} busy={busy}/>
-          <button type="button" onClick={()=>window.open("/portfolio/preferans?view=history","_blank","noopener,noreferrer")}>История и рейтинг</button></>}
+        {!roomId && <><Lobby openRoom={openRoom} create={create} busy={busy}/><PreferansHistory/></>}
 
         {roomId && !view && <section className={styles.roomBar} aria-label="Комната">
           <div><strong>Комната</strong> <code>{roomId.slice(0, 8)}…{roomId.slice(-6)}</code><span className={styles.subtle}>{invited ? "Приглашение" : "Подключение…"}</span></div>
@@ -585,12 +592,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         {view && <>
           <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation} leave={leaveRoom}
             controls={<><PreferansControls view={view} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
-            urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.sheet_offers?.some(offer => offer.to === view.my_seat) || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
+            urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
-            <GameTable view={view} profiles={profiles} presence={rtReady ? rtPresence : null}
-              theme={localTableTheme==="room"?view.table_theme??"felt":localTableTheme} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+            <GameTable view={view} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
+              theme={selectedTheme} surfaceOpacity={opacity} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={`${dropNotice||status|| (view.controls?.paused?"Пауза":statusNames[view.status])} · ${phaseLabel(view.phase)}${isPlay&&view.turn!=null?` · Ход: ${profiles?.[view.turn]?.name||seatNames[view.turn]}`:""}${isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat?" · Управляешь открытой рукой":""}`}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               hand={ownHand} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
@@ -600,7 +607,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
               onScore={view.presentation?.enabled?()=>openShared("score_sheet"):undefined}
               objects={view.presentation?.enabled ? <SharedObjects busy={busy} open={openShared}/> : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
-              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow}/>}/>
+              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} sheetExit={<SheetExit view={view} busy={busy} command={command}/>}/>}/>
           </ImmersiveMenu>
         </>}
     </div>

@@ -88,8 +88,6 @@ class Command(Mutation):
         "break_start",
         "break_ready",
         "music",
-        "sheet_offer",
-        "sheet_reply",
         "sheet_discard",
         "seat_swap_offer",
         "seat_swap_vote",

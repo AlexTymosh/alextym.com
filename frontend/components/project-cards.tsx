@@ -23,7 +23,7 @@ export function ProjectCards({ projects, detailed = false }: { projects: readonl
       <Link className={styles.card} href={project.path}>
         {project.id === "workforce_intelligence"
           ? <Image className={styles.logo} src="/workforce-simulation-logo.png" alt="" width={64} height={64} />
-          : project.id === "preferans" ? <span className={styles.logo} aria-hidden="true">
+          : project.id === "preferans" ? <span className={styles.logo} style={{background:"#fff",color:"var(--accent)"}} aria-hidden="true">
             <svg viewBox="0 0 32 32" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.7">
               <rect x="7" y="3" width="18" height="26" rx="3"/><path d="M16 9c-3 4-7 6-7 10 0 4 5 5 7 1 2 4 7 3 7-1 0-4-4-6-7-10Z" fill="currentColor" stroke="none"/><path d="M16 19v6m-3 0h6"/>
             </svg>
@@ -80,7 +80,7 @@ function ProjectCaseStudy({ project }: { project: ProjectCard }) {
     </ul>
     <div className={styles.caseFooter}>
       <span>{project.id === "preferans"
-        ? "Private three-player card game · Invitation-only access; no public player data."
+        ? "Private beta · Three-player card game · Invitation-only access; no public player data."
         : "Concept prototype · Synthetic data, with support for importing, processing and exporting your own datasets."}</span>
       <Link className={styles.demoLink} href={project.path} aria-label={`Open ${project.title} demo`}>
         Open demo

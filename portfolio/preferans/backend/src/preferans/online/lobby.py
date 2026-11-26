@@ -14,6 +14,7 @@ from .realtime import enabled as realtime_enabled, hub
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from .store import ROOM_ID, StoreError
+from .quota_guard import is_quota_error
 
 LIMIT = 100
 STATUSES = {"lobby", "playing", "awaiting_settlement", "between", "closed", "archived"}
@@ -63,24 +64,32 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
             continue
         created = room.get("created_at_ms")
         waiting_names = []
-        # Only live, accessible lobbies. Bound extra reads per request and never
-        # disclose UIDs, avatars or account email through the directory.
-        if room["status"] == "lobby" and realtime_enabled():
-            for seat, seen in zip(room["seats"], hub.presence(room["id"], room["seats"], at)):
-                if seat is None or seen is None:
-                    continue
-                if seat not in cached_names and len(cached_names) < 30:
-                    try:
-                        snap = (
-                            db.collection("portfolio_lab_profiles").document(seat).get(timeout=5.0)
-                        )
-                        cached_names[seat] = profile_projection(
-                            snap.to_dict() if snap.exists else None
-                        )["name"]
-                    except Exception:
-                        cached_names[seat] = None
-                if cached_names.get(seat):
-                    waiting_names.append(cached_names[seat])
+        player_names = []
+        # Only accessible rooms. Reuse the existing per-request read budget.
+        # A seated player is not necessarily connected; live presence remains separate.
+        presence = (
+            hub.presence(room["id"], room["seats"], at)
+            if room["status"] == "lobby" and realtime_enabled()
+            else [None, None, None]
+        )
+        for seat, seen in zip(room["seats"], presence):
+            if seat is None:
+                player_names.append(None)
+                continue
+            if seat not in cached_names and len(cached_names) < 30:
+                try:
+                    snap = db.collection("portfolio_lab_profiles").document(seat).get(timeout=5.0)
+                    cached_names[seat] = profile_projection(
+                        snap.to_dict() if snap.exists else None
+                    )["name"]
+                except Exception as exc:
+                    if is_quota_error(exc):
+                        raise
+                    cached_names[seat] = None
+            name = cached_names.get(seat)
+            player_names.append(name)
+            if name and seen is not None:
+                waiting_names.append(name)
         result[room["id"]] = (
             created if type(created) is int else 0,
             {
@@ -91,6 +100,7 @@ def directory(db: Any, uid: str, *, admin: bool) -> dict:
                 "created_at_ms": created if type(created) is int and created > 0 else None,
                 "daily_number": room.get("daily_number"),
                 "waiting_names": waiting_names,
+                "player_names": player_names,
             },
         )
     rooms = [

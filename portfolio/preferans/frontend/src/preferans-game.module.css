@@ -267,3 +267,8 @@
 .backChoices button { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.3rem; min-width:0; text-align:center; font-size:.75rem; }
 .backChoices button img,.tableRoot .backChoices button img { display:block; width:clamp(48px,7vw,80px); height:auto; aspect-ratio:2/3; object-fit:contain; flex:none; }
 .backChoices button[aria-pressed="true"] { outline:2px solid #e8ca88; }
+
+.headerStatus[data-offline="true"] { color:#ff6060; }
+.headerStatus[data-offline="true"] .statusOff { background:#ff4545; }
+.transparencySetting { display:grid; gap:.35rem; }
+.transparencySetting input { width:100%; }
