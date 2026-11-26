@@ -4,7 +4,7 @@ import { mayConcede } from "../../portfolio/preferans/frontend/src/interaction-m
 import { latestTrickSeat, opponentWidowCards, WIDOW_SHOW_MS } from "../../portfolio/preferans/frontend/src/table-refinements";
 import type { RoomView } from "../../portfolio/preferans/frontend/src/game-model.ru";
 
-const base:RoomView={room_id:"a".repeat(32),version:2,status:"playing",my_seat:0,room_admin:true,occupied:[true,true,true],game_id:"deal",phase:"declare",declarer:0,legal_contracts:[{kind:"regular",level:7,suit:"H"}]};
+const base:RoomView={room_id:"a".repeat(32),version:2,status:"playing",my_seat:0,room_admin:true,occupied:[true,true,true],game_id:"deal",phase:"declare",declarer:0,winning_bid:{kind:"regular",level:7,suit:"H"},legal_contracts:[{kind:"regular",level:7,suit:"H"}]};
 test("a defense decision precludes a concession",()=>{
   expect(mayConcede(base)).toBe(true);
   for(const decision of ["vist","pass"])expect(mayConcede({...base,defense:[null,decision,null]})).toBe(false);

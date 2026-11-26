@@ -46,8 +46,12 @@ def test_without_three_cannot_follow_contract_or_defense(phase):
         apply_command(state, 0, "without_three", {"bid": BID})
 
 
-def test_concession_rejects_other_actor_missing_bid_and_lower_bid():
-    for actor, args in [(1, {"bid": BID}), (0, {}), (0, {"bid": {**BID, "level": 6}})]:
+def test_concession_rejects_other_actor_and_alternative_bid():
+    for actor, args in [
+        (1, {"bid": BID}),
+        (0, {"bid": {**BID, "level": 8}}),
+        (0, {"bid": {**BID, "level": 6}}),
+    ]:
         with pytest.raises(RuleViolation):
             apply_command(declaration(), actor, "without_three", args)
 

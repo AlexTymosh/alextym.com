@@ -128,3 +128,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Move repeated corrections and final confirmation to the notebook; move remaining controls into settings. Published results remain immutable after explicit confirmation.
 - Retire accidental-reveal commands and UI, clean legacy active pauses without deleting historical entries.
 - Full integration CI and three-player browser acceptance pending. No additional polling or billing changes.
+
+## PR31 - Play, defense cues and connectivity
+
+- Concession now derives the winning auction bid on the server and settles the 3x hill penalty atomically. Real passouts and misere are not eligible. Exact legacy bid arguments remain accepted; alternative bids are rejected.
+- Defender card cues use the existing authenticated WebSocket and viewer-specific visible cards; no Firestore writes or change to play rights. Hidden hands are not disclosed; local-only cues remain available when sharing is not possible. Cues are scoped to a game/version and cleared by the next authoritative action.
+- Extend the WS lease/stale threshold from 35/38s to 90/75s, ping on returning to the foreground, log only fixed disconnect stages/codes, and explain pause reasons. Real connection loss and authorization checks remain enforced. Production logs are needed to confirm the reported periodic pause.
+- Show all awarded trick bundles without fabricated replay cards. Keep the real last-trick replay, center reward choices, move call bubbles left and animate the original unsorted packet order before visual sorting.
+- Full CI and three-player visual acceptance are required; see PR31_PLAY_AND_CUES.ru.md.

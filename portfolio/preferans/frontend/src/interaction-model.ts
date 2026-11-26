@@ -68,6 +68,6 @@ export function animationBetween(previous: RoomView | null, current: RoomView): 
 export function mayConcede(view: RoomView): boolean {
   return view.status === "playing" && view.phase === "declare" && view.my_seat !== null && view.declarer === view.my_seat &&
     !view.controls?.paused && !view.controls?.undo &&
-    (view.legal_contracts ?? []).some(bid => bid.kind === "regular" || bid.kind === "ten_no_widow") &&
+    !view.is_passout && (view.winning_bid?.kind === "regular" || view.winning_bid?.kind === "ten_no_widow") &&
     !view.defense?.some(Boolean) && (view.played_tricks ?? 0) === 0 && (view.trick?.length ?? 0) === 0;
 }

@@ -1,5 +1,7 @@
 /** All coordinates are taken from the current client's actual layout. */
-export const DEAL_DURATION_MS = 3300;
+export const DEAL_DURATION_MS = 3650;
+const DEAL_SORT_AT_MS = 3100;
+const DEAL_SORT_MS = 450;
 export const TRICK_DURATION_MS = 1600;
 const DEAL_FLIGHT_MS = 900;
 const COLLECT_HOLD_MS = 900;
@@ -9,15 +11,33 @@ export function flightDelta(from:DOMRect,to:DOMRect) {
   const a=center(from),b=center(to);
   return {x:b.x-a.x,y:b.y-a.y};
 }
-export function animateDeal(table:HTMLElement, dealer:number):()=>void {
+export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[]):()=>void {
   const source=table.querySelector<HTMLElement>("[data-play-field]");
   if(!source)return ()=>{};
   const origin=source.getBoundingClientRect();
+  const unsorted=new Map<HTMLElement,{x:number;y:number}>();
+  const layers:{node:HTMLElement;previous:string}[]=[];
   const hands=Array.from({length:3},(_,i)=>{
     const seat=(dealer+1+i)%3;
     const node=table.querySelector<HTMLElement>(`[data-seat="${seat}"]`);
     const own=node?.dataset.position==="bottom";
-    return Array.from((own?table:node)?.querySelectorAll<HTMLElement>(own?"[data-own-hand] [data-hand-card] [data-card]":"[data-card-back]")??[]);
+    const cards=Array.from((own?table:node)?.querySelectorAll<HTMLElement>(own?"[data-own-hand] [data-hand-card] [data-card]":"[data-card-back]")??[]);
+    if(!own||cards.length<2)return cards;
+    const byId=new Map(cards.map(card=>[card.dataset.card,card]));
+    const ordered=rawOrder.map(id=>byId.get(id));
+    if(ordered.length!==cards.length||ordered.some(card=>!card)||new Set(ordered).size!==cards.length)return cards;
+    const rects=cards.map(card=>card.getBoundingClientRect());
+    const left=Math.min(...rects.map(r=>r.left));
+    const right=Math.max(...rects.map(r=>r.right));
+    const y=rects[0].top;
+    const step=(right-left-rects[0].width)/(cards.length-1);
+    const original=ordered as HTMLElement[];
+    original.forEach((card,index)=>{
+      const box=card.getBoundingClientRect();
+      unsorted.set(card,{x:left+index*step-box.left,y:y-box.top});
+      if(card.parentElement){layers.push({node:card.parentElement,previous:card.parentElement.style.zIndex});card.parentElement.style.zIndex=String(index+1);}
+    });
+    return original;
   });
   const widow=Array.from(table.querySelectorAll<HTMLElement>("[data-widow-zone] img"));
   const batches:HTMLElement[][]=[];
@@ -29,9 +49,25 @@ export function animateDeal(table:HTMLElement, dealer:number):()=>void {
   batches.forEach((batch,i)=>batch.forEach(card=>{
     if(typeof card.animate!=="function")return;
     const delta=flightDelta(card.getBoundingClientRect(),origin);
-    animations.push(card.animate([{transform:`translate3d(${delta.x}px,${delta.y}px,0) rotate(-8deg) scale(.75)`,opacity:0},{transform:"none",opacity:1}],{duration:DEAL_FLIGHT_MS,delay:i*135,easing:"cubic-bezier(.2,.75,.3,1)",fill:"backwards"}));
+    const slot=unsorted.get(card);
+    const start={transform:`translate3d(${delta.x}px,${delta.y}px,0) rotate(-8deg) scale(.75)`,opacity:0};
+    const delay=i*135;
+    if(!slot){
+      animations.push(card.animate([start,{transform:"none",opacity:1}],{duration:DEAL_FLIGHT_MS,delay,easing:"cubic-bezier(.2,.75,.3,1)",fill:"backwards"}));
+      return;
+    }
+    const duration=DEAL_SORT_AT_MS+DEAL_SORT_MS-delay;
+    const transform=`translate3d(${slot.x}px,${slot.y}px,0)`;
+    animations.push(card.animate([
+      {...start,offset:0,easing:"cubic-bezier(.2,.75,.3,1)"},
+      {transform,opacity:1,offset:DEAL_FLIGHT_MS/duration},
+      {transform,opacity:1,offset:(DEAL_SORT_AT_MS-delay)/duration,easing:"ease-in-out"},
+      {transform:"none",opacity:1,offset:1},
+    ],{duration,delay,fill:"both"}));
   }));
-  return ()=>animations.forEach(animation=>animation.cancel());
+  const restoreLayers=()=>layers.forEach(({node,previous})=>{node.style.zIndex=previous;});
+  const sortTimer=setTimeout(restoreLayers,DEAL_SORT_AT_MS);
+  return ()=>{clearTimeout(sortTimer);restoreLayers();animations.forEach(animation=>animation.cancel());};
 }
 export function animateCollection(table:HTMLElement,winner:number,onFinished?:()=>void):()=>void {
   const target=table.querySelector<HTMLElement>(`[data-trick-train="${winner}"] [data-latest="true"]`);

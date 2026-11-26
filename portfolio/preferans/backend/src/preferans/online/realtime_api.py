@@ -16,6 +16,7 @@ from .store import FirestoreRooms, StoreError
 from .quota_guard import quota
 from .publish_signal import wait_for_publish_or_frame
 from .live_relay import MAX_FRAME, LiveError, live_enabled
+from .defense_hints import decorated_view, receive_hint
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +183,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
         reader: asyncio.Task | None = None
         unsubscribe: Callable[[], None] | None = None
         close_code = 1000
+        close_stage = "handshake"
         try:
             await socket.accept()
             auth = await asyncio.wait_for(_receive(socket), timeout=5)
@@ -200,6 +202,8 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
             pending = False
             await run_in_threadpool(_sync, store, ticket)
             last_version = -1
+            last_hints = None
+            last_hint_at = -1_000
             last_presence: list[str] | None = None
             last_ping = 0
             last_media = None
@@ -212,6 +216,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                 room_id, lambda: loop.call_soon_threadsafe(wake.set)
             )
             while True:
+                close_stage = "lease"
                 wake.clear()
                 at = now_ms()
                 if (
@@ -220,17 +225,25 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                     or not hub.current(ticket, connection, at)
                 ):
                     raise HubError("Connection expired")
+                close_stage = "quota"
                 quota.require_available()
                 if at - last_auth >= AUTH_MS:
+                    close_stage = "reauthorize"
                     await run_in_threadpool(_revalidate, ticket, connection, verify)
                     last_auth = now_ms()
                 # Only transitions, timer deadlines and rare active timer checkpoints
                 # cause a Firestore transaction. Never one transaction per WS ping.
                 if hub.due(room_id, at, claim=False):
+                    close_stage = "reconcile"
                     await run_in_threadpool(_sync, store, ticket)
+                close_stage = "delivery"
                 view = hub.snapshot(ticket, connection, now_ms())
                 presence = hub.statuses(room_id, now_ms())
-                if view and view["version"] > last_version:
+                if view:
+                    with hub.lock:
+                        view = decorated_view(hub.rooms[room_id], view)
+                hints = view.get("defense_hints") if view else None
+                if view and (view["version"] > last_version or hints != last_hints):
                     await _send(
                         socket,
                         {
@@ -243,6 +256,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                         },
                     )
                     last_version = view["version"]
+                    last_hints = hints
                     last_presence = presence
                     with hub.lock:
                         hub.metrics["snapshots_sent"] += 1
@@ -275,6 +289,7 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                         await _send(
                             socket, {**message, "protocol": PROTOCOL, "server_now_ms": now_ms()}
                         )
+                close_stage = "receive"
                 if await wait_for_publish_or_frame(reader, wake):
                     frame = reader.result()
                     at = now_ms()
@@ -296,6 +311,16 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                                 )
                         reader = asyncio.create_task(_receive(socket))
                         continue
+                    if frame.get("type") == "defense_hint":
+                        # Invalid/late presentation cues never close a healthy game socket.
+                        if at - last_hint_at >= 125:
+                            last_hint_at = at
+                            with hub.lock:
+                                if hub.current(ticket, connection, at):
+                                    receive_hint(hub.rooms[room_id], ticket.uid, frame)
+                            hub.publish_signal.notify(room_id)
+                        reader = asyncio.create_task(_receive(socket))
+                        continue
                     if frame != {"type": "ping", "protocol": PROTOCOL} or (
                         last_ping and at - last_ping < 2_000
                     ):
@@ -304,8 +329,8 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
                     last_ping = at
                     await _send(socket, {"type": "pong", "protocol": PROTOCOL, "server_now_ms": at})
                     reader = asyncio.create_task(_receive(socket))
-        except WebSocketDisconnect:
-            pass
+        except WebSocketDisconnect as exc:
+            logger.info("preferans.realtime.peer_closed code=%s", exc.code)
         except HTTPException as exc:
             quota.record_failure(exc)
             close_code = (
@@ -322,6 +347,11 @@ def make_realtime_router(verify: Callable[[str], tuple[str, bool]]) -> APIRouter
             logger.warning("preferans.realtime.failed")
             close_code = 1011
         finally:
+            if close_code != 1000:
+                # Fixed category and code only: never log tickets, cards, UIDs or raw exceptions.
+                logger.warning(
+                    "preferans.realtime.closed code=%s stage=%s", close_code, close_stage
+                )
             if unsubscribe is not None:
                 unsubscribe()
             if pending:

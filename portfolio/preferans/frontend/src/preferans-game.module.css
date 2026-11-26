@@ -282,3 +282,7 @@
 
 /* Cards share the lower edge with the radio dock. */
 .tableRoot [data-own-hand="true"] .handRow { padding-bottom:0; }
+
+/* A raised defense cue is independent of drag and playable-card state. */
+.tableRoot .playingCard[data-defense-raised="true"]:not([data-pointer-dragging="true"]){transform:translateY(-18%)!important;}
+.tableRoot .playingCard[data-defense-raised="true"]:focus-visible{outline-offset:2px;}

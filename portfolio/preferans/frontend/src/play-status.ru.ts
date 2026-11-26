@@ -1,0 +1,26 @@
+import type { RoomView } from "./game-model.ru";
+import type { Presence } from "./realtime-client";
+
+export function awardedMessage(view:RoomView,name:(seat:number)=>string):string|null {
+  const claim=view.claim;
+  if(claim?.status!=="accepted")return null;
+  const count=view.tricks_won?.[claim.seat]??0;
+  return `${name(claim.seat)}: всего взяток — ${count} (карт — ${count*3})`;
+}
+
+export function pauseMessage(view:RoomView,presence:Presence[]|null,name:(seat:number)=>string):string {
+  const reasons=view.controls?.pause_reasons??[];
+  const labels:string[]=[];
+  if(reasons.includes("connection_lost")){
+    const missing=presence?.flatMap((state,seat)=>state!=="online"?[name(seat)]:[])??[];
+    labels.push(missing.length?`ожидаем связь: ${missing.join(", ")}`:"ожидаем восстановления связи");
+  }
+  if(reasons.includes("shared_overlay")){
+    const overlay=view.presentation?.overlay;
+    const names:Record<string,string>={score_sheet:"листик",last_trick:"последнюю взятку",widow_replay:"прикуп",discard_replay:"снос",radio:"магнитофон"};
+    labels.push(overlay?`${name(overlay.seat)} смотрит ${names[overlay.kind]??"общую панель"}`:"открыта общая панель");
+  }
+  if(view.presentation?.break)labels.push("общий перерыв");
+  if(view.controls?.undo)labels.push("голосование за отмену");
+  return labels.length?`Пауза · ${labels.join(" · ")}`:"Пауза · ожидание общего решения";
+}

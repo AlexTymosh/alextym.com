@@ -30,7 +30,7 @@ test("widow is shown only from the already-public projection",()=>{
   expect(visibleWidow({...room,phase:"play",is_passout:true,played_tricks:1,widow})).toEqual({count:1,cards:[widow[1]]});
 });
 test("concession and animation respect phases and snapshot identity",()=>{
-  expect(mayConcede({...room,phase:"declare",declarer:0,legal_contracts:[bid(6,"S")]})).toBe(true);
+  expect(mayConcede({...room,phase:"declare",declarer:0,winning_bid:bid(6,"S"),legal_contracts:[bid(6,"S")]})).toBe(true);
   expect(mayConcede({...room,phase:"defense_first",declarer:0,contract:bid(6,"S")})).toBe(false);
   expect(mayConcede({...room,phase:"play",declarer:0,contract:bid(6,"S"),played_tricks:1})).toBe(false);
   expect(animationBetween(null,room)).toBeNull();

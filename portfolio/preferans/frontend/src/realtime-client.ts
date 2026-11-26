@@ -1,12 +1,13 @@
 /** Bounded, versioned room transport. HTTP remains the only game-command channel. */
 import { isRoomView, ROOM_ID_RE, type RoomView } from "./game-model.ru";
 import { gameCooldown } from "./transport-budget";
+import type { HintSender } from "./defense-hints";
 
 import { isMediaEnvelope, parseLiveFrame, type LiveFrame, type LiveSender } from "./live-media-model";
 
 export const REALTIME_PROTOCOL = 1;
 export const HEARTBEAT_MS = 15_000;
-export const STALE_MS = 38_000;
+export const STALE_MS = 75_000;
 export type Presence = "online" | "reconnecting" | "offline";
 
 type Frame =
@@ -53,6 +54,7 @@ export type RealtimeCallbacks = {
   onPresence: (value: Presence[]) => void;
   onDenied: () => void;
   onMediaTransport?: (sender: LiveSender | null) => void;
+  onHintTransport?: (sender: HintSender | null) => void;
   onMediaFrame?: (frame: LiveFrame) => void;
 };
 
@@ -70,6 +72,20 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
   let lastSeen = 0;
   let latestVersion = -1;
   let mediaBound = false;
+  let hintBound = false;
+  let lastPing = 0;
+  const releaseHint = () => { if(hintBound)callbacks.onHintTransport?.(null); hintBound=false; };
+  const ping = () => {
+    const ws=socket;
+    if(disposed||!ws||ws.readyState!==WebSocket.OPEN)return;
+    const now=Date.now();
+    if(now-lastSeen>STALE_MS){ws.close();return;}
+    if(now-lastPing<2_500)return;
+    try {ws.send(JSON.stringify({type:"ping",protocol:REALTIME_PROTOCOL}));lastPing=now;}
+    catch {ws.close();}
+  };
+  const visible = () => { if(document.visibilityState==="visible")ping(); };
+  document.addEventListener("visibilitychange",visible);
   const releaseMedia = () => { if (mediaBound) callbacks.onMediaTransport?.(null); mediaBound = false; };
   const stopTimers = () => {
     if (heartbeat) clearInterval(heartbeat);
@@ -115,12 +131,8 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
         if (disposed || socket !== ws) { ws.close(); return; }
         lastSeen = Date.now();
         ws.send(JSON.stringify({ type: "authenticate", protocol: REALTIME_PROTOCOL, ticket: token }));
-        heartbeat = setInterval(() => {
-          if (disposed || socket !== ws) return;
-          if (Date.now() - lastSeen > STALE_MS || ws.readyState !== WebSocket.OPEN) { ws.close(); return; }
-          try { ws.send(JSON.stringify({ type: "ping", protocol: REALTIME_PROTOCOL })); }
-          catch { ws.close(); }
-        }, HEARTBEAT_MS);
+        lastPing=Date.now();
+        heartbeat = setInterval(ping, HEARTBEAT_MS);
       };
       ws.onmessage = event => {
         if (disposed || socket !== ws) return;
@@ -141,6 +153,14 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
           callbacks.onView(frame.view);
           callbacks.onPresence(frame.presence);
           callbacks.onReady(true);
+          if(frame.view.defense_hints!==undefined&&!hintBound){
+            hintBound=true;
+            callbacks.onHintTransport?.(message=>{
+              if(!hintBound||disposed||socket!==ws||ws.readyState!==WebSocket.OPEN||ws.bufferedAmount>128_000)return false;
+              try{ws.send(JSON.stringify({...message,type:"defense_hint",protocol:REALTIME_PROTOCOL}));return true;}
+              catch{return false;}
+            });
+          }else if(frame.view.defense_hints===undefined&&hintBound)releaseHint();
           if (frame.live_media === true && callbacks.onMediaTransport && !mediaBound) {
             mediaBound = true;
             callbacks.onMediaTransport(message => {
@@ -154,7 +174,7 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
       ws.onerror = () => { if (!disposed && socket === ws) ws.close(); };
       ws.onclose = event => {
         if (socket !== ws) return;
-        socket = null; stopTimers(); releaseMedia();
+        socket = null; stopTimers(); releaseMedia(); releaseHint();
         if (disposed) return;
         if ([4401, 4403].includes(event.code)) { failAccess(); return; }
         schedule();
@@ -164,7 +184,8 @@ export function connectRealtime(room: string, seat: number, callbacks: RealtimeC
   }
   void start();
   return () => {
-    releaseMedia();
+    releaseMedia(); releaseHint();
+    document.removeEventListener("visibilitychange",visible);
     disposed = true;
     if (retry) clearTimeout(retry);
     stopTimers(); abort?.abort();

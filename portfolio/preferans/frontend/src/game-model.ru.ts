@@ -39,6 +39,7 @@ export type RewardRoute = "pool"|"hill_first"|"help";
 export type NotebookMark = {field:"hill"|"pool"|"vist";seat:number;against:number|null;index:number;manual?:boolean;latest?:boolean};
 export type NotebookStep = {kind:"deal"|"manual"|"penalty";declarer?:number|null;contract?:Bid|null;passout?:number|null;entries:(NotebookMark&{delta:number;reason:string})[]};
 export type RoomView = {
+  defense_hints?: Array<{owner:number;card:Card}>;
   table_theme?: TableTheme;
   activity_started_at_ms?: number;
   /** Legacy transport field; never used for trick replay. */
@@ -148,6 +149,10 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if(v.defense_hints!==undefined){
+    if(v.status!=="playing"||!isSeat(v.my_seat)||!isSeat(v.declarer)||v.my_seat===v.declarer||!Array.isArray(v.defense_hints)||v.defense_hints.length>20)return false;
+    if(!v.defense_hints.every(m=>m&&isSeat(m.owner)&&m.owner!==v.declarer&&m.card&&["S","C","D","H"].includes(m.card.suit)&&Number.isInteger(m.card.rank)&&m.card.rank>=7&&m.card.rank<=14))return false;
+  }
   if(v.final_review!==undefined&&(v.final_review!==true||v.status!=="awaiting_settlement"||v.final_settlement===undefined||v.settlement_options!==undefined||!v.score||typeof v.score!=="object"||(v.score as Score).closed!==true))return false;
   if(v.final_settlement!==undefined){
     const f=v.final_settlement as RoomView["final_settlement"];
