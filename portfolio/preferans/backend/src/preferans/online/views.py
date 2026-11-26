@@ -12,6 +12,7 @@ from preferans.domain.cards import Card
 from preferans.domain.claims import can_claim, claim_voters
 from preferans.domain.game import GameState, Phase, legal_play_cards
 from preferans.domain.ledger import ScoreState
+from preferans.domain.settlement import net_results, pairwise_results
 from preferans.online.controls import public_controls
 from preferans.online.deal_flow import projection as next_deal_projection
 from preferans.online.presentation import projection as presentation_projection
@@ -71,6 +72,11 @@ def seat_view(
             result["seat_swap"] = swap
     if score is not None and my_seat is not None and room["status"] != "lobby":
         result["score_sheet"] = notebook(score, controls or {})
+        if room["status"] == "closed" and score.closed and room.get("sheet_loser") is None:
+            result["final_settlement"] = {
+                "pairs": [list(row) for row in pairwise_results(score)],
+                "net": list(net_results(score)),
+            }
     if owner and room["status"] in {"lobby", "playing", "between", "awaiting_settlement"}:
         result["can_archive"] = True
     if room["status"] == "archived":
@@ -137,10 +143,21 @@ def seat_view(
         {"seat": i, "cards": [public_card(c) for c in state.hands[i]]}
         for i in sorted(state.exposed_hands)
     ]
+    if state.phase == Phase.MISERE_OFFER and my_seat is None:
+        exposed = []
     if state.phase == Phase.MISERE_OFFER and my_seat is not None:
         declarer = state.declarer
         assert declarer is not None
-        exposed = [{"seat": declarer, "cards": [public_card(c) for c in state.hands[declarer]]}]
+        # A defender sees both the declarer and the other defender. The declarer
+        # sees neither defender. Do not persist temporary disclosure in GameState.
+        exposed = (
+            [
+                {"seat": i, "cards": [public_card(c) for c in state.hands[i]]}
+                for i in (declarer, 3 - my_seat - declarer)
+            ]
+            if my_seat != declarer
+            else []
+        )
         result["misere_offer"] = {
             "approved": sorted(state.misere_votes),
             "can_vote": my_seat != declarer and my_seat not in state.misere_votes,

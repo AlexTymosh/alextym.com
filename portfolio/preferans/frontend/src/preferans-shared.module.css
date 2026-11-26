@@ -22,3 +22,6 @@
 .objects { right:clamp(8px,2cqw,28px); bottom:8px; }
 .radioButton { width:clamp(147px,23.4cqw,273px); }
 @media(max-height:650px) and (orientation:landscape) { .objects { bottom:5px; } .radioButton { width:clamp(108px,16.5cqw,188px); } .breakButton { bottom:5px; } }
+
+/* The sheet is the visible overlay, not a green card behind it. */
+.panel.scoreOverlay { background:transparent; border:0; border-radius:0; padding:0; box-shadow:none; width:min(576px,calc(100% - 16px)); max-height:min(90dvh,calc(100% - 12px)); overflow:auto; scrollbar-width:thin; }

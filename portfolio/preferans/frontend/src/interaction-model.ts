@@ -8,6 +8,7 @@ export function bidsInGroup(bids: readonly Bid[], group: BidGroup): Bid[] {
 }
 export function canHold(view: RoomView): boolean {
   return view.phase === "auction" && view.can_say_here === true && !!view.high_bid &&
+    view.high_bid.kind !== "misere" && view.high_bid.kind !== "misere_no_widow" &&
     !(view.high_bid.kind === "regular" && view.high_bid.level === 6 && view.high_bid.suit === "S");
 }
 export type SortMode = "grouped" | "suit";

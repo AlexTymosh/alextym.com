@@ -84,12 +84,9 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
   if (view.status === "playing" && (view.controls?.undo || (view.controls?.paused && !replayMoveAllowed(view)))) {
     return null;
   }
-  if (view.status === "between" && view.next_deal && REALTIME_ENABLED) {
-    return <section className={styles.actionPanel}><h3>Новая раздача</h3><DealStatus view={view}/></section>;
-  }
+  if (view.status === "between" && view.next_deal && REALTIME_ENABLED) return null;
   if (view.status === "lobby" || view.status === "between") {
-    return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">{view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}</h3>
-      {view.status==="lobby"&&<p>Занято мест: {view.occupied.filter(Boolean).length} из 3.</p>}
+    return <section className={styles.actionPanel} aria-label={view.status === "lobby" ? "Сбор игроков" : "Новая раздача"}>
       {(view.room_admin || (view.my_seat!==null&&dealerFor(view)===view.my_seat)) && <button type="button" className={styles.primary} disabled={busy || !mayStart(view)} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
@@ -100,34 +97,29 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
       const name=(seat:number)=>profiles?.[seat]?.name||seatNames[seat];
       const mine=view.my_seat!==null&&waiting.includes(view.my_seat)?view.my_seat:null;
       const targets=mine===null?[]:choices?.passout_targets?.[mine]??[];
-      return <section className={styles.actionPanel} aria-label="Бонус распасов"><h3>Бонус за ноль взяток</h3>
-        {mine!==null?<div className={styles.actions}>{choices?.passout_choices?.[mine]?.map(route=><button type="button" key={route} disabled={busy||!!view.controls?.paused} onClick={()=>command("passout_reward",{route})}>{route==="hill_first"?"Списать с горы":route==="pool"?"Записать себе в пулю":targets.length?`Написать ${targets.length>1?"поровну ":""}на ${targets.map(name).join(" и ")}`:"Расписать висты поровну"}</button>)}</div>:<p>Ожидаем решения: {waiting.map(name).join(", ")}</p>}
+      return <section className={styles.actionPanel} aria-label="Бонус распасов">
+        {mine!==null?<div className={styles.actions}>{choices?.passout_choices?.[mine]?.map(route=><button type="button" key={route} disabled={busy||!!view.controls?.paused} onClick={()=>command("passout_reward",{route})}>{route==="hill_first"?"Списать с горы":route==="pool"?"Записать себе в пулю":targets.length?`Написать ${targets.length>1?"поровну ":""}на ${targets.map(name).join(" и ")}`:"Расписать висты поровну"}</button>)}</div>:null}
       </section>;
     }
     if(view.settlement_options?.regular_choice===false)return null;
     if(!view.settlement_options)return view.room_admin?<button type="button" className={styles.primary} disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} onClick={onSettle}>Рассчитать раздачу</button>:null;
-    return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">Сдача завершена</h3>
-      <p>Раздача ожидает начисления пули, горы и вистов.</p>
+    return <section className={styles.actionPanel} aria-label="Сдача завершена">
       {view.my_seat===view.declarer ? <>
         {view.settlement_options?.regular_choice && <label className={styles.field}>Куда записать выигрыш
           <select value={regularRoute} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRegularRoute(e.target.value as "pool" | "hill_first")}>
             <option value="pool">Помочь соперникам</option><option value="hill_first">Сначала погасить гору</option></select></label>}
         <button type="button" disabled={busy || Boolean(view.controls?.paused || view.controls?.undo)} className={styles.primary} onClick={onSettle}>Рассчитать раздачу</button>
-      </> : <p className={styles.subtle}>Ожидаем решение заказчика.</p>}
+      </> : null}
     </section>;
   }
-  if (view.status === "archived") return <section className={styles.actionPanel}><h3>Партия архивирована</h3><p>Без игрового поражения, медалей и расчёта незакрытой пули.</p></section>;
-  if (view.status === "closed" && view.sheet_loser !== undefined) return null;
-  if (view.status === "closed") return <section className={styles.actionPanel}>
-    {view.sheet_loser !== undefined ? null : <><h3>Пуля закрыта</h3><p>Все три игрока закрыли пули. Итоговая партия завершена.</p></>}
-  </section>;
+  if (view.status === "archived" || view.status === "closed") return null;
   if (view.phase === "misere_offer") {
     const name = profiles?.[view.declarer??-1]?.name || seatNames[view.declarer??0];
     return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Предложение сыгранного мизера">
       {myTurn?<div className={styles.actions}>
         <button type="button" className={styles.primary} disabled={busy} onClick={()=>command("misere_vote",{approve:true})}>Согласен, {name} сыграл мизер.</button>
         <button type="button" disabled={busy} onClick={()=>command("misere_vote",{approve:false})}>Да хрен там, играем!!!</button>
-      </div>:<p>Ждём согласия соперников: {view.misere_offer?.approved.length??0}/2.</p>}
+      </div>:null}
     </section>;
   }
   if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
@@ -136,12 +128,10 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
       <BidPanel key={`${view.game_id}:auction`} view={view} busy={busy} command={command}/>
     </>}
     {view.phase === "discard" && <>
-      <p>Перетащи две карты в снос</p>
       <button type="button" className={styles.primary} disabled={busy || selectedCards.length !== 2}
         onClick={() => command("discard", { cards: selectedCards })}>Снести две карты</button>
     </>}
     {view.phase === "declare" && <>
-      <p>Объяви игру</p>
       <BidPanel key={`${view.game_id}:declare`} view={view} busy={busy} command={command}/>
     </>}
     {(["defense_first", "defense_second", "defense_reconsider"] as string[]).includes(view.phase ?? "") && <>
@@ -154,7 +144,6 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
       </div>
     </>}
     {view.phase === "choose_mode" && <>
-      <p>Светлая игра открывает карты пасовавшего, и вистующий управляет ими. В тёмную каждый ходит сам.</p>
       <div className={styles.actions}>
         <button type="button" className={styles.primary} disabled={busy} onClick={() => command("mode", { mode: "open" })}>В светлую</button>
         <button type="button" disabled={busy} onClick={() => command("mode", { mode: "closed" })}>В тёмную</button>
@@ -570,6 +559,28 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       {!visibleHand.length&&<span className={styles.subtle}>Нет карт для отображения</span>}
     </div>
   </div>;
+  const playerName=(seat:number)=>profiles?.[seat]?.name||seatNames[seat]||"Игрок";
+  const tableStatus = view && (()=>{
+    const transient=dropNotice||status||(busy&&pending?.label!=="play"?"Операция выполняется…":"");
+    if(transient)return transient;
+    if(view.status==="closed")return "Закончили!";
+    if(view.status==="archived")return "Партия архивирована";
+    if(view.controls?.paused)return "Пауза";
+    if(view.claim?.status==="rejected")return `${playerName(view.claim.rejected_by!)} не согласен`;
+    if(view.claim?.status==="accepted")return `${playerName(view.claim.seat)}: присуждено взяток — ${view.claim.awarded}`;
+    if(view.status==="lobby")return `Сбор игроков · ${view.occupied.filter(Boolean).length} из 3`;
+    if(view.status==="between")return view.next_deal&&REALTIME_ENABLED?<DealStatus view={view}/>:"Новая раздача";
+    if(view.status==="awaiting_settlement"){
+      const waiting=view.settlement_options?.passout_pending??[];
+      return waiting.length?`Бонус распасов · ожидаем: ${waiting.map(playerName).join(", ")}`:view.settlement_options?.regular_choice?`Ожидаем решение: ${playerName(view.declarer??0)}`:"Подсчёт результатов";
+    }
+    if(view.phase==="misere_offer")return `Мизер · ждём согласия ${view.misere_offer?.approved.length??0}/2`;
+    if(view.phase==="discard"&&view.my_seat===view.declarer)return "Перетащи две карты в снос";
+    if(view.phase==="declare"&&view.my_seat===view.declarer)return "Объяви игру";
+    if(view.phase==="choose_mode"&&allowedToAct(view))return "Выбери: в светлую или в тёмную";
+    const turn=view.turn!=null?`Ход: ${playerName(view.turn)}`:"";
+    return view.is_passout?<><strong data-passout-status="true">Распасы</strong>{turn&&<small>{turn}</small>}</>:<><strong>{isPlay?(turn||statusNames[view.status]):phaseLabel(view.phase)}</strong>{!isPlay&&turn&&<small>{turn}</small>}{isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat&&<small>Управляешь открытой рукой</small>}</>;
+  })();
   const actions = view && <>
     {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
     {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
@@ -610,7 +621,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
               theme={selectedTheme} surfaceOpacity={opacity} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
-              statusLine={`${dropNotice||status|| (view.controls?.paused?"Пауза":statusNames[view.status])} · ${phaseLabel(view.phase)}${isPlay&&view.turn!=null?` · Ход: ${profiles?.[view.turn]?.name||seatNames[view.turn]}`:""}${isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat?" · Управляешь открытой рукой":""}`}
+              statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               claimPanel={<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/>}
               claimButton={view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:undefined}
@@ -625,7 +636,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
           </ImmersiveMenu>
         </>}
     </div>
-    {((!view&&status) || (!busy&&pending) || (busy&&pending?.label!=="play")) && <div className={styles.notification} role="status" aria-live="polite">
+    {!view&&((status) || (!busy&&pending) || (busy&&pending?.label!=="play")) && <div className={styles.notification} role="status" aria-live="polite">
       {busy ? "Операция выполняется…" : status}
       {!busy && pending && <button type="button" onClick={() => void mutate(pending.label, pending.run)}>Повторить операцию</button>}
     </div>}

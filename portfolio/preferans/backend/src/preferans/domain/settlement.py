@@ -38,13 +38,18 @@ def final_hill_vists(state: ScoreState) -> tuple[int, int, int]:
     )
 
 
-def net_results(state: ScoreState) -> tuple[int, int, int]:
-    """R_i = sum_j (W_ij - W_ji + G_j - G_i)."""
+def pairwise_results(state: ScoreState) -> tuple[tuple[int, ...], ...]:
+    """Signed net claim of seat i against seat j, including reconciled hills."""
     hills = final_hill_vists(state)
-    balances = tuple(
-        sum(state.vists[i][j] - state.vists[j][i] + hills[j] - hills[i] for j in range(3) if i != j)
+    return tuple(
+        tuple(state.vists[i][j] - state.vists[j][i] + hills[j] - hills[i] for j in range(3))
         for i in range(3)
     )
+
+
+def net_results(state: ScoreState) -> tuple[int, int, int]:
+    """R_i = sum_j (W_ij - W_ji + G_j - G_i)."""
+    balances = tuple(sum(row) for row in pairwise_results(state))
     if sum(balances) != 0:
         raise AssertionError("Pairwise ledger violated its zero-sum invariant")
     return balances
