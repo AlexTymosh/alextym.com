@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { notebookAngle, splitPlayerName } from "./table-pr20";
-import type { RoomView } from "./game-model.ru";
+import type { RoomView, NotebookMark } from "./game-model.ru";
 import { tableSeats, type SeatProfile } from "./table-model";
 import styles from "./preferans-notebook.module.css";
 
@@ -12,10 +12,13 @@ export function Notebook({view, profiles, miniature=false}: {view: RoomView; pro
   const seats = tableSeats(view.my_seat);
   const history = view.score_sheet;
   const name = (seat:number) => profiles?.[seat]?.name || `Игрок ${seat+1}`;
+  const cellMarks=new Map<number[],NotebookMark[]>();
   const vals = (kind: "hill" | "pool" | "vist", seat: number, against?: number) => {
     const current = kind === "vist" ? score.vists[seat]?.[against!] ?? 0 : score[kind][seat] ?? 0;
     const values = kind === "vist" ? history?.vists[seat]?.[against!] : history?.[kind][seat];
-    return values ?? (current ? [current] : []);
+    const result=values ?? (current ? [current] : []);
+    cellMarks.set(result,(history?.marks??[]).filter(m=>m.field===kind&&m.seat===seat&&m.against===(against??null)));
+    return result;
   };
   const fields = (["left", "right", "bottom"] as const).map(position => {
     const seat = seats[position];
@@ -23,12 +26,12 @@ export function Notebook({view, profiles, miniature=false}: {view: RoomView; pro
     return {position, seat, left, right, hill: vals("hill",seat), pool: vals("pool",seat), lv: vals("vist",seat,left), rv: vals("vist",seat,right)};
   });
   // Grow the entire drawing, not the font: long-running games retain every entry.
-  const maxChars = Math.max(0, ...fields.flatMap(f => [f.hill,f.pool,f.lv,f.rv].map(v => v.map(n=>`. ${n}`).join(" ").length)));
+  const maxChars = Math.max(0, ...fields.flatMap(f => [f.hill,f.pool,f.lv,f.rv].map(v => v.map(n=>`. ${n}`).join(" ").length+(cellMarks.get(v)?.filter(m=>m.manual).length??0)*12)));
   const extra = Math.max(0, maxChars * 11 - 120);
   const w = 578 + extra * 2, h = 600 + extra * 2, cx = w/2, cy = h/2 - 55;
   const inner = 156, outer = 100, innerY = h-176, outerY = h-124;
   const rows = (v:number[]) => v.map(n=>`. ${n}`).join(" ");
-  const text = (v:number[], x:number,y:number, angle=0, extent?:number) => <text x={x} y={y} transform={`rotate(${angle} ${x} ${y})`} textLength={extent&&v.length?Math.min(extent,rows(v).length*10.5):undefined} lengthAdjust="spacingAndGlyphs">{rows(v)}</text>;
+  const text = (v:number[], x:number,y:number, angle=0, extent?:number) => <text x={x} y={y} transform={`rotate(${angle} ${x} ${y})`} textLength={extent&&v.length?Math.min(extent,(rows(v).length+(cellMarks.get(v)?.filter(m=>m.manual).length??0)*12)*10.5):undefined} lengthAdjust="spacingAndGlyphs">{v.map((n,i)=>{const mark=cellMarks.get(v)?.find(m=>m.index===i);return <tspan key={i} fill={mark?.latest?"#b51524":mark?.manual?"#87620b":undefined}>. {n}{mark?.manual&&<tspan fill="#87620b" fontSize="10"> ручная корректировка</tspan>}{" "}</tspan>;})}</text>;
   const left = fields[0], right = fields[1], bottom = fields[2];
   const nameY = (cy-24+16)/2;
   const nameExtent = Math.max(20,cy-64);

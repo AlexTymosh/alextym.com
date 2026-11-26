@@ -37,26 +37,30 @@ def test_activity_timestamp_only_changes_with_game_action():
 
 
 def test_only_meaningful_regular_reward_choice():
-    score = SimpleNamespace(pool=[0, 0, 0], hill=[5, 0, 0], target=20)
-    assert not settlement_options(score, game())["regular_choice"]
-    score.pool[0] = 20
-    assert settlement_options(score, game())["regular_choice"]
-    assert not settlement_options(score, game(tricks_won=[5, 4, 1]))["regular_choice"]
-    score.hill[0] = 0
-    assert not settlement_options(score, game())["regular_choice"]
+    from test_scoring import ledger, played
+
+    assert not settlement_options(ledger(hill=(5, 0, 0)), played(7, (7, 2, 1)))["regular_choice"]
+    score = ledger(pool=(20, 15, 10), hill=(5, 0, 0))
+    assert settlement_options(score, played(7, (7, 2, 1)))["regular_choice"]
+    assert not settlement_options(score, played(7, (6, 3, 1)))["regular_choice"]
+    assert not settlement_options(ledger(pool=(20, 15, 10)), played(7, (7, 2, 1)))["regular_choice"]
 
 
 def test_passout_routes_respect_mandatory_closure():
-    rules = SimpleNamespace(passout_cost=lambda _: 4)
-    score = SimpleNamespace(
-        pool=[18, 10, 20],
-        hill=[5, 5, 5],
-        target=20,
-        passout_level=6,
-        ruleset=SimpleNamespace(rules=rules),
-    )
-    options = settlement_options(score, game(is_passout=True, tricks_won=[0, 0, 10]))
-    assert options == {"regular_choice": False, "passout_defaults": ["hill_first", "pool", "pool"]}
+    from test_scoring import ledger, passouts
+
+    score = ledger(pool=(18, 10, 20), hill=(5, 5, 5), passout=8)
+    options = settlement_options(score, passouts((0, 0, 10), level=8))
+    # A mandatory closure precedes help. The second player's own-pool choice
+    # is collected before the first player's target is announced.
+    assert options["passout_pending"] == [1]
+    options = settlement_options(score, passouts((0, 0, 10), level=8), {"1": "pool"})
+    assert options["passout_pending"] == [0]
+    assert options["passout_choices"][0] == ["hill_first", "help"]
+    assert options["passout_targets"][0] == [1]
+    chosen = settlement_options(score, passouts((0, 0, 10), level=8), {"0": "help", "1": "pool"})
+    assert chosen["passout_pending"] == []
+    assert chosen["passout_defaults"] == ["help", "pool", "pool"]
 
 
 def test_table_theme_admin_only_and_projection(monkeypatch):

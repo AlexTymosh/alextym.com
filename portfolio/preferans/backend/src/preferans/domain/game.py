@@ -55,6 +55,17 @@ class EndReason(str, Enum):
     HALF_VIST = "half_vist"
     WITHOUT_THREE = "without_three"
     MISERE_ACCEPTED = "misere_accepted"
+    ALL_MINE_ACCEPTED = "all_mine_accepted"
+
+
+@dataclass(frozen=True, slots=True)
+class TrickClaim:
+    seat: int
+    at_tricks: int
+    partial: tuple[PlayedCard, ...] = ()
+    approved: frozenset[int] = frozenset()
+    rejected_by: int | None = None
+    accepted: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +98,11 @@ class GameState:
     end_reason: EndReason | None = None
     half_vist_receiver: int | None = None
     misere_votes: frozenset[int] = frozenset()
+    claim: TrickClaim | None = None
+
+    @property
+    def claim_pending(self) -> bool:
+        return self.claim is not None and not self.claim.accepted and self.claim.rejected_by is None
 
     @property
     def is_passout(self) -> bool:
@@ -337,7 +353,7 @@ def decide_defense(state: GameState, actor: int, decision: DefenseDecision) -> G
 
 
 def choose_defense_mode(state: GameState, actor: int, mode: DefenseMode) -> GameState:
-    if state.phase != Phase.CHOOSE_MODE or not isinstance(mode, DefenseMode):
+    if state.claim_pending or state.phase != Phase.CHOOSE_MODE or not isinstance(mode, DefenseMode):
         raise RuleViolation("Defense mode cannot be selected now")
     visters = [seat for seat, d in enumerate(state.defense) if d == DefenseDecision.VIST]
     passers = [seat for seat, d in enumerate(state.defense) if d == DefenseDecision.PASS]
@@ -359,7 +375,11 @@ def choose_defense_mode(state: GameState, actor: int, mode: DefenseMode) -> Game
 
 
 def legal_play_cards(state: GameState, owner: int) -> tuple[Card, ...]:
-    if state.phase not in (Phase.PLAY, Phase.OPENING_LEAD) or state.turn != owner:
+    if (
+        state.claim_pending
+        or state.phase not in (Phase.PLAY, Phase.OPENING_LEAD)
+        or state.turn != owner
+    ):
         return ()
     if state.phase == Phase.OPENING_LEAD and owner != state.declarer:
         return ()

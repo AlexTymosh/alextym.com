@@ -272,3 +272,9 @@
 .headerStatus[data-offline="true"] .statusOff { background:#ff4545; }
 .transparencySetting { display:grid; gap:.35rem; }
 .transparencySetting input { width:100%; }
+
+/* PR24: compact header and visible correction confirmation. */
+.tableRoot .compactHeader { flex-direction:row; align-items:center; justify-content:space-between; gap:.4rem; }
+.tableRoot .compactHeader .eyebrow { margin:0; }
+.root button.confirmAdjustment { display:block; margin-top:.65rem; background:#e3c674; color:#172a20; font-weight:700; border:2px solid #f4df9d; }
+.root button.confirmAdjustment:disabled { opacity:.65; }

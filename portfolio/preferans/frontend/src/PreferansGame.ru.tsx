@@ -34,6 +34,7 @@ import { SeatSwap } from "./SeatSwap.ru";
 import { BidPanel } from "./BidPanel.ru";
 import { CycleSetting } from "./CycleSetting.ru";
 import { DealStatus } from "./DealStatus.ru";
+import { ClaimPanel } from "./ClaimPanel.ru";
 import { orderHand, ownCards, type SortMode } from "./interaction-model";
 import { autoSettlementAllowed } from "./table-pr20";
 import { fallbackDelay, gameCooldown } from "./transport-budget";
@@ -79,6 +80,7 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
   onStart: () => void; onSettle: () => void;
 }) {
   const myTurn = allowedToAct(view);
+  if(view.claim?.status==="pending")return null;
   if (view.status === "playing" && (view.controls?.undo || (view.controls?.paused && !replayMoveAllowed(view)))) {
     return null;
   }
@@ -92,6 +94,16 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
     </section>;
   }
   if (view.status === "awaiting_settlement") {
+    const choices=view.settlement_options;
+    const waiting=choices?.passout_pending??[];
+    if(waiting.length){
+      const name=(seat:number)=>profiles?.[seat]?.name||seatNames[seat];
+      const mine=view.my_seat!==null&&waiting.includes(view.my_seat)?view.my_seat:null;
+      const targets=mine===null?[]:choices?.passout_targets?.[mine]??[];
+      return <section className={styles.actionPanel} aria-label="Бонус распасов"><h3>Бонус за ноль взяток</h3>
+        {mine!==null?<div className={styles.actions}>{choices?.passout_choices?.[mine]?.map(route=><button type="button" key={route} disabled={busy||!!view.controls?.paused} onClick={()=>command("passout_reward",{route})}>{route==="hill_first"?"Списать с горы":route==="pool"?"Записать себе в пулю":targets.length?`Написать ${targets.length>1?"поровну ":""}на ${targets.map(name).join(" и ")}`:"Расписать висты поровну"}</button>)}</div>:<p>Ожидаем решения: {waiting.map(name).join(", ")}</p>}
+      </section>;
+    }
     if(view.settlement_options?.regular_choice===false)return null;
     if(!view.settlement_options)return view.room_admin?<button type="button" className={styles.primary} disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} onClick={onSettle}>Рассчитать раздачу</button>:null;
     return <section className={styles.actionPanel} aria-labelledby="preferans-actions"><h3 id="preferans-actions">Сдача завершена</h3>
@@ -437,6 +449,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const settle = () => {
     if (!view) return;
     const token = newKey();
+    if(view.settlement_options?.passout_pending?.length)return;
     const routes: Array<"pool"|"hill_first"|"help"> = view.settlement_options?.passout_defaults ?? ["pool", "pool", "pool"];
     const route = view.settlement_options?.regular_choice ? regularRoute : "pool";
     void mutate("расчёт раздачи", () => settleRoom(view.room_id, token, view.version, route, routes));
@@ -565,9 +578,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       onStart={start} onSettle={settle} />
   </>;
   return <CardBackContext.Provider value={back}><main className={`${styles.root} ${styles.tableRoot}`}>
-    <header className={styles.header}>
-      <div><p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p><h1>Преферанс</h1>
-</div>
+    <header className={`${styles.header} ${styles.compactHeader}`}>
+      <p className={styles.eyebrow}>Частная игра · Преферанс по-запорожски</p>
       <div className={styles.headerTools}><div className={styles.headerStatus} data-offline={!online&&!rtReady?"true":undefined}><span className={online ? styles.statusDot : styles.statusOff} aria-hidden="true" />
         {rtReady ? "Обновление в реальном времени" : online ? "Резервная связь" : "Переподключение"}</div></div>
     </header>
@@ -591,21 +603,23 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
 
         {view && <>
           <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation} leave={leaveRoom}
-            controls={<><PreferansControls view={view} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
+            controls={<><PreferansControls view={view} profiles={profiles} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
             urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
-            shared={view.presentation?.enabled ? openShared : undefined}
+            shared={view.presentation?.enabled&&view.claim?.status!=="pending" ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
-              theme={selectedTheme} surfaceOpacity={opacity} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+              theme={selectedTheme} surfaceOpacity={opacity} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={`${dropNotice||status|| (view.controls?.paused?"Пауза":statusNames[view.status])} · ${phaseLabel(view.phase)}${isPlay&&view.turn!=null?` · Ход: ${profiles?.[view.turn]?.name||seatNames[view.turn]}`:""}${isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat?" · Управляешь открытой рукой":""}`}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
+              claimPanel={<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/>}
+              claimButton={view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:undefined}
               hand={ownHand} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}
               mediaForSeat={LIVE_MEDIA_ENABLED && !archived && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}
               onScore={view.presentation?.enabled?()=>openShared("score_sheet"):undefined}
-              objects={view.presentation?.enabled ? <SharedObjects busy={busy} open={openShared}/> : undefined}
+              objects={view.presentation?.enabled ? <SharedObjects busy={busy||view.claim?.status==="pending"} open={openShared}/> : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
               sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} sheetExit={<SheetExit view={view} busy={busy} command={command}/>}/>}/>
           </ImmersiveMenu>

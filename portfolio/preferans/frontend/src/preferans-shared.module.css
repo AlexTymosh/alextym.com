@@ -11,3 +11,14 @@
 .scoreClose { justify-content:space-between; gap:.5rem; flex-wrap:wrap; }
 .scoreClose>button:last-child { margin-left:auto; }
 @media(max-height:650px) and (orientation:landscape) { .objects { bottom:33%; } .radioButton { width:clamp(72px,11cqw,125px); } }
+
+/* PR24: centred last-trick overlay and compact table furniture. */
+.lastTrickOverlay { position:absolute; z-index:16; top:50%; left:50%; transform:translate(-50%,-50%); --replay-w:clamp(55px,9cqw,95px); width:calc(3 * var(--replay-w) + 2.9rem); max-width:calc(100% - 16px); box-sizing:border-box; max-height:80dvh; overflow:auto; }
+.lastTrickOverlay header { flex-wrap:wrap; }
+.lastTrickOverlay .replay { gap:.5rem; }
+.lastTrickOverlay .replay>div { width:var(--replay-w); min-width:0; overflow-wrap:anywhere; }
+.viewerTitle { margin:0 0 .4rem; text-align:center; font-weight:700; }
+.breakButton { position:absolute; left:clamp(10px,2cqw,28px); bottom:8px; z-index:6; width:max-content; }
+.objects { right:clamp(8px,2cqw,28px); bottom:8px; }
+.radioButton { width:clamp(147px,23.4cqw,273px); }
+@media(max-height:650px) and (orientation:landscape) { .objects { bottom:5px; } .radioButton { width:clamp(108px,16.5cqw,188px); } .breakButton { bottom:5px; } }

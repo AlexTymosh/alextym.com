@@ -4,26 +4,14 @@ import { CardArtwork } from "./CardArtwork.ru";
 import { type RoomView, suitSymbol } from "./game-model.ru";
 import { type SeatProfile } from "./table-model";
 import { Notebook } from "./Notebook.ru";
+import { VesnaRadio } from "./VesnaRadio.ru";
 import { musicPosition, TRACKS, type Music, type OverlayKind, type SharedAction } from "./presentation-model";
 import styles from "./preferans-shared.module.css";
 
 export type SharedCommand=(action:SharedAction,args?:Record<string,unknown>)=>void;
 const labels:Record<OverlayKind,string>={score_sheet:"Пулька",radio:"Магнитофон",last_trick:"Последняя взятка",widow_replay:"Прикуп",discard_replay:"Просмотр сноса"};
 const names=(seat:number,profiles:SeatProfile[]|null)=>profiles?.[seat]?.name||`Игрок ${seat+1}`;
-function RadioArt(){return <svg viewBox="0 0 300 142" aria-hidden="true" className={styles.radioArt}>
-  <rect x="95" y="4" width="110" height="22" rx="7" fill="none" stroke="#b6b4a7" strokeWidth="8"/>
-  <rect x="3" y="24" width="294" height="114" rx="8" fill="#30332e" stroke="#c7c0aa" strokeWidth="3"/>
-  <rect x="12" y="31" width="276" height="23" rx="3" fill="#aeaa97"/>
-  <rect x="19" y="35" width="185" height="14" fill="#2f3932"/>
-  {Array.from({length:20},(_,i)=><path key={i} d={`M${24+i*9} 36v${i%5===0?11:6}`} stroke="#e3c479"/>)}
-  <circle cx="265" cy="42" r="10" fill="#3a3b34" stroke="#ded5be"/>
-  {[53,247].map(x=><g key={x}><circle cx={x} cy="95" r="36" fill="#141a16" stroke="#8c8d7e" strokeWidth="3"/>{[8,15,22,29].map(r=><circle key={r} cx={x} cy="95" r={r} fill="none" stroke="#454942" strokeWidth="2"/>)}</g>)}
-  <rect x="99" y="61" width="102" height="66" rx="4" fill="#bdb6a3"/>
-  <rect x="108" y="71" width="84" height="37" rx="3" fill="#454a41"/>
-  {[125,175].map(x=><circle key={x} cx={x} cy="89" r="12" fill="#d7cdb6" stroke="#6b6c60" strokeWidth="5"/>)}
-  <rect x="134" y="84" width="32" height="11" fill="#191f19"/>
-  <text x="150" y="121" fill="#252c25" textAnchor="middle" fontSize="10" fontWeight="bold">STEREO</text>
-</svg>}
+function RadioArt(){return <VesnaRadio className={styles.radioArt}/>;}
 export function SharedObjects({busy,open}:{busy:boolean;open:(kind:OverlayKind)=>void}){
   return <div className={styles.objects}>
     <button type="button" className={styles.radioButton} disabled={busy} onClick={()=>open("radio")} aria-label="Открыть магнитофон"><RadioArt/></button>
@@ -70,14 +58,14 @@ export function SharedRoom({view,profiles,busy,command,serverNow,sheetExit}:{vie
     <audio ref={radio.audio} preload="none" onError={()=>radio.setFailed(true)}/>
     {p.enabled&&(p.music.playing||radio.blocked)&&radio.needsGesture&&<button type="button" onClick={radio.unlock}>Включить звук на моём устройстве</button>}
     {radio.failed&&<p role="status">Аудиофайл недоступен. Игра продолжается.</p>}
-    {p.enabled&&!p.break&&<button type="button" disabled={busy} onClick={()=>command("break_start")}>Перерыв</button>}
+    {p.enabled&&!p.break&&<button className={styles.breakButton} type="button" disabled={busy||view.claim?.status==="pending"} onClick={()=>command("break_start")}>Перерыв</button>}
     {p.break&&<div className={styles.breakPanel} role="status"><strong>Общий перерыв · готовность {p.break.ready.filter(Boolean).length}/3</strong>
       <p>{p.break.ready.map((v,i)=>`${names(i,profiles)}: ${v?"готов":"ожидает"}`).join(" · ")}</p>
       {my!==null&&<button type="button" disabled={busy||!p.enabled} onClick={()=>command("break_ready",{break_id:p.break!.id,ready:!p.break!.ready[my]})}>{p.break.ready[my]?"Отозвать готовность":"Готов продолжить"}</button>}
     </div>}
-    {p.overlay&&<section className={`${styles.panel} ${p.overlay.kind==="score_sheet"?styles.scoreOverlay:""}`} role={p.overlay.kind==="score_sheet"?"dialog":undefined} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind}>
-      {p.overlay.kind!=="score_sheet"&&<header><div><strong>{labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small></div><button type="button" disabled={busy} onClick={close}>Закрыть</button></header>}
-      {p.overlay.kind==="score_sheet"&&<><Notebook view={view} profiles={profiles}/><footer className={styles.scoreClose}>{sheetExit}<button type="button" disabled={busy} onClick={close}>Закрыть</button></footer></>}
+    {p.overlay&&<section className={`${styles.panel} ${p.overlay.kind==="score_sheet"?styles.scoreOverlay:p.overlay.kind==="last_trick"?styles.lastTrickOverlay:""}`} role={p.overlay.kind==="score_sheet"||p.overlay.kind==="last_trick"?"dialog":undefined} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind}>
+      {p.overlay.kind!=="score_sheet"&&<header><div><strong>{p.overlay.kind==="last_trick"?`${names(p.overlay.seat,profiles)} смотрит последнюю взятку`:labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small></div><button type="button" disabled={busy} onClick={close}>Закрыть</button></header>}
+      {p.overlay.kind==="score_sheet"&&<><p className={styles.viewerTitle}>{names(p.overlay.seat,profiles)} смотрит листик</p><Notebook view={view} profiles={profiles}/><footer className={styles.scoreClose}>{sheetExit}<button type="button" disabled={busy} onClick={close}>Закрыть</button></footer></>}
       {p.overlay.kind==="last_trick"&&<><div className={styles.replay}>{(view.last_trick??[]).map(play=><div key={play.owner}><span>{names(play.owner,profiles)}</span><CardArtwork card={play.card}/></div>)}</div><p>Победитель: {names(view.last_trick_winner??0,profiles)}{view.last_trick_suit?` · Масть ${suitSymbol(view.last_trick_suit)}`:""}. Следующий разрешённый ход закроет просмотр.</p></>}
       {p.overlay.kind==="widow_replay"&&<div className={styles.replay}>{(view.widow??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>)}</div>}
       {p.overlay.kind==="discard_replay"&&<div className={styles.replay}>{view.my_seat===view.declarer&&view.my_seat===p.overlay.seat ? (view.own_discard??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>) : <p>{names(p.overlay.seat,profiles)} смотрит свои сброшенные карты.</p>}</div>}

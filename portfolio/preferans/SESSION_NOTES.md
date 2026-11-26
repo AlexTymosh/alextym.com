@@ -77,3 +77,7 @@ Base: 2bc7f789e92bff14b3f1c0a998ad301b745b2204 (PR #290 merged). Place the deck 
 - Add bounded seated-player directory names and local room age; show history by default.
 - Update beta labels, radio placement, passout widow display and outside-click menu dismissal.
 - Production and Firebase configuration unchanged. Full CI and three-player visual acceptance remain pending.
+
+## PR24 candidate — consensual remaining tricks and outcome-based reward routing
+
+Owner confirmed the current rules change without a new ruleset version. Claims require the explicitly agreed voters; accepted claims award only the remaining count and retain actual played trick records. Rejection restores play, and another offer becomes available after a completed trick. Outcome hill penalties block priority help (including passouts); counters and manual adjustments do not. Passout reward decisions are authenticated seat choices and gate settlement. UI refinements, notebook marks, FAQ and regression tests included. Full repository CI and three-device UAT remain required. No cloud configuration or billing changes.

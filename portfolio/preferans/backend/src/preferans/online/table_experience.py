@@ -2,6 +2,8 @@
 
 import json
 
+from preferans.domain.reward_routing import blocked_players, passout_options, priority_targets
+
 THEMES = ("felt", "blue", "wood", "glass")
 
 
@@ -20,6 +22,9 @@ def mark_activity(room, game, now):
         len(game.trick),
         [d.value if d else None for d in game.defense],
         game.mode.value if game.mode else None,
+        [game.claim.seat, game.claim.at_tricks, game.claim.rejected_by, game.claim.accepted]
+        if getattr(game, "claim", None) is not None
+        else None,
     ]
     key = json.dumps(key, separators=(",", ":"))
     if room.get("activity_key") != key:
@@ -27,27 +32,23 @@ def mark_activity(room, game, now):
         room["activity_started_at_ms"] = now
 
 
-def settlement_options(score, game):
-    """Hide meaningless choices; do not modify the accounting engine.
-
-    Own open pools receive regular rewards first. Passout routes obey the
-    engine's mandatory closure and remainder constraints.
-    """
-    choices = False
-    defaults = ["pool", "pool", "pool"]
+def settlement_options(score, game, selected=None):
+    result = {"regular_choice": False, "passout_defaults": ["pool"] * 3}
     if game.is_passout:
-        amount = score.ruleset.rules.passout_cost(score.passout_level)
-        for seat, tricks in enumerate(game.tricks_won):
-            gap = score.target - score.pool[seat]
-            if tricks == 0 and 0 < gap < amount and score.hill[seat] > 0:
-                defaults[seat] = "hill_first"
-    elif game.contract and game.declarer is not None:
+        result.update(passout_options(score, game, selected))
+    elif game.contract and game.declarer is not None and not game.is_misere:
         seat = game.declarer
         level = game.contract.level
-        won = game.end_reason.value in ("all_passed", "half_vist") if game.end_reason else False
-        if level is not None and game.end_reason and game.end_reason.value == "played":
-            won = game.tricks_won[seat] >= level
-        choices = bool(
-            level is not None and won and score.pool[seat] >= score.target and score.hill[seat] > 0
+        reason = game.end_reason.value if game.end_reason else ""
+        won = reason in ("all_passed", "half_vist") or (
+            level is not None
+            and reason in ("played", "all_mine_accepted")
+            and game.tricks_won[seat] >= level
         )
-    return {"regular_choice": choices, "passout_defaults": defaults}
+        _, denied = priority_targets(
+            score.pool, score.target, seat, blocked_players(game, score.ruleset.rules)
+        )
+        result["regular_choice"] = bool(
+            won and score.pool[seat] >= score.target and score.hill[seat] > 0 and not denied
+        )
+    return result

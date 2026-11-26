@@ -382,3 +382,31 @@
 .roomEnter span,.roomEnter strong { display:block; overflow-wrap:anywhere; }
 .roomItem .roomLink { flex-shrink:0; }
 .roomItem:focus-within { border-color:#e3c67a; }
+
+/* PR24: table-local presentation. */
+.table .trickField .tableCard { width:min(calc(var(--side-w,50px) * 1.2), 100%); }
+.table .firstHand { position:absolute; bottom:3px; left:4px; z-index:6; padding:2px 5px; border-radius:4px; background:#f0d697; color:#302819; font-weight:700; font-size:clamp(9px,1.1cqw,13px); pointer-events:none; }
+.table .avatar .activityRing { overflow:visible; }
+.table .bidGroups button { font-size:1.4375em; min-height:2.4725rem; padding:.345rem .575rem; }
+.table .decision .bidSuits button { min-width:2.07rem; padding:.2875rem; }
+.totusOptions { display:inline-flex; flex-wrap:wrap; gap:.25rem; }
+.viewerTitle { margin:0 0 .45rem; text-align:center; font-weight:700; }
+.claimButton { display:flex; justify-content:center; }
+.table .ownHand[data-claim-hidden="true"] { visibility:hidden; pointer-events:none; }
+.claimPanel,.localReplay { position:absolute; left:50%; transform:translate(-50%,-50%); z-index:18; top:50%; width:max-content; max-width:calc(100% - 20px); box-sizing:border-box; padding:.65rem; display:grid; gap:.5rem; border:1px solid #e3c674; border-radius:10px; background:#203a30; color:#f8eed9; text-align:center; }
+.claimPanel { top:57%; width:min(86%,850px); }
+.claimCards { display:flex; justify-content:center; gap:3px; flex-wrap:wrap; }
+.claimCards>span { width:min(9%,75px); min-width:24px; }
+.claimCards img,.localReplayCards img { width:100%; height:auto; }
+.claimCards { animation:claimReveal .3s ease-out both; }
+@keyframes claimReveal { from { opacity:.3; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .claimCards { animation:none; } }
+.table[data-furniture="true"] .bottomArea { padding-bottom:clamp(64px,10cqw,126px); }
+@media(max-height:650px) and (orientation:landscape) { .table[data-furniture="true"] .bottomArea { padding-bottom:clamp(52px,7.5cqw,88px); } }
+.claimVotes,.localReplayCards { display:flex; justify-content:center; gap:.4rem; }
+.claimVotes button:first-child { background:#315b3d; }
+.claimVotes button:last-child { background:#71332d; }
+.claimNotice { position:absolute; left:50%; top:40%; transform:translateX(-50%); z-index:9; background:#203a30; padding:.5rem .8rem; border-radius:8px; color:#f8eed9; text-align:center; pointer-events:none; }
+.localReplay { width:calc(3 * clamp(60px,10cqw,100px) + 2.4rem); }
+.localReplayCards>div { width:clamp(60px,10cqw,100px); min-width:0; overflow-wrap:anywhere; }
+@media(max-height:650px) and (orientation:landscape) { .claimPanel { top:53%; } .claimCards>span { max-width:50px; } .table .bidGroups button { min-height:2rem; } }

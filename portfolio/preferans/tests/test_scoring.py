@@ -262,10 +262,16 @@ def test_equal_pool_help_splits_even_amount():
 
 def test_equal_pool_help_odd_point_creates_two_five_vists():
     start = ledger(pool=(20, 15, 15))
+    # Both defenders receive a shortfall penalty on ten: neither can receive help.
     state = settle(played(10, (10, 0, 0)), points=start)
+    assert state.pool == (20, 15, 15)
+    assert state.vists[0][1:] == (50, 50)
+    # A successful misere has no defender penalties, so ten points fill both.
+    state = settle(
+        played(contract=Bid.misere(), tricks=(0, 5, 5), defense=(None, None, None)), points=start
+    )
     assert state.pool == (20, 20, 20)
     assert state.vists[0][1:] == (50, 50)
-    # 10 points exactly fill both. Test the actual odd-remainder case separately.
     start = ledger(pool=(20, 17, 17))
     state = settle(played(8, (8, 1, 1)), points=start)
     assert state.vists[0][1:] == (30, 30)
@@ -326,7 +332,8 @@ def test_passout_bonus_closed_pool_mandatory_hill_then_help():
     start = ledger(pool=(20, 20, 19), hill=(2, 0, 0), passout=8)
     state = settle(game, points=start)
     assert state.hill[0] == 0
-    assert state.vists[0][2] == 10
+    assert state.pool == (20, 20, 19)
+    assert state.vists[0][1:] == (5, 5)
 
 
 def test_passout_bonus_insufficient_pool_can_pay_hill():

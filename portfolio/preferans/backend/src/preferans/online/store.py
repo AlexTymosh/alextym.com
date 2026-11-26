@@ -126,6 +126,7 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     controls["candidate"] = None
     controls.pop("next_deal", None)
     controls.pop("sheet_offers", None)
+    controls.pop("passout_choices", None)
     controls.pop("reveal", None)
     controls.pop("revealed_cards", None)
     mark_activity(room, game, now)
@@ -512,6 +513,12 @@ class FirestoreRooms:
                     score, auto_events = reconcile(controls, game, score, now, room.get("game_id"))
                 except ControlError as exc:
                     raise StoreError(exc.status, exc.detail) from exc
+            if (
+                isinstance(game, GameState)
+                and game.claim_pending
+                and action not in {"claim_vote", "pulse", "sheet_discard", "archive"}
+            ):
+                raise StoreError(409, "Resolve the remaining-tricks offer first")
             event_data = {}
             sheet_loser = None
             choice_update = None
@@ -719,6 +726,24 @@ class FirestoreRooms:
                         room, controls, game, score, now
                     )
                     auto_events.extend(events)
+            elif action == "passout_reward":
+                if (
+                    room["status"] != "awaiting_settlement"
+                    or not isinstance(game, GameState)
+                    or not game.is_passout
+                ):
+                    raise StoreError(409, "No passout reward choice")
+                seat = room["seats"].index(uid)
+                selected = controls.setdefault("passout_choices", {})
+                options = settlement_options(score, game, selected)
+                if (
+                    set(args) != {"route"}
+                    or seat not in options["passout_pending"]
+                    or args["route"] not in options["passout_choices"][seat]
+                ):
+                    raise StoreError(422, "Invalid or already submitted reward choice")
+                selected[str(seat)] = args["route"]
+                event_data = {"seat": seat, "route": args["route"]}
             elif action == "settle":
                 if room["status"] != "awaiting_settlement" or not isinstance(game, GameState):
                     raise StoreError(409, "No completed deal to settle")
@@ -734,6 +759,18 @@ class FirestoreRooms:
                     raise StoreError(409, "Pending undo decision")
                 if set(args) != {"regular_route", "passout_routes"}:
                     raise StoreError(422, "Invalid settlement options")
+                options = settlement_options(score, game, controls.get("passout_choices"))
+                if options.get("passout_pending"):
+                    raise StoreError(409, "Awaiting player reward decisions")
+                if (
+                    game.is_passout
+                    and any(options.get("passout_choices", []))
+                    and (
+                        not isinstance(args["passout_routes"], (list, tuple))
+                        or list(args["passout_routes"]) != options["passout_defaults"]
+                    )
+                ):
+                    raise StoreError(422, "Settlement must use the players' confirmed choices")
                 try:
                     routes = tuple(RewardRoute(x) for x in args["passout_routes"])
                     score = settle_game(
@@ -833,6 +870,7 @@ class FirestoreRooms:
                     raise StoreError(403, "Room admin required")
                 if set(args) != {"field", "seat", "against", "delta", "reason"}:
                     raise StoreError(422, "Invalid adjustment")
+                controls.pop("passout_choices", None)
                 try:
                     score, event_data = adjust_score(
                         score,

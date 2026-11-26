@@ -14,6 +14,6 @@ export function PreferansSiteBar() {
       <span>ALEXTYM.COM</span>
     </Link>
     <div id="preferans-menu-slot" className="preferans-site-menu"/>
-    <div className="preferans-site-account"><button type="button" className="preferans-fullscreen" aria-label={"\u041f\u043e\u043b\u043d\u043e\u044d\u043a\u0440\u0430\u043d\u043d\u044b\u0439 \u0440\u0435\u0436\u0438\u043c"} title="Fullscreen" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>⛶</button>{avatar}<span>{account?.displayName??""}</span></div>
+    <div className="preferans-site-account"><button type="button" className="preferans-fullscreen" aria-label={"\u041f\u043e\u043b\u043d\u043e\u044d\u043a\u0440\u0430\u043d\u043d\u044b\u0439 \u0440\u0435\u0436\u0438\u043c"} title="Fullscreen" onClick={()=>{if(document.fullscreenElement)void document.exitFullscreen().catch(()=>undefined);else void document.documentElement.requestFullscreen?.().catch(()=>undefined);}}>⛶ <span>Fullscreen</span></button><span aria-hidden="true" className="preferans-site-divider">|</span>{avatar}<span>{account?.displayName??""}</span></div>
   </header>;
 }
