@@ -10,7 +10,7 @@ from __future__ import annotations
 from enum import Enum
 from copy import deepcopy
 
-from .auction import Bid, BidKind, RuleViolation
+from .auction import BidKind, RuleViolation
 from .game import DefenseDecision, EndReason, GameState, Phase
 from .ledger import EntryKind, ScoreState, _Posting
 from .play import CompletedTrick
@@ -75,6 +75,8 @@ def _regular_reward(
     if route not in (RewardRoute.POOL, RewardRoute.HILL_FIRST):
         raise RuleViolation("Regular rewards require POOL or HILL_FIRST")
     if route == RewardRoute.HILL_FIRST:
+        if post.pool[owner] != post.rules.pool_target:
+            raise RuleViolation("Close own pool before paying hill")
         paid = min(amount, post.hill[owner])
         post.pay_hill(owner, paid, "successful_contract_hill_payment")
         amount -= paid
@@ -93,15 +95,14 @@ def _stage_passout_bonus(post: _Posting, owner: int, amount: int, route: RewardR
             post.pay_hill(owner, paid, "closed_pool_passout_hill_payment")
             return amount - paid
         return amount
-    if amount < gap:
-        if route == RewardRoute.POOL:
-            post.add_pool(owner, amount, "passout_zero_tricks")
-        elif route == RewardRoute.HILL_FIRST and post.hill[owner] > 0:
-            paid = min(amount, post.hill[owner])
-            post.pay_hill(owner, paid, "passout_hill_payment")
-            post.add_pool(owner, amount - paid, "passout_hill_overflow_to_pool")
-        else:
-            raise RuleViolation("Choose own pool or available hill for a short passout bonus")
+    if amount <= gap:
+        if route != RewardRoute.POOL:
+            raise RuleViolation("Passout reward must fill the open pool first")
+        post.add_pool(
+            owner,
+            amount,
+            "passout_zero_tricks" if amount < gap else "mandatory_passout_pool_closure",
+        )
         return 0
     post.add_pool(owner, gap, "mandatory_passout_pool_closure")
     remainder = amount - gap
@@ -254,17 +255,29 @@ def _check_finished(game: GameState) -> None:
             != game.tricks_won
         ):
             raise RuleViolation("Invalid consensual remaining-tricks result")
+    elif game.end_reason == EndReason.MISERE_ACCEPTED:
+        if (
+            game.is_passout
+            or not game.is_misere
+            or game.winning_bid != game.contract
+            or game.declarer not in range(3)
+            or game.misere_votes != frozenset(range(3)) - {game.declarer}
+            or len(game.discarded) != (2 if game.contract.uses_widow else 0)
+            or game.trick
+            or game.tricks_won[game.declarer] != 0
+            or not 0 <= len(game.completed_tricks) < 10
+            or any(
+                not isinstance(t, CompletedTrick) or t.number != i or t.winner not in range(3)
+                for i, t in enumerate(game.completed_tricks, 1)
+            )
+            or tuple(sum(t.winner == i for t in game.completed_tricks) for i in range(3))
+            != game.tricks_won
+        ):
+            raise RuleViolation(
+                "Misere acceptance requires both defenders and a successful actual history"
+            )
     elif game.completed_tricks or game.trick or any(game.tricks_won):
         raise RuleViolation("An unplayed deal cannot claim taken tricks")
-    if game.end_reason == EndReason.MISERE_ACCEPTED and (
-        game.is_passout
-        or game.contract != Bid.misere()
-        or game.winning_bid != Bid.misere()
-        or game.declarer not in range(3)
-        or game.misere_votes != frozenset(range(3)) - {game.declarer}
-        or len(game.discarded) != 2
-    ):
-        raise RuleViolation("Misere acceptance requires both defenders and a valid discard")
     if not game.is_passout and (game.declarer is None or game.contract is None):
         raise RuleViolation("A declarer and final contract are required")
 

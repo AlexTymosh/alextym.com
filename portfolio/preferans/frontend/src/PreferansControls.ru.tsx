@@ -6,29 +6,20 @@ import { type CommandAction, type RoomView } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
 
 import type { SeatProfile } from "./table-model";
-type AdjustRequest = { field: "pool" | "hill" | "vist"; seat: number; against: number | null;
-  delta: number; reason: string };
-
 function secondsLeft(deadline: number | null, remaining: number | undefined, now: number): number {
   return Math.max(0, Math.ceil(((deadline === null ? remaining ?? 0 : deadline - now) / 1000)));
 }
 
-export function PreferansControls({ view, profiles, busy, command, adjust }: {
+export function PreferansControls({ view, profiles, busy, command }: {
   profiles:SeatProfile[]|null;
   view: RoomView;
   busy: boolean;
   command: (action: CommandAction, args?: Record<string, unknown>) => void;
-  adjust: (value: AdjustRequest) => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
   const [counterSec, setCounterSec] = useState(180);
   const [multiplier, setMultiplier] = useState(3);
   const [voteSec, setVoteSec] = useState(120);
-  const [field, setField] = useState<AdjustRequest["field"]>("hill");
-  const [seat, setSeat] = useState(0);
-  const [against, setAgainst] = useState(1);
-  const [deltaText, setDeltaText] = useState("1");
-  const [reason, setReason] = useState("");
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
@@ -64,16 +55,8 @@ export function PreferansControls({ view, profiles, busy, command, adjust }: {
     !controls.undo && !controls.counter;
   const counter = controls.counter;
   const vote = controls.undo;
-  const delta = Number(deltaText);
-  const before = field === "hill" ? view.score?.hill[seat] :
-    field === "pool" ? view.score?.pool[seat] : view.score?.vists[seat]?.[against];
-  const after = before === undefined ? null : before + delta;
-  const validAdjustment = Number.isSafeInteger(delta) && delta !== 0 && Math.abs(delta) <= 1000 &&
-    reason.trim().length >= 5 && reason.trim().length <= 180 && after !== null && after >= 0 &&
-    (field !== "pool" || (!view.final_review && after <= (view.score?.target ?? 20))) &&
-    (field !== "vist" || seat !== against);
   return <section className={styles.controlPanel} aria-labelledby="preferans-controls-heading">
-    <h3 id="preferans-controls-heading">Управление игрой</h3>
+    <h3 id="preferans-controls-heading">Счётчик и отмена действий</h3>
     {controls.paused && <p role="status" className={styles.controlAlert}>Пауза: таймеры заморожены. Проверь общие панели, перерыв и соединение.</p>}
     {counter && <div className={styles.controlNote} aria-live="off">
       <strong>На счётчике: {names[counter.target]}</strong>
@@ -96,34 +79,5 @@ export function PreferansControls({ view, profiles, busy, command, adjust }: {
         <button type="button" disabled={busy} onClick={() => command("undo_vote", { approve: false })}>Отказать</button>
       </div>}
     </div>}
-    {view.room_admin && view.status !== "closed" && view.score && <details name="preferans-control-group" className={styles.adjustments}>
-      <summary>Корректировка расчётов (только администратор)</summary>
-      <p className={styles.subtle}>До подтверждения итогов. Каждое изменение остаётся в журнале. Исправление ошибки — новая обратная операция.</p>
-      <div className={styles.adjustGrid}>
-        <label>Запись <select value={field} onChange={(e: ChangeEvent<HTMLSelectElement>) => setField(e.target.value as AdjustRequest["field"])}>
-          <option value="hill">Гора</option><option value="pool" disabled={!!view.final_review}>Пуля</option><option value="vist">Висты</option>
-        </select></label>
-        <label>Игрок <select value={seat} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSeat(Number(e.target.value))}>
-          {names.map((name, i) => <option key={i} value={i}>{name}</option>)}
-        </select></label>
-        {field === "vist" && <label>На кого <select value={against} onChange={(e: ChangeEvent<HTMLSelectElement>) => setAgainst(Number(e.target.value))}>
-          {names.map((name, i) => <option key={i} value={i}>{name}</option>)}
-        </select></label>}
-        <label>Изменение (+ или −) <input type="number" step="1" min="-1000" max="1000" value={deltaText} onChange={(e: ChangeEvent<HTMLInputElement>) => setDeltaText(e.target.value)} /></label>
-        <label>Причина <input maxLength={180} value={reason} onChange={(e: ChangeEvent<HTMLInputElement>) => setReason(e.target.value)} placeholder="Почему изменён расчёт" /></label>
-      </div>
-      <p aria-live="polite">Предпросмотр: {before ?? "?"} → {after ?? "?"}</p>
-      <button type="button" className={styles.confirmAdjustment} disabled={busy || view.claim?.status==="pending" || !validAdjustment} onClick={() => {
-        if (!validAdjustment || !window.confirm(`Записать корректировку: ${before} → ${after}?`)) return;
-        adjust({ field, seat, against: field === "vist" ? against : null, delta, reason: reason.trim() });
-      }}>Подтвердить корректировку</button>
-    </details>}
-    {(controls.adjustments?.length ?? 0) > 0 && <details name="preferans-control-group" className={styles.adjustments}>
-      <summary>Журнал корректировок ({controls.adjustments.length} последних)</summary>
-      <ol>{controls.adjustments.map((entry, index) => <li key={`${entry.game_version}-${index}`}>
-        {entry.field} · {names[entry.seat]}{entry.against !== null ? ` → ${names[entry.against]}` : ""}:
-        {" "}{entry.before} → {entry.after}. {entry.reason}
-      </li>)}</ol>
-    </details>}
   </section>;
 }

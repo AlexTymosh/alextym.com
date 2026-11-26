@@ -13,6 +13,7 @@ import {
 } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
 import { PreferansControls } from "./PreferansControls.ru";
+import { ScoreAdjustment } from "./ScoreAdjustment.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
 import { CardArtwork } from "./CardArtwork.ru";
@@ -36,6 +37,7 @@ import { BidPanel } from "./BidPanel.ru";
 import { CycleSetting } from "./CycleSetting.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { ClaimPanel } from "./ClaimPanel.ru";
+import { MisereOfferPanel } from "./MisereOfferPanel.ru";
 import { orderHand, ownCards, type SortMode } from "./interaction-model";
 import { autoSettlementAllowed } from "./table-pr20";
 import { fallbackDelay, gameCooldown } from "./transport-budget";
@@ -92,7 +94,7 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
       {(view.room_admin || (view.my_seat!==null&&dealerFor(view)===view.my_seat)) && <button type="button" className={styles.primary} disabled={busy || !mayStart(view)} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
-  if (view.final_review) return <section className={styles.actionPanel} aria-label="Проверка итогов">{view.room_admin?<button type="button" disabled={busy} className={styles.primary} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<p>Ожидаем подтверждения итогов администратором.</p>}</section>;
+  if (view.final_review) return null;
   if (view.status === "awaiting_settlement") {
     const choices=view.settlement_options;
     const waiting=choices?.passout_pending??[];
@@ -116,15 +118,7 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
     </section>;
   }
   if (view.status === "archived" || view.status === "closed") return null;
-  if (view.phase === "misere_offer") {
-    const name = profiles?.[view.declarer??-1]?.name || seatNames[view.declarer??0];
-    return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Предложение сыгранного мизера">
-      {myTurn?<div className={styles.actions}>
-        <button type="button" className={styles.primary} disabled={busy} onClick={()=>command("misere_vote",{approve:true})}>Согласен, {name} сыграл мизер.</button>
-        <button type="button" disabled={busy} onClick={()=>command("misere_vote",{approve:false})}>Да хрен там, играем!!!</button>
-      </div>:null}
-    </section>;
-  }
+  if (view.phase === "misere_offer") return null;
   if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
   return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Игровое действие">
     {view.phase === "auction" && <>
@@ -543,6 +537,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const openShared = (kind: OverlayKind) => shared("overlay_open", {kind});
   const visibleHand=draft?hand.filter(c=>!selected.includes(cardId(c))):hand;
   const settings=<div className={styles.settingsPanel}>
+    {view&&<><PreferansControls view={view} profiles={profiles} busy={busy} command={command}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
     <CycleSetting<SortMode> label="Сортировка карт" value={sortMode} options={[["grouped","По длине масти"],["suit","По порядку мастей"]]} onChange={changeSort}/>
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
@@ -589,7 +584,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if(view.status==="between")return view.next_deal&&REALTIME_ENABLED?<DealStatus view={view}/>:"Новая раздача";
     if(view.status==="awaiting_settlement"){
       const waiting=view.settlement_options?.passout_pending??[];
-      return waiting.length?`Бонус распасов · ожидаем: ${waiting.map(playerName).join(", ")}`:view.settlement_options?.regular_choice?`Ожидаем решение: ${playerName(view.declarer??0)}`:"Подсчёт результатов";
+      return waiting.length?`${waiting.map(playerName).join(", ")} ${waiting.length===1?"думает":"думают"} списать с горы или записать в пулю`:view.settlement_options?.regular_choice?`${playerName(view.declarer??0)} думает списать с горы или записать в пулю`:"Подсчёт результатов";
     }
     if(view.phase==="misere_offer")return `Мизер · ждём согласия ${view.misere_offer?.approved.length??0}/2`;
     if(view.phase==="discard"&&view.my_seat===view.declarer)return "Перетащи две карты в снос";
@@ -631,17 +626,16 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
 
         {view && <>
           <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation}
-            controls={<><PreferansControls view={view} profiles={profiles} busy={busy} command={command} adjust={adjust}/><ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
-            urgent={Boolean(view.reveal || view.controls?.counter || view.controls?.undo || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
+            urgent={Boolean(view.controls?.counter || view.controls?.undo || view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled&&view.claim?.status!=="pending" ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
-              theme={selectedTheme} roundTable={roundTable} tableSurface={surface} tableOpacity={1-tableTransparency/100} surfaceOpacity={opacity} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+              theme={selectedTheme} roundTable={roundTable} tableSurface={surface} tableOpacity={1-tableTransparency/100} surfaceOpacity={opacity} scoreAdjustment={<ScoreAdjustment view={view} profiles={profiles} busy={busy} adjust={adjust}/>} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
-              claimPanel={<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/>}
-              claimButton={view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:undefined}
+              claimPanel={<><ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/><MisereOfferPanel view={view} profiles={profiles} busy={busy} command={command}/></>}
+              claimButton={(view.can_offer_misere&&view.phase==="play"||view.can_claim&&view.claim?.status!=="pending")?<>{view.can_offer_misere&&view.phase==="play"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("misere_offer")}>{view.my_seat===view.declarer?"Показать карты и предложить что я сыграл":`Согласен, что ${playerName(view.declarer??0)} сыграл мизер`}</button>:null}{view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:null}</>:undefined}
               hand={ownHand} handCount={visibleHand.length} handBreaks={visibleHand.filter((card,index)=>index>0&&visibleHand[index-1].suit!==card.suit).length} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}
@@ -649,7 +643,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
               onScore={view.presentation?.enabled?()=>openShared("score_sheet"):undefined}
               objects={view.presentation?.enabled ? <SharedObjects busy={busy||view.claim?.status==="pending"} open={openShared}/> : undefined}
               onField={view.presentation?.overlay ? () => shared("overlay_close", {overlay_id: view.presentation?.overlay?.id}) : undefined}
-              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} sheetExit={<SheetExit view={view} busy={busy} command={command}/>}/>}/>
+              sharedPanel={view.presentation && <SharedRoom key={view.room_id} view={view} profiles={profiles} busy={busy} command={shared} serverNow={serverNow} scoreAdjustment={<ScoreAdjustment view={view} profiles={profiles} busy={busy} adjust={adjust}/>} sheetExit={<SheetExit view={view} busy={busy} command={command}/>}/>}/>
           </ImmersiveMenu>
         </>}
     </div>

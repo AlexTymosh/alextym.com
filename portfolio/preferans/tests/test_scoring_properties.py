@@ -26,7 +26,9 @@ def test_400_randomized_settlements_are_integer_and_zero_sum():
             initial,
             source,
             f"random-{n}",
-            regular_route=RewardRoute.HILL_FIRST if n % 2 else RewardRoute.POOL,
+            regular_route=RewardRoute.HILL_FIRST
+            if n % 2 and initial.pool[0] == initial.target
+            else RewardRoute.POOL,
         )
         assert initial.pool == old_pool and initial.hill == old_hill
         assert all(isinstance(v, int) and 0 <= v <= 20 for v in actual.pool)

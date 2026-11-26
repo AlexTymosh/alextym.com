@@ -66,8 +66,8 @@ from preferans.online.sheet_exit import (
 )
 from preferans.online.realtime import CHECKPOINT_MS, HubError, enabled as realtime_enabled, hub
 
-from preferans.online import accidental_reveal, punch_choices, ruleset_catalog
-from preferans.online.pause_clock import reasons, transition
+from preferans.online import punch_choices, ruleset_catalog
+from preferans.online.pause_clock import retire_reveal
 
 ROOM_ID = re.compile(r"^[0-9a-f]{32}$")
 
@@ -258,7 +258,10 @@ class FirestoreRooms:
             presence = hub.presence(room["id"], room["seats"], now)
             generation, interrupted = hub.generation(room["id"])
         restarted = controls.get("rt_epoch") != hub.epoch
+        retired = retire_reveal(controls, now)
         events = synchronize(controls, presence, hub.epoch, now, interrupted=interrupted)
+        if retired:
+            events.append({"action": "legacy_reveal_retired", "data": {}})
         events.extend(invalidate_ready(controls, presence, restarted or interrupted))
         if room["status"] == "playing":
             score, expired = tick_controls(controls, game, score, now, room.get("game_id"))
@@ -432,6 +435,8 @@ class FirestoreRooms:
     ) -> dict:
         if type(expected_version) is not int or expected_version < 0:
             raise StoreError(422, "Invalid version")
+        if action in {"reveal_report", "reveal_propose", "reveal_vote"}:
+            raise StoreError(422, "Accidental disclosure actions are retired")
         if not isinstance(args, dict):
             raise StoreError(422, "Invalid arguments")
         op_id = _key(uid, token)
@@ -514,6 +519,7 @@ class FirestoreRooms:
             if review and action not in {"score_adjust", "final_confirm"}:
                 raise StoreError(409, "Confirm or correct the final settlement first")
             now = self.now_ms()
+            retire_reveal(controls, now)
             auto_events = []
             # Reconcile timers at the same authoritative timestamp as this write.
             if review or action in SHEET_ACTIONS or action == "archive":
@@ -531,7 +537,6 @@ class FirestoreRooms:
                     controls.get("paused_at") is not None
                     and action not in {"score_adjust"}
                     and action not in PRESENTATION_ACTIONS
-                    and action not in accidental_reveal.ACTIONS
                     and not (action == "play" and allows_replay_move(controls))
                 ):
                     raise StoreError(409, "Game is paused for a connection or shared reason")
@@ -552,10 +557,6 @@ class FirestoreRooms:
             choice_rankings = []
             choice_ref = None
             seat_before = room["seats"].index(uid) if uid in room["seats"] else None
-            if controls.get(
-                "reveal"
-            ) and action not in accidental_reveal.ACTIONS | SHEET_ACTIONS | {"pulse", "archive"}:
-                raise StoreError(409, "Resolve the exposed card first")
             if pending_swap(room) and action in {
                 "dealer_pass",
                 "start",
@@ -597,23 +598,6 @@ class FirestoreRooms:
                 controls.pop("reveal", None)
                 controls.pop("revealed_cards", None)
                 event_data = {"reason": reason.strip(), "archived_at_ms": now}
-            elif action in accidental_reveal.ACTIONS:
-                if not use_rt and not can_start_counter(controls, now):
-                    transition(controls, reasons(controls) | {"connection_lost"}, now)
-                try:
-                    event_data, score, redeal = accidental_reveal.change(
-                        controls, room, game, score, seat_before, action, args, now
-                    )
-                except ControlError as exc:
-                    raise StoreError(exc.status, exc.detail) from exc
-                if redeal:
-                    old_game_id = room["game_id"]
-                    game = _begin_deal(room, score, controls, now, room["dealer"])
-                    event_data = {
-                        **event_data,
-                        "old_game_id": old_game_id,
-                        "new_game_id": room["game_id"],
-                    }
             elif action == "punch_choose":
                 if (
                     room["status"] != "closed"

@@ -51,11 +51,9 @@ def test_passout_routes_respect_mandatory_closure():
 
     score = ledger(pool=(18, 10, 20), hill=(5, 5, 5), passout=8)
     options = settlement_options(score, passouts((0, 0, 10), level=8))
-    # A mandatory closure precedes help. The second player's own-pool choice
-    # is collected before the first player's target is announced.
-    assert options["passout_pending"] == [1]
-    options = settlement_options(score, passouts((0, 0, 10), level=8), {"1": "pool"})
+    # The second player's open pool is credited first, without a hill choice.
     assert options["passout_pending"] == [0]
+    assert options["passout_choices"][1] == []
     assert options["passout_choices"][0] == ["hill_first", "help"]
     assert options["passout_targets"][0] == [1]
     chosen = settlement_options(score, passouts((0, 0, 10), level=8), {"0": "help", "1": "pool"})

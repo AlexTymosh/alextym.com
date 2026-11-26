@@ -71,6 +71,8 @@ def decode(obj: object, depth: int = 0) -> object:
         if cls is game.GameState:
             kwargs = dict(kwargs)
             kwargs.setdefault("misere_votes", {"$set": []})
+            kwargs.setdefault("misere_resume_turn", None)
+            kwargs.setdefault("misere_refused_at", None)
             kwargs.setdefault("claim", None)
         if set(kwargs) != expected:
             raise ValueError("State schema mismatch")

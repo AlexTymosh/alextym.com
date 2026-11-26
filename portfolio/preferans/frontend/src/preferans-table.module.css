@@ -632,3 +632,6 @@
 /* Long localized claim replies may wrap on narrow landscape screens. */
 .table .claimPanel .claimVotes { flex-wrap:wrap; }
 .table .claimPanel .claimVotes button { max-width:100%; white-space:normal; overflow-wrap:break-word; }
+
+.table .claimButton { display:flex; flex-wrap:wrap; gap:.3rem; justify-content:flex-start; }
+.table .claimButton button { max-width:100%; white-space:normal; }

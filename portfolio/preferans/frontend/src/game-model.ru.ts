@@ -3,7 +3,7 @@ import { isPresentation, replayMoveAllowed, type Presentation } from "./presenta
 import { isSeat } from "./sheet-exit-model";
 import { validClaim, type Claim } from "./claim-model";
 import { isSeatSwap, type SeatSwap } from "./seat-swap-model";
-import { isReleaseProjection, type Reveal, type RevealedCard, type PunchChoice } from "./release-model";
+import { isReleaseProjection, type PunchChoice } from "./release-model";
 export type Suit = "S" | "C" | "D" | "H";
 export type Card = { suit: Suit; rank: number };
 export type Bid = {
@@ -53,7 +53,7 @@ export type RoomView = {
   sheet_loser?: number;
   seat_swap?: SeatSwap; seat_revision?: number;
   can_archive?: boolean; archived_at_ms?: number;
-  reveal?: Reveal; revealed_cards?: RevealedCard[]; punch_choices?: PunchChoice[];
+  punch_choices?: PunchChoice[];
   last_trick_suit?: Suit | null;
   lobby_setup?: { ready: boolean[]; dealer: number; target: number; ruleset: string; ruleset_version: number; ruleset_name?: string; ruleset_parameters?: Record<string,number|number[]>; ruleset_snapshot_hash?: string };
   phase?: Phase; turn?: number | null; controller?: number | null;
@@ -64,13 +64,14 @@ export type RoomView = {
   next_deal?: { after_game_id: string; deadline_ms: number | null; remaining_ms: number | null };
   hand?: Card[]; hand_counts?: number[]; legal_cards?: Card[];
   legal_bids?: Bid[]; legal_contracts?: Bid[]; can_say_here?: boolean;
-  misere_offer?: {approved:number[];can_vote:boolean};
+  misere_offer?: {approved:number[];can_vote:boolean}; can_offer_misere?:true;
   trick?: Array<{ owner: number; card: Card }>;
   last_trick?: Array<{ owner: number; card: Card }>;
   open_hands?: Array<{ seat: number; cards: Card[] }>;
   widow?: Card[]; defense?: Array<string | null>; mode?: string | null;
   tricks_won?: number[]; score?: Score; end_reason?: string | null;
   final_settlement?: {pairs:number[][];net:number[]};
+  final_hill_vists?: number[];
   final_review?: true;
   score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[];steps?:NotebookStep[]};
   discard_count?: 2; own_discard?: Card[];
@@ -81,7 +82,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode" | "misere_offer" | "misere_vote" | "claim_offer" | "claim_vote" | "passout_reward"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "reveal_report" | "reveal_propose" | "reveal_vote" | "punch_choose" | "final_confirm" | "archive" | "ruleset_select";
+  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "punch_choose" | "final_confirm" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {
@@ -156,6 +157,8 @@ export function isRoomView(value: unknown): value is RoomView {
   }
   if(v.claim!==undefined&&!validClaim(v.claim,v))return false;
   if(v.can_claim!==undefined&&(v.can_claim!==true||!isSeat(v.my_seat)||v.status!=="playing"||!["play","opening_lead","choose_mode"].includes(String(v.phase))))return false;
+  if(v.can_offer_misere!==undefined&&(v.can_offer_misere!==true||v.status!=="playing"||!isSeat(v.my_seat)||!["declare","play"].includes(String(v.phase))))return false;
+  if(v.final_hill_vists!==undefined&&(!v.final_settlement||!Array.isArray(v.final_hill_vists)||v.final_hill_vists.length!==3||!v.final_hill_vists.every(n=>Number.isSafeInteger(n)&&n>=0)))return false;
   if (v.misere_offer !== undefined) {
     const offer = v.misere_offer as RoomView["misere_offer"];
     if (v.phase!=="misere_offer" || v.status!=="playing" || !isSeat(v.my_seat) || !isSeat(v.declarer) || !offer || !Array.isArray(offer.approved) || offer.approved.length>1 || !offer.approved.every(s=>isSeat(s)&&s!==v.declarer) || typeof offer.can_vote!=="boolean" || offer.can_vote!==(v.my_seat!==v.declarer&&!offer.approved.includes(v.my_seat as number))) return false;
