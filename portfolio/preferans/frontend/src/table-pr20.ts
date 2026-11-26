@@ -9,6 +9,6 @@ export function splitPlayerName(name:string):[string,string] {
   return [first,rest.join(" ")];
 }
 export function autoSettlementAllowed(view:RoomView|null):boolean {
-  return !!view&&view.status==="awaiting_settlement"&&view.room_admin&&view.settlement_options?.regular_choice===false&&
+  return !!view&&view.status==="awaiting_settlement"&&!view.final_review&&view.room_admin&&view.settlement_options?.regular_choice===false&&
     !view.controls?.paused&&!view.controls?.undo&&!view.settlement_options.passout_pending?.length;
 }

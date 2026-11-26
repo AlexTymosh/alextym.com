@@ -91,6 +91,7 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
       {(view.room_admin || (view.my_seat!==null&&dealerFor(view)===view.my_seat)) && <button type="button" className={styles.primary} disabled={busy || !mayStart(view)} onClick={onStart}>Раздать карты</button>}
     </section>;
   }
+  if (view.final_review) return <section className={styles.actionPanel} aria-label="Проверка итогов">{view.room_admin?<button type="button" disabled={busy} className={styles.primary} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<p>Ожидаем подтверждения итогов администратором.</p>}</section>;
   if (view.status === "awaiting_settlement") {
     const choices=view.settlement_options;
     const waiting=choices?.passout_pending??[];
@@ -208,6 +209,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const changeTransparency=(value:number)=>{setTransparency(value);if(transparencyKey)try{localStorage.setItem(transparencyKey,String(value));}catch{/* Optional preference. */}};
   const selectedTheme=localTableTheme==="room"?view?.table_theme??"felt":localTableTheme;
   const opacity=effectiveOpacity(selectedTheme,transparency);
+  const roundKey=preferenceScope?`preferans:round-table:${preferenceScope}`:null;
+  const [roundTable,setRoundTable]=useState(true);
+  useEffect(()=>{if(roundKey)try{setRoundTable(localStorage.getItem(roundKey)!=="off");}catch{/* Optional preference. */}},[roundKey]);
+  const changeRoundTable=(value:boolean)=>{setRoundTable(value);if(roundKey)try{localStorage.setItem(roundKey,value?"on":"off");}catch{/* Optional preference. */}};
   useEffect(()=>{if(tableKey)try{const saved=localStorage.getItem(tableKey);if(saved==="felt"||saved==="blue"||saved==="wood"||saved==="glass")setLocalTableTheme(saved);else setLocalTableTheme("room");}catch{/* Optional preference. */}},[tableKey]);
   const changeTableTheme=(theme:TableTheme|"room")=>{setLocalTableTheme(theme);if(tableKey)try{localStorage.setItem(tableKey,theme);}catch{/* Optional preference. */}};
   useEffect(()=>attachCardPointerDrag(document),[]);
@@ -535,6 +540,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <CycleSetting<SortMode> label="Сортировка карт" value={sortMode} options={[["grouped","По длине масти"],["suit","По порядку мастей"]]} onChange={changeSort}/>
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
+    <label><input type="checkbox" checked={roundTable} onChange={e=>changeRoundTable(e.target.checked)}/> Круглый стол (вид сверху)</label>
     <label className={styles.transparencySetting}>Прозрачность: {Math.round((1-opacity)*100)}% <input type="range" min={0} max={75} step={5} value={Math.round((1-opacity)*100)} onChange={e=>changeTransparency(Number(e.target.value))}/></label>
     {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme==="glass"?"felt":view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={theme=>command("table_theme",{theme})}/>}
     <fieldset className={styles.backChoices}><legend>Рубашка карт</legend>{([["classic","Текущая классическая"],["ornament","Красный орнамент"],["red-blue","Красно-голубая сетка"],["green","Зелёная сетка"]] as const).map(([value,label])=><button type="button" key={value} aria-pressed={back===value} title={label} onClick={()=>changeBack(value)}><CardBackContext.Provider value={value}><CardArtwork decorative/></CardBackContext.Provider><span>{label}</span></button>)}</fieldset>
@@ -564,6 +570,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const tableStatus = view && (()=>{
     const transient=dropNotice||status||(busy&&pending?.label!=="play"?"Операция выполняется…":"");
     if(transient)return transient;
+    if(view.final_review)return "Проверьте итоговые расчёты";
     if(view.status==="closed")return "Закончили!";
     if(view.status==="archived")return "Партия архивирована";
     if(view.controls?.paused)return "Пауза";
@@ -621,12 +628,12 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
             <GameTable view={view} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
-              theme={selectedTheme} surfaceOpacity={opacity} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+              theme={selectedTheme} roundTable={roundTable} surfaceOpacity={opacity} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               claimPanel={<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/>}
               claimButton={view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:undefined}
-              hand={ownHand} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
+              hand={ownHand} handCount={visibleHand.length} handBreaks={visibleHand.filter((card,index)=>index>0&&visibleHand[index-1].suit!==card.suit).length} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}
               mediaForSeat={LIVE_MEDIA_ENABLED && !archived && rtReady && view.my_seat !== null && liveMedia.state.joined ? seat => <MediaSeatTile media={liveMedia} seat={seat} own={seat===view.my_seat}/> : undefined}

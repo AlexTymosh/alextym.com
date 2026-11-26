@@ -98,3 +98,10 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Render radio in a compact dedicated shared overlay; suppress the local notebook while a shared overlay is active. Keep shared pause, playback and authorization semantics unchanged.
 - Move room-return navigation to the host header slot and retain the existing leave-room callback. No new backend calls or provider settings.
 - Reduce activity ring stroke from 5 to 3.5 and set opacity to 0.5. Full CI and three-player visual acceptance remain release gates.
+
+## PR27 - Final review and centred playing surface
+
+- Keep normal closed ledgers in final review until an explicit room-admin confirmation; audit hill/vist corrections, reject repeat settlement, then create result and rankings exactly once. Existing confirmed results and technical discards remain unchanged.
+- Exempt second place with no negative reconciled pair balance from received punches; preserve existing net-distance formula otherwise. Allow direct misere-without-widow over another player's ordinary misere.
+- Use a bounded table height, symmetric bottom rails, optional overhead round table, local 75% default transparency, horizontal calls, enlarged bare claim cards and notebook controls/totals. No additional periodic Firestore requests.
+- Full CI and actual authenticated three-player acceptance are required.

@@ -109,6 +109,18 @@ def test_punch_choice_keeps_result_and_updates_both_rankings_once(monkeypatch):
         False,
     )
     ref = f"preferans_results/{rid}"
+    assert ref not in db.docs
+    assert api.view(rid, "auth-A")["final_review"] is True
+
+    api.command(
+        rid,
+        "auth-A",
+        "confirm-pr14-01",
+        api.view(rid, "auth-A")["version"],
+        "final_confirm",
+        {},
+    )
+    assert api.view(rid, "auth-A")["status"] == "closed"
     original = deepcopy(db.docs[ref])
     pair = api.view(rid, "auth-B")["punch_choices"][0]
     assert pair["to"] == 1 and pair["bare"] >= 1

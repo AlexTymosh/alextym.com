@@ -181,3 +181,13 @@ def test_auction_replay_from_immutable_events() -> None:
     st = apply_auction_action(st, 2, P)
     st = apply_auction_action(st, 0, P)
     assert replay_auction(2, st.history) == st
+
+
+def test_rival_can_raise_misere_directly_to_misere_without_widow():
+    st = start_auction(0)
+    assert Bid.misere_no_widow() not in legal_auction_bids(st, 1)
+    st = apply_auction_action(st, 1, B(Bid.misere()))
+    assert Bid.misere_no_widow() in legal_auction_bids(st, 2)
+    st = apply_auction_action(st, 2, B(Bid.misere_no_widow()))
+    assert Bid.misere_no_widow() not in legal_auction_bids(st, 0)
+    assert Bid.regular(10, Suit.SPADES) in legal_auction_bids(st, 0)

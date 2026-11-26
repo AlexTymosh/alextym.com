@@ -113,8 +113,38 @@ def test_atomic_close_creates_immutable_result_and_ranking_once(monkeypatch):
     clock[0] += 5_000
     payload = {"regular_route": "pool", "passout_routes": ["pool"] * 3}
     saved = api.settle(rid, "auth-A", "settle-unique-01", before, payload, False)
-    assert db.docs[room_ref]["status"] == "closed"
+    assert db.docs[room_ref]["status"] == "awaiting_settlement"
+    assert api.view(rid, "auth-A")["final_review"] is True
     result_key = f"preferans_results/{rid}"
+    assert result_key not in db.docs
+    assert not api.rankings("auth-A")["rankings"]
+    with pytest.raises(StoreError) as forbidden:
+        api.command(rid, "auth-B", "confirm-guest-01", saved["version"], "final_confirm", {})
+    assert forbidden.value.code == 403
+    with pytest.raises(StoreError) as invalid:
+        api.settle(rid, "auth-A", "settle-again-01", saved["version"], payload, False)
+    assert invalid.value.code == 409
+    adjustment = api.admin_adjust(
+        rid,
+        "auth-A",
+        "review-adjust-01",
+        saved["version"],
+        {"field": "hill", "seat": 1, "against": None, "delta": 3, "reason": "review correction"},
+        False,
+    )
+    assert api.view(rid, "auth-A")["score"]["hill"] == [0, 9, 0]
+    assert result_key not in db.docs
+    with pytest.raises(StoreError) as stale:
+        api.command(rid, "auth-A", "confirm-stale-01", saved["version"], "final_confirm", {})
+    assert stale.value.code == 409
+    confirmed = api.command(
+        rid, "auth-A", "confirm-final-01", adjustment["version"], "final_confirm", {}
+    )
+    assert confirmed["status"] == "closed"
+    assert (
+        api.command(rid, "auth-A", "confirm-final-01", adjustment["version"], "final_confirm", {})
+        == confirmed
+    )
     result = db.docs[result_key]
     assert result["room_id"] == rid
     assert result["deal_count"] == 1
@@ -138,7 +168,7 @@ def test_atomic_close_creates_immutable_result_and_ranking_once(monkeypatch):
             rid,
             "auth-A",
             "adjust-too-late",
-            saved["version"],
+            confirmed["version"],
             {"field": "hill", "seat": 1, "against": None, "delta": 5, "reason": "late adjustment"},
             False,
         )
@@ -160,6 +190,9 @@ def test_rankings_all_games_and_history_page(monkeypatch):
         {"regular_route": "pool", "passout_routes": ["pool"] * 3},
         False,
     )
+    api.command(
+        a, "auth-A", "confirm-a-01", db.docs[f"preferans_rooms/{a}"]["version"], "final_confirm", {}
+    )
     clock[0] += 90_000
     api, b = session(db, clock, 2)
     api.settle(
@@ -169,6 +202,9 @@ def test_rankings_all_games_and_history_page(monkeypatch):
         db.docs[f"preferans_rooms/{b}"]["version"],
         {"regular_route": "pool", "passout_routes": ["pool"] * 3},
         False,
+    )
+    api.command(
+        b, "auth-A", "confirm-b-01", db.docs[f"preferans_rooms/{b}"]["version"], "final_confirm", {}
     )
     assert len(api.history("auth-A", limit=1)["results"]) == 1
     assert api.history("auth-A", limit=1)["has_more"] is True
@@ -186,3 +222,18 @@ def test_history_rejects_invalid_limits_and_ids():
     with pytest.raises(StoreError) as exc:
         api.result("../../credentials", "auth-A")
     assert exc.value.code == 404
+
+
+def test_second_place_without_pairwise_losses_receives_no_punches():
+    score = replace(complete_score((0, 0, 0)), vists=((0, 0, 280), (10, 0, 10), (0, 0, 0)))
+    result = final_result({"id": "b" * 32, "seats": ["a", "b", "c"]}, score, 1)
+    second = result["players"][1]
+    assert [p["net_vists"] for p in result["players"]] == [270, 20, -290]
+    assert second["silver"] == 1 and second["place"] == 2
+    assert second["ordinary_received"] == second["bare_received"] == 0
+    assert not any(p["to"] == 1 for p in result["punches"])
+    # Preserve the existing formula when the second-ranked player actually owes a rival.
+    other = replace(score, vists=((0, 20, 280), (0, 0, 40), (0, 0, 0)))
+    result = final_result({"id": "c" * 32, "seats": ["a", "b", "c"]}, other, 1)
+    assert result["players"][1]["place"] == 2
+    assert any(p["to"] == 1 for p in result["punches"])

@@ -11,7 +11,7 @@ export function parseTransparency(value:string|null):number|null {
 }
 export function effectiveOpacity(theme:string,transparency:number|null):number {
   const valid=transparency===null?null:parseTransparency(String(transparency));
-  return valid===null?(theme==="glass"?.5:1):1-valid/100;
+  return valid===null?(theme==="glass"?.5:.25):1-valid/100;
 }
 export function roomAgeMinutes(created:number|null|undefined,now:number):number|null {
   if(typeof created!=="number"||!Number.isFinite(created)||created<=0||!Number.isFinite(now))return null;
