@@ -48,6 +48,8 @@ def _valid_seat(seat: int) -> int:
 
 
 def acting_seat(game: GameState) -> int | None:
+    if game.claim_pending:
+        return None
     if game.phase in (Phase.PLAY, Phase.OPENING_LEAD):
         return game.controllers[game.turn] if game.turn is not None else None
     if game.phase in (Phase.DISCARD, Phase.DECLARE):

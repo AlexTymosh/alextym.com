@@ -9,6 +9,7 @@ from preferans.domain.auction import (
     legal_final_contracts,
 )
 from preferans.domain.cards import Card
+from preferans.domain.claims import can_claim, claim_voters
 from preferans.domain.game import GameState, Phase, legal_play_cards
 from preferans.domain.ledger import ScoreState
 from preferans.online.controls import public_controls
@@ -144,6 +145,31 @@ def seat_view(
             "approved": sorted(state.misere_votes),
             "can_vote": my_seat != declarer and my_seat not in state.misere_votes,
         }
+    if my_seat is not None:
+        if (
+            can_claim(state, my_seat)
+            and not (controls or {}).get("paused_at")
+            and not (controls or {}).get("vote")
+            and not (controls or {}).get("reveal")
+        ):
+            result["can_claim"] = True
+        claim = state.claim
+        if claim is not None and (claim.accepted or claim.at_tricks == len(state.completed_tricks)):
+            result["claim"] = {
+                "seat": claim.seat,
+                "status": "accepted"
+                if claim.accepted
+                else "rejected"
+                if claim.rejected_by is not None
+                else "pending",
+                "voters": sorted(claim_voters(state, claim.seat)),
+                "approved": sorted(claim.approved),
+                "rejected_by": claim.rejected_by,
+                "awarded": 10 - claim.at_tricks if claim.accepted else 0,
+                "cards": [public_card(c) for c in state.hands[claim.seat]]
+                if state.claim_pending
+                else [],
+            }
     # Auction history is public. Retain only the last call per seat, never
     # serialize the state or a player's private discard.
     calls = [None, None, None]
@@ -198,7 +224,9 @@ def seat_view(
         if room["status"] == "playing" and type(room.get("activity_started_at_ms")) is int:
             result["activity_started_at_ms"] = room["activity_started_at_ms"]
         if room["status"] == "awaiting_settlement" and score is not None:
-            result["settlement_options"] = settlement_options(score, state)
+            result["settlement_options"] = settlement_options(
+                score, state, (controls or {}).get("passout_choices")
+            )
         if len(state.discarded) == 2 and room["status"] == "playing":
             result["discard_count"] = 2
             if my_seat == state.declarer:

@@ -33,11 +33,12 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
     {concessionMode&&<span className={styles.concessionHint}>Выбери контракт для штрафа</span>}
     <div className={styles.bidGroups}>
       {auction && <button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>{setConfirmation(null);command("pass");}}>ПАС</button>}
-      {BID_GROUPS.map(key=>{
+      {BID_GROUPS.filter(key=>key!=="ten_no_widow").map(key=>{
         const available=bidsInGroup(bids,key);
-        if (!available.length && (!auction||key==="misere_no_widow"||key==="ten_no_widow")) return null;
+        const totus=key==="10"?bidsInGroup(bids,"ten_no_widow"):[];
+        if (!available.length&&!totus.length && (!auction||key==="misere_no_widow")) return null;
         const direct = key==="misere"||key==="misere_no_widow";
-        const special = direct||key==="ten_no_widow";
+        const special = direct;
         const needsConfirm = auction&&special;
         const asking = needsConfirm&&confirmed===key;
         const choose = () => {
@@ -46,10 +47,13 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
           if(special&&available.length===1)submit(available[0]);
           else setGroup(old=>old===key?null:key);
         };
-        return <div key={key}><button type="button" disabled={busy||!available.length} aria-expanded={direct?undefined:group===key&&options.length>0}
-          data-bid-tone={direct?"sky":key==="ten_no_widow"?"dark":undefined} data-confirm={asking?"true":undefined}
+        return <div key={key}><button type="button" disabled={busy||(!available.length&&!totus.length)} aria-expanded={direct?undefined:group===key}
+          data-bid-tone={direct?"sky":undefined} data-confirm={asking?"true":undefined}
           onClick={choose}>{asking?`${labels[key].replace(/!$/,"").toUpperCase()}, ТЫ УВЕРЕН?`:labels[key]}</button>
-          {group===key&&options.length>0&&<span className={styles.bidSuits} aria-label={`${labels[key]}: доступные масти`}>
+          {group===key&&(options.length>0||totus.length>0)&&<span className={styles.bidSuits} aria-label={`${labels[key]}: доступные масти`}>
+            {totus.length>0&&<span className={styles.totusOptions}>
+              {auction&&confirmed!=="ten_no_widow"?<button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>setConfirmation({group:"ten_no_widow",version:view.version})}>Тотус без прикупа!</button>:<>{totus.map(bid=><button type="button" key={JSON.stringify(bid)} disabled={busy} data-bid-tone="dark" onClick={()=>submit(bid)}>{`Тотус ${bid.suit?suitSymbol(bid.suit):"БК"}${auction?" — подтвердить":""}`}</button>)}</>}
+            </span>}
             {options.map(bid=><button type="button" key={JSON.stringify(bid)} aria-label={bidLabel(bid)} disabled={busy}
               className={bid.suit==="H"||bid.suit==="D"?styles.redSuit:undefined} onClick={()=>submit(bid)}>{bid.suit?suitSymbol(bid.suit):"БК"}</button>)}
           </span>}

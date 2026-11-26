@@ -6,6 +6,7 @@ from collections.abc import Mapping
 
 from preferans.domain.auction import AuctionAction, Bid, BidKind, RuleViolation
 from preferans.domain.cards import Card, Rank, Suit
+from preferans.domain.claims import offer_claim, vote_claim
 from preferans.domain.game import (
     DefenseDecision,
     DefenseMode,
@@ -60,6 +61,14 @@ def apply_command(state: GameState, seat: int, action: str, data: object) -> Gam
     _seat(seat)
     if not isinstance(data, dict) or len(data) > 8:
         raise RuleViolation("Invalid command arguments")
+    if state.claim_pending and action != "claim_vote":
+        raise RuleViolation("Resolve the remaining-tricks offer first")
+    if action == "claim_offer":
+        _keys(data, set())
+        return offer_claim(state, seat)
+    if action == "claim_vote":
+        _keys(data, {"approve"})
+        return vote_claim(state, seat, data["approve"])
     if action == "bid":
         _keys(data, {"bid"})
         return auction_action(state, seat, AuctionAction.place(_bid(data["bid"])))
@@ -111,6 +120,6 @@ def redacted_action(action: str, args: dict) -> dict:
         return {"bid": args["bid"]}
     if action in {"play"}:
         return {"owner": args["owner"], "card": args["card"]}
-    if action in {"defense", "mode", "misere_vote"}:
+    if action in {"defense", "mode", "misere_vote", "claim_vote"}:
         return {k: args[k] for k in args}
     return {}

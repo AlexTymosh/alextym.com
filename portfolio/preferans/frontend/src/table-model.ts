@@ -21,7 +21,7 @@ export function seatPosition(me: number | null, seat: number): SeatPosition | nu
   return positions.left === seat ? "left" : positions.right === seat ? "right" : "bottom";
 }
 export function actorSeat(view: RoomView): Seat | null {
-  if (view.status !== "playing" || view.controls?.paused || view.controls?.undo) return null;
+  if (view.status !== "playing" || view.controls?.paused || view.controls?.undo || view.claim?.status==="pending") return null;
   const actor = view.phase === "play" || view.phase === "opening_lead" ? view.controller
     : view.phase === "discard" || view.phase === "declare" ? view.declarer : view.turn;
   return validSeat(actor) ? actor : null;

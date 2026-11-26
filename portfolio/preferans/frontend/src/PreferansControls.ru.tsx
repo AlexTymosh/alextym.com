@@ -5,7 +5,7 @@ import type { ChangeEvent } from "react";
 import { type CommandAction, type RoomView } from "./game-model.ru";
 import styles from "./preferans-game.module.css";
 
-const names = ["Игрок 1", "Игрок 2", "Игрок 3"];
+import type { SeatProfile } from "./table-model";
 type AdjustRequest = { field: "pool" | "hill" | "vist"; seat: number; against: number | null;
   delta: number; reason: string };
 
@@ -13,7 +13,8 @@ function secondsLeft(deadline: number | null, remaining: number | undefined, now
   return Math.max(0, Math.ceil(((deadline === null ? remaining ?? 0 : deadline - now) / 1000)));
 }
 
-export function PreferansControls({ view, busy, command, adjust }: {
+export function PreferansControls({ view, profiles, busy, command, adjust }: {
+  profiles:SeatProfile[]|null;
   view: RoomView;
   busy: boolean;
   command: (action: CommandAction, args?: Record<string, unknown>) => void;
@@ -32,6 +33,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+  const names=[0,1,2].map(i=>profiles?.[i]?.name||`Игрок ${i+1}`);
   const controls = view.controls;
   if (!controls || view.status === "archived") return null;
   if (view.status === "lobby") {
@@ -57,7 +59,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
   }
   const active = view.status === "playing";
   const target = view.phase === "play" || view.phase === "opening_lead" ? view.controller : view.turn;
-  const canCounter = active && view.my_seat !== null && target !== null &&
+  const canCounter = active && view.claim?.status!=="pending" && view.my_seat !== null && target !== null &&
     target !== undefined && target !== view.my_seat && !controls.paused &&
     !controls.undo && !controls.counter;
   const counter = controls.counter;
@@ -111,7 +113,7 @@ export function PreferansControls({ view, busy, command, adjust }: {
         <label>Причина <input maxLength={180} value={reason} onChange={(e: ChangeEvent<HTMLInputElement>) => setReason(e.target.value)} placeholder="Почему изменён расчёт" /></label>
       </div>
       <p aria-live="polite">Предпросмотр: {before ?? "?"} → {after ?? "?"}</p>
-      <button type="button" disabled={busy || !validAdjustment} onClick={() => {
+      <button type="button" className={styles.confirmAdjustment} disabled={busy || view.claim?.status==="pending" || !validAdjustment} onClick={() => {
         if (!validAdjustment || !window.confirm(`Записать корректировку: ${before} → ${after}?`)) return;
         adjust({ field, seat, against: field === "vist" ? against : null, delta, reason: reason.trim() });
       }}>Подтвердить корректировку</button>

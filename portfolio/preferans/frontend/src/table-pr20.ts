@@ -10,5 +10,5 @@ export function splitPlayerName(name:string):[string,string] {
 }
 export function autoSettlementAllowed(view:RoomView|null):boolean {
   return !!view&&view.status==="awaiting_settlement"&&view.room_admin&&view.settlement_options?.regular_choice===false&&
-    !view.controls?.paused&&!view.controls?.undo;
+    !view.controls?.paused&&!view.controls?.undo&&!view.settlement_options.passout_pending?.length;
 }

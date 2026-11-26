@@ -42,6 +42,10 @@ def test_running_notebook_merges_corrections_in_ledger_order():
     assert result["pool"][0] == [2]
     assert result["vists"][0][1] == [4]
     assert result["vists"][1][0] == []
+    assert {"field": "hill", "seat": 0, "against": None, "index": 2, "manual": True} in result[
+        "marks"
+    ]
+    assert {"field": "vist", "seat": 0, "against": 1, "index": 0, "latest": True} in result["marks"]
     legacy = notebook(score, {"adjustments": [correction]})
     assert legacy["exact"] is False
     assert legacy["hill"][0] == [6]
