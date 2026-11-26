@@ -4,6 +4,7 @@ import { isSeat } from "./sheet-exit-model";
 import { validClaim, type Claim } from "./claim-model";
 import { isSeatSwap, type SeatSwap } from "./seat-swap-model";
 import { isReleaseProjection, type PunchChoice } from "./release-model";
+import { isNotebookPunches, type NotebookPunch } from "./notebook-punches";
 export type Suit = "S" | "C" | "D" | "H";
 export type Card = { suit: Suit; rank: number };
 export type Bid = {
@@ -72,6 +73,7 @@ export type RoomView = {
   widow?: Card[]; defense?: Array<string | null>; mode?: string | null;
   tricks_won?: number[]; score?: Score; end_reason?: string | null;
   final_settlement?: {pairs:number[][];net:number[]};
+  final_punches?: NotebookPunch[];
   final_hill_vists?: number[];
   final_review?: true;
   score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[];steps?:NotebookStep[]};
@@ -159,6 +161,10 @@ export function isRoomView(value: unknown): value is RoomView {
     const triple=(x:unknown):x is number[]=>Array.isArray(x)&&x.length===3&&x.every(Number.isSafeInteger);
     if((v.status!=="closed"&&v.final_review!==true)||v.sheet_loser!==undefined||!isSeat(v.my_seat)||!f||!triple(f.net)||!Array.isArray(f.pairs)||f.pairs.length!==3||!f.pairs.every(triple))return false;
     if(!f.pairs.every((row,i)=>row[i]===0&&row.every((n,j)=>n===-f.pairs[j][i])&&row.reduce((sum,n)=>sum+n,0)===f.net[i]))return false;
+  }
+  if(v.final_punches!==undefined){
+    const final=v.final_settlement as RoomView["final_settlement"];
+    if(!final||!isNotebookPunches(v.final_punches,final.net))return false;
   }
   if(v.claim!==undefined&&!validClaim(v.claim,v))return false;
   if(v.can_claim!==undefined&&(v.can_claim!==true||!isSeat(v.my_seat)||v.status!=="playing"||!["play","opening_lead","choose_mode"].includes(String(v.phase))))return false;

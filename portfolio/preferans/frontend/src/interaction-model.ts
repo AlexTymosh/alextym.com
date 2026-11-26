@@ -28,6 +28,12 @@ export function orderHand(cards: readonly Card[], manual: readonly string[] = []
   }
   return [...result, ...Array.from(byId.values())];
 }
+/** The offer never reconstructs a private hand from the deck. */
+export function misereOfferCards(view:RoomView,mode:SortMode):Card[] {
+  if(view.phase!=="misere_offer"||view.my_seat===null||view.declarer==null)return [];
+  const cards=view.my_seat===view.declarer?view.hand??[]:view.open_hands?.find(hand=>hand.seat===view.declarer)?.cards??[];
+  return orderHand(cards,[],mode);
+}
 export function ownCards(view: RoomView | null): Card[] {
   if (!view || view.my_seat === null) return [];
   const cards = [...(view.hand ?? [])];

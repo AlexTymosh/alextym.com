@@ -11,9 +11,11 @@ from preferans.domain.auction import (
 from preferans.domain.cards import Card
 from preferans.domain.claims import can_claim, claim_voters
 from preferans.domain.game import GameState, Phase, can_offer_misere, legal_play_cards
+from preferans.domain.history import placement_outcome
 from preferans.domain.ledger import ScoreState
 from preferans.domain.settlement import final_hill_vists, net_results, pairwise_results
 from preferans.online.controls import public_controls
+from preferans.online.punch_choices import notebook_awards
 from preferans.online.pause_clock import retire_reveal, reasons
 from copy import deepcopy
 from preferans.online.deal_flow import projection as next_deal_projection
@@ -88,11 +90,20 @@ def seat_view(
         ):
             if room["status"] == "awaiting_settlement":
                 result["final_review"] = True
+            pairs = pairwise_results(score)
+            net = net_results(score)
             result["final_settlement"] = {
-                "pairs": [list(row) for row in pairwise_results(score)],
-                "net": list(net_results(score)),
+                "pairs": [list(row) for row in pairs],
+                "net": list(net),
             }
             result["final_hill_vists"] = list(final_hill_vists(score))
+            awards = (
+                room["final_punches"]
+                if room["status"] == "closed" and "final_punches" in room
+                else placement_outcome(net, pairs=pairs)["punches"]
+            )
+            choices = room.get("punch_choices", []) if room["status"] == "closed" else []
+            result["final_punches"] = notebook_awards(awards, choices)
     if (
         owner
         and not (score and score.closed)

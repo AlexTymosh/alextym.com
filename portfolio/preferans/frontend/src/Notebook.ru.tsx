@@ -4,6 +4,7 @@ import { bidLabel, type RoomView, type NotebookMark } from "./game-model.ru";
 import { notebookAt } from "./notebook-history";
 import { packNotebookRows, poolEntryText, vistEquation, type InkToken } from "./notebook-layout";
 import { tableSeats, type SeatProfile } from "./table-model";
+import { punchGeometry, type NotebookPunch } from "./notebook-punches";
 import styles from "./preferans-notebook.module.css";
 
 export function Notebook({view, profiles, miniature=false, title, sheetExit, onClose, closeDisabled=false, reviewAction, scoreAdjustment}: {view: RoomView; profiles: SeatProfile[] | null; miniature?:boolean; title?:string; sheetExit?:ReactNode; onClose?:()=>void; closeDisabled?:boolean; reviewAction?:ReactNode; scoreAdjustment?:ReactNode}) {
@@ -36,6 +37,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     return {position, seat, left, right, hill: vals("hill",seat), pool: vals("pool",seat), lv: vals("vist",seat,left), rv: vals("vist",seat,right)};
   });
   const final=past?undefined:view.final_settlement;
+  const finalPunches=final?view.final_punches??[]:[];
   const distributed=final?view.final_hill_vists:undefined;
   const packed=new Map<number[],InkToken[][]>();
   for(const [values,cell] of Array.from(cells.entries())){
@@ -57,7 +59,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const rowHeight=25;
   const outer=Math.max(100, 66+(vistRows-1)*rowHeight+(final?28:0));
   const inner=outer+Math.max(56,20+poolRows*rowHeight);
-  const w=Math.max(578,2*inner+Math.max(266,220+(hillRows-1)*58),2*outer+440);
+  const w=Math.max(578,2*inner+Math.max(266,220+(hillRows-1)*58)+(finalPunches.length?154:0),2*outer+440);
   const h=Math.max(w+22,2*(inner+160+hillRows*rowHeight));
   const cx=w/2,cy=h/2-55,innerY=h-inner-20,outerY=h-outer-24;
   const slope=(innerY-cy-21)/(cx-inner-43);
@@ -78,8 +80,10 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     })}</g>;
   };
   const left = fields[0], right = fields[1], bottom = fields[2];
-  const nameY = (cy-24+16)/2;
-  const nameExtent = Math.max(20,cy-64);
+  const topPunch=finalPunches.some(p=>p.from!==bottom.seat&&p.to!==bottom.seat);
+  const nameTop=topPunch?99:16;
+  const nameY = (cy-24+nameTop)/2;
+  const nameExtent = Math.max(20,cy-24-nameTop-24);
   const sideName = (seat:number, x:number, rotation:number) => <text x={x} y={nameY} transform={`rotate(${rotation} ${x} ${nameY})`} textAnchor="middle" dominantBaseline="central" textLength={name(seat).length*12>nameExtent?nameExtent:undefined} lengthAdjust="spacingAndGlyphs">{name(seat)}</text>;
   const [first,rest] = splitPlayerName(name(bottom.seat));
   const angle=notebookAngle(miniature?0:orientation);
@@ -98,6 +102,23 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     const amount=signed(final.net[seat]);
     const pair=final.pairs[seat].filter((_,i)=>i!==seat);
     return <g data-final-net={seat} transform={`translate(${x} ${y}) rotate(${rotation})`}><ellipse rx={Math.max(30,amount.length*7.8+10)} ry="18" fill="#fbf9ee" stroke="#b51524" strokeWidth="2.4"/><text fill="#b51524" fontSize="23.8" fontWeight="bold" textAnchor="middle" dominantBaseline="central">{amount}</text>{distributed&&<text y="35" fill="#b51524" fontSize="12" textAnchor="middle">{`${signed(pair[0])} ${signed(pair[1])} = ${amount}`}</text>}</g>;
+  };
+  const punchWord=(n:number)=>n%100>=11&&n%100<=14?"УДАРОВ":n%10===1?"УДАР":n%10>=2&&n%10<=4?"УДАРА":"УДАРОВ";
+  const bareWord=(n:number)=>n%100!==11&&n%10===1?"ГОЛЫЙ":"ГОЛЫХ";
+  const punchBadge=(p:NotebookPunch)=>{
+    const {center,start,end}=punchGeometry(p,seats,w,cy,inner,innerY);
+    const lines=p.bare&&p.ordinary?[`${p.bare} ${bareWord(p.bare)}`,`${p.ordinary} ${punchWord(p.ordinary)}`]:p.bare?[String(p.bare),bareWord(p.bare)]:[String(p.ordinary),punchWord(p.ordinary)];
+    const counts=[p.bare?`${p.bare} ${bareWord(p.bare).toLowerCase()} ${punchWord(p.bare).toLowerCase()}`:"",p.ordinary?`${p.ordinary} ${punchWord(p.ordinary).toLowerCase()}`:""].filter(Boolean).join(", ");
+    const label=`${name(p.from)} → ${name(p.to)}: ${counts}`;
+    return <g key={`${p.from}:${p.to}`} data-punch-from={p.from} data-punch-to={p.to} aria-label={label}>
+      <title>{label}</title>
+      <path d={`M${start.x} ${start.y} L${end.x} ${end.y}`} stroke="#b51524" strokeWidth="2.4" fill="none" markerEnd={`url(#punch-arrow-${id})`}/>
+      <circle cx={center.x} cy={center.y} r="31" fill="#b51524" stroke="#fbf9ee" strokeWidth="1.5"/>
+      {lines.map((line,i)=>{
+        const size=i===0&&!(p.bare&&p.ordinary)?21:12;
+        return <text key={i} x={center.x} y={center.y+(i===0?-8:11)} dominantBaseline="central" textAnchor="middle" fill="#fff" fontWeight="700" fontStyle="normal" fontSize={size} textLength={line.length*size*.7>51?51:undefined} lengthAdjust="spacingAndGlyphs">{line}</text>;
+      })}
+    </g>;
   };
   const Wrapper=miniature?"span":"div";
   return <Wrapper className={miniature?styles.miniature:styles.wrap} style={{"--paper-ratio":(angle?h:w)/(angle?w:h)} as CSSProperties} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
@@ -119,7 +140,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     {!miniature&&<span className={styles.scissors} aria-hidden="true">✁</span>}
     <span className={miniature?styles.miniatureCanvas:styles.paperViewport} data-zoomed={!miniature&&zoom!==1?"true":undefined} style={{"--paper-zoom":miniature?1:zoom} as CSSProperties}>
     <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} role="img" aria-label="Рукописная пулька">
-      <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern></defs>
+      <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern>{finalPunches.length>0&&<marker id={`punch-arrow-${id}`} markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5.5L0 11Z" fill="#b51524"/></marker>}</defs>
       <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
       <g stroke="#28509a" strokeWidth="2" fill="none" strokeLinejoin="round">
         <path d={`M${cx} 16V${cy-24} M${cx-43} ${cy+21} L${inner} ${innerY} L${outer} ${outerY} L0 ${h} M${cx+43} ${cy+21} L${w-inner} ${innerY} L${w-outer} ${outerY} L${w} ${h} M${inner} 16V${innerY}H${w-inner}V16 M${outer} 16V${outerY}H${w-outer}V16 M0 ${cy}H${outer} M${w-outer} ${cy}H${w} M${cx} ${outerY}V${h}`}/>
@@ -130,6 +151,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
         <g data-score-seat={bottom.seat} data-score-position="bottom"><text x={cx} y={cy+53} textAnchor="middle"><tspan x={cx}>{first}</tspan>{rest&&<tspan x={cx} dy="1.2em">{rest}</tspan>}</text>{text(bottom.hill,inner+50,innerY-12)}{text(bottom.pool,outer+48,outerY-10)}{text(bottom.lv,outer+12,outerY+34)}{text(bottom.rv,cx+24,outerY+34)}{total(bottom.seat,cx,cy+(rest?103:82))}{circle(bottom.seat,bottom.left,(outer+cx)/2,h-25)}{circle(bottom.seat,bottom.right,(w-outer+cx)/2,h-25)}</g>
         <g data-score-seat={left.seat} data-score-position="left">{sideName(left.seat,cx-18,90)}{text(left.hill,inner+11,24,90)}{text(left.pool,outer+11,24,90)}{text(left.rv,outer-18,cy+22,90,outerY-(cy+22)-15)}{text(left.lv,outer-18,24,90,cy-42)}{total(left.seat,cx-49,nameY,90)}{circle(left.seat,left.left,25,cy/2,90)}{circle(left.seat,left.right,25,(cy+outerY)/2,90)}</g>
         <g data-score-seat={right.seat} data-score-position="right">{sideName(right.seat,cx+18,-90)}{text(right.hill,w-inner-11,innerY-Math.ceil(11*slope)-18,-90)}{text(right.pool,w-outer-11,outerY-30,-90)}{text(right.rv,w-outer+18,cy-22,-90,cy-42)}{text(right.lv,w-outer+18,outerY-15,-90,outerY-cy-35)}{total(right.seat,cx+49,nameY,-90)}{circle(right.seat,right.right,w-25,cy/2,-90)}{circle(right.seat,right.left,w-25,(cy+outerY)/2,-90)}</g>
+        {finalPunches.map(punchBadge)}
       </g>
     </g></svg>
     </span>

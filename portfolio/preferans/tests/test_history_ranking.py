@@ -148,6 +148,8 @@ def test_atomic_close_creates_immutable_result_and_ranking_once(monkeypatch):
     result = db.docs[result_key]
     assert result["room_id"] == rid
     assert result["deal_count"] == 1
+    assert db.docs[room_ref]["final_punches"] == result["punches"]
+    assert api.view(rid, "auth-A")["final_punches"] == result["punches"]
     assert result["duration_ms"] == 5_000
     assert [p["gold"] for p in result["players"]] == [1, 0, 1]
     # Exact retry returns the idempotent response; neither medal nor result repeats.
