@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CardArtwork } from "./CardArtwork.ru";
-import { type RoomView, suitSymbol } from "./game-model.ru";
+import type { RoomView } from "./game-model.ru";
 import { type SeatProfile } from "./table-model";
 import { Notebook } from "./Notebook.ru";
 import { VesnaRadio } from "./VesnaRadio.ru";
@@ -64,9 +64,9 @@ export function SharedRoom({view,profiles,busy,command,serverNow,sheetExit,score
       {my!==null&&<button type="button" disabled={busy||!p.enabled} onClick={()=>command("break_ready",{break_id:p.break!.id,ready:!p.break!.ready[my]})}>{p.break.ready[my]?"Отозвать готовность":"Готов продолжить"}</button>}
     </div>}
     {p.overlay&&!(p.overlay.kind==="discard_replay"&&p.overlay.seat===my)&&<section className={`${styles.panel} ${p.overlay.kind==="score_sheet"?styles.scoreOverlay:p.overlay.kind==="last_trick"?styles.lastTrickOverlay:p.overlay.kind==="radio"?styles.radioOverlay:p.overlay.kind==="discard_replay"?styles.discardOverlay:""}`} role={p.overlay.kind==="score_sheet"||p.overlay.kind==="last_trick"||p.overlay.kind==="radio"||p.overlay.kind==="discard_replay"?"dialog":undefined} aria-label={labels[p.overlay.kind]} data-shared-overlay={p.overlay.kind} data-paper-lift={p.overlay.kind==="score_sheet"?"true":undefined}>
-      {p.overlay.kind!=="score_sheet"&&<header><div><strong>{p.overlay.kind==="last_trick"?`${names(p.overlay.seat,profiles)} смотрит последнюю взятку`:labels[p.overlay.kind]}</strong><small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small></div>{p.overlay.kind!=="discard_replay"&&<button type="button" disabled={busy} onClick={close}>Закрыть</button>}</header>}
+      {p.overlay.kind!=="score_sheet"&&<header><div><strong>{p.overlay.kind==="last_trick"?`${names(p.overlay.seat,profiles)} смотрит последнюю взятку`:labels[p.overlay.kind]}</strong>{p.overlay.kind!=="last_trick"&&<small>Открыл: {names(p.overlay.seat,profiles)}. {p.overlay.kind==="discard_replay"?"Карты видит только заказчик.":"Видят все игроки."}</small>}</div>{p.overlay.kind!=="discard_replay"&&<button type="button" disabled={busy} onClick={close}>Закрыть</button>}</header>}
       {p.overlay.kind==="score_sheet"&&<Notebook view={view} profiles={profiles} title={`${names(p.overlay.seat,profiles)} смотрит листик`} sheetExit={sheetExit} scoreAdjustment={scoreAdjustment} onClose={close} closeDisabled={busy}/>}
-      {p.overlay.kind==="last_trick"&&<><div className={styles.replay}>{(view.last_trick??[]).map(play=><div key={play.owner}><span>{names(play.owner,profiles)}</span><CardArtwork card={play.card}/></div>)}</div><p>Победитель: {names(view.last_trick_winner??0,profiles)}{view.last_trick_suit?` · Масть ${suitSymbol(view.last_trick_suit)}`:""}. Следующий разрешённый ход закроет просмотр.</p></>}
+      {p.overlay.kind==="last_trick"&&<div className={styles.replay}>{(view.last_trick??[]).map(play=><div key={play.owner}><span>{names(play.owner,profiles)}</span><CardArtwork card={play.card}/></div>)}</div>}
       {p.overlay.kind==="widow_replay"&&<div className={styles.replay}>{(view.widow??[]).map((card,i)=><div key={i}><CardArtwork card={card}/></div>)}</div>}
       {p.overlay.kind==="discard_replay"&&<div className={styles.replay}><p>{names(p.overlay.seat,profiles)} смотрит свои сброшенные карты.</p></div>}
       {p.overlay.kind==="radio"&&<div className={styles.radio}><RadioArt/><p>Тестовая мелодия {radio.display.track+1} · {Math.floor(radio.display.offset/1000)} с / 12 с</p><p>Пока только собственные тестовые звуки; коммерческие записи не включены.</p>

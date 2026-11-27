@@ -100,7 +100,7 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
     {localControls}
     {deck}
 
-    {!own && cards.count > 0 && !(view.claim?.status==="pending"&&view.claim.defender_target===undefined&&view.claim.seat===seat)&&!(view.phase==="misere_offer"&&view.declarer===seat) && <div className={`${styles.opponentHand} ${cards.open ? styles.openHand : ""}`}
+    {!own && cards.count > 0 && !(view.claim?.status==="pending"&&view.claim.seat===seat)&&!(view.phase==="misere_offer"&&view.declarer===seat) && <div className={`${styles.opponentHand} ${cards.open ? styles.openHand : ""}`}
       aria-label={cards.open ? `Открытая рука: ${fallbackName(seat)}` : `Закрытых карт: ${cards.count}`}>
       {opened ? opened.map((card,index) => <div className={styles.rivalCard} data-suit-break={index>0&&opened[index-1].suit!==card.suit?"true":undefined} key={cardId(card)}>{renderOpenCard(card,seat)}</div>)
         : Array.from({length:cards.count},(_,i)=><span className={styles.rivalCard} key={i} data-card-back="true"><CardArtwork decorative /></span>)}
@@ -209,7 +209,7 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
       const elapsed=discardScene.phase&&gagAt!==undefined?Math.max(0,serverNow()-gagAt-(discardScene.phase==="deal"?GAG_FAKE_MS:0)):0;
       const field=table.querySelector<HTMLElement>("[data-play-field]")?.getBoundingClientRect(),point=deckPoint.current;
       const origin=field&&point?.room===view.room_id&&discardScene.phase!=="deal"?new DOMRect(field.left+field.width*point.x,field.top+field.height*point.y,0,0):undefined;
-      return animateDeal(table,currentDealer,dealOrder.split(","),elapsed,origin);
+      return animateDeal(table,currentDealer,dealOrder.split(","),elapsed,origin,discardScene.phase==="fake");
     }
     if(collecting&&animationSeat!=null)return animateCollection(table,animationSeat,view.is_passout?()=>setAnimation(null):undefined);
   },[dealing,dealOrder,collecting,animationSeat,currentDealer,view.is_passout,view.game_id,view.played_tricks,discardScene.phase,gagAt,serverNow,view.room_id]);
@@ -263,7 +263,7 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
         {view.my_seat!==null&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seats.bottom}`} view={view} seat={seats.bottom} busy={busy} onReplay={replay}/>}
         {!centerChoice&&<div className={styles.decision} data-table-actions="true">{actions}</div>}
         {claimButton&&<div className={styles.claimButton}>{claimButton}</div>}
-        {view.my_seat!==null&&<div className={styles.ownHand} data-own-hand="true" inert={Boolean(discardScene.phase)} data-claim-hidden={(view.claim?.status==="pending"&&view.claim.defender_target===undefined&&view.claim.seat===view.my_seat||view.phase==="misere_offer"&&view.declarer===view.my_seat)?"true":undefined}>{hand}</div>}
+        {view.my_seat!==null&&<div className={styles.ownHand} data-own-hand="true" inert={Boolean(discardScene.phase)} data-claim-hidden={(view.claim?.status==="pending"&&view.claim.seat===view.my_seat||view.phase==="misere_offer"&&view.declarer===view.my_seat)?"true":undefined}>{hand}</div>}
       </div>}
       {!inLobby&&objects&&<div className={styles.bottomFurniture} data-radio-dock="true">{objects}</div>}
       {inLobby && <p className={styles.lobbyHint}>Занято мест: {view.occupied.filter(Boolean).length} из 3</p>}

@@ -69,7 +69,7 @@ def test_by_own_rejects_wrong_contract_actor_or_target():
             apply_command(state, 0, "claim_offer", args)
 
 
-def test_by_own_refusal_preserves_partial_and_projection_hides_cards():
+def test_by_own_refusal_preserves_partial_and_projection_reveals_only_claimant():
     state = regular()
     state = play_card(state, 0, legal_play_cards(state, 0)[0])
     pending = offer_claim(state, 0, defender_target=3)
@@ -82,13 +82,19 @@ def test_by_own_refusal_preserves_partial_and_projection_hides_cards():
     }
     for uid in "abc":
         view = seat_view(room, pending, ScoreState.new(), uid, 1)
-        assert view["claim"]["cards"] == []
+        assert view["claim"]["cards"] == [
+            {"rank": int(card.rank), "suit": card.suit.value} for card in state.hands[0]
+        ]
         assert view["claim"]["voters"] == [1]
         assert view["claim"]["defender_target"] == 3
         assert "by_own_options" not in view
     refused = vote_claim(pending, 1, False)
     assert replace(refused, claim=None) == state
     assert by_own_options(refused, 0) == ()
+    for uid in "abc":
+        assert seat_view(room, refused, ScoreState.new(), uid, 2)["claim"]["cards"] == []
+    observer = seat_view(room, pending, ScoreState.new(), "observer", 1, owner=True)
+    assert "claim" not in observer
     accepted = vote_claim(pending, 1, True)
     assert accepted.claim.partial == state.trick
     assert accepted.tricks_won == (7, 3, 0)
@@ -96,6 +102,7 @@ def test_by_own_refusal_preserves_partial_and_projection_hides_cards():
         {**room, "status": "awaiting_settlement"}, accepted, ScoreState.new(), "a", 2
     )
     assert finished_view["claim"]["awards"] == [7, 3, 0]
+    assert finished_view["claim"]["cards"] == []
 
 
 def test_already_played_tricks_are_preserved():

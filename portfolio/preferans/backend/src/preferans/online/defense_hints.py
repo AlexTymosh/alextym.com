@@ -85,6 +85,10 @@ def receive_hint(room, uid, frame):
     actor = room.views.get(uid)
     if not _defender(actor):
         return False
+    if (actor.get("contract") or {}).get("kind") in ("regular", "ten_no_widow") and (
+        actor.get("mode") != "open"
+    ):
+        return False
     scope = _scope(actor)
     if scope is None or scope != (frame["game_id"], frame["version"]) or scope[1] != room.revision:
         return False

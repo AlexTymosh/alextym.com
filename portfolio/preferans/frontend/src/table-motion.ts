@@ -12,7 +12,7 @@ export function flightDelta(from:DOMRect,to:DOMRect) {
   return {x:b.x-a.x,y:b.y-a.y};
 }
 export const localTableScale=(table:HTMLElement):number=>table.offsetWidth?table.getBoundingClientRect().width/table.offsetWidth||1:1;
-export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[],elapsedMs=0,deckOrigin?:DOMRect):()=>void {
+export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[],elapsedMs=0,deckOrigin?:DOMRect,missingWidow=false):()=>void {
   if(elapsedMs>=DEAL_SORT_AT_MS+DEAL_SORT_MS)return ()=>{};
   const source=table.querySelector<HTMLElement>("[data-play-field]");
   if(!source)return ()=>{};
@@ -46,9 +46,32 @@ export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly 
   const batches:HTMLElement[][]=[];
   for(let round=0;round<5;round++){
     for(const hand of hands)batches.push(hand.slice(round*2,round*2+2));
-    if(round===0)batches.push(widow);
+    if(round===0)batches.push(missingWidow?[]:widow);
   }
   const animations:Animation[]=[];
+  const departures=batches.flatMap((batch,i)=>batch.length?[{at:i*135,count:batch.length}]:[]);
+  const remainingAt=(time:number)=>departures.reduce((sum,packet)=>sum+(packet.at>time?packet.count:0),0);
+  const stack=document.createElement("span");
+  const stackTimers:ReturnType<typeof setTimeout>[]=[];
+  const initialRemaining=remainingAt(elapsedMs);
+  if(initialRemaining>0){
+    const bounds=table.getBoundingClientRect();
+    const sample=widow[0];
+    const sampleRect=sample?.getBoundingClientRect();
+    const width=Math.max(22,Math.min(76,sampleRect?.width?sampleRect.width/scale:48));
+    stack.dataset.dealStack="true";
+    stack.setAttribute("aria-hidden","true");stack.inert=true;
+    Object.assign(stack.style,{position:"absolute",display:"block",left:`${(origin.left+origin.width/2-bounds.left)/scale-table.clientLeft}px`,top:`${(origin.top+origin.height/2-bounds.top)/scale-table.clientTop}px`,width:`${width}px`,height:`${width*1.5}px`,transform:"translate(-50%,-50%) rotate(-8deg)",border:"1px solid #f4ead4",borderRadius:"5%",background:"repeating-linear-gradient(45deg,#913e42 0 3px,#e2a4a0 3px 4px)",pointerEvents:"none",zIndex:"3"});
+    if(sample){const image=sample.cloneNode(true) as HTMLElement;Object.assign(image.style,{width:"100%",height:"100%",display:"block",visibility:"visible"});stack.append(image);}
+    const updateStack=(remaining:number)=>{
+      if(remaining<=0){stack.remove();return;}
+      stack.dataset.dealRemaining=String(remaining);
+      const layers=Math.min(6,Math.ceil(remaining/5));
+      stack.style.boxShadow=Array.from({length:layers},(_,i)=>`${i+1}px ${i+1}px ${i%2?"#f1e8d7":"#786c57"}`).join(",");
+    };
+    table.append(stack);updateStack(initialRemaining);
+    departures.filter(packet=>packet.at>elapsedMs).forEach(packet=>stackTimers.push(setTimeout(()=>updateStack(remainingAt(packet.at)),packet.at-elapsedMs)));
+  }
   batches.forEach((batch,i)=>batch.forEach(card=>{
     if(typeof card.animate!=="function")return;
     const delta=flightDelta(card.getBoundingClientRect(),origin);
@@ -70,7 +93,7 @@ export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly 
   }));
   const restoreLayers=()=>layers.forEach(({node,previous})=>{node.style.zIndex=previous;});
   const sortTimer=setTimeout(restoreLayers,Math.max(0,DEAL_SORT_AT_MS-elapsedMs));
-  return ()=>{clearTimeout(sortTimer);restoreLayers();animations.forEach(animation=>animation.cancel());};
+  return ()=>{clearTimeout(sortTimer);stackTimers.forEach(id=>clearTimeout(id));stack.remove();restoreLayers();animations.forEach(animation=>animation.cancel());};
 }
 export function animateCollection(table:HTMLElement,winner:number,onFinished?:()=>void):()=>void {
   const target=table.querySelector<HTMLElement>(`[data-trick-train="${winner}"] [data-latest="true"]`);

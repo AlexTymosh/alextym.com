@@ -16,7 +16,9 @@ export function canHint(view:RoomView,owner:number,card:Card):boolean {
 }
 export function sharedHint(view:RoomView,owner:number,card:Card):boolean {
   // Another defender must already be entitled to see this hand. Never infer hidden cards.
-  return view.defense_hints!==undefined&&canHint(view,owner,card)&&
+  const kind=view.contract?.kind;
+  const open=kind==="misere"||kind==="misere_no_widow"||view.mode==="open";
+  return open&&view.defense_hints!==undefined&&canHint(view,owner,card)&&
     (owner!==view.my_seat||view.open_hands?.some(h=>h.seat===owner&&h.cards.some(c=>cardId(c)===cardId(card)))===true);
 }
 
@@ -28,3 +30,11 @@ export function canRaiseOwn(view:RoomView,owner:number,card:Card):boolean {
     view.claim?.status!=="pending"&&view.hand?.some(c=>cardId(c)===cardId(card))===true;
 }
 export const ownRaiseScope=(view:RoomView)=>`${view.room_id}:${view.game_id}`;
+
+/** A same-version HTTP response cannot replace the last authoritative cue list. */
+export function mergeHintSnapshot(previous:RoomView|null,next:RoomView,active:boolean):RoomView {
+  if(active&&previous&&previous.room_id===next.room_id&&previous.game_id===next.game_id&&previous.version===next.version&&previous.my_seat===next.my_seat&&previous.declarer===next.declarer&&
+    next.defense_hints===undefined&&previous.defense_hints!==undefined&&!next.controls?.paused&&!next.controls?.undo)
+    return {...next,defense_hints:previous.defense_hints};
+  return next;
+}
