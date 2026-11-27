@@ -2,7 +2,7 @@ import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { notebookAngle, splitPlayerName } from "./table-pr20";
 import { bidLabel, type RoomView, type NotebookMark } from "./game-model.ru";
 import { notebookAt } from "./notebook-history";
-import { packNotebookRows, poolEntryText, vistEquation, type InkToken } from "./notebook-layout";
+import { packNotebookRows, poolEntryText, notebookEntryLabel, vistEquation, type InkToken } from "./notebook-layout";
 import { tableSeats, type SeatProfile } from "./table-model";
 import { punchGeometry, type NotebookPunch } from "./notebook-punches";
 import styles from "./preferans-notebook.module.css";
@@ -45,7 +45,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     const tokens=values.map((n,i):InkToken=>{
       const mark=marks.find(m=>m.index===i);
       const label=cell.kind==="pool"?poolEntryText(values,i,score.target??20):String(n);
-      return {label:`. ${label}`,manual:!!mark?.manual,latest:!!mark?.latest,underline:!!distributed&&cell.kind==="hill"&&i===values.length-1};
+      return {label:notebookEntryLabel(label),manual:!!mark?.manual,latest:!!mark?.latest,underline:!!distributed&&cell.kind==="hill"&&i===values.length-1};
     });
     const rows=packNotebookRows(tokens,cell.kind==="hill"?232:176);
     if(distributed&&cell.kind==="vist"&&cell.against!==undefined){
@@ -114,7 +114,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     return <g key={`${p.from}:${p.to}`} data-punch-from={p.from} data-punch-to={p.to} aria-label={label}>
       <title>{label}</title>
       <path d={`M${start.x} ${start.y} L${end.x} ${end.y}`} stroke="#b51524" strokeWidth="2.4" fill="none" markerEnd={`url(#punch-arrow-${id})`}/>
-      <circle cx={center.x} cy={center.y} r="31" fill="#b51524" stroke="#fbf9ee" strokeWidth="1.5"/>
+      <circle cx={center.x} cy={center.y} r="37" fill="#b51524" fillOpacity="0.8" stroke="#fbf9ee" strokeWidth="1.5"/>
       {lines.map((line,i)=>{
         const size=i===0&&!(p.bare&&p.ordinary)?21:12;
         return <text key={i} x={center.x} y={center.y+(i===0?-8:11)} dominantBaseline="central" textAnchor="middle" fill="#fff" fontWeight="700" fontStyle="normal" fontSize={size} textLength={line.length*size*.7>51?51:undefined} lengthAdjust="spacingAndGlyphs">{line}</text>;
@@ -126,17 +126,17 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     {!miniature&&<div className={styles.paperToolbar}>
       <div className={styles.paperExit}>{!past&&sheetExit}</div>
       <div className={styles.rotateControls}><button type="button" aria-label="Повернуть к левому игроку" onClick={()=>setOrientation(n=>(n+1)%3)}>↶</button><button type="button" aria-label="Моя сторона" onClick={()=>setOrientation(0)}>Моя сторона</button><button type="button" aria-label="Повернуть к правому игроку" onClick={()=>setOrientation(n=>(n+2)%3)}>↷</button></div>
+      <div className={styles.zoomControls} aria-label="Масштаб пульки"><button type="button" aria-label="Уменьшить пульку" disabled={zoom<=0.5} onClick={()=>setZoom(z=>Math.max(0.5,z-0.25))}>−</button><button type="button" aria-label="Исходный масштаб" onClick={()=>setZoom(1)}>{Math.round(zoom*100)}%</button><button type="button" aria-label="Увеличить пульку" disabled={zoom>=4} onClick={()=>setZoom(z=>Math.min(4,z+0.25))}>+</button></div>
       {onClose&&<button type="button" className={styles.paperClose} aria-label="Закрыть пульку" title="Закрыть пульку" disabled={closeDisabled} onClick={onClose}>×</button>}
     </div>}
     {!miniature&&title&&<p className={styles.paperTitle}>{title}</p>}
-    {!miniature&&!past&&scoreAdjustment&&<div className={styles.accountingActions}>{scoreAdjustment}</div>}
     {!miniature&&!past&&reviewAction&&<div className={styles.reviewAction}>{reviewAction}</div>}
-    {!miniature&&<div className={styles.zoomControls} aria-label="Масштаб пульки"><button type="button" aria-label="Уменьшить пульку" disabled={zoom<=0.5} onClick={()=>setZoom(z=>Math.max(0.5,z-0.25))}>−</button><button type="button" aria-label="Исходный масштаб" onClick={()=>setZoom(1)}>{Math.round(zoom*100)}%</button><button type="button" aria-label="Увеличить пульку" disabled={zoom>=4} onClick={()=>setZoom(z=>Math.min(4,z+0.25))}>+</button></div>}
     {!miniature&&steps.length>0&&<div className={styles.historyNav} aria-label="История записей">
       <div><button type="button" aria-label="Предыдущая запись" disabled={cursor===0} onClick={()=>setStepIndex(cursor-1)}>←</button><strong>Запись {cursor} / {steps.length}</strong><button type="button" aria-label="Следующая запись" disabled={cursor===steps.length} onClick={()=>setStepIndex(cursor+1===steps.length?null:cursor+1)}>→</button><button type="button" onClick={()=>setStepIndex(null)} disabled={!past}>Последняя</button></div>
       <p>{step?step.kind==="manual"?"Ручная корректировка":step.kind==="penalty"?"Штраф":step.passout?`Распасы ${step.passout}`:step.contract&&step.declarer!=null?`${name(step.declarer)} · ${bidLabel(step.contract)}`:"Раздача (контракт не сохранён)":"Начало записей"}</p>
       {step&&<ul>{step.entries.map((e,i)=><li key={i}>{name(e.seat)} · {e.field==="hill"?"Гора":e.field==="pool"?"Пуля":`Висты на ${name(e.against!)}`} {signed(e.delta)}</li>)}</ul>}
     </div>}
+    {!miniature&&!past&&scoreAdjustment&&<div className={styles.accountingActions}>{scoreAdjustment}</div>}
     <span className={miniature?styles.miniatureBody:styles.paperBody}>
     {!miniature&&<span className={styles.scissors} aria-hidden="true">✁</span>}
     <span className={miniature?styles.miniatureCanvas:styles.paperViewport} data-zoomed={!miniature&&zoom!==1?"true":undefined} style={{"--paper-zoom":miniature?1:zoom} as CSSProperties}>

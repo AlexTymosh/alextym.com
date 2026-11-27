@@ -19,3 +19,12 @@ export function sharedHint(view:RoomView,owner:number,card:Card):boolean {
   return view.defense_hints!==undefined&&canHint(view,owner,card)&&
     (owner!==view.my_seat||view.open_hands?.some(h=>h.seat===owner&&h.cards.some(c=>cardId(c)===cardId(card)))===true);
 }
+
+/** Own-hand presentation only. This never grants shared hint or play permissions. */
+export function canRaiseOwn(view:RoomView,owner:number,card:Card):boolean {
+  return view.status==="playing"&&view.my_seat!==null&&owner===view.my_seat&&
+    view.phase!=="finished"&&view.phase!=="misere_offer"&&
+    !(view.phase==="discard"&&view.declarer===owner)&&!view.controls?.paused&&!view.controls?.undo&&
+    view.claim?.status!=="pending"&&view.hand?.some(c=>cardId(c)===cardId(card))===true;
+}
+export const ownRaiseScope=(view:RoomView)=>`${view.room_id}:${view.game_id}`;

@@ -30,5 +30,26 @@
     "license": "CC0-1.0",
     "size": 691195,
     "md5": "202624e89023d9ace2845b372015490c"
+  },
+  "walnut": {
+    "asset": "walnut_procedural_1k",
+    "source": "Original procedural diffuse texture created for this project",
+    "license": "Project license",
+    "size": 197315,
+    "md5": "50c7406415e6232264fe6d05fca5e289"
+  },
+  "marble": {
+    "asset": "marble_procedural_1k",
+    "source": "Original procedural diffuse texture created for this project",
+    "license": "Project license",
+    "size": 73892,
+    "md5": "a7b234e07befd365b2fa0f0dc08431c5"
+  },
+  "leather": {
+    "asset": "leather_procedural_1k",
+    "source": "Original procedural diffuse texture created for this project",
+    "license": "Project license",
+    "size": 139851,
+    "md5": "c2e3e64382d590bdac1a8f8d62ef9bb8"
   }
 }

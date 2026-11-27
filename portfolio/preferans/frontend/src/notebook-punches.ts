@@ -24,7 +24,7 @@ export function isNotebookPunches(value:unknown,net:readonly number[]):value is 
 export function punchGeometry(punch:NotebookPunch,seats:Seats,w:number,cy:number,inner:number,innerY:number):{center:Point;start:Point;end:Point} {
   const position=(seat:number):Position=>seat===seats.left?"left":seat===seats.right?"right":"bottom";
   const from=position(punch.from),to=position(punch.to);
-  const cx=w/2, reach=55;
+  const cx=w/2, reach=63;
   if(from!=="bottom"&&to!=="bottom"){
     const center={x:cx,y:49};
     const left={x:cx-reach,y:center.y},right={x:cx+reach,y:center.y};
@@ -35,7 +35,7 @@ export function punchGeometry(punch:NotebookPunch,seats:Seats,w:number,cy:number
   const ax=cx+sign*43, ay=cy+21;
   const bx=side==="left"?inner:w-inner;
   const dx=bx-ax,dy=innerY-ay,len=Math.hypot(dx,dy);
-  const center={x:ax+dx*.59,y:ay+dy*.59};
+  const center={x:ax+dx*.531,y:ay+dy*.531};
   // Outward normal points into the side player's sector.
   const nx=sign*dy/len,ny=-sign*dx/len;
   const outside={x:center.x+reach*nx,y:center.y+reach*ny};

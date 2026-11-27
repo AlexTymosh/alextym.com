@@ -25,8 +25,8 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
     </div>;
   }
   return <div className={styles.bidPanel} aria-label={auction?"Торговля":"Окончательный контракт"}>
-    {canConcede&&<button type="button" disabled={busy} onClick={()=>{if(window.confirm(`Ты уверен, что хочешь объявить «Без трёх» (${bidLabel(view.winning_bid!)})?`))command("without_three");}}>Без трёх</button>}
     <div className={styles.bidGroups}>
+      {canConcede&&<button type="button" data-bid-tone="dark" disabled={busy} onClick={()=>{if(window.confirm(`Ты уверен, что хочешь объявить «Без трёх» (${bidLabel(view.winning_bid!)})?`))command("without_three");}}>Без трёх</button>}
       {auction && <button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>{setConfirmation(null);command("pass");}}>ПАС</button>}
       {BID_GROUPS.filter(key=>key!=="ten_no_widow").map(key=>{
         const available=bidsInGroup(bids,key);

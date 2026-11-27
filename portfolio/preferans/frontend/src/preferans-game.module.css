@@ -291,3 +291,14 @@
 .undoPanel[data-undo-vote] { gap:.35rem; padding:.4rem; max-height:100%; overflow:auto; }
 .undoPanel:not([data-undo-vote]) { background:transparent; padding:0; border:0; gap:0; align-items:flex-start; }
 .undoPanel:not([data-undo-vote]) button { padding:.25rem .45rem; min-height:24px; font-size:.78rem; }
+
+/* PR34: draft controls remain beside the two slots and do not shift the hand. */
+.tableRoot .discardSlots { flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+.tableRoot .discardActions { display:flex; align-items:center; gap:.3rem; flex-wrap:wrap; justify-content:flex-end; }
+.tableRoot .discardActions button { font-size:clamp(.65rem,1.05cqw,.9rem); min-height:28px; white-space:nowrap; }
+.tableRoot .rewardRoute { display:grid; justify-items:center; gap:.4rem; text-align:center; }
+.tableRoot .rewardRoute>div { display:flex; flex-wrap:wrap; justify-content:center; gap:.3rem; }
+.tableRoot .rewardRoute button[aria-pressed="true"] { background:#bca174; color:#142820; border-color:#cbb58f; }
+.tableRoot .undoIconButton { display:inline-grid; place-items:center; padding:.24rem .4rem; min-width:30px; min-height:30px; }
+.tableRoot .undoIconButton svg,.tableRoot .discardSlots button svg { display:block; width:18px; height:18px; }
+@media(max-height:650px) and (orientation:landscape) { .tableRoot .discardActions button { min-height:24px; padding:.15rem .3rem; } }
