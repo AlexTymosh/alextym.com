@@ -380,3 +380,48 @@ def test_control_projection_never_returns_private_undo_checkpoint():
     observer = api.view(rid, "owner-outside", owner=True)
     assert "hand" not in observer
     assert "candidate" not in str(observer)
+
+
+def test_counter_cancel_authority_idempotency_and_charges(monkeypatch):
+    monkeypatch.delenv("PREFERANS_REALTIME_ENABLED", raising=False)
+    api, rid, clock = service()
+    pulse_all(api, rid, clock)
+    view = api.view(rid, "a")
+    target = view["turn"]
+    initiator = next(i for i in (1, 2) if i != target)
+    response = api.command(
+        rid, "abc"[initiator], "cancel-start-01", view["version"], "counter_start", {}
+    )
+    other = next(i for i in (1, 2) if i != initiator)
+    with pytest.raises(StoreError) as denied:
+        api.command(
+            rid, "abc"[other], "cancel-denied-01", response["version"], "counter_cancel", {}
+        )
+    assert denied.value.code == 403
+    with pytest.raises(StoreError) as malformed:
+        api.command(
+            rid,
+            "abc"[initiator],
+            "cancel-invalid-01",
+            response["version"],
+            "counter_cancel",
+            {"target": target},
+        )
+    assert malformed.value.code == 422
+    base = api.view(rid, "a")["score"]["hill"][target]
+    clock[0] += TIMER_MS
+    api.db.docs[f"preferans_rooms/{rid}/private/current"]["controls"]["presence"] = [clock[0]] * 3
+    result = api.command(rid, "a", "cancel-admin-01", response["version"], "counter_cancel", {})
+    assert (
+        api.command(rid, "a", "cancel-admin-01", response["version"], "counter_cancel", {})
+        == result
+    )
+    seen = api.view(rid, "a")
+    assert seen["controls"]["counter"] is None
+    assert seen["score"]["hill"][target] > base
+    assert any(event["action"] == "counter_cancel" for event in api.events(rid, "a")["events"])
+    started = api.command(
+        rid, "abc"[initiator], "cancel-start-02", seen["version"], "counter_start", {}
+    )
+    api.command(rid, "abc"[initiator], "cancel-own-02", started["version"], "counter_cancel", {})
+    assert api.view(rid, "a")["controls"]["counter"] is None

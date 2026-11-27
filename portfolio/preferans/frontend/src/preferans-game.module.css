@@ -302,3 +302,7 @@
 .tableRoot .undoIconButton { display:inline-grid; place-items:center; padding:.24rem .4rem; min-width:30px; min-height:30px; }
 .tableRoot .undoIconButton svg,.tableRoot .discardSlots button svg { display:block; width:18px; height:18px; }
 @media(max-height:650px) and (orientation:landscape) { .tableRoot .discardActions button { min-height:24px; padding:.15rem .3rem; } }
+
+/* PR35: vertical discard actions retain the two-card drop area. */
+.tableRoot .discardActions { flex-direction:column; align-items:stretch; flex-wrap:nowrap; gap:.2rem; }
+.tableRoot .discardActions button { min-height:24px; }

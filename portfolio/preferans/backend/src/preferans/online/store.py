@@ -38,6 +38,7 @@ from preferans.online.controls import (
     request_undo,
     start_counter,
     stop_counter,
+    cancel_counter,
     tick_controls,
     vote_undo,
 )
@@ -542,7 +543,7 @@ class FirestoreRooms:
                     raise StoreError(exc.status, exc.detail) from exc
                 if (
                     controls.get("paused_at") is not None
-                    and action not in {"score_adjust"}
+                    and action not in {"score_adjust", "counter_cancel"}
                     and action not in PRESENTATION_ACTIONS
                     and not (action == "play" and allows_replay_move(controls))
                 ):
@@ -936,6 +937,12 @@ class FirestoreRooms:
                         if not can_start_counter(controls, now):
                             raise ControlError(409, "Other players are not online")
                         event_data = start_counter(controls, game, score, seat, now)
+                    elif action == "counter_cancel":
+                        if args:
+                            raise ControlError(422, "Unexpected counter cancellation arguments")
+                        event_data = cancel_counter(
+                            controls, seat, admin=owner or uid == room["admin_uid"]
+                        )
                     elif action == "undo_request":
                         if set(args) != {"reason"}:
                             raise ControlError(422, "Undo requires a reason")

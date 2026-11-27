@@ -959,3 +959,9 @@ The owner-context regression tests use provider doubles on the backend and mocke
 API responses in Playwright. Browser tests assert actual outgoing request bodies
 on desktop and mobile Chromium. They verify frontend transmission and rendering;
 they do not exercise live Telegram delivery, Qdrant retrieval, or model behaviour.
+
+### Preferans nickname and counter cancellation
+
+`POST /auth/access/preferans-alias` accepts exactly `uid` and `alias` (trimmed, up to 40 characters, empty clears). Owner, recent authenticated session, same-origin bounded JSON and an active account are required. The optional display label is stored on the existing UID-bound profile, not an authentication identifier. Ordinary profile edits preserve it. Game room profile responses may contain an optional `alias` string; other profile fields and permissions are unchanged.
+
+`counter_cancel` is a versioned Preferans room command with empty `args`. Only the seated counter initiator or room administrator (including the seated Owner) may cancel an active counter. Existing reconciliation precedes cancellation and accrued penalties remain. The action is audited and follows the existing idempotency contract.

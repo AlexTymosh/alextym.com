@@ -159,3 +159,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Own-hand private card raises for all seated players except declarer discard selection, retaining the existing authorized defense hint channel. Dashed single growing activity ring.
 - Add local original procedural walnut, marble and leather material maps. Extend the synchronized hidden-discard scene to 11.9s with a two-second complaint and card discovery cue. Animate confirmed technical sheet disposal only on the live transition; no additional operations or score changes.
 - Full CI and three-client visual acceptance required.
+
+## PR35 - Room preparation and table interaction
+
+- Keep existing readiness, three-seat swap, claims and scoring contracts. Entry into a joinable room attempts one authorized join; a failed join retains the manual retry. Readiness and swap votes appear inside the table; rule configuration remains in the room menu.
+- Add an Owner-managed game-only nickname in access settings, stored by UID on the existing profile document. No identity or grant changes; notebook projections use the alias, ordinary labels keep their original name. Reopening a room refreshes the profile.
+- Add versioned counter cancellation for the initiator or seated room administrator. Previously incurred penalties remain; existing transaction reconciliation and audit remain authoritative.
+- Add bid hover contrast, height and suit glyph changes, inline concession confirmation, vertical discard controls and thinner activity ring. Historical seating uses persisted seat numbers. Paper lift and return are local animation; hidden discard remains face down.
+- Full repository CI and three-client visual acceptance remain required. No additional periodic requests or provider changes.

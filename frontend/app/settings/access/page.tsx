@@ -5,6 +5,7 @@ import { getOwnerUid, isLabEnabled } from "../../../lib/portfolio-lab/firebase-s
 import { listLabUsers } from "../../../lib/portfolio-lab/owner-access-server";
 import { labProjects } from "../../../lib/portfolio-lab/project-catalog";
 import { LabGrantEditor } from "../../../components/lab-grant-editor";
+import { PreferansAliasEditor } from "../../../components/preferans-alias-editor";
 import styles from "../../../components/lab-auth.module.css";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function LabAdminPage({ searchParams }: { searchParams: Pro
               <tr>
                 <th scope="col">User</th>
                 <th scope="col">Linked accounts</th>
+                <th scope="col">Preferans nickname</th>
                 {labProjects.map((project) => <th key={project.id} scope="col">{project.title}</th>)}
               </tr>
             </thead>
@@ -56,6 +58,7 @@ export default async function LabAdminPage({ searchParams }: { searchParams: Pro
                       ))}
                     </ul>
                   </td>
+                  <td><PreferansAliasEditor uid={user.uid} initial={user.alias} disabled={user.disabled}/></td>
                   {labProjects.map((project) => {
                     const grant = user.grants.find((entry) => entry.projectId === project.id)!;
                     return (
