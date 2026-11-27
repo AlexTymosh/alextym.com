@@ -14,37 +14,42 @@ def reasons(control: dict) -> set[str]:
     )
 
 
-def transition(control: dict, desired: set[str], at: int, *, freeze_at: int | None = None) -> bool:
-    """Freeze once; removing one reason must not resume other paused clocks.
+def timer_paused(control: dict, desired: set[str] | None = None) -> bool:
+    """A score sheet pauses play, not an already running decision clock."""
+    active = reasons(control) if desired is None else desired
+    overlay = (control.get("presentation") or {}).get("overlay") or {}
+    if overlay.get("kind") == "score_sheet":
+        active = active - {"shared_overlay"}
+    return bool(active or control.get("vote"))
 
-    Undo is independent: it freezes the counter, but not its own voting clock.
-    This helper is for external pauses. No client supplies timestamps or reasons.
-    """
+
+def transition(control: dict, desired: set[str], at: int, *, freeze_at: int | None = None) -> bool:
+    """Reconcile each clock independently, including a replaced shared overlay."""
     previous = reasons(control)
-    if previous == desired:
-        return False
-    control["pause_reasons"] = sorted(desired)
+    changed = previous != desired
+    if changed:
+        control["pause_reasons"] = sorted(desired)
+    frozen = at if freeze_at is None else min(at, freeze_at)
     if not previous and desired:
-        frozen = at if freeze_at is None else min(at, freeze_at)
         control["paused_at"] = frozen
-        for key in ("timer", "vote", "next_deal"):
-            clock = control.get(key)
-            if clock and isinstance(clock.get("deadline_ms"), int):
-                remaining = max(0, clock["deadline_ms"] - frozen)
-                clock["remaining_ms"] = min(5_000, remaining) if key == "next_deal" else remaining
-                clock["deadline_ms"] = None
     elif previous and not desired:
         control["paused_at"] = None
-        vote = control.get("vote")
-        if vote and vote.get("deadline_ms") is None:
-            vote["deadline_ms"] = at + vote.pop("remaining_ms", 0)
-        next_deal = control.get("next_deal")
-        if next_deal and not vote and next_deal.get("deadline_ms") is None:
-            next_deal["deadline_ms"] = at + next_deal.pop("remaining_ms", 5_000)
-        timer = control.get("timer")
-        if timer and not vote and timer.get("deadline_ms") is None:
-            timer["deadline_ms"] = at + timer.pop("remaining_ms", 0)
-    return True
+    for key in ("timer", "vote", "next_deal"):
+        clock = control.get(key)
+        if not clock:
+            continue
+        blocked = timer_paused(control, desired) if key == "timer" else bool(desired)
+        if key == "next_deal" and control.get("vote"):
+            blocked = True
+        if blocked and isinstance(clock.get("deadline_ms"), int):
+            remaining = max(0, clock["deadline_ms"] - frozen)
+            clock["remaining_ms"] = min(5_000, remaining) if key == "next_deal" else remaining
+            clock["deadline_ms"] = None
+        elif not blocked and clock.get("deadline_ms") is None:
+            clock["deadline_ms"] = at + clock.pop(
+                "remaining_ms", 5_000 if key == "next_deal" else 0
+            )
+    return changed
 
 
 def synchronize(

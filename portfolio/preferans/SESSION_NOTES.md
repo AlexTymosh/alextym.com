@@ -167,3 +167,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Add versioned counter cancellation for the initiator or seated room administrator. Previously incurred penalties remain; existing transaction reconciliation and audit remain authoritative.
 - Add bid hover contrast, height and suit glyph changes, inline concession confirmation, vertical discard controls and thinner activity ring. Historical seating uses persisted seat numbers. Paper lift and return are local animation; hidden discard remains face down.
 - Full repository CI and three-client visual acceptance remain required. No additional periodic requests or provider changes.
+
+## PR36 - Decision controls and independent table/paper zoom
+
+- Move undo request and vote to a readable in-table dialog. Return the accepted/rejected/expired outcome only to the requester, without polling or exposing snapshots.
+- Keep a running counter live during score-sheet review; real breaks and lost connections still freeze it. Charge at most once per decision and disable undo when a counter starts. Preserve cancellation authorization and existing ledger entries.
+- Store correction reasons durably, recover available legacy reasons and never invent absent ones. Keep notebook zoom inside a two-axis viewport; table zoom is an independent local preference next to Fullscreen.
+- Move the first-hand label outside avatars and clear it on the first card. Preserve the claimant's exact validated displayed hand order. Thin activity strokes by another 30%.
+- Full repository CI and three-player browser acceptance remain required. No additional periodic reads, provider or billing changes.

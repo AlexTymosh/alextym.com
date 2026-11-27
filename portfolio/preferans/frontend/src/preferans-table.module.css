@@ -751,3 +751,13 @@
   .table[data-lobby="true"] .trickField { min-height:clamp(160px,50dvh,290px); }
   .table .paperHiddenCards { bottom:33%; }
 }
+
+/* PR36: visible first lead, independent game zoom, and active clock over paper. */
+.table .firstHand { position:static; display:block; align-self:center; text-align:center; margin:0 auto; max-width:100%; white-space:normal; font-size:clamp(11px,1.2cqw,15px); }
+.table .handColumn>.firstHand { flex:0 0 auto; }
+.tableScene[data-table-zoomed="true"] { overflow:auto; max-height:var(--available-table-height,calc(100dvh - 150px)); scrollbar-gutter:stable; }
+.tableScene[data-table-zoomed="true"]>.table { width:var(--unscaled-table-width,100%); box-sizing:border-box; zoom:var(--table-zoom,1); margin-inline:auto; }
+.table[data-paper-open="true"] .fieldStatus:has(.counterDisplay) { visibility:hidden; }
+.table .paperCounter { position:absolute; top:.5rem; right:.5rem; z-index:27; max-width:min(38%,240px); padding:.4rem; border:1px solid #ad976a; border-radius:.5rem; background:#17352c; text-align:center; font-size:clamp(.65rem,1cqw,.85rem); }
+.table .paperCounter .counterDigits { font-size:clamp(1.1rem,2.4cqw,1.8rem); }
+.table .paperCounter button { font-size:.8rem; padding:.15rem .4rem; min-height:26px; }

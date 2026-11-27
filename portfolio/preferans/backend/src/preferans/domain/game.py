@@ -66,6 +66,7 @@ class TrickClaim:
     approved: frozenset[int] = frozenset()
     rejected_by: int | None = None
     accepted: bool = False
+    display_order: tuple[Card, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

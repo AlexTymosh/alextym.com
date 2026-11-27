@@ -33,12 +33,16 @@ export type RoomControls = {
   undo: null | { kind: "card_play" | "auction_bid"; requester: number;
     deadline_ms: number | null; remaining_ms?: number; reason: string; votes: Record<string, boolean>; can_vote: boolean };
   can_request_undo: boolean;
+  counter_result?: {target:number;initiator:number;multiplier:number;penalty:number;at_ms:number};
+  counter_exhausted_target?: number;
+  undo_candidate_version?: number;
+  undo_result?: {outcome:"accepted"|"rejected"|"expired";at_ms:number};
   adjustments: Adjustment[];
   policy?: { counter_seconds: number; counter_multiplier: number; undo_seconds: number };
 };
 export type TableTheme = "felt" | "blue" | "wood" | "glass";
 export type RewardRoute = "pool"|"hill_first"|"help";
-export type NotebookMark = {field:"hill"|"pool"|"vist";seat:number;against:number|null;index:number;manual?:boolean;latest?:boolean};
+export type NotebookMark = {field:"hill"|"pool"|"vist";seat:number;against:number|null;index:number;manual?:boolean;latest?:boolean;manual_reason?:string};
 export type NotebookStep = {kind:"deal"|"manual"|"penalty";declarer?:number|null;contract?:Bid|null;passout?:number|null;entries:(NotebookMark&{delta:number;reason:string})[]};
 export type RoomView = {
   defense_hints?: Array<{owner:number;card:Card}>;
@@ -217,7 +221,7 @@ export function isRoomView(value: unknown): value is RoomView {
       Array.isArray(step.entries)&&step.entries.length>0&&step.entries.every(m=>m&&["hill","pool","vist"].includes(m.field)&&isSeat(m.seat)&&
         (m.field==="vist"?isSeat(m.against)&&m.against!==m.seat:m.against===null)&&Number.isSafeInteger(m.index)&&m.index>=0&&
         m.index<(m.field==="vist"?s.vists[m.seat]?.[m.against!]??[]:s[m.field][m.seat]??[]).length&&Number.isSafeInteger(m.delta)&&typeof m.reason==="string"))))return false;
-    if(s.marks!==undefined&&(!Array.isArray(s.marks)||!s.marks.every(m=>m&&["hill","pool","vist"].includes(m.field)&&isSeat(m.seat)&&(m.field==="vist"?isSeat(m.against)&&m.against!==m.seat:m.against===null)&&Number.isSafeInteger(m.index)&&m.index>=0&&m.index<(m.field==="vist"?s.vists[m.seat]?.[m.against!]??[]:s[m.field][m.seat]??[]).length&&(m.manual===undefined||m.manual===true)&&(m.latest===undefined||m.latest===true))))return false;
+    if(s.marks!==undefined&&(!Array.isArray(s.marks)||!s.marks.every(m=>m&&["hill","pool","vist"].includes(m.field)&&isSeat(m.seat)&&(m.field==="vist"?isSeat(m.against)&&m.against!==m.seat:m.against===null)&&Number.isSafeInteger(m.index)&&m.index>=0&&m.index<(m.field==="vist"?s.vists[m.seat]?.[m.against!]??[]:s[m.field][m.seat]??[]).length&&(m.manual===undefined||m.manual===true)&&(m.latest===undefined||m.latest===true)&&(m.manual_reason===undefined||(typeof m.manual_reason==="string"&&m.manual_reason.length<=180)))))return false;
   }
   if (v.seat_revision !== undefined && (!Number.isSafeInteger(v.seat_revision) || Number(v.seat_revision) < 0 || !isSeat(v.my_seat))) return false;
   if (v.seat_swap !== undefined && (v.status !== "lobby" || !isSeat(v.my_seat) || !isSeatSwap(v.seat_swap))) return false;

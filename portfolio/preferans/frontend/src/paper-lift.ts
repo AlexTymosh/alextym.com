@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
+import { localTableScale } from "./table-motion";
 
 type Rect = Pick<DOMRect,"x"|"y"|"width"|"height">;
 export function paperFlight(from:Rect,to:Rect) {
@@ -15,6 +16,7 @@ export function usePaperLift(table:RefObject<HTMLElement|null>,open:boolean) {
     flight.current?.cancel();
     const mini=root.querySelector<HTMLElement>("[data-paper-miniature]");
     const overlay=root.querySelector<HTMLElement>("[data-paper-lift]");
+    const scale=localTableScale(root);
     const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(open&&overlay&&mini){
       const target=overlay.getBoundingClientRect();
@@ -23,14 +25,14 @@ export function usePaperLift(table:RefObject<HTMLElement|null>,open:boolean) {
       const shift=paperFlight(mini.getBoundingClientRect(),target);
       if(!shift)return;
       const base=getComputedStyle(overlay).transform;
-      flight.current=overlay.animate([{transform:`translate(${shift.x}px,${shift.y}px) ${base==="none"?"":base} rotate(-11deg) scale(${shift.sx},${shift.sy})`},{transform:base}],{duration:420,easing:"cubic-bezier(.2,.75,.3,1)"});
+      flight.current=overlay.animate([{transform:`translate(${shift.x/scale}px,${shift.y/scale}px) ${base==="none"?"":base} rotate(-11deg) scale(${shift.sx},${shift.sy})`},{transform:base}],{duration:420,easing:"cubic-bezier(.2,.75,.3,1)"});
     }else if(!open){
       const from=last.current;last.current=null;
       if(!from||!mini||reduce||typeof mini.animate!=="function"||mini.dataset.sheetDiscarded==="true")return;
       const shift=paperFlight(from,mini.getBoundingClientRect());
       if(!shift)return;
       const base=getComputedStyle(mini).transform;
-      flight.current=mini.animate([{transform:`translate(${shift.x}px,${shift.y}px) scale(${shift.sx},${shift.sy})`},{transform:base}],{duration:360,easing:"ease-in-out"});
+      flight.current=mini.animate([{transform:`translate(${shift.x/scale}px,${shift.y/scale}px) scale(${shift.sx},${shift.sy})`},{transform:base}],{duration:360,easing:"ease-in-out"});
     }
     return()=>flight.current?.cancel();
   },[table,open]);

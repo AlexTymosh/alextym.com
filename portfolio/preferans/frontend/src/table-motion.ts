@@ -11,10 +11,12 @@ export function flightDelta(from:DOMRect,to:DOMRect) {
   const a=center(from),b=center(to);
   return {x:b.x-a.x,y:b.y-a.y};
 }
+export const localTableScale=(table:HTMLElement):number=>table.offsetWidth?table.getBoundingClientRect().width/table.offsetWidth||1:1;
 export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[]):()=>void {
   const source=table.querySelector<HTMLElement>("[data-play-field]");
   if(!source)return ()=>{};
   const origin=source.getBoundingClientRect();
+  const scale=localTableScale(table);
   const unsorted=new Map<HTMLElement,{x:number;y:number}>();
   const layers:{node:HTMLElement;previous:string}[]=[];
   const hands=Array.from({length:3},(_,i)=>{
@@ -50,14 +52,14 @@ export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly 
     if(typeof card.animate!=="function")return;
     const delta=flightDelta(card.getBoundingClientRect(),origin);
     const slot=unsorted.get(card);
-    const start={transform:`translate3d(${delta.x}px,${delta.y}px,0) rotate(-8deg) scale(.75)`,opacity:0};
+    const start={transform:`translate3d(${delta.x/scale}px,${delta.y/scale}px,0) rotate(-8deg) scale(.75)`,opacity:0};
     const delay=i*135;
     if(!slot){
       animations.push(card.animate([start,{transform:"none",opacity:1}],{duration:DEAL_FLIGHT_MS,delay,easing:"cubic-bezier(.2,.75,.3,1)",fill:"backwards"}));
       return;
     }
     const duration=DEAL_SORT_AT_MS+DEAL_SORT_MS-delay;
-    const transform=`translate3d(${slot.x}px,${slot.y}px,0)`;
+    const transform=`translate3d(${slot.x/scale}px,${slot.y/scale}px,0)`;
     animations.push(card.animate([
       {...start,offset:0,easing:"cubic-bezier(.2,.75,.3,1)"},
       {transform,opacity:1,offset:DEAL_FLIGHT_MS/duration},
@@ -107,5 +109,6 @@ export function animateArrival(table:HTMLElement, seat:number):void {
   const target=table.querySelector<HTMLElement>(`[data-trick-seat="${seat}"]`);
   if(!source||!target||!target.firstElementChild||typeof target.animate!=="function")return;
   const d=flightDelta(target.getBoundingClientRect(),source.getBoundingClientRect());
-  target.animate([{translate:`${d.x}px ${d.y}px`,opacity:.55},{translate:"0px 0px",opacity:1}],{duration:180,easing:"cubic-bezier(.2,.75,.3,1)"});
+  const scale=localTableScale(table);
+  target.animate([{translate:`${d.x/scale}px ${d.y/scale}px`,opacity:.55},{translate:"0px 0px",opacity:1}],{duration:180,easing:"cubic-bezier(.2,.75,.3,1)"});
 }

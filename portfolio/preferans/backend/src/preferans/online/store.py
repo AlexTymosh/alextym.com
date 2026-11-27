@@ -130,6 +130,9 @@ def _begin_deal(room: dict, score: ScoreState, controls: dict, now: int, dealer:
     controls["timer"] = None
     controls["vote"] = None
     controls["candidate"] = None
+    controls.pop("counter_exhausted_target", None)
+    controls.pop("counter_result", None)
+    controls.pop("undo_result", None)
     controls.pop("next_deal", None)
     controls.pop("sheet_offers", None)
     controls.pop("passout_choices", None)
@@ -940,9 +943,19 @@ class FirestoreRooms:
                     elif action == "counter_cancel":
                         if args:
                             raise ControlError(422, "Unexpected counter cancellation arguments")
-                        event_data = cancel_counter(
-                            controls, seat, admin=owner or uid == room["admin_uid"]
-                        )
+                        admin = owner or uid == room["admin_uid"]
+                        expired = any(event["action"] == "counter_expired" for event in auto_events)
+                        if expired and not controls.get("timer"):
+                            notice = controls["counter_result"]
+                            if seat != notice["initiator"] and not admin:
+                                raise ControlError(403, "Counter initiator or room admin required")
+                            event_data = {
+                                "initiator": notice["initiator"],
+                                "target": notice["target"],
+                                "periods": 1,
+                            }
+                        else:
+                            event_data = cancel_counter(controls, seat, admin=admin)
                     elif action == "undo_request":
                         if set(args) != {"reason"}:
                             raise ControlError(422, "Undo requires a reason")

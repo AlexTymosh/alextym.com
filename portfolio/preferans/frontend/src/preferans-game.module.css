@@ -306,3 +306,21 @@
 /* PR35: vertical discard actions retain the two-card drop area. */
 .tableRoot .discardActions { flex-direction:column; align-items:stretch; flex-wrap:nowrap; gap:.2rem; }
 .tableRoot .discardActions button { min-height:24px; }
+
+/* PR36: all vote/request controls occupy a readable dialog, not the trick circle. */
+.root .undoDialog { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:min(440px,calc(100% - 24px)); max-height:calc(100% - 20px); overflow:auto; box-sizing:border-box; z-index:28; background:#193b30; color:#fff4db; border:1px solid #d5bb7e; box-shadow:0 8px 28px #0009; border-radius:.8rem; padding:clamp(.65rem,2cqw,1.1rem); gap:.6rem; font-size:clamp(.9rem,1.5cqw,1.1rem); text-align:left; }
+.root .undoDialog .controlNote { padding:0; border:0; gap:.5rem; }
+.root .undoDialog strong { font-size:1.1em; }
+.root .undoDialog p { overflow-wrap:anywhere; margin:0; }
+.root .undoDialog label { display:grid; gap:.35rem; }
+.root .undoDialog .undoReason { width:100%; box-sizing:border-box; min-height:2.5rem; background:#fff7e3; color:#1e3029; border:1px solid #d5bb7e; border-radius:.35rem; padding:.45rem; font:inherit; }
+.root .undoDialog form { display:grid; gap:.65rem; }
+.root .undoDialog button { background:#345b47; color:#fff4db; min-height:36px; font-size:1rem; padding:.35rem .7rem; }
+.root .undoDialog button:hover:not(:disabled) { background:#52775d; }
+.root .undoDialog button.primary { color:#142820; background:#d5bb7e; }
+.root .undoDialog button.primary:hover:not(:disabled) { background:#e8cd94; }
+.root .feedbackStack { position:absolute; top:.55rem; left:50%; transform:translateX(-50%); max-width:min(88%,480px); width:max-content; z-index:31; display:grid; gap:.25rem; pointer-events:none; }
+.root .feedbackNotice { padding:.55rem .75rem; background:#17352c; border:1px solid #d5bb7e; color:#fff4db; border-radius:.5rem; box-shadow:0 4px 15px #0007; font-size:clamp(.85rem,1.3cqw,1.05rem); text-align:center; overflow-wrap:anywhere; }
+.zoomToolbar { display:inline-flex; gap:.2rem; align-items:center; white-space:nowrap; }
+.zoomToolbar button { min-width:26px; min-height:28px; background:#203a30; border:1px solid #ad976a; color:#fff4db; border-radius:.35rem; padding:.15rem .35rem; cursor:pointer; font-size:.85rem; }
+.zoomToolbar button:disabled { opacity:.4; }

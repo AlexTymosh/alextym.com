@@ -21,6 +21,6 @@ export function CounterDisplay({view,name,serverNow,busy,onCancel}:{view:RoomVie
     <span className={styles.counterDigits} aria-live="off" aria-label={`Осталось ${left} секунд`}>{String(Math.floor(left/60)).padStart(2,"0")}:{String(left%60).padStart(2,"0")}</span>
     {mayCancelCounter(view)&&<button type="button" disabled={busy} onClick={onCancel}>Отмена</button>}
     <small>Не успеешь - штраф {multiplier}х в гору!</small>
-    <small>{counter.penalty} в гору за интервал · истечений: {counter.periods}{counter.deadline_ms===null?" · пауза":""}</small>
+    <small>{counter.penalty} в гору однократно{counter.deadline_ms===null?" · пауза":""}</small>
   </div>;
 }

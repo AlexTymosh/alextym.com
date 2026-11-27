@@ -21,7 +21,7 @@ export function gagPhase(mark:GagMark|undefined,now:number):"fake"|"deal"|null {
 export function counterTarget(view:RoomView):number|null {
   if(view.my_seat===null||!view.controls||view.controls.counter||view.phase==="misere_offer")return null;
   const target=actorSeat(view);
-  return target!==null&&target!==view.my_seat&&view.occupied[target]?target:null;
+  return target!==null&&target!==view.my_seat&&target!==view.controls.counter_exhausted_target&&view.occupied[target]?target:null;
 }
 export function counterSeconds(deadline:number|null,remaining:number|undefined,now:number):number {
   return Math.max(0,Math.ceil((deadline===null?remaining??0:deadline-now)/1000));
