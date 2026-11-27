@@ -15,6 +15,7 @@ from preferans.domain.history import placement_outcome
 from preferans.domain.ledger import ScoreState
 from preferans.domain.settlement import final_hill_vists, net_results, pairwise_results
 from preferans.online.controls import public_controls
+from preferans.online.discard_gag import project as discard_projection
 from preferans.online.punch_choices import notebook_awards
 from preferans.online.pause_clock import retire_reveal, reasons
 from copy import deepcopy
@@ -274,6 +275,31 @@ def seat_view(
         }
     )
     if my_seat is not None:
+        if room["status"] in {"playing", "awaiting_settlement", "between"}:
+            result.update(
+                discard_projection(
+                    controls or {},
+                    room.get("game_id"),
+                    auction=state.phase == Phase.AUCTION and room["status"] == "playing",
+                )
+            )
+        if (
+            now_ms > 0
+            and "presentation" not in result
+            and (
+                "redeal_gag" in result
+                or "hidden_discard" in result
+                or (controls or {}).get("timer")
+            )
+        ):
+            result["server_clock_ms"] = now_ms
+        previous_passout = (controls or {}).get("previous_passout")
+        if (
+            room["status"] == "playing"
+            and state.phase == Phase.AUCTION
+            and previous_passout in (6, 7, 8)
+        ):
+            result["previous_passout"] = previous_passout
         if room["status"] == "playing" and type(room.get("activity_started_at_ms")) is int:
             result["activity_started_at_ms"] = room["activity_started_at_ms"]
         if room["status"] == "awaiting_settlement" and score is not None and not score.closed:

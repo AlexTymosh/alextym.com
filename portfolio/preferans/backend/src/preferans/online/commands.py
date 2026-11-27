@@ -77,7 +77,12 @@ def apply_command(state: GameState, seat: int, action: str, data: object) -> Gam
         operation = AuctionAction.pass_turn() if action == "pass" else AuctionAction.here()
         return auction_action(state, seat, operation)
     if action == "discard":
-        _keys(data, {"cards"})
+        if "hide_under_sheet" in data:
+            _keys(data, {"cards", "hide_under_sheet"})
+            if type(data["hide_under_sheet"]) is not bool:
+                raise RuleViolation("Hide option must be boolean")
+        else:
+            _keys(data, {"cards"})
         values = data["cards"]
         if not isinstance(values, list) or len(values) != 2:
             raise RuleViolation("Discard requires two cards")
@@ -119,6 +124,8 @@ def redacted_action(action: str, args: dict) -> dict:
     """Public event body excludes discarded and privately played content."""
     if action in {"bid", "declare"} or (action == "without_three" and "bid" in args):
         return {"bid": args["bid"]}
+    if action == "discard" and args.get("hide_under_sheet") is True:
+        return {"hide_under_sheet": True}
     if action in {"play"}:
         return {"owner": args["owner"], "card": args["card"]}
     if action in {"defense", "mode", "misere_vote", "claim_vote"}:

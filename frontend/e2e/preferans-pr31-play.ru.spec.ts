@@ -15,9 +15,9 @@ test("cues never disclose a hidden card or give declarer access",()=>{
   expect(canHint(base,2,card)).toBe(false);
   expect(canHint({...base,phase:"auction"},1,card)).toBe(false);
 });
-test("claim status displays total actual and awarded tricks",()=>{
+test("claim status displays newly awarded tricks only",()=>{
   const view:RoomView={...base,status:"awaiting_settlement",phase:"finished",tricks_won:[2,8,0],claim:{seat:1,status:"accepted",voters:[0,2],approved:[0,2],rejected_by:null,awarded:6,cards:[]}};
-  expect(awardedMessage(view,seat=>`Игрок ${seat+1}`)).toBe("Игрок 2: всего взяток — 8 (карт — 24)");
+  expect(awardedMessage(view,seat=>`Игрок ${seat+1}`)).toBe("Игрок 2: +6 взяток");
   expect(pauseMessage({...base,controls:{paused:true,pause_reasons:["connection_lost"],counter:null,undo:null,can_request_undo:false,adjustments:[]}},["online","online","reconnecting"],seat=>`Игрок ${seat+1}`)).toContain("Игрок 3");
 });
 test("packet animation lands in raw order before sorting",async({page})=>{

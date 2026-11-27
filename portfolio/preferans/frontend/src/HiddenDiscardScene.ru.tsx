@@ -1,0 +1,71 @@
+import {useEffect,useLayoutEffect,useRef,useState,type CSSProperties} from "react";
+import {CardArtwork} from "./CardArtwork.ru";
+import {seatPosition} from "./table-model";
+import type {RoomView} from "./game-model.ru";
+import {GAG_FAKE_MS,GAG_TOTAL_MS,HIDE_DURATION_MS,gagPhase} from "./gag-model";
+import styles from "./preferans-table.module.css";
+
+// The only clock is a local presentation clock, synchronized to the server offset.
+export function useDiscardScene(view:RoomView|null,serverNow:()=>number) {
+  const [at,setAt]=useState(()=>serverNow());
+  const hiddenAt=view?.hidden_discard?.at_ms;
+  const redealAt=view?.redeal_gag?.at_ms;
+  useEffect(()=>{
+    const boundaries=[...(hiddenAt===undefined?[]:[hiddenAt+HIDE_DURATION_MS]),...(redealAt===undefined?[]:[redealAt+3200,redealAt+4200,redealAt+GAG_FAKE_MS,redealAt+GAG_TOTAL_MS])].sort((a,b)=>a-b);
+    if(!boundaries.length)return;
+    let id:ReturnType<typeof setTimeout>;
+    const tick=()=>{
+      const next=serverNow();setAt(next);
+      const boundary=boundaries.find(t=>t>next);
+      if(boundary!==undefined)id=setTimeout(tick,Math.max(1,boundary-next));
+    };
+    id=setTimeout(tick,0);
+    return()=>clearTimeout(id);
+  },[hiddenAt,redealAt,serverNow]);
+  return {now:at,phase:gagPhase(view?.redeal_gag,at),hide:Boolean(view?.hidden_discard&&at<view.hidden_discard.at_ms+HIDE_DURATION_MS)};
+}
+const destination={left:[16,29],right:[84,29],bottom:[57,84]} as const;
+export function HiddenDiscardScene({view,now,hide,phase,name,serverNow}:{serverNow:()=>number;view:RoomView;now:number;hide:boolean;phase:"fake"|"deal"|null;name:(seat:number)=>string}) {
+  const marker=phase==="fake"?view.redeal_gag:hide?view.hidden_discard:undefined;
+  const [initial]=useState(()=>marker?Math.max(0,serverNow()-marker.at_ms):0);
+  const scene=useRef<HTMLDivElement>(null);
+  useLayoutEffect(()=>{
+    const node=scene.current,table=node?.closest<HTMLElement>("[data-table-view]");
+    if(!node||!table)return;
+    const fit=()=>{
+      const bounds=node.getBoundingClientRect();
+      if(!bounds.width||!bounds.height)return;
+      const set=(name:string,element:Element|null)=>{
+        if(!element)return;
+        const r=element.getBoundingClientRect();
+        node.style.setProperty(`--${name}-x`,`${(r.left+r.width/2-bounds.left)/bounds.width*100}%`);
+        node.style.setProperty(`--${name}-y`,`${(r.top+r.height/2-bounds.top)/bounds.height*100}%`);
+        node.style.setProperty(`--${name}-step`,`${Math.min(2.3,r.width/10/bounds.width*100)}%`);
+      };
+      set("paper",table.querySelector("[data-paper-miniature]"));
+      set("left",table.querySelector(`[data-position="left"] .${styles.opponentHand}`)??table.querySelector('[data-position="left"]'));
+      set("right",table.querySelector(`[data-position="right"] .${styles.opponentHand}`)??table.querySelector('[data-position="right"]'));
+      set("bottom",table.querySelector("[data-own-hand]"));
+    };
+    fit();table.style.setProperty("--gag-paper-offset",`${-initial}ms`);
+    const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(fit):null;
+    observer?.observe(table);
+    return()=>{observer?.disconnect();table.style.removeProperty("--gag-paper-offset");};
+  },[initial]);
+  if(!marker)return null;
+  const elapsed=Math.max(0,now-marker.at_ms);
+  const pos=seatPosition(view.my_seat,marker.seat)??"bottom";
+  const [x,y]=destination[pos];
+  if(phase!=="fake")return <div ref={scene} className={styles.gagScene} aria-hidden="true">
+    {[0,1].map(i=><span key={i} className={styles.gagHideCard} style={{"--from-x":`calc(var(--${pos}-x,${x}%) + ${i*2}%)`,"--from-y":`var(--${pos}-y,${y}%)`,"--gag-offset":`${-initial}ms`} as CSSProperties}><CardArtwork decorative/></span>)}
+  </div>;
+  return <div ref={scene} className={styles.gagScene} data-redeal-stage={elapsed<3200?"deal":elapsed<4200?"missing":"return"}>
+    {(["left","right","bottom"] as const).flatMap((side,s)=>Array.from({length:10},(_,i)=>{
+      const [tx,ty]=destination[side];
+      return <span key={`${side}:${i}`} aria-hidden="true" className={styles.gagDealCard} style={{"--to-x":`calc(var(--${side}-x,${tx}%) + ${i-4.5} * var(--${side}-step,1.3%))`,"--to-y":`var(--${side}-y,${ty}%)`,"--deal-delay":`${(Math.floor(i/2)*3+s)*160-initial}ms`,"--return-delay":`${4250+(i%5)*65-initial}ms`} as CSSProperties}><CardArtwork decorative/></span>;
+    }))}
+    {[0,1].map(i=><span key={`found:${i}`} aria-hidden="true" className={styles.gagFoundCard} style={{"--gag-offset":`${-initial}ms`,"--found-offset":`${i*1.5}%`} as CSSProperties}><CardArtwork decorative/></span>)}
+    {elapsed>=3200&&elapsed<4200&&<strong className={styles.gagMessage} role="status">бля, {name(marker.seat)} ты задолбал! Куда ты карты сбросил?</strong>}
+    {elapsed>=4200&&elapsed<GAG_FAKE_MS&&<strong className={styles.gagMessage}>Пересдаём!</strong>}
+  </div>;
+}

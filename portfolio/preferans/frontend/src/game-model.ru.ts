@@ -5,6 +5,7 @@ import { validClaim, type Claim } from "./claim-model";
 import { isSeatSwap, type SeatSwap } from "./seat-swap-model";
 import { isReleaseProjection, type PunchChoice } from "./release-model";
 import { isNotebookPunches, type NotebookPunch } from "./notebook-punches";
+import { isGagMark, type GagMark } from "./gag-model";
 export type Suit = "S" | "C" | "D" | "H";
 export type Card = { suit: Suit; rank: number };
 export type Bid = {
@@ -78,6 +79,7 @@ export type RoomView = {
   final_review?: true;
   score_sheet?: {exact:boolean;hill:number[][];pool:number[][];vists:number[][][];marks?:NotebookMark[];steps?:NotebookStep[]};
   discard_count?: 2; own_discard?: Card[];
+  hidden_discard?: GagMark; redeal_gag?: GagMark; previous_passout?: 6|7|8; server_clock_ms?:number;
 };
 export type RoomInvitation = {
   room_id: string; version: number; status: "lobby"; occupied: boolean[];
@@ -151,6 +153,10 @@ export function isRoomView(value: unknown): value is RoomView {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   if (!isReleaseProjection(v)) return false;
+  if(v.server_clock_ms!==undefined&&(!isSeat(v.my_seat)||!Number.isSafeInteger(v.server_clock_ms)||Number(v.server_clock_ms)<0))return false;
+  if(v.hidden_discard!==undefined&&(!isGagMark(v.hidden_discard)||!isSeat(v.my_seat)||!v.game_id||!["playing","awaiting_settlement","between"].includes(String(v.status))))return false;
+  if(v.redeal_gag!==undefined&&(!isGagMark(v.redeal_gag)||!isSeat(v.my_seat)||!v.game_id||v.status!=="playing"||v.phase!=="auction"))return false;
+  if(v.previous_passout!==undefined&&(![6,7,8].includes(v.previous_passout as number)||!isSeat(v.my_seat)||v.status!=="playing"||v.phase!=="auction"))return false;
   if(v.defense_hints!==undefined){
     if(v.status!=="playing"||!isSeat(v.my_seat)||!isSeat(v.declarer)||v.my_seat===v.declarer||!Array.isArray(v.defense_hints)||v.defense_hints.length>20)return false;
     if(!v.defense_hints.every(m=>m&&isSeat(m.owner)&&m.owner!==v.declarer&&m.card&&["S","C","D","H"].includes(m.card.suit)&&Number.isInteger(m.card.rank)&&m.card.rank>=7&&m.card.rank<=14))return false;

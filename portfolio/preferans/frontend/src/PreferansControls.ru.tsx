@@ -20,10 +20,12 @@ export function PreferansControls({ view, profiles, busy, command }: {
   const [counterSec, setCounterSec] = useState(180);
   const [multiplier, setMultiplier] = useState(3);
   const [voteSec, setVoteSec] = useState(120);
+  const undoRunning=Boolean(view.controls?.undo);
   useEffect(() => {
+    if(!undoRunning)return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [undoRunning]);
   const names=[0,1,2].map(i=>profiles?.[i]?.name||`Игрок ${i+1}`);
   const controls = view.controls;
   if (!controls || view.status === "archived") return null;
@@ -49,22 +51,9 @@ export function PreferansControls({ view, profiles, busy, command }: {
     </section> : null;
   }
   const active = view.status === "playing";
-  const target = view.phase === "play" || view.phase === "opening_lead" ? view.controller : view.turn;
-  const canCounter = active && view.claim?.status!=="pending" && view.my_seat !== null && target !== null &&
-    target !== undefined && target !== view.my_seat && !controls.paused &&
-    !controls.undo && !controls.counter;
-  const counter = controls.counter;
   const vote = controls.undo;
-  return <section className={styles.controlPanel} aria-labelledby="preferans-controls-heading">
-    <h3 id="preferans-controls-heading">Счётчик и отмена действий</h3>
-    {controls.paused && <p role="status" className={styles.controlAlert}>Пауза: таймеры заморожены. Проверь общие панели, перерыв и соединение.</p>}
-    {counter && <div className={styles.controlNote} aria-live="off">
-      <strong>На счётчике: {names[counter.target]}</strong>
-      <span>Поставил: {names[counter.initiator]}</span>
-      <span>До следующего штрафа: {secondsLeft(counter.deadline_ms, counter.remaining_ms, now)} сек.</span>
-      <span>Штраф: {counter.penalty} в гору · истечений: {counter.periods}</span>
-    </div>}
-    {canCounter && <button type="button" disabled={busy} onClick={() => command("counter_start")}>Поставить на счётчик ({controls.policy?.counter_seconds ?? 180} сек.)</button>}
+  if(!active||(!vote&&(!controls.can_request_undo||controls.paused)))return null;
+  return <section className={`${styles.controlPanel} ${styles.undoPanel}`} data-undo-vote={vote?"true":undefined} aria-label="Отмена действий">
     {active && controls.can_request_undo && !controls.paused && !vote &&
       <button type="button" disabled={busy} onClick={() => {
         const answer = window.prompt("Почему отменить последний ход или ставку?", "Ошибся при выборе");
