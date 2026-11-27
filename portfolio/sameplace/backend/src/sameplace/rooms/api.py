@@ -62,7 +62,9 @@ class PrivateRoute(APIRoute):
         return handle
 
 
-def make_room_router(identify, database_provider, enabled=lambda: True):
+def make_room_router(
+    identify, database_provider, enabled=lambda: True, *, on_change=None, circuit=None, limiter=None
+):
     class EnabledRoute(PrivateRoute):
         feature_enabled = staticmethod(enabled)
 
@@ -73,8 +75,8 @@ def make_room_router(identify, database_provider, enabled=lambda: True):
         include_in_schema=False,
     )
 
-    circuit = QuotaCircuit()
-    limiter = RequestLimiter()
+    circuit = circuit if circuit is not None else QuotaCircuit()
+    limiter = limiter if limiter is not None else RequestLimiter()
 
     def available():
         remaining = circuit.remaining()
@@ -127,7 +129,10 @@ def make_room_router(identify, database_provider, enabled=lambda: True):
 
     @router.post("/redeem")
     def redeem(command: m.Redeem, current=Depends(actor), rooms=Depends(service)):
-        return run(lambda: rooms.redeem(current, command))
+        result = run(lambda: rooms.redeem(current, command))
+        if on_change is not None:
+            on_change("redeem", result, command)
+        return result
 
     @router.post("/admin/approval")
     def approval(command: m.Approval, current=Depends(actor), rooms=Depends(service)):
@@ -135,12 +140,18 @@ def make_room_router(identify, database_provider, enabled=lambda: True):
 
     @router.post("/admin/limits")
     def limits(command: m.Limits, current=Depends(actor), rooms=Depends(service)):
-        return run(lambda: rooms.limits(current, command))
+        result = run(lambda: rooms.limits(current, command))
+        if on_change is not None:
+            on_change("limits", result, command)
+        return result
 
     def register(action, model):
         # Register typed commands once; no arbitrary action names from the client.
         def endpoint(slug: SlugPath, command, current=Depends(actor), rooms=Depends(service)):
-            return run(lambda: rooms.change(current, slug, action, command))
+            result = run(lambda: rooms.change(current, slug, action, command))
+            if on_change is not None:
+                on_change(action, result, command)
+            return result
 
         endpoint.__annotations__["command"] = model
         endpoint.__name__ = "room_" + action
