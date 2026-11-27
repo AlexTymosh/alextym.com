@@ -149,3 +149,31 @@ def test_projection_is_allowlisted_and_legacy_gate():
     c["presentation"]["overlay"]["private"] = "secret"
     assert "private" not in projection(c, True, 100_000)["overlay"]
     assert not projection(c, False, 100_000)["enabled"]
+
+
+def test_normal_widow_review_cannot_reopen_after_first_play():
+    game = SimpleNamespace(widow_revealed=2, is_passout=False, trick=[], completed_tricks=[])
+    c = control()
+    change(
+        c,
+        ROOM,
+        game,
+        1,
+        "overlay_open",
+        {"presentation_version": 0, "kind": "widow_replay"},
+        100_000,
+    )
+    for trick, completed in [([object()], []), ([], [object()])]:
+        game.trick = trick
+        game.completed_tricks = completed
+        with pytest.raises(PresentationError) as exc:
+            change(
+                control(),
+                ROOM,
+                game,
+                1,
+                "overlay_open",
+                {"presentation_version": 0, "kind": "widow_replay"},
+                100_000,
+            )
+        assert exc.value.code == 409

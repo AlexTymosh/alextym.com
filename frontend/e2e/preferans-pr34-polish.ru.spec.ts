@@ -53,7 +53,7 @@ test("enlarged final badges move along the same sector boundary",()=>{
 
 test("gag shows complaint for two seconds and leaves time for discovery and a complete deal",()=>{
   expect(GAG_FOUND_MS-GAG_MISSING_MS).toBe(2000);
-  expect(GAG_RETURN_MS-GAG_FOUND_MS).toBeGreaterThanOrEqual(1200);
+  expect(GAG_RETURN_MS-GAG_FOUND_MS).toBe(2800);
   expect(GAG_FAKE_MS-GAG_RETURN_MS).toBeGreaterThanOrEqual(1200);
   expect(GAG_TOTAL_MS-GAG_FAKE_MS).toBeGreaterThanOrEqual(3650);
   const mark={seat:0,at_ms:1000};
