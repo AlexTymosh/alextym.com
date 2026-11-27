@@ -1,0 +1,23 @@
+.foundation {
+  max-width: 46rem;
+  margin: 1.5rem auto;
+  padding: clamp(1.25rem, 4vw, 2.75rem);
+  border: 1px solid currentColor;
+  border-radius: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.eyebrow {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.motto {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 600;
+}
+
+.notice {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+}

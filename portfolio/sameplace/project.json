@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "sameplace",
+  "slug": "sameplace",
+  "title": "SamePlace \u2014 Private Social Game Rooms",
+  "summary": "A room-first platform for private gatherings and modular games. In development.",
+  "category": "Interactive Projects",
+  "technologies": [
+    "Next.js",
+    "React",
+    "TypeScript",
+    "FastAPI",
+    "Python",
+    "Firebase"
+  ],
+  "mode": "embedded",
+  "demo": {
+    "path": "/portfolio/sameplace",
+    "apiPrefix": "/api/sameplace"
+  },
+  "catalog": {
+    "visible": false,
+    "featured": false
+  }
+}
