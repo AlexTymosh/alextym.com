@@ -28,6 +28,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Fetch immutable legacy Preferans baseline
+        run: git fetch --no-tags --depth=1 origin 1e76eaa4c0ba58ceed0e5b5615917a6ee229f777
+
       - name: Install Task
         uses: go-task/setup-task@v2
         with:

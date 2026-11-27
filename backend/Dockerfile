@@ -20,6 +20,8 @@ COPY portfolio/workforce_intelligence/backend/pyproject.toml /portfolio/workforc
 COPY portfolio/workforce_intelligence/backend/src /portfolio/workforce_intelligence/backend/src
 COPY portfolio/preferans/backend/pyproject.toml /portfolio/preferans/backend/pyproject.toml
 COPY portfolio/preferans/backend/src /portfolio/preferans/backend/src
+COPY portfolio/sameplace/backend/pyproject.toml /portfolio/sameplace/backend/pyproject.toml
+COPY portfolio/sameplace/backend/src /portfolio/sameplace/backend/src
 COPY backend/app ./app
 COPY config ./config
 COPY content/public ./content/public

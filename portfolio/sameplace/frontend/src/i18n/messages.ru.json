@@ -1,0 +1,11 @@
+{
+  "foundation.stage": "Разработка платформы",
+  "foundation.motto": "Место встречи изменить нельзя",
+  "foundation.description": "Постоянное место встречи друзей, независимое от выбранной игры.",
+  "foundation.notice": "Пока доступен только архитектурный каркас. Комнаты, игры и общение ещё не подключены.",
+  "fallback.missing": "Текст временно недоступен.",
+  "players.one": "{count} игрок",
+  "players.few": "{count} игрока",
+  "players.many": "{count} игроков",
+  "players.other": "{count} игрока"
+}

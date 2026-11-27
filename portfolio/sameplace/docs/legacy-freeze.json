@@ -1,0 +1,1686 @@
+{
+  "schema_version": 1,
+  "baseline": "1e76eaa4c0ba58ceed0e5b5615917a6ee229f777",
+  "files": [
+    {
+      "path": "backend/app/security/preferans_access.py",
+      "mode": "100644",
+      "oid": "b93ceab9c0169663aad91b8bd44262682095ced6"
+    },
+    {
+      "path": "backend/tests/test_preferans_access.py",
+      "mode": "100644",
+      "oid": "c0010348980d7a6d8645db9b3a2c418dc78e1b88"
+    },
+    {
+      "path": "backend/tests/test_preferans_firestore_emulators.py",
+      "mode": "100644",
+      "oid": "07d8f2e394751f5c558f9d96be989c6cfa5f8714"
+    },
+    {
+      "path": "frontend/app/api/preferans/[...operation]/route.ts",
+      "mode": "100644",
+      "oid": "c89e82a828cc02bffe818947b33856b394405128"
+    },
+    {
+      "path": "frontend/app/auth/access/preferans-alias/route.ts",
+      "mode": "100644",
+      "oid": "1221712113ec6a2f8557cc959982717459a80295"
+    },
+    {
+      "path": "frontend/app/portfolio/preferans/page.tsx",
+      "mode": "100644",
+      "oid": "bc0726e5eed0db9b16b3a6f789886c5fc32074dc"
+    },
+    {
+      "path": "frontend/components/preferans-alias-editor.tsx",
+      "mode": "100644",
+      "oid": "cbf1935681ffb3eb1b4e24f6de458b1e1f38b043"
+    },
+    {
+      "path": "frontend/components/preferans-site-bar.tsx",
+      "mode": "100644",
+      "oid": "70e342c2c91c7958b714ee1af882d057cae5681f"
+    },
+    {
+      "path": "frontend/e2e/preferans-beta.ru.spec.ts",
+      "mode": "100644",
+      "oid": "c59704069951c6559cbe408338a6f4d14c64302b"
+    },
+    {
+      "path": "frontend/e2e/preferans-controls.ru.spec.ts",
+      "mode": "100644",
+      "oid": "2cb8064d11af2a231a822c0479ec37d51948f7b4"
+    },
+    {
+      "path": "frontend/e2e/preferans-details.ru.spec.ts",
+      "mode": "100644",
+      "oid": "80a37d7c3c005b6d4e35b808c4ca1d890b1b9b47"
+    },
+    {
+      "path": "frontend/e2e/preferans-experience.ru.spec.ts",
+      "mode": "100644",
+      "oid": "256c86b180f9fa57456e455f314903929a63a6ac"
+    },
+    {
+      "path": "frontend/e2e/preferans-history.ru.spec.ts",
+      "mode": "100644",
+      "oid": "8bbad6cd78e417b475e29f3465ad0f31fd8a578b"
+    },
+    {
+      "path": "frontend/e2e/preferans-immersive.ru.spec.ts",
+      "mode": "100644",
+      "oid": "d2c953e04054fbf9756f053ea4f7481044660707"
+    },
+    {
+      "path": "frontend/e2e/preferans-interaction.ru.spec.ts",
+      "mode": "100644",
+      "oid": "c517555bdce357fe08a4d8a62627f54a47bc0ca6"
+    },
+    {
+      "path": "frontend/e2e/preferans-live.ru.spec.ts",
+      "mode": "100644",
+      "oid": "24a5f7f90feab95bae6ca6df4aedcabf083c2ef4"
+    },
+    {
+      "path": "frontend/e2e/preferans-media.ru.spec.ts",
+      "mode": "100644",
+      "oid": "ce817baf26101ee2a2baf3c29f3527862c2a18ec"
+    },
+    {
+      "path": "frontend/e2e/preferans-polish.ru.spec.ts",
+      "mode": "100644",
+      "oid": "c03ada58364d5994306777a9432cc9e61e2257b3"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr20.ru.spec.ts",
+      "mode": "100644",
+      "oid": "4943c15d23dbdbbfaa35cd650f5561fc37e5742f"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr21.ru.spec.ts",
+      "mode": "100644",
+      "oid": "bce52d46110922820e6520553ba28bc218fc2473"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr24.ru.spec.ts",
+      "mode": "100644",
+      "oid": "16db2e36ea43b4ea8f0cb209dda0bc968c5a0020"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr26-layout.ru.spec.ts",
+      "mode": "100644",
+      "oid": "27bd75a5e44b38dd8b68b379a39aa5173da23229"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr27-review.ru.spec.ts",
+      "mode": "100644",
+      "oid": "7dc785a79c8fd1566141e8fd5f0c7bbbd7a902ea"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr28-history.ru.spec.ts",
+      "mode": "100644",
+      "oid": "81c5c9dd7dde2ae2f01ffe63c07fed4b8da34fc9"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr29-presentation.ru.spec.ts",
+      "mode": "100644",
+      "oid": "57dbb67ca63aecae9ff4e966d494c7f9c0b353b2"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr30-notebook.ru.spec.ts",
+      "mode": "100644",
+      "oid": "8fa53c44eb5df4ab61e6cbe67f9265c4a7963722"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr31-play.ru.spec.ts",
+      "mode": "100644",
+      "oid": "b7d68def06844aee14896017384a4f5c1410823c"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr32-punches.ru.spec.ts",
+      "mode": "100644",
+      "oid": "10f3db0fb8ad14d25a817a63f166160779086f03"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr33-gag.ru.spec.ts",
+      "mode": "100644",
+      "oid": "cc2bb48df0483415f7a959a828f2636a7f8357f3"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr34-polish.ru.spec.ts",
+      "mode": "100644",
+      "oid": "92f91edbbb9b7fa6aaf6f0965cfca80b702b523b"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr35-preparation.ru.spec.ts",
+      "mode": "100644",
+      "oid": "53057f4be5ad81dd8a1e75b35bbed4e1dec449fa"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr36-controls.ru.spec.ts",
+      "mode": "100644",
+      "oid": "79a106820c815a7a4ddf3b9fc760607b3fa4a699"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr37-polish.ru.spec.ts",
+      "mode": "100644",
+      "oid": "a48d9256119216a10718891814801039390193d8"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr38-scenes.ru.spec.ts",
+      "mode": "100644",
+      "oid": "789825170ea935c91a859bc2edafb98cc670c912"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr39.ru.spec.ts",
+      "mode": "100644",
+      "oid": "ad3e07f607b77a6510d5542cc347667bcb3049b3"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr40.ru.spec.ts",
+      "mode": "100644",
+      "oid": "5c7f15781e48bfc5be5e569a5cb97bbbc6d77551"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr41.ru.spec.ts",
+      "mode": "100644",
+      "oid": "be6a9a19afe9e51f4fdfff4da13d3b3cf8d6cd90"
+    },
+    {
+      "path": "frontend/e2e/preferans-pr42.ru.spec.ts",
+      "mode": "100644",
+      "oid": "4279c963944ad7fe88f400ea233d50be8251f0ae"
+    },
+    {
+      "path": "frontend/e2e/preferans-quota.ru.spec.ts",
+      "mode": "100644",
+      "oid": "bcba999711bdffe71efd76efea2d95f7c2df268d"
+    },
+    {
+      "path": "frontend/e2e/preferans-realtime.ru.spec.ts",
+      "mode": "100644",
+      "oid": "036aae61ee9593bd7beed4dfd8f790da0c482cef"
+    },
+    {
+      "path": "frontend/e2e/preferans-refinements.ru.spec.ts",
+      "mode": "100644",
+      "oid": "7615443234916aaf76e30251645cbc847958ce4b"
+    },
+    {
+      "path": "frontend/e2e/preferans-seat-swap.ru.spec.ts",
+      "mode": "100644",
+      "oid": "03d74af1c78e9f1cb592c41b14c4598bb0719eb3"
+    },
+    {
+      "path": "frontend/e2e/preferans-shared.ru.spec.ts",
+      "mode": "100644",
+      "oid": "3120907ebc4a74cfb13e65ac6ba3e6a07b10cd6d"
+    },
+    {
+      "path": "frontend/e2e/preferans-sheet-exit.ru.spec.ts",
+      "mode": "100644",
+      "oid": "fa2421981317f38890d3bde5f83f0afa1d42f228"
+    },
+    {
+      "path": "frontend/e2e/preferans-table.ru.spec.ts",
+      "mode": "100644",
+      "oid": "72b5cc2dac1b5a40fa7fd93e4a61e81fcce378fc"
+    },
+    {
+      "path": "frontend/e2e/preferans-ui.ru.spec.ts",
+      "mode": "100644",
+      "oid": "e1c96ebf8f59f9d05e451455e386d736e826398b"
+    },
+    {
+      "path": "frontend/lib/portfolio-lab/preferans-alias.ts",
+      "mode": "100644",
+      "oid": "31a294a6b16ec3d2b67c395638b123058b2b7136"
+    },
+    {
+      "path": "frontend/public/images/portfolio/preferans-concept.png",
+      "mode": "100644",
+      "oid": "a37fb93c6d32406835bcfe06f55fab281e8dda28"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/10C.png",
+      "mode": "100644",
+      "oid": "d674d79d42280215e10d4c69bf17ee4ebbfd36ec"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/10D.png",
+      "mode": "100644",
+      "oid": "6f93fb6e64ec2688a64db36bfc12575102ebaada"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/10H.png",
+      "mode": "100644",
+      "oid": "a16da6ad05d6bde52d85940fcd86ed63d8e45147"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/10S.png",
+      "mode": "100644",
+      "oid": "268a218df61e168aaa212ac374203d89356441ed"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/11C.png",
+      "mode": "100644",
+      "oid": "a411fb8be49c23d9690d99616e90f6ce249814c7"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/11D.png",
+      "mode": "100644",
+      "oid": "985c452f43a4c15bb58693b92429855be29cd6cc"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/11H.png",
+      "mode": "100644",
+      "oid": "b448dec5b5cc41ebdd169aaf279658f30a260ac8"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/11S.png",
+      "mode": "100644",
+      "oid": "0ec845f775d5ce2d5bf91b58dfbdcdc6607bd714"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/12C.png",
+      "mode": "100644",
+      "oid": "094d06c7c066c9ce5530961034e4ec98aef6e9b7"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/12D.png",
+      "mode": "100644",
+      "oid": "94e3352aaa2f54e736e6e11b2bc414af489e6e8f"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/12H.png",
+      "mode": "100644",
+      "oid": "dc8eeb44239ecea6899c65b043029e3a5f6624b0"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/12S.png",
+      "mode": "100644",
+      "oid": "f9a0c71489264d9f9d0011d8f53b00ac5aedb85e"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/13C.png",
+      "mode": "100644",
+      "oid": "38f36cd7ece8c1e27dc37928e3ff854ff7be55b8"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/13D.png",
+      "mode": "100644",
+      "oid": "bb48f81341cf0fa5e1fdfb521e0d91fc4e9642a1"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/13H.png",
+      "mode": "100644",
+      "oid": "f2de711e657e7aa90860667f7c67158a5f4f03a0"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/13S.png",
+      "mode": "100644",
+      "oid": "8140949b37958de54713f55319c7afdfd44f7029"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/14C.png",
+      "mode": "100644",
+      "oid": "b7d081bd549b18b289548786d9394725bc44826e"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/14D.png",
+      "mode": "100644",
+      "oid": "6b2a36d4a4f78a6f69d3d6bdfe78f4df57c9027b"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/14H.png",
+      "mode": "100644",
+      "oid": "0cfd3ce214e4a61b949289e2420cfa5ba586719d"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/14S.png",
+      "mode": "100644",
+      "oid": "059845a3dada18758030089267b1d14eba76a022"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/7C.png",
+      "mode": "100644",
+      "oid": "c10d776dc03c0be9e11762c18bb6019b393fb76f"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/7D.png",
+      "mode": "100644",
+      "oid": "6b12ac693f567a63cc71e7129dc9690606ab48d5"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/7H.png",
+      "mode": "100644",
+      "oid": "9fda4154528b9223c3ed90b5d5e2ddfc0400695f"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/7S.png",
+      "mode": "100644",
+      "oid": "d80b7efc273197dc00dea5955f7d062666f59c84"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/8C.png",
+      "mode": "100644",
+      "oid": "5b003fb8bf5151af777a35c6ded9fb5b04522b40"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/8D.png",
+      "mode": "100644",
+      "oid": "f7756c858259e60d515a82a1a4609f6f003a5e7a"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/8H.png",
+      "mode": "100644",
+      "oid": "a4c8b1d93cf1bc85577cffd5205c985fec4c8a08"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/8S.png",
+      "mode": "100644",
+      "oid": "143b03e2e1ffab57660c38c815be45e4764c9c87"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/9C.png",
+      "mode": "100644",
+      "oid": "90096ff7695554cb6d669eacc2792341e29063ed"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/9D.png",
+      "mode": "100644",
+      "oid": "d65f83b634017cf72cc99f4807941416fa4e1d15"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/9H.png",
+      "mode": "100644",
+      "oid": "72fe52923fc98e0a7e10a0cd9b6a3a1209239ac5"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/9S.png",
+      "mode": "100644",
+      "oid": "b6eb2ab5153967471518f86c5676564ed4808958"
+    },
+    {
+      "path": "frontend/public/preferans/atlas/sources.json",
+      "mode": "100644",
+      "oid": "3b1b49f5289fdd88ef03633bd143aec18e59d96a"
+    },
+    {
+      "path": "frontend/public/preferans/audio/test-01.wav",
+      "mode": "100644",
+      "oid": "ede6c70617928332e654d26365c3815cb1ae32c1"
+    },
+    {
+      "path": "frontend/public/preferans/audio/test-02.wav",
+      "mode": "100644",
+      "oid": "fbf21df2c3d1629eb53a8dcf366fa51d69ca590f"
+    },
+    {
+      "path": "portfolio/preferans/README.md",
+      "mode": "100644",
+      "oid": "afe8445b957d2fa6d1c5875f76a217ee531799fe"
+    },
+    {
+      "path": "portfolio/preferans/SESSION_NOTES.md",
+      "mode": "100644",
+      "oid": "203ab07f02eaf9c8b9034a5cb615c8faddc8f342"
+    },
+    {
+      "path": "portfolio/preferans/backend/README.md",
+      "mode": "100644",
+      "oid": "904d04ac559a9ca3034f2cb233ada18eec14d9df"
+    },
+    {
+      "path": "portfolio/preferans/backend/pyproject.toml",
+      "mode": "100644",
+      "oid": "26bfd7dd9b494b7b892b431382ebd0edcd26415c"
+    },
+    {
+      "path": "portfolio/preferans/backend/scripts/cleanup_media.py",
+      "mode": "100644",
+      "oid": "46c2205b5184e3f2b587ba2cfebcb1f5bf9dcf16"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/__init__.py",
+      "mode": "100644",
+      "oid": "e458798b6075b911b3d394844d715276f424ac24"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/__init__.py",
+      "mode": "100644",
+      "oid": "184903da5c562fbef11c315409889e388a9ceac0"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/auction.py",
+      "mode": "100644",
+      "oid": "d30bd9b3c0305a395e8c8e94dad53c0bbadc5c3c"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/cards.py",
+      "mode": "100644",
+      "oid": "a963110a9852a889a335c57bc5873ffd13ac2346"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/claims.py",
+      "mode": "100644",
+      "oid": "66ca521d40bf90f44e3e896e679e8f38a9775417"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/game.py",
+      "mode": "100644",
+      "oid": "024168c445e95dc2ab5b2db5d93e2fc388843e34"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/history.py",
+      "mode": "100644",
+      "oid": "f7908222a660f7375ab7ea6803e41f035f482a68"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/ledger.py",
+      "mode": "100644",
+      "oid": "04a81c679ce792b1a0f84b374684b3d433393373"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/play.py",
+      "mode": "100644",
+      "oid": "a9aab7cd2c214b969b71c3e3098e72d7d8c21f20"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/reward_routing.py",
+      "mode": "100644",
+      "oid": "dafe062a26742f7beba008788b4ecce44affe956"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/rulesets.py",
+      "mode": "100644",
+      "oid": "8c82f52871a92c03f9c5b3dbedfd935ae66c1281"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/scoring.py",
+      "mode": "100644",
+      "oid": "87248182c43ef59712a087cac0fe84ba2d5970c8"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/domain/settlement.py",
+      "mode": "100644",
+      "oid": "aeb629604f743e7e5c1beadf84c2722574def726"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/__init__.py",
+      "mode": "100644",
+      "oid": "014f3a2542d8a5968e5ead909e2618866bf87129"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/codec.py",
+      "mode": "100644",
+      "oid": "f9a01078534f986cb3ce2ef69f1bfbd324b5e6ae"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/commands.py",
+      "mode": "100644",
+      "oid": "086f4d2bc2bfeb8df6014c1c330f72fdf8759f16"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/controls.py",
+      "mode": "100644",
+      "oid": "a076e017b50458827d7eb1ee792794f201809343"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/deal_flow.py",
+      "mode": "100644",
+      "oid": "5e7c5e5ee375f92bfbeca9fcd5e3b27d50f0fad5"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/defense_hints.py",
+      "mode": "100644",
+      "oid": "0ad8f4a6a47351fa04ac6f0c0ddbfc655454ac8a"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/discard_gag.py",
+      "mode": "100644",
+      "oid": "5a099cdc2d9c55d171d5d1a61b49634664c8fc1b"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/history_names.py",
+      "mode": "100644",
+      "oid": "08fe5acca40a9128b04e94ca606ac5c999c1dec9"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/live_relay.py",
+      "mode": "100644",
+      "oid": "cc22485ef4b0eebfa843e55cb7820583fbd8e55d"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/lobby.py",
+      "mode": "100644",
+      "oid": "8f4052997b39beb8fc80104e3df2a6da31a569f4"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/media.py",
+      "mode": "100644",
+      "oid": "e1f26bc38b96239150c784e25f73127e980c3767"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/pause_clock.py",
+      "mode": "100644",
+      "oid": "d777bdf7b094e7befd181d2f93ded98362aadcbd"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/presentation.py",
+      "mode": "100644",
+      "oid": "fe74a4ffc24da18479b6022d029b97a046ff44b3"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/publish_signal.py",
+      "mode": "100644",
+      "oid": "3b1aefb18520366eed57d0621f0348822048f161"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/punch_choices.py",
+      "mode": "100644",
+      "oid": "ed5c430488f1a730eb64d9badedcb0253d3786f4"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/quota_guard.py",
+      "mode": "100644",
+      "oid": "d9e60748ac397828c59148a3c22c2fd85d784934"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/realtime.py",
+      "mode": "100644",
+      "oid": "e7975991946c7063fe867b3edb947a05ded5f3fe"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/realtime_api.py",
+      "mode": "100644",
+      "oid": "c59bec1a41b6025e414aeec5b45bcee488c8d758"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/router.py",
+      "mode": "100644",
+      "oid": "96fd2e70b0a0750de7451d8c3fc83157100e3e2c"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/ruleset_catalog.py",
+      "mode": "100644",
+      "oid": "0f6a6c85ec51a20d4bf49390790530828b25de68"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/seat_swap.py",
+      "mode": "100644",
+      "oid": "69c387f01a26f00c26e326ab9eefffc11da71f14"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/sheet_exit.py",
+      "mode": "100644",
+      "oid": "0e76d73fb79328889a01f2e6f1121aca9195d748"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/store.py",
+      "mode": "100644",
+      "oid": "58c082c6a35f8f296c64f21332263c0c3158fb98"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/table_experience.py",
+      "mode": "100644",
+      "oid": "45b6e667b76aedab03b950c62e0d7b46223265e7"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/table_presentation.py",
+      "mode": "100644",
+      "oid": "00076009ef1224c234bdc71a06c4c1d558e27fee"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/online/views.py",
+      "mode": "100644",
+      "oid": "475a3c1991d39025e23bb9240fe609ee55892fd9"
+    },
+    {
+      "path": "portfolio/preferans/backend/src/preferans/router.py",
+      "mode": "100644",
+      "oid": "672f99bea5d4cb280b050375066fd56a650eed68"
+    },
+    {
+      "path": "portfolio/preferans/docs/ADR_REALTIME_TRANSPORT.ru.md",
+      "mode": "100644",
+      "oid": "ab3e96141e24f08dae16a33da7dfa21d6bd21f16"
+    },
+    {
+      "path": "portfolio/preferans/docs/ASSET_LICENSES.ru.md",
+      "mode": "100644",
+      "oid": "502e516d88cf7e043e4e468a9e01bfe06a4bee9c"
+    },
+    {
+      "path": "portfolio/preferans/docs/DEVELOPMENT_PLAN.ru.md",
+      "mode": "100644",
+      "oid": "7e118e00f4662c21a003337a677cac2e6bb9ca7d"
+    },
+    {
+      "path": "portfolio/preferans/docs/DOMAIN_ENGINE.ru.md",
+      "mode": "100644",
+      "oid": "76d14edee41f3d0ff92654f8a711a66e99502833"
+    },
+    {
+      "path": "portfolio/preferans/docs/FULL_TECHNICAL_SPECIFICATION.ru.md",
+      "mode": "100644",
+      "oid": "56db5cb1e72f8aea2a7f5e7cb3f7f7cbc7df579f"
+    },
+    {
+      "path": "portfolio/preferans/docs/HOUSE_RULES.ru.md",
+      "mode": "100644",
+      "oid": "243b98165cf30a25957fed2e71bea31d0a9cd16b"
+    },
+    {
+      "path": "portfolio/preferans/docs/HOUSE_RULES_DECISIONS.ru.md",
+      "mode": "100644",
+      "oid": "ce71ca24f01ca21e830ee7644a3e417d79a77571"
+    },
+    {
+      "path": "portfolio/preferans/docs/HTTP_503_FIRESTORE.ru.md",
+      "mode": "100644",
+      "oid": "99bcbf34f42e58a740869e5ac0b9730f44cbacfe"
+    },
+    {
+      "path": "portfolio/preferans/docs/HTTP_503_HANDOFF.ru.md",
+      "mode": "100644",
+      "oid": "1662dc355efb1bc9338ac2271711e0435308cb9a"
+    },
+    {
+      "path": "portfolio/preferans/docs/MODERNIZATION_DEVELOPMENT_PLAN.ru.md",
+      "mode": "100644",
+      "oid": "4ac4caed612b8415b6e2b99bd794eec08ccea3fb"
+    },
+    {
+      "path": "portfolio/preferans/docs/MODERNIZATION_GAP_REGISTER.ru.md",
+      "mode": "100644",
+      "oid": "fe73708529e04c5e19b6b367ff7e526584d88c08"
+    },
+    {
+      "path": "portfolio/preferans/docs/MODERNIZATION_TECHNICAL_SPECIFICATION.ru.md",
+      "mode": "100644",
+      "oid": "c346654c05063bc58a726d3ac7734c7b8928d568"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR04_RUNBOOK.ru.md",
+      "mode": "100644",
+      "oid": "89ec1ca6a1f08ea5db2f3b79334fa283f42fdc3c"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR05_GAME_UI.ru.md",
+      "mode": "100644",
+      "oid": "f56445d71058a4ef05859ad11380b250f181f0ef"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR05_UAT.ru.md",
+      "mode": "100644",
+      "oid": "53a8c7eaa7b7240497e8b1c9fd7989cf1ef249c1"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR06_GAME_CONTROLS.ru.md",
+      "mode": "100644",
+      "oid": "2b5a861c3484ec9fcd0c670112d14620c62557c9"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR06_UAT.ru.md",
+      "mode": "100644",
+      "oid": "5053f7f1058cdc62a666f3aabcd67ee0e963b3e4"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR07_HISTORY_RANKING.ru.md",
+      "mode": "100644",
+      "oid": "b0b3aa5088553f28e6681a5d6e0e5c141da52d1a"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR07_UAT.ru.md",
+      "mode": "100644",
+      "oid": "cbb30c867ceaef7e762b6956036209b3eca3ef59"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR08_MEDIA.ru.md",
+      "mode": "100644",
+      "oid": "1a914d5f4629a09d695068e381670b864792ee99"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR08_UAT.ru.md",
+      "mode": "100644",
+      "oid": "613ed6009c0453a8616ed5d7c4ccd2c0fe9c7fb5"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR09_RELEASE_CANDIDATE.ru.md",
+      "mode": "100644",
+      "oid": "7c801f766332f737506c1af257877fec379f15ab"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR09_UAT.ru.md",
+      "mode": "100644",
+      "oid": "417c8394493605af593739950898f42550a114ea"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR10_REALTIME_RUNBOOK.ru.md",
+      "mode": "100644",
+      "oid": "b622b826494e9665d7a8c075bec9032e42429885"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR11_GAME_TABLE.ru.md",
+      "mode": "100644",
+      "oid": "a1d6833902f59ce9af2f648d0cf76fde0229f1c3"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR12_GAME_INTERACTION.ru.md",
+      "mode": "100644",
+      "oid": "584be3598114aa3d7f9b8318b044cbef5f0b47dd"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR13_LIVE_MEDIA.ru.md",
+      "mode": "100644",
+      "oid": "bd23f9dcf047e99030c36a7fa0c45c5f53853a63"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR13_SHARED_ROOM.ru.md",
+      "mode": "100644",
+      "oid": "2dc717e3edae10142c3a121c8a89ed6bea5bcfdb"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR14_FINAL_WORKFLOWS.ru.md",
+      "mode": "100644",
+      "oid": "11446ee2dbd708ebcbb8eb74bd773d814433b1e2"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR14_RELEASE_ACCEPTANCE.ru.md",
+      "mode": "100644",
+      "oid": "08212ef5cd5f36e7e37adca763e7138c10c36fc6"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR14_SEAT_SWAP.ru.md",
+      "mode": "100644",
+      "oid": "86f132805cc88b31eb364eb54a31babe08c41081"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR15_IMMERSIVE_TABLE.ru.md",
+      "mode": "100644",
+      "oid": "0623916058cbd3974085804abcf281b897ea7322"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR17_TABLE_REFINEMENTS.ru.md",
+      "mode": "100644",
+      "oid": "1e4898039893a8996e62bf8eeab18861c6ea928d"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR18_TABLE_POLISH.ru.md",
+      "mode": "100644",
+      "oid": "2b23f283c4c55fc34fa5e838c4a36960d7467427"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR19_TABLE_DETAILS.ru.md",
+      "mode": "100644",
+      "oid": "49f5fdf1233960376a50b9e2bf900958aef3678d"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR20_SHELL_AND_BIDDING.ru.md",
+      "mode": "100644",
+      "oid": "5f65b3025e01bd968c6edfebf99e06e8958a7b90"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR21_AUCTION_AND_TABLE.ru.md",
+      "mode": "100644",
+      "oid": "915661a5519e42897cf2049d2b4722d82390247d"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR22_QUOTA_RECOVERY.ru.md",
+      "mode": "100644",
+      "oid": "f1c4a217d971154029f7374a5e05eabedba9750b"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR23_PRIVATE_BETA.ru.md",
+      "mode": "100644",
+      "oid": "14841bfb985c8a65b38da63bfe8b8e82fb5184cb"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR24_CLAIMS_AND_SCORING.ru.md",
+      "mode": "100644",
+      "oid": "21de4ad7d133155318346c1e6c687f50f9c4390b"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR26_NOTEBOOK_LAYOUT.ru.md",
+      "mode": "100644",
+      "oid": "59a3233bf0fb09238a81bb021535a98f0b652931"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR27_FINAL_REVIEW_AND_TABLE.ru.md",
+      "mode": "100644",
+      "oid": "431aabcbee6ab5ab27817a4c7cb9dd2003501e98"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR29_TRICK_MOTION_AND_MATERIALS.ru.md",
+      "mode": "100644",
+      "oid": "52cab2eb8cad5576a1f7f0bd3928909315d65ee4"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR31_PLAY_AND_CUES.ru.md",
+      "mode": "100644",
+      "oid": "4b836a3802735864c66f498366c8175985d08c62"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR33_COUNTER_AND_HIDDEN_DISCARD.ru.md",
+      "mode": "100644",
+      "oid": "29b2a9dd60abb075b614f0523aa80a1591d421e2"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR34_TABLE_POLISH.ru.md",
+      "mode": "100644",
+      "oid": "4396c208afe4ae9f2efe98feb0a209565eab660f"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR35_ROOM_PREPARATION.ru.md",
+      "mode": "100644",
+      "oid": "524818daa4c399341e42c9c555cf1a902d099e00"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR36_DECISION_CONTROLS.ru.md",
+      "mode": "100644",
+      "oid": "f8ed58b25a6dc50958dfd7e19b73cf383df850d7"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR37_TABLE_POLISH.ru.md",
+      "mode": "100644",
+      "oid": "33f4a1b232f516a17d3d743872b2b56875cea042"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR38_TABLE_SCENES.ru.md",
+      "mode": "100644",
+      "oid": "09f2de0d8f3b54d9a3cbedd0deec8bd678a1d3e8"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR39_BY_OWN_AND_TABLE.ru.md",
+      "mode": "100644",
+      "oid": "5449467d20ee4df5182867d4fc6111735c02585e"
+    },
+    {
+      "path": "portfolio/preferans/docs/PR40_TABLE_CUES_AND_DEAL.ru.md",
+      "mode": "100644",
+      "oid": "a74e2f9435634529670a8c78a5fa9107edb32d6b"
+    },
+    {
+      "path": "portfolio/preferans/docs/SCORING_ENGINE.ru.md",
+      "mode": "100644",
+      "oid": "f2ddde2e24f958c274fa724d5cab7d548d26ea51"
+    },
+    {
+      "path": "portfolio/preferans/docs/SECURE_ROOMS.ru.md",
+      "mode": "100644",
+      "oid": "2e1b57bc1e9dcdb756e3e5849102027c8acfe632"
+    },
+    {
+      "path": "portfolio/preferans/docs/release-evidence.template.json",
+      "mode": "100644",
+      "oid": "758567598078616f0256541b95fe1f909b5db7b5"
+    },
+    {
+      "path": "portfolio/preferans/frontend/README.md",
+      "mode": "100644",
+      "oid": "3b7b10b71d6e02e110c37fbe31d56d5618b23936"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/BidPanel.ru.tsx",
+      "mode": "100644",
+      "oid": "87c9be4119e44bd2f32adeda1fef5ca633ccfe06"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ByOwnButton.ru.tsx",
+      "mode": "100644",
+      "oid": "c5b9cedffd4d06b24e3696c368efe5f4b58ecfad"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/CardArtwork.ru.tsx",
+      "mode": "100644",
+      "oid": "cee40b3aadce1822e38e9e3d94a8430698509faf"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/CardBackTheme.tsx",
+      "mode": "100644",
+      "oid": "4c73dfcde3d869c5726c3bce09ed24c1c651ceff"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ClaimPanel.ru.tsx",
+      "mode": "100644",
+      "oid": "8e7f7464ce27c16921b025cf66ed77e0000e8d8e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ControlDialogs.ru.tsx",
+      "mode": "100644",
+      "oid": "82d878f819bb2ebf6eb1e65f1972720b2ee16112"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/CounterDisplay.ru.tsx",
+      "mode": "100644",
+      "oid": "3afc436ca0021ee0e5244c8ce7ac5f512dbd9d8c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/CycleSetting.ru.tsx",
+      "mode": "100644",
+      "oid": "8a802c6add23e1cd2a6a81dfe8fc457117071de4"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/DealStatus.ru.tsx",
+      "mode": "100644",
+      "oid": "b96f0f2af54a9ae1af9f6de8fa06283eefdb25f7"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/Deck.ru.tsx",
+      "mode": "100644",
+      "oid": "4b614e655d0c32b9c992e890a6080aed8371ec27"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/GameIcons.tsx",
+      "mode": "100644",
+      "oid": "c1ee2364d484600483889146c35d839ebb125f57"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/GameTable.ru.tsx",
+      "mode": "100644",
+      "oid": "8b652f4597a1724b97eef0219b7cc1b66aec8b6c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/HiddenDiscardScene.ru.tsx",
+      "mode": "100644",
+      "oid": "167fa5d4efe25a547daebe1b7380f256446df7d4"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/LiveMedia.ru.tsx",
+      "mode": "100644",
+      "oid": "34f18bdadf4069e989c8d28976d7b82df679cca2"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/Lobby.ru.tsx",
+      "mode": "100644",
+      "oid": "351904b66722aefb4dbeceffb6d52dc18fe5e917"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/LobbySetup.ru.tsx",
+      "mode": "100644",
+      "oid": "e794302fde9f5b718e04a7f0f137b0c9a205903c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/MisereOfferPanel.ru.tsx",
+      "mode": "100644",
+      "oid": "e76ae9d0d5591cf2bdfa9c46e64d5808ea3afbef"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/Notebook.ru.tsx",
+      "mode": "100644",
+      "oid": "108fb541e2c84aae36beaf4942c090ebaf6ed47d"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/PreferansControls.ru.tsx",
+      "mode": "100644",
+      "oid": "a9b8bee648392a7dc81e7a20abda71556573a213"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/PreferansGame.ru.tsx",
+      "mode": "100644",
+      "oid": "1826941b8a02e67082cb6382f8d4a98e5391e359"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/PreferansHistory.ru.tsx",
+      "mode": "100644",
+      "oid": "a2727a40e03c7366c95ab4c105e0aaaac4d347b9"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/PreferansMedia.ru.tsx",
+      "mode": "100644",
+      "oid": "90d3aa2bfc431314f2d5df8dcb7e3f13a05295f1"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/PreferansWelcome.tsx",
+      "mode": "100644",
+      "oid": "dd22fa0d1b0cecbe526abd77085273164a8954d4"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ProjectSidebar.ru.tsx",
+      "mode": "100644",
+      "oid": "2176cc2388023b106a6ac2fb2aba12a477fac834"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ReferencePage.ru.tsx",
+      "mode": "100644",
+      "oid": "e310517e841bb7a09d92246ac86a133929fa4c8f"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ReleaseControls.ru.tsx",
+      "mode": "100644",
+      "oid": "dc943e47d965b14e75e773e9d530166565d92af7"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/RoomReturn.ru.tsx",
+      "mode": "100644",
+      "oid": "70129aa1e7752f52d5e43c89a7364b5ab7298d5a"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/RulesFaq.ru.tsx",
+      "mode": "100644",
+      "oid": "7d9a5c597f9784f1e5186cc608e0d44e2bf738ee"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/RulesetEditor.ru.tsx",
+      "mode": "100644",
+      "oid": "415fb4a0da89ad7f1738093a3abfee6c618a679f"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/ScoreAdjustment.ru.tsx",
+      "mode": "100644",
+      "oid": "35ddeae078e164fdceb346149fb63e995d51e141"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/SeatSwap.ru.tsx",
+      "mode": "100644",
+      "oid": "118158a90680fc2a237c0959298895a070927646"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/SharedRoom.ru.tsx",
+      "mode": "100644",
+      "oid": "0c495701537453dc8a62cb149bbff7d200b93897"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/SheetExit.ru.tsx",
+      "mode": "100644",
+      "oid": "8abfa53c564dbd0f0338b03338e439e145b54720"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/SheetTearScene.ru.tsx",
+      "mode": "100644",
+      "oid": "61ff08bf28f4468cd5635bb8ea49910b2f602c1c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/VesnaRadio.ru.tsx",
+      "mode": "100644",
+      "oid": "0c82af2b90b5dcd4699e104b3c0c8661e2590694"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/WidowDisplay.ru.tsx",
+      "mode": "100644",
+      "oid": "677e7ef18baf465495d865d0fea83f0ad065af4f"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/atlas-art.ts",
+      "mode": "100644",
+      "oid": "3d6bf7916316479789614412b77190b18c11d389"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/claim-copy.ru.ts",
+      "mode": "100644",
+      "oid": "d08a4dc6432851286f1057ecab7d0c1edf6fbf40"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/claim-model.ts",
+      "mode": "100644",
+      "oid": "bc71908c9808f456a00ac66de14dc9d776cf67bf"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/classic-court.ts",
+      "mode": "100644",
+      "oid": "73b892f90095fdcfcf520a6f92a254d896d1bee5"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/content.ru.json",
+      "mode": "100644",
+      "oid": "b238795628988b2371e6f4f09391e01151b9e93f"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/control-feedback.ts",
+      "mode": "100644",
+      "oid": "fddadbbacc7ce4e551e7f56a823757a9aff24b18"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/defense-hints.ts",
+      "mode": "100644",
+      "oid": "686be2718cdcc502ebb3c3f09309b87184527b60"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/gag-model.ts",
+      "mode": "100644",
+      "oid": "4fcc52578b0412405bba82b1fd1db88cf1144bbd"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/game-model.ru.ts",
+      "mode": "100644",
+      "oid": "518fed0391656269bbf71cd6ea947e67807f29f9"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/history-model.ts",
+      "mode": "100644",
+      "oid": "996a911604b7394c0e0c301e65cf98c91acba445"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/history-seats.ts",
+      "mode": "100644",
+      "oid": "5cfabb23f571b07e8512cb9f100e9e399169f455"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/index.ts",
+      "mode": "100644",
+      "oid": "1c122f98762e7dbcd43e912caecae6edc5ad7565"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/interaction-model.ts",
+      "mode": "100644",
+      "oid": "71c7c34c6b2b1a2be2693de07c1c14770d1afe18"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/live-media-model.ts",
+      "mode": "100644",
+      "oid": "1ad4056d2bf78d9eb16e8d94446f7d16794d9c61"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/live-media-session.ts",
+      "mode": "100644",
+      "oid": "10fe5aa291496ddb3253c6d8b8b1a4b58480bb1f"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/PROVENANCE.json",
+      "mode": "100644",
+      "oid": "59a4ec39057c9ccc815793d6d83d963eab8071b4"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/cloth.jpg",
+      "mode": "100644",
+      "oid": "1c10eb339d7671fd0cc113be2d59b6cfc9e2a27c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/leather.jpg",
+      "mode": "100644",
+      "oid": "7354d392de81649a0ef38e414a151341be42ea0c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/marble.jpg",
+      "mode": "100644",
+      "oid": "748d42d4cb98410791ed1211d87d615ee16cd02e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/pine.jpg",
+      "mode": "100644",
+      "oid": "34cb99eb7ddcf7b031c8caa8db4651ccf5a9112e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/plain.jpg",
+      "mode": "100644",
+      "oid": "3b23533b73419c1733ce684d1b8c46fbd63aea8f"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/plastic.jpg",
+      "mode": "100644",
+      "oid": "8855e6112d8d352df8baef3105ac241f1a2d8760"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/materials/walnut.jpg",
+      "mode": "100644",
+      "oid": "5a11f549c66e7ae8c8569d50c5338392d71b3c4d"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/media-client.ts",
+      "mode": "100644",
+      "oid": "1954d65c023b70c4d15a39ec93045da035308bab"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/nostalgic-room.webp",
+      "mode": "100644",
+      "oid": "232df92ec284691cedf8a079e79e17347f49b0e6"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/notebook-history.ts",
+      "mode": "100644",
+      "oid": "4bb2d06305e61ab9a1ce103874f2524e747f627e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/notebook-layout.ts",
+      "mode": "100644",
+      "oid": "86fce6db6a0f3a1110369a71f6044a97990dfede"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/notebook-punches.ts",
+      "mode": "100644",
+      "oid": "4fb2ef46b3a9432d4224360057750d97857054a9"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/paper-lift.ts",
+      "mode": "100644",
+      "oid": "07127029e2333c06e55528acf0631dda4c8ca311"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/play-status.ru.ts",
+      "mode": "100644",
+      "oid": "35aa4c40706c6fa65ef5ee5bc8b0b23543f9f7a4"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/pointer-drag.ts",
+      "mode": "100644",
+      "oid": "8bb58d5771fa234d42d40943580adc2c65bcb58a"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-faq.module.css",
+      "mode": "100644",
+      "oid": "89c867f46a322491102fe877ae020db4cdbdfb8e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-game.module.css",
+      "mode": "100644",
+      "oid": "33b37e6380bf8f0f2054db8e59bd4a10b12daa2e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-history.module.css",
+      "mode": "100644",
+      "oid": "3428199ab36284753d2f8ed8269f2b8c82f22526"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-live.module.css",
+      "mode": "100644",
+      "oid": "be69384878b00fb7cd1461273a7a2b4dd21a8285"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-media.module.css",
+      "mode": "100644",
+      "oid": "e6d24040a55f0578be608532e919eda891545970"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-notebook.module.css",
+      "mode": "100644",
+      "oid": "88357ec731098427432608725887f5a0cb566ad2"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-shared.module.css",
+      "mode": "100644",
+      "oid": "f788acd2e1559950832f2f1c1c6e31bfee86f092"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-table.module.css",
+      "mode": "100644",
+      "oid": "49f0eb7380b7acb4f228f4378a99e22e81374e1d"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/preferans-welcome.module.css",
+      "mode": "100644",
+      "oid": "4f6ccd9e8a14ab486bd7a4039ffdcb51f6faca27"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/presentation-model.ts",
+      "mode": "100644",
+      "oid": "efdb2e5193e885521b3056e1383a28f9149f5889"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/realtime-client.ts",
+      "mode": "100644",
+      "oid": "94a867a6906b57ce617e74ca979670a116b46cfe"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/release-model.ts",
+      "mode": "100644",
+      "oid": "3aee431909936258a08a052cf4909d0d8e410e72"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/room-client.ts",
+      "mode": "100644",
+      "oid": "54bd180282cb1c2e02b660a3026224a60bc79a0b"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/room-preparation.ts",
+      "mode": "100644",
+      "oid": "a41e70ac7c2ef34c2c9b6c35337bdfc0c9ceacaf"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/rules-faq.ts",
+      "mode": "100644",
+      "oid": "aa021e9ed7a2531067ababcf1a012f913dd95f99"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/rules-source.ru.json",
+      "mode": "100644",
+      "oid": "51f7ba4483b5d75d639e032e83120d716936a189"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/seat-swap-model.ts",
+      "mode": "100644",
+      "oid": "b32bcace7274a4c8ac04b97294ff4b392fc35d60"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/sheet-exit-model.ts",
+      "mode": "100644",
+      "oid": "05c79ad5c1995de6dcda507622e138f38943e21e"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/sheet-tear.module.css",
+      "mode": "100644",
+      "oid": "e653c45b320f84d34a4380a36724249b4af86ac2"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/table-details.ts",
+      "mode": "100644",
+      "oid": "522e621508d9e615d4379d53ec437fd60582284c"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/table-interaction.ts",
+      "mode": "100644",
+      "oid": "17635e30a3182da7179283c59cf9e17cff568680"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/table-model.ts",
+      "mode": "100644",
+      "oid": "983385c8e6cae18200d13c1249f058e598a25e73"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/table-motion.ts",
+      "mode": "100644",
+      "oid": "d3fd63e24ded27b9b5c3be5a7a17fd6610b63fde"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/table-pr20.ts",
+      "mode": "100644",
+      "oid": "15b15d4b50b81cc5f8ce9138ebf7f14813bf8485"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/table-refinements.ts",
+      "mode": "100644",
+      "oid": "0fc9e19edb8e059a0c2cc1e4a7194d21ecd2a294"
+    },
+    {
+      "path": "portfolio/preferans/frontend/src/transport-budget.ts",
+      "mode": "100644",
+      "oid": "828ca8292e0284fb243d82be26cbb3ec085bc08b"
+    },
+    {
+      "path": "portfolio/preferans/project.json",
+      "mode": "100644",
+      "oid": "b05de6515f83760d4a63545cb44ed2fd70eb7cb7"
+    },
+    {
+      "path": "portfolio/preferans/scripts/release_evidence.py",
+      "mode": "100644",
+      "oid": "85837a474bef6ca0e033dcbf2f3019097781d61b"
+    },
+    {
+      "path": "portfolio/preferans/scripts/sync-rules-faq.mjs",
+      "mode": "100644",
+      "oid": "7285fd49b5163de6051f6ab2e05f9737f24ad13e"
+    },
+    {
+      "path": "portfolio/preferans/tests/README.md",
+      "mode": "100644",
+      "oid": "77c8729a9d9b45e6df8db04bfb28b34616ecc945"
+    },
+    {
+      "path": "portfolio/preferans/tests/check-foundation.mjs",
+      "mode": "100644",
+      "oid": "b8070a7e882e5d1041807a8b9736b8c4c4fd92f5"
+    },
+    {
+      "path": "portfolio/preferans/tests/conftest.py",
+      "mode": "100644",
+      "oid": "bb11f008fcce8bdb0b887b613421d99d78c65c31"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_auction.py",
+      "mode": "100644",
+      "oid": "861de76ee967a7bffb27eb288183d1e88fccdb36"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_auto_deal_store.py",
+      "mode": "100644",
+      "oid": "f177dc5c39611e280754416f4d75c8295bf60fb5"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_cards.py",
+      "mode": "100644",
+      "oid": "11ff526780bb31827a5648e53a2bc29a024e687d"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_cleanup_media.py",
+      "mode": "100644",
+      "oid": "640a4e1e832e6662af482864aa6b672c4f799e21"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_deal_flow.py",
+      "mode": "100644",
+      "oid": "b4faad793f0e474a5dbb2b2c1ffb6ef9837e58dd"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_declaration_polish.py",
+      "mode": "100644",
+      "oid": "7d466b1694cff3233972e496bfc1edee15fc9f3c"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_game.py",
+      "mode": "100644",
+      "oid": "5e5579df65b0b97506c7d761800e83dbec134c51"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_game_controls.py",
+      "mode": "100644",
+      "oid": "5c7f43dbb96a0b251a53f081927d3c7aba2292e3"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_game_ui_contract.py",
+      "mode": "100644",
+      "oid": "8ce3f658fec966be52610f73cc84560727f971f1"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_history_names.py",
+      "mode": "100644",
+      "oid": "0539dd13c9f7ca08326fb3de24199523aab51269"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_history_ranking.py",
+      "mode": "100644",
+      "oid": "1b6c9071ee4da16e833e6132b4d0183df9ca51d3"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_immersive_table.py",
+      "mode": "100644",
+      "oid": "f57eb22f66473be457f252e56f25824fbb9abb68"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_latest_trick_projection.py",
+      "mode": "100644",
+      "oid": "1fb971bf055b0a8a518979ffc723518d0b3eeb55"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_live_media_socket.py",
+      "mode": "100644",
+      "oid": "3c0e844e0f8363866de8610a1b47264842bf934a"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_live_relay.py",
+      "mode": "100644",
+      "oid": "bc350d9283e87a06a487145cae576d8d8783c3cb"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_lobby_setup.py",
+      "mode": "100644",
+      "oid": "c5cf274e73b2c598f464e7b8f6f31244a9ed97e8"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_media.py",
+      "mode": "100644",
+      "oid": "dc0b6b2358c868d621e9ce551d917ad72145cdc2"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_play.py",
+      "mode": "100644",
+      "oid": "9b394833e62cc354b122d4f03d22e4d4f887b20e"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr14_final_workflows.py",
+      "mode": "100644",
+      "oid": "f3e00d0855f968603ceb1f2b14a3780b5bf426c6"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr21_misere_here.py",
+      "mode": "100644",
+      "oid": "c18af8ed37d1583f06c3c82c9a6c10410e21f583"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr21_misere_store.py",
+      "mode": "100644",
+      "oid": "00312c06d96aeda0af3780ea306eff6deabdec78"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr24_claims_scoring.py",
+      "mode": "100644",
+      "oid": "6e222e5a0d603bee86e5e358202993c2ee4e1b6d"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr24_store.py",
+      "mode": "100644",
+      "oid": "85f730fc9fec4a8dea1a60e4cc94363fd35f4017"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr28_history_and_auction.py",
+      "mode": "100644",
+      "oid": "72080c749fad79cacc6f225cfe8c2802d5077763"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr30_accounting.py",
+      "mode": "100644",
+      "oid": "d17297e688606a34207cb1fe190d461bc8e7d16f"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr31_play_cues.py",
+      "mode": "100644",
+      "oid": "ae2ebfd9e9874888088b981c6db3e0fd054a38ae"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr32_final_punches.py",
+      "mode": "100644",
+      "oid": "338914dcd73180580de0a21ce968a11a9712223c"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr33_discard_gag.py",
+      "mode": "100644",
+      "oid": "d43fd834a09185db6f3b47d8a1579507a5972164"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr34_discard_timeline.py",
+      "mode": "100644",
+      "oid": "edbc943211ea595ec3efe79bbabb068d3ba6bb01"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr36_controls.py",
+      "mode": "100644",
+      "oid": "a79b027d26e6b47c29d78c5cea70f0b926da99bb"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr39_by_own.py",
+      "mode": "100644",
+      "oid": "35d9a9c6d320f25a7aeb3b0ca7a937a755e61fbd"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_pr39_presentation.py",
+      "mode": "100644",
+      "oid": "34bd23b44aa10c803bef431925c346f603e7aa01"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_presentation.py",
+      "mode": "100644",
+      "oid": "386369c3f1912722b29047a06f98de81056f3520"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_publish_signal.py",
+      "mode": "100644",
+      "oid": "4b878e6c7a512bd2b3c92f27895a8b63c131324d"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_quota_budget.py",
+      "mode": "100644",
+      "oid": "8bd56df11ea3ef27235654988002f22a09044e2d"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_randomized.py",
+      "mode": "100644",
+      "oid": "988fb97b01f6690b23155066b1a4ef33f5742981"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_realtime_hub.py",
+      "mode": "100644",
+      "oid": "4dcfc6dafd615c5265ca594b8479ea60909b77a0"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_realtime_socket.py",
+      "mode": "100644",
+      "oid": "ce4650b2f480c70302a8015e195b115d8dd1e537"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_realtime_store.py",
+      "mode": "100644",
+      "oid": "fc3a5c9c745847de50323d6fc0100980ce35fb09"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_release_evidence.py",
+      "mode": "100644",
+      "oid": "b52db6b39f4437d91bb6f6a7807553fb6c19f31d"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_release_security.py",
+      "mode": "100644",
+      "oid": "3d3ef434f786bb66137ca18d4cde8944c14f1842"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_release_simulated_soak.py",
+      "mode": "100644",
+      "oid": "3a9162a87f54b1649e8bb783a0e9e0b49801b5de"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_rulesets_and_settlement.py",
+      "mode": "100644",
+      "oid": "84b6e721712dc0e482a5c9973b201e68c6755192"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_scoring.py",
+      "mode": "100644",
+      "oid": "470900a9b20d0d1ecb4eb95819a176413e96f1af"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_scoring_properties.py",
+      "mode": "100644",
+      "oid": "b0633e42ac5aa876322984f778c872fab8d6a353"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_seat_swap.py",
+      "mode": "100644",
+      "oid": "cfa4c1695b2d7ce5903b57b21afbb51d0b711e9d"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_seat_swap_store.py",
+      "mode": "100644",
+      "oid": "15b44e436a9b93f99674b3b10e25f4d9f9383ad7"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_secure_rooms.py",
+      "mode": "100644",
+      "oid": "6034ec73b6ea452db4a24ae02227278c3e087e26"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_shared_room_store.py",
+      "mode": "100644",
+      "oid": "ce0db14d6857d459c4bbc79fe45f6abd3cdf4e04"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_sheet_exit.py",
+      "mode": "100644",
+      "oid": "6e395c7e985b8ea258dc0b7d692ac37179842304"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_sheet_exit_store.py",
+      "mode": "100644",
+      "oid": "27a1bb72a5ba497315cb59caf5d3616e5b2d3735"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_storage_diagnostics.py",
+      "mode": "100644",
+      "oid": "f5ef0219680ca53bcaceda8ffa7ae04fbc5a5541"
+    },
+    {
+      "path": "portfolio/preferans/tests/test_table_experience.py",
+      "mode": "100644",
+      "oid": "7b87a2e6e33387724123d03effe30cadab5e97fa"
+    }
+  ]
+}
