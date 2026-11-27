@@ -67,6 +67,7 @@ class TrickClaim:
     rejected_by: int | None = None
     accepted: bool = False
     display_order: tuple[Card, ...] = ()
+    defender_target: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,10 +8,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const source=(file:string)=>readFileSync(resolve(process.cwd(),"../portfolio/preferans/frontend/src",file),"utf8");
-test("normal widow review ends on the first card without changing passout rules",()=>{
+test("normal widow review ends when defense decisions finish without changing passout rules",()=>{
   const cards=[{rank:14,suit:"S" as const},{rank:7,suit:"H" as const}];
-  const view:RoomView={room_id:"a".repeat(32),version:1,game_id:"g",status:"playing",my_seat:1,room_admin:false,occupied:[true,true,true],declarer:0,phase:"play",widow:cards,played_tricks:0,trick:[]};
+  const view:RoomView={room_id:"a".repeat(32),version:1,game_id:"g",status:"playing",my_seat:1,room_admin:false,occupied:[true,true,true],declarer:0,phase:"defense_second",widow:cards,played_tricks:0,trick:[]};
   expect(opponentWidowCards(view)).toEqual(cards);
+  for(const phase of ["choose_mode","opening_lead","play"] as const)expect(opponentWidowCards({...view,phase})).toBeNull();
   expect(opponentWidowCards({...view,trick:[{owner:0,card:cards[0]}]})).toBeNull();
   expect(opponentWidowCards({...view,played_tricks:1})).toBeNull();
   expect(opponentWidowCards({...view,my_seat:0})).toBeNull();

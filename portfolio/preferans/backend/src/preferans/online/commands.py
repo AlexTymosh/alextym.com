@@ -66,6 +66,11 @@ def apply_command(state: GameState, seat: int, action: str, data: object) -> Gam
     if action == "claim_offer":
         if not data:
             return offer_claim(state, seat)
+        if "defender_target" in data:
+            _keys(data, {"defender_target"})
+            if type(data["defender_target"]) is not int:
+                raise RuleViolation("Invalid defender target")
+            return offer_claim(state, seat, defender_target=data["defender_target"])
         _keys(data, {"cards"})
         values = data["cards"]
         if not isinstance(values, list) or len(values) > 10:
@@ -133,6 +138,8 @@ def redacted_action(action: str, args: dict) -> dict:
         return {"hide_under_sheet": True}
     if action in {"play"}:
         return {"owner": args["owner"], "card": args["card"]}
+    if action == "claim_offer" and "defender_target" in args:
+        return {"defender_target": args["defender_target"]}
     if action in {"defense", "mode", "misere_vote", "claim_vote"}:
         return {k: args[k] for k in args}
     return {}

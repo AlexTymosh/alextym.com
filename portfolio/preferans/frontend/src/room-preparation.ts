@@ -9,3 +9,7 @@ export function mayCancelCounter(view:RoomView):boolean {
 export function notebookName(profile:SeatProfile|undefined,fallback:string):string {
   return profile?.alias||profile?.name||fallback;
 }
+
+export function lobbyReady(view:RoomView):boolean {
+  return view.status==="lobby"&&view.occupied.every(Boolean)&&!!view.lobby_setup&&view.lobby_setup.ready.length===3&&view.lobby_setup.ready.every(Boolean)&&!view.seat_swap;
+}

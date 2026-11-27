@@ -197,3 +197,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Unify illegal move feedback using authoritative legal cards.
 - Refine auction messages and table presentation.
 - Preserve scoring, API contracts and Firebase configuration.
+
+## PR39 - By-own agreement and Version 1.0 table polish
+
+- Extend existing claim with an optional defender target, a single authorized defender vote and verified allocation. Preserve actual completed tricks, privacy, codec compatibility and existing scoring.
+- End normal widow review after defense decisions. Make discard review informational and close on a successful play or declaration; only opener can explicitly dismiss it.
+- Restore even pool target in lobby, show first-deal action on the field only when all are ready, retain dealer and server readiness guards. Keep the existing automatic next-deal path and manual deck fallback.
+- Keep the table and center geometry independent of peripheral element scale; move control feedback into field status; collapse history by default and fetch it on expansion. Display Version 1.0 in game header.
+- No additional periodic Firestore requests or provider configuration changes. Full CI and three-player visual acceptance required.

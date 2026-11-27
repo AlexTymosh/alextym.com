@@ -35,7 +35,9 @@ test("only already-public normal widow cards receive the ten-second opponent dis
   expect(opponentWidowCards({...view,is_passout:true})).toBeNull();
   expect(opponentWidowCards({...view,widow:cards.slice(0,1)})).toBeNull();
   expect(opponentWidowCards({...view,status:"between"})).toBeNull();
-  expect(opponentWidowCards({...view,phase:"play",played_tricks:0,trick:[]})).toEqual(cards);
+  expect(opponentWidowCards({...view,phase:"play",played_tricks:0,trick:[]})).toBeNull();
+  expect(opponentWidowCards({...view,phase:"choose_mode",played_tricks:0,trick:[]})).toBeNull();
+  expect(opponentWidowCards({...view,phase:"opening_lead",played_tricks:0,trick:[]})).toBeNull();
   expect(opponentWidowCards({...view,phase:"play",played_tricks:0,trick:[{owner:0,card:cards[0]}]})).toBeNull();
   expect(opponentWidowCards({...view,phase:"play",played_tricks:1})).toBeNull();
 });

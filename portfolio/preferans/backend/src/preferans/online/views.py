@@ -9,7 +9,7 @@ from preferans.domain.auction import (
     legal_final_contracts,
 )
 from preferans.domain.cards import Card
-from preferans.domain.claims import can_claim, claim_voters
+from preferans.domain.claims import by_own_options, can_claim, claim_awards, claim_voters
 from preferans.domain.game import GameState, Phase, can_offer_misere, legal_play_cards
 from preferans.domain.history import placement_outcome
 from preferans.domain.ledger import ScoreState
@@ -207,6 +207,9 @@ def seat_view(
             and not (controls or {}).get("vote")
         ):
             result["can_claim"] = True
+            options = by_own_options(state, my_seat)
+            if options:
+                result["by_own_options"] = list(options)
         claim = state.claim
         if claim is not None and (claim.accepted or claim.at_tricks == len(state.completed_tricks)):
             result["claim"] = {
@@ -221,8 +224,18 @@ def seat_view(
                 "rejected_by": claim.rejected_by,
                 "awarded": 10 - claim.at_tricks if claim.accepted else 0,
                 "cards": [public_card(c) for c in (claim.display_order or state.hands[claim.seat])]
-                if state.claim_pending
+                if state.claim_pending and claim.defender_target is None
                 else [],
+                **(
+                    {
+                        "defender_target": claim.defender_target,
+                        "awards": list(claim_awards(state, claim.seat, claim.defender_target))
+                        if claim.accepted
+                        else [0, 0, 0],
+                    }
+                    if claim.defender_target is not None
+                    else {}
+                ),
             }
     # Auction history is public. Retain only the last call per seat, never
     # serialize the state or a player's private discard.

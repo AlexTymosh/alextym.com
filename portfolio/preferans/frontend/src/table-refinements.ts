@@ -13,6 +13,7 @@ export function trickTrain(count: number): {index: number; turned: boolean}[] {
 export const WIDOW_SHOW_MS = 10_000;
 export function opponentWidowCards(view: RoomView) {
   return view.status === "playing" && !view.is_passout &&
+    ["discard","declare","defense_first","defense_second","defense_reconsider"].includes(view.phase??"") &&
     (view.played_tricks ?? 0) === 0 && !view.trick?.length &&
     validSeat(view.declarer) && validSeat(view.my_seat) && view.declarer !== view.my_seat &&
     view.widow?.length === 2 ? view.widow : null;

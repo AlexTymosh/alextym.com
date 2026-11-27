@@ -151,8 +151,10 @@ def test_projection_is_allowlisted_and_legacy_gate():
     assert not projection(c, False, 100_000)["enabled"]
 
 
-def test_normal_widow_review_cannot_reopen_after_first_play():
-    game = SimpleNamespace(widow_revealed=2, is_passout=False, trick=[], completed_tricks=[])
+def test_normal_widow_review_cannot_reopen_after_defense():
+    game = SimpleNamespace(
+        widow_revealed=2, is_passout=False, phase="defense_second", trick=[], completed_tricks=[]
+    )
     c = control()
     change(
         c,
@@ -163,7 +165,8 @@ def test_normal_widow_review_cannot_reopen_after_first_play():
         {"presentation_version": 0, "kind": "widow_replay"},
         100_000,
     )
-    for trick, completed in [([object()], []), ([], [object()])]:
+    game.phase = "play"
+    for trick, completed in [([], []), ([object()], []), ([], [object()])]:
         game.trick = trick
         game.completed_tricks = completed
         with pytest.raises(PresentationError) as exc:

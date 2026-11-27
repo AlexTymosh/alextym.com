@@ -23,7 +23,7 @@ function LobbyConfig({view,profiles,busy,command,mode}: {view:RoomView;profiles:
     <p>Счётчик: {view.controls?.policy?.counter_seconds ?? 180} с · штраф ×{view.controls?.policy?.counter_multiplier ?? 3} · отмена: {view.controls?.policy?.undo_seconds ?? 120} с</p>
     {mode==="ready"&&<><p>Согласны с правилами и готовы начать?</p>
       <p>{setup.ready.map((ready,i)=>`${name(i)}: ${ready?"готов":"ожидает"}`).join(" · ")}</p></>}
-    {mode==="config"&&view.room_admin && <div className={styles.actions}>
+    {view.room_admin && <div className={styles.actions}>
       <label className={styles.field}>Первый сдающий<select value={dealer} onChange={e=>setDealer(Number(e.target.value))}>
         {[0,1,2].map(seat=><option key={seat} value={seat}>{name(seat)}</option>)}
       </select></label>

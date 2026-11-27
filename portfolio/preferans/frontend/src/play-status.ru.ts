@@ -4,6 +4,7 @@ import type { Presence } from "./realtime-client";
 export function awardedMessage(view:RoomView,name:(seat:number)=>string):string|null {
   const claim=view.claim;
   if(claim?.status!=="accepted")return null;
+  if(claim.awards)return claim.awards.flatMap((n,i)=>n?[`${name(i)}: +${n} взяток`]:[]).join(" · ");
   return `${name(claim.seat)}: +${claim.awarded} взяток`;
 }
 

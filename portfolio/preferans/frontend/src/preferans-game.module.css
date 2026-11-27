@@ -336,3 +336,9 @@
 .tableRoot .discardReview { flex:0 1 auto; min-width:0; display:flex; flex-direction:column; align-items:flex-end; }
 .tableRoot .discardReviewNote { font-size:clamp(.65rem,1.05cqw,.9rem); max-width:26ch; text-align:right; overflow-wrap:anywhere; }
 .tableRoot .declareRow .discardSlots { flex-wrap:nowrap; }
+
+/* PR39: feedback is part of the central field status, not a top-screen toast. */
+.root .feedbackStack { position:static; transform:none; width:100%; max-width:100%; margin:0; }
+.root .feedbackNotice { font-size:inherit; padding:.35rem .5rem; }
+.root .historyDisclosure { margin-top:1rem; }
+.root .historyDisclosure>button { text-align:left; font-weight:700; }
