@@ -17,7 +17,7 @@ import { ScoreAdjustment } from "./ScoreAdjustment.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
 import { canHint, sharedHint, hintKey, hintScope, canRaiseOwn, ownRaiseScope, type HintSender } from "./defense-hints";
-import { pauseMessage, awardedMessage, auctionMessage } from "./play-status.ru";
+import { pauseMessage, awardedMessage, auctionMessage, illegalCardMessage, declarationMessage } from "./play-status.ru";
 import { CounterDisplay } from "./CounterDisplay.ru";
 import { useDiscardScene } from "./HiddenDiscardScene.ru";
 import { gagPhase } from "./gag-model";
@@ -538,7 +538,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const endDrag=()=>{dragging.current=null;};
   const takeDrag=(e:DragEvent)=>{e.preventDefault();e.stopPropagation();const drag=dragging.current;dragging.current=null;return view&&!busy&&matchingDrag(drag,view)?drag:null;};
   const playNow=(card:Card,owner:number)=>{
-    if(!view||busy||localPlay||inFlight.current||!isPlay||!allowedToAct(view)||view.turn!==owner||!legal.has(cardId(card)))return;
+    if(!view||busy||localPlay||inFlight.current||!isPlay||!allowedToAct(view)||view.turn!==owner)return;
+    if(!legal.has(cardId(card))){setDropNotice(illegalCardMessage(view));return;}
+    setDropNotice("");
     setPendingPlay({room:view.room_id,game:view.game_id,version:view.version,owner,card});
     command("play",{card,owner});
   };
@@ -567,8 +569,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
     return <CardFace card={card} playable={playable} raised={raised(card,seat)} onHint={view&&canHint(view,seat,card)?()=>toggleHint(card,seat):undefined} pendingPlay={!!localPlay&&localPlay.owner===seat&&cardId(localPlay.card)===cardId(card)}
       onDragStart={isPlay&&!busy?e=>beginDrag(e,"card",card,seat):undefined} onDragEnd={endDrag}
-      onDoubleClick={playable?()=>playNow(card,seat):undefined}
-      onKeyDown={e=>{if(playable&&(e.key==="Enter"||e.key===" ")){e.preventDefault();playNow(card,seat);}}}/>;
+      onDoubleClick={isPlay&&canInteractCards&&view?.turn===seat?()=>playNow(card,seat):undefined}
+      onKeyDown={e=>{if(isPlay&&canInteractCards&&view?.turn===seat&&(e.key==="Enter"||e.key===" ")){e.preventDefault();playNow(card,seat);}}}/>;
   };
   const reorder = (from:string,to:string) => {
     const ids=hand.map(cardId), a=ids.indexOf(from), b=ids.indexOf(to);
@@ -582,7 +584,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if(isPlay&&(view.controller!==view.my_seat||view.turn!==drag.owner)){setDropNotice("Убери карту, не твой ход!");return;}
     const card=legalDrop(view,drag);
     if(card&&view.turn!=null)playNow(card,view.turn);
-    else if(isPlay)setDropNotice("Ты чё, слепой!? Правильно давай ходи!");
+    else if(isPlay&&allowedToAct(view)&&!localPlay&&!inFlight.current)setDropNotice(illegalCardMessage(view));
   };
   const seatDrop=(seat:Seat,e:DragEvent)=>{const drag=takeDrag(e);if(view&&drag?.kind==="deck"&&mayPassDeck(view,seat))command("dealer_pass",{dealer:seat});};
   const draft=Boolean(view?.phase==="discard"&&view.my_seat===view.declarer);
@@ -649,10 +651,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
       {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
         <CardFace card={card} selected={false} raised={view.my_seat!==null&&raised(card,view.my_seat)} onHint={!busy&&!discardScene.phase&&view.my_seat!==null&&canRaiseOwn(view,view.my_seat,card)?()=>toggleOwnRaise(card,view.my_seat!):undefined} fromWidow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
           onClick={ownPlayable&&draft?()=>onCardSelect(card):undefined}
-          onDoubleClick={isPlay&&ownPlayable&&legal.has(cardId(card))?()=>{if(view.my_seat!==null)playNow(card,view.my_seat);}:undefined}
+          onDoubleClick={isPlay&&ownPlayable?()=>{if(view.my_seat!==null)playNow(card,view.my_seat);}:undefined}
           onDragStart={e=>beginDrag(e,"card",card,view.my_seat??undefined)} onDragEnd={endDrag}
           onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e,cardId(card))}
-          onKeyDown={e=>{if(e.altKey&&e.key==="ArrowUp"&&view.my_seat!==null&&canRaiseOwn(view,view.my_seat,card)){e.preventDefault();toggleOwnRaise(card,view.my_seat);return;}if(isPlay&&ownPlayable&&legal.has(cardId(card))&&(e.key==="Enter"||e.key===" ")){e.preventDefault();if(view.my_seat!=null)playNow(card,view.my_seat);return;}if(e.altKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){const target=visibleHand[index+(e.key==="ArrowLeft"?-1:1)];if(target){e.preventDefault();reorder(cardId(card),cardId(target));}}}}/>
+          onKeyDown={e=>{if(e.altKey&&e.key==="ArrowUp"&&view.my_seat!==null&&canRaiseOwn(view,view.my_seat,card)){e.preventDefault();toggleOwnRaise(card,view.my_seat);return;}if(isPlay&&ownPlayable&&(e.key==="Enter"||e.key===" ")){e.preventDefault();if(view.my_seat!=null)playNow(card,view.my_seat);return;}if(e.altKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){const target=visibleHand[index+(e.key==="ArrowLeft"?-1:1)];if(target){e.preventDefault();reorder(cardId(card),cardId(target));}}}}/>
       </div>)}
       {!visibleHand.length&&view.status==="playing"&&<span className={styles.subtle}>Нет карт для отображения</span>}
     </div>
@@ -679,7 +681,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     }
     if(view.phase==="misere_offer")return `Мизер · ждём согласия ${view.misere_offer?.approved.length??0}/2`;
     if(view.phase==="discard"&&view.my_seat===view.declarer)return "Перетащи две карты в снос";
-    if(view.phase==="declare"&&view.my_seat===view.declarer)return "Объяви игру";
+    if(view.phase==="declare")return declarationMessage(view,playerName);
     if(view.phase==="choose_mode"&&allowedToAct(view))return "Выбери: в светлую или в тёмную";
     const turn=view.turn!=null?`Ход: ${playerName(view.turn)}`:"";
     const bidding=auctionMessage(view);

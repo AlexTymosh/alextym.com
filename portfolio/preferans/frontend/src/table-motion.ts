@@ -12,11 +12,11 @@ export function flightDelta(from:DOMRect,to:DOMRect) {
   return {x:b.x-a.x,y:b.y-a.y};
 }
 export const localTableScale=(table:HTMLElement):number=>table.offsetWidth?table.getBoundingClientRect().width/table.offsetWidth||1:1;
-export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[],elapsedMs=0):()=>void {
+export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[],elapsedMs=0,deckOrigin?:DOMRect):()=>void {
   if(elapsedMs>=DEAL_SORT_AT_MS+DEAL_SORT_MS)return ()=>{};
   const source=table.querySelector<HTMLElement>("[data-play-field]");
   if(!source)return ()=>{};
-  const origin=source.getBoundingClientRect();
+  const origin=deckOrigin??source.getBoundingClientRect();
   const scale=localTableScale(table);
   const unsorted=new Map<HTMLElement,{x:number;y:number}>();
   const layers:{node:HTMLElement;previous:string}[]=[];
@@ -112,4 +112,33 @@ export function animateArrival(table:HTMLElement, seat:number):void {
   const d=flightDelta(target.getBoundingClientRect(),source.getBoundingClientRect());
   const scale=localTableScale(table);
   target.animate([{translate:`${d.x/scale}px ${d.y/scale}px`,opacity:.55},{translate:"0px 0px",opacity:1}],{duration:180,easing:"cubic-bezier(.2,.75,.3,1)"});
+}
+
+export const GATHER_DURATION_MS=1450;
+/** Visual-only collection. The real deck remains on the server. */
+export function animateGather(table:HTMLElement):()=>void {
+  const target=table.querySelector<HTMLElement>("[data-deck-collect-target]");
+  if(!target)return ()=>{};
+  const destination=target.getBoundingClientRect(),bounds=table.getBoundingClientRect(),scale=localTableScale(table);
+  const nodes=Array.from(table.querySelectorAll<HTMLElement>("[data-trick-train] > button:not([data-awarded]),[data-seat] [data-card-back],[data-seat] [data-card],[data-own-hand] [data-card],[data-widow-zone] img"));
+  if(!nodes.length||typeof target.animate!=="function")return ()=>{};
+  const deck=target.closest("button");
+  const wasInert=deck?.inert??false;
+  const animations:Animation[]=[],clones:HTMLElement[]=[];
+  table.dataset.gathering="true";
+  if(deck)deck.inert=true;
+  nodes.forEach((node,i)=>{
+    const rect=node.getBoundingClientRect();if(!rect.width||!rect.height)return;
+    const clone=node.cloneNode(true) as HTMLElement;
+    clone.setAttribute("aria-hidden","true");clone.inert=true;clone.dataset.gatherClone="true";
+    clone.removeAttribute("data-latest");clone.removeAttribute("id");
+    Object.assign(clone.style,{position:"absolute",left:`${(rect.left-bounds.left)/scale-table.clientLeft}px`,top:`${(rect.top-bounds.top)/scale-table.clientTop}px`,width:`${rect.width/scale}px`,height:`${rect.height/scale}px`,margin:"0",visibility:"visible",pointerEvents:"none",zIndex:"11"});
+    table.append(clone);clones.push(clone);
+    const d=flightDelta(rect,destination);
+    animations.push(clone.animate([{transform:"none",opacity:1},{transform:`translate3d(${d.x/scale}px,${d.y/scale}px,0) rotate(12deg) scale(.45)`,opacity:1},{transform:`translate3d(${d.x/scale}px,${d.y/scale}px,0) scale(.3)`,opacity:0}],{duration:900,delay:i%12*35,fill:"both",easing:"ease-in-out"}));
+  });
+  let finished=false;
+  const finish=()=>{if(finished)return;finished=true;animations.forEach(a=>a.cancel());clones.forEach(n=>n.remove());delete table.dataset.gathering;if(deck)deck.inert=wasInert;};
+  const timer=setTimeout(finish,GATHER_DURATION_MS);
+  return ()=>{clearTimeout(timer);finish();};
 }

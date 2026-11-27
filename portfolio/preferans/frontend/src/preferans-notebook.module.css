@@ -75,7 +75,12 @@
 @media(pointer:coarse) { .wrap .historyNav button { min-height:26px; } }
 
 /* PR36: the viewport is fixed; both scroll axes belong to the paper, not its window. */
-.wrap { width:min(100%,551px); }
-.paperViewport { --paper-viewport-height:calc(max(112px,80dvh - 7rem)); height:var(--paper-viewport-height); max-height:var(--paper-viewport-height); overflow:auto; }
+.wrap { width:min(100%,551px); container-type:inline-size; }
+.paperViewport { --paper-viewport-height:min(calc(max(112px,80dvh - 7rem)),var(--paper-fit-limit,100dvh)); height:auto; max-height:min(var(--paper-viewport-height),calc(100cqw / var(--paper-ratio,1))); overflow:auto; }
 .wrap .paperViewport .paper { width:min(calc(100% * var(--paper-zoom,1)),calc(var(--paper-viewport-height) * var(--paper-ratio,1) * var(--paper-zoom,1))); height:auto; max-width:none; max-height:none; min-width:0; margin-inline:auto; }
-@media(max-height:650px) and (orientation:landscape) { .paperViewport { --paper-viewport-height:calc(max(90px,75dvh - 6rem)); } }
+@media(max-height:650px) and (orientation:landscape) { .paperViewport { --paper-viewport-height:min(calc(max(90px,75dvh - 6rem)),var(--paper-fit-limit,100dvh)); } }
+
+/* Only the drawing scrolls. Its natural unzoomed height is the maximum viewport height. */
+.paperViewport[data-zoomed="true"] { cursor:grab; }
+.paperViewport[data-panning="true"] { cursor:grabbing; user-select:none; }
+.paperViewport .paper { -webkit-user-drag:none; user-select:none; }

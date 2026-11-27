@@ -188,3 +188,12 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Restrict normal public widow review to before the first card, with press-and-hold behavior; preserve passout widow rules. Review one's discard beside the hand; shared observers see only a notice.
 - Refine concession text, discard/declare alignment, first-hand label and activity strokes. Full repository CI and visual acceptance remain pending.
 - PR37 test follow-up: compile the complete table-motion module into a fresh lexical scope for each scale and assert browser errors and card count. No production animation changes.
+
+## PR38 - Table scenes and notebook navigation
+
+- Support two-axis notebook scrolling and drag panning.
+- Introduce synchronized cartoon sheet disposal animation.
+- Gather previous deal cards into the next deck.
+- Unify illegal move feedback using authoritative legal cards.
+- Refine auction messages and table presentation.
+- Preserve scoring, API contracts and Firebase configuration.
