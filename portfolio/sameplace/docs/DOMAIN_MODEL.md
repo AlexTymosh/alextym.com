@@ -26,3 +26,19 @@ A request ID is stable for a retry. Identical accepted mutation retries return c
 ## Deferred lifecycle
 
 Meeting admission, lease, distinct online UID counting, global active limits, waiting state, favourites and recent visits: SP03. Interiors have only stable preset identifiers; art/editor/audio SP04. Activities and archived unfinished sessions SP05. This is not yet the product release; all new routes remain disabled by default.
+
+
+## SP03 additive state (schema v1)
+
+Existing `sameplace_room_core_v1` document namespace and `Store.run(UnitOfWork)` port are reused. No migration, eager initialization or Firestore rule change. All reads precede staged writes in the adapter. Existing room/member/slug/approval records are unchanged.
+
+| Key | Fields and invariants |
+|---|---|
+| `social_<sha256(uid)>` | Internal UID; derived opaque public ID (128-bit hash domain-separated from other IDs), nickname, preset avatar, privacy, bilateral relationship map, favourite/recent room IDs, bounded inbox and sender ping window. Public projection excludes UID, email, contacts and private settings of others. |
+| `public_<public_id>` | Server-only mapping to UID, created lazily on profile save, visit or authorized social mutation. No directory or email search. Reject conflicting mapping. |
+| `chat_<room_id>` | Bounded room aggregate, ordered server timestamps and opaque message IDs; plain text, author public ID/nickname snapshot, expiry, hidden flag/reason. Hide removes text; reads filter hidden/expired independently of physical cleanup. |
+| Existing `command_`, `audit_` | Reuse SP02 idempotent fingerprint and audit metadata for durable social mutations. No plaintext message or contact payload in audit. |
+
+Friend transitions: request creates symmetric outgoing/incoming; only recipient accepts/declines; requester cancels; accepted pair can be removed; independent blocks prevent social lookup/pings but never change room grants. Terminal declined/cancelled relationships are removed from the bounded map; receipt/audit remains. Profiles can persist after room revocation (friendship independent), but room lists/notices are filtered by current memberships. Profile scope requires owner, approval, indexed membership or existing profile. Room access uses authoritative SP02 membership; archived rooms cannot admit or serve active chat. Chat retention 30 days; current members read available history; per-room 500 messages/400 kB hard cap; expired records are pruned on send or moderator cleanup. Notices expire after seven days, independent of chat; no contact fields. All durable times are server UTC ms.
+
+Ephemeral: `Meeting` has room ID, opaque meeting ID, sequence, room/chat revisions, idle grace, participants and proposals. `Person` owns public projection, location, visit/watch role, at most two connection leases and bounded command receipts. One UID admitted once per meeting and only one active meeting globally. `Ticket` contains memory-only verified credential and exact origin, 25 s expiry, single use. Active counts, ticket/connection IDs, proposal state and approximate opted-in last seen are not persisted. Restart clears them; no durable room/game changes. Location intent does not equal game seat; SP05 integrates activity lifecycle and durable game seat locks. Presence outside active room is not tracked by this stage.

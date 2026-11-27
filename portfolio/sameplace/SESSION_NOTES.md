@@ -1,8 +1,8 @@
 # SamePlace — Session notes and implementation roadmap
 
-**Revision:** 2.0 | **Date:** 2026-11-27 | **Scope:** SamePlace only
+**Revision:** 3.0 | **Date:** 2026-11-27 | **Scope:** SamePlace only
 
-**Status:** SP01 MERGED; SP02 CANDIDATE r01 prepared. Full local CI and hosted acceptance pending. Not activated.
+**Status:** SP01–SP02 MERGED; SP03 CANDIDATE r01 prepared. Full local/hosted CI, Emulator and real-device acceptance pending. Not activated.
 
 Canonical path: `portfolio/sameplace/SESSION_NOTES.md`.
 
@@ -10,10 +10,10 @@ Requirements: [SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md](docs/SAMEPLACE_FULL
 
 ## 1. Resume here
 
-- **Last inspected main:** `98945bc295e5988e6f4223513c023ce6b4605799` (SP01 squash merge, confirmed by GitHub read-only inspection; Vercel combined status success only). Legacy freeze source remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777` (PR42). Do not regenerate the freeze inventory.
-- **Last merged SamePlace PR:** SP01, verified on main at `98945bc295e5988e6f4223513c023ce6b4605799`. Owner reports merged; exact full CI log not provided. Both canonical requirements and session ledger present.
-- **Current candidate:** SP02 r01, `sameplace-sp02-room-core-r01.zip`, branch `feat/sameplace-room-core`, exact pinned main above. Apply only to clean matching main, run focused tests, full no-Task CI and optional local Emulator. Do not activate production.
-- **Current evidence:** isolated domain/HTTP/fake-storage/guard tests pass on local FastAPI 0.128.2 with mocked host identity (not locked FastAPI); real full host and provider tests pending. See latest session entry.
+- **Last inspected main:** `e33b71b4e815819c9086f8114dec47871473ea0c` (SP02 merge verified by GitHub; Vercel combined status success only). Legacy freeze source remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777` (PR42). Do not regenerate the freeze inventory.
+- **Last merged SamePlace PR:** SP02, verified on main at `e33b71b4e815819c9086f8114dec47871473ea0c`. Owner reports merged and marked full local/hosted CI green in SP02 PR checklist; raw logs not independently observed; local Emulator remains open.
+- **Current candidate:** SP03 r01, `sameplace-sp03-social-realtime-r01.zip`, branch `feat/sameplace-social-realtime`, exact pinned main above. Apply only to clean matching main, run full no-Task CI and local Emulator/actual browser acceptance before any activation.
+- **Current evidence:** isolated SP03 domain/HTTP/WS tests pass on FastAPI 0.128.2 with synthetic identity and memory/fake transaction storage; pure TS modules typechecked and TSX syntax checked. See latest evidence. Full locked host CI and Emulator/actual browser gates remain open.
 - **Plan:** 10 sequential implementation PRs, 46 planned logical commits (4+5+5+5+5+6+4+4+4+4). Planning estimate, not an enforced count. Documentation is included in each PR; no separate documentation-only scaffold PR. One implementation branch and ZIP candidate at a time.
 - **Production:** keep SamePlace disabled until the explicit release gate. Do not disable or modify legacy Preferans, existing site features, or cloud billing to make SamePlace work.
 
@@ -226,8 +226,8 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 | PR | Planned commits | Status | Candidate / merge SHA | Evidence / next action |
 |---|---:|---|---|---|
 | SP01 | 4 | MERGED | `98945bc295e5` | Owner confirmed; main contents verified; Vercel success, full CI log not independently observed |
-| SP02 | 5 | CANDIDATE r01 | `98945bc295e5` (base) | Room core implemented; full local/hosted CI and Emulator pending |
-| SP03 | 5 | PLANNED | - | Depends on SP02 |
+| SP02 | 5 | MERGED | `e33b71b4e815` | Owner reports full local/hosted CI green; merge verified; Emulator remains open |
+| SP03 | 5 | CANDIDATE r01 | `e33b71b4e815` (base) | Social/realtime implemented; full locked CI and acceptance pending |
 | SP04 | 5 | PLANNED | - | Depends on SP03 |
 | SP05 | 5 | PLANNED | - | Depends on SP03/SP04 |
 | SP06 | 6 | PLANNED | - | Depends on SP05 and frozen Preferans source |
@@ -235,7 +235,7 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 | SP08 | 4 | PLANNED | - | Depends on SP06; default sequence SP07 then SP08 |
 | SP09 | 4 | PLANNED | - | Requires approved Domino rules |
 | SP10 | 4 | PLANNED | - | All previous stages and acceptance gates |
-| **Total** | **46** | **1 merged** | - | SP02 candidate; SP03–SP10 planned |
+| **Total** | **46** | **2 merged** | - | SP03 candidate; SP04–SP10 planned |
 
 ## 10. Open items (carry forward until evidenced or resolved)
 
@@ -292,6 +292,19 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 - English docs updated: DOMAIN_MODEL, SECURITY_AND_PERMISSIONS, API_CONTRACT, ARCHITECTURE, TEST_STRATEGY, ADR 0003 and README files. Russian UI only in localized resources, no global site changes. Keep the feature off through acceptance. No separate dependencies or lock changes; only host mount and route-local credential/BFF adapters outside project. Existing SP01 status unchanged.
 - Rollback: keep flag off; revert SP02 as a unit if necessary, do not delete any room records or change freeze inventory. No persistent production data expected because no activation. Before SP03 verify actual merged main and local/hosted evidence; carry forward open Emulator/provider and admission checks.
 
+### 2026-11-27 — SP02 merge verification
+
+- Owner confirmed SP02 merged. GitHub main is `e33b71b4e815819c9086f8114dec47871473ea0c`; actual merged files include room core and scoped identity/transport, tests and English docs. Combined Vercel status success. Owner marked full local CI and GitHub Actions CI checked in the prior PR description; raw test logs were not independently obtained. Emulator not marked passed. Keep previous history; SP02 is merged, no production activation claimed.
+
+### 2026-11-27 — SP03 / candidate r01 — Social and Realtime
+
+- Base `e33b71b4e815819c9086f8114dec47871473ea0c`; branch `feat/sameplace-social-realtime`; ZIP `sameplace-sp03-social-realtime-r01.zip`. Five planned logical commits; exact manifest in package. No remote writes, no host startup edits, no dependency/lock, freeze, canonical Russian specification or legacy changes.
+- Implemented: shared Room Core/Social composition, short one-use ticket bound to origin, fresh identity and membership verification, bounded single-worker hub, presence and meeting grace, one UID/one slot, two tabs, global capacity policy, revision invalidation after core commit, 60 s reauth, read-only/manual fallback and 15–120 s bounded retries; durable profiles, bilateral friends/block, privacy, favourites/recent, 30-day chat with pagination/moderation, internal inbox with consent/rate/idempotency, email/SMS disabled stubs and copy. Location proposal/accept/decline and visit/watch placeholders; layouts 2/3/4/5–10; no seat or actual activity. Requirements T-013–025, T-051, T-062–063, T-070–076, T-081–082 are addressed in code, not all acceptance gates verified. Room access and raw state isolation retained. New social collection keys use existing `sameplace_room_core_v1`; no migration or production writes.
+- Decisions and known limits: one process/worker required; one meeting per UID; retry-based wait not FIFO. Chat capped at 500 messages/400 kB, 50/page; rejects when full rather than shortening retention; expiry is server filtered, physical cleanup lazy/manual; measure whole-document traffic. Friends and inbox read on demand outside room. Last-seen and proposals are ephemeral; activity privacy stored but no games yet. No global website tracking. No paid provider, video/music or real email/SMS. Actual 10-person capacity, network and quota not verified. Realtime off by default. SP05 must add active-game pause/safe movement before archive/leave and private activity state.
+- Validation evidence: Python 3.13.5 / FastAPI 0.128.2, `pytest` isolated SP03 domain+HTTP/WS and SP02 room-core/HTTP/storage regression subset: 42 PASS (19 new SP03 and 23 SP02), 1 Emulator SKIP. Node 22.16.0 with local TypeScript: 8 localization/BFF/layout tests PASS; strict pure TypeScript compilation PASS; 7 TSX files transpiled without syntax errors. Seven replacement anchors and exact SHA of three Python base files verified via GitHub; all existing payload replacements checked against known base blobs. Synthetic installer preflight and package integrity checks run; actual full repository checkout not available. Full locked FastAPI host, actual full checkout Ruff/uv/Next/ESLint/Playwright/RAG/Docker, local Emulator, real browsers, load/usage and GitHub Actions remain NOT RUN in author environment. Do not mark SP03 verified before Owner local CI and review. No production settings changed.
+- English engineering documentation: REALTIME_AND_MEDIA, RESOURCE_BUDGET, ADR 0004, ARCHITECTURE, DOMAIN_MODEL, API_CONTRACT, SECURITY_AND_PERMISSIONS, TEST_STRATEGY, README and this ledger. Canonical `.ru.md` remains untouched, new UI strings in `messages.ru.json` only.
+- Rollback: disable realtime then SamePlace flag, preserve durable data; revert SP03 as a unit if necessary, do not regenerate freeze inventory or delete state. Apply installer only on exact matching clean main; full no-Task CI, five commits and Owner review. Next: SP04 interiors/music after actual SP03 merge. Provider and Emulator evidence remain release gates.
+
 ### Template for the next candidate entry (replace placeholders; retain history)
 
 ```markdown
@@ -321,3 +334,7 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 ```
 
 End of current log. Append new entries in chronological order; update the resume block and progress ledger in each package. Keep the canonical specification unchanged unless requirements are explicitly revised. If this file becomes long, move older detailed evidence into linked English stage reports under `docs/`, preserving all historical entries or links, and keep the current resume block concise.
+
+### SP03 r01 - Ruff correction
+
+- Fixed E702 in test_sameplace_social_http.py by separating two statements. No runtime behavior changed. Full CI rerun required.
