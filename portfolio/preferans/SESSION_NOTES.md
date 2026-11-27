@@ -175,3 +175,7 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Store correction reasons durably, recover available legacy reasons and never invent absent ones. Keep notebook zoom inside a two-axis viewport; table zoom is an independent local preference next to Fullscreen.
 - Move the first-hand label outside avatars and clear it on the first card. Preserve the claimant's exact validated displayed hand order. Thin activity strokes by another 30%.
 - Full repository CI and three-player browser acceptance remain required. No additional periodic reads, provider or billing changes.
+
+### PR36 animation test follow-up
+
+- Supply the new zoom coordinate helper to the isolated PR31 browser animation test. Retain the raw-order, final-transform and animation cleanup assertions. Production animation code is unchanged.
