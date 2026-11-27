@@ -51,7 +51,7 @@ export type RoomView = {
   /** Legacy transport field; never used for trick replay. */
   last_won_tricks?: (Array<{owner:number;card:Card}> | null)[];
   settlement_options?: {regular_choice:boolean;passout_defaults:RewardRoute[];passout_choices?:RewardRoute[][];passout_targets?:number[][];passout_pending?:number[]};
-  claim?:Claim; can_claim?:boolean;
+  claim?:Claim; can_claim?:boolean; by_own_options?:number[];
   room_id: string; version: number;
   status: "lobby" | "playing" | "awaiting_settlement" | "between" | "closed" | "archived";
   occupied: boolean[]; my_seat: number | null; room_admin: boolean; game_id: string | null;
@@ -177,6 +177,7 @@ export function isRoomView(value: unknown): value is RoomView {
     if(!final||!isNotebookPunches(v.final_punches,final.net))return false;
   }
   if(v.claim!==undefined&&!validClaim(v.claim,v))return false;
+  if(v.by_own_options!==undefined&&(!v.can_claim||v.my_seat!==v.declarer||!Array.isArray(v.by_own_options)||v.by_own_options.length<1||v.by_own_options.length>2||new Set(v.by_own_options).size!==v.by_own_options.length||!v.by_own_options.every(n=>[1,2,3,4].includes(n))))return false;
   if(v.can_claim!==undefined&&(v.can_claim!==true||!isSeat(v.my_seat)||v.status!=="playing"||!["play","opening_lead","choose_mode"].includes(String(v.phase))))return false;
   if(v.can_offer_misere!==undefined&&(v.can_offer_misere!==true||v.status!=="playing"||!isSeat(v.my_seat)||!["declare","play"].includes(String(v.phase))))return false;
   if(v.final_hill_vists!==undefined&&(!v.final_settlement||!Array.isArray(v.final_hill_vists)||v.final_hill_vists.length!==3||!v.final_hill_vists.every(n=>Number.isSafeInteger(n)&&n>=0)))return false;

@@ -14,7 +14,7 @@ from .auction import BidKind, RuleViolation
 from .game import DefenseDecision, EndReason, GameState, Phase
 from .ledger import EntryKind, ScoreState, _Posting
 from .play import CompletedTrick
-from .claims import claim_voters
+from .claims import claim_awards, claim_voters
 from .reward_routing import blocked_players, defender_shortfalls, priority_targets
 
 
@@ -249,7 +249,7 @@ def _check_finished(game: GameState) -> None:
             )
             or tuple(
                 sum(t.winner == i for t in game.completed_tricks)
-                + (10 - count if i == claim.seat else 0)
+                + claim_awards(game, claim.seat, claim.defender_target)[i]
                 for i in range(3)
             )
             != game.tricks_won

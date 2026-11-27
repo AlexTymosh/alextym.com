@@ -2,8 +2,8 @@
 
 from dataclasses import replace
 
-from .auction import RuleViolation
-from .cards import Card
+from .auction import BidKind, RuleViolation
+from .cards import Card, Suit
 from .game import DefenseDecision, EndReason, GameState, Phase, TrickClaim
 
 PLAY_PHASES = (Phase.PLAY, Phase.OPENING_LEAD, Phase.CHOOSE_MODE)
@@ -32,11 +32,84 @@ def can_claim(game: GameState, seat: int) -> bool:
     )
 
 
+BY_OWN_TARGETS = {6: (4,), 7: (2, 3), 8: (1, 2), 9: (1,)}
+
+
+def sole_vister(game: GameState, seat: int) -> int | None:
+    contract = game.contract
+    if (
+        type(seat) is not int
+        or seat != game.declarer
+        or game.is_passout
+        or contract is None
+        or contract.kind != BidKind.REGULAR
+        or contract.level not in BY_OWN_TARGETS
+        or (contract.level == 6 and contract.suit == Suit.SPADES)
+    ):
+        return None
+    defenders = [i for i in range(3) if i != seat]
+    visters = [i for i in defenders if game.defense[i] == DefenseDecision.VIST]
+    passers = [i for i in defenders if game.defense[i] == DefenseDecision.PASS]
+    return visters[0] if len(visters) == len(passers) == 1 else None
+
+
+def claim_awards(game: GameState, seat: int, target: int | None) -> tuple[int, int, int]:
+    """Allocate only the remaining tricks, preserving all actual winners."""
+    remaining = 10 - len(game.completed_tricks)
+    if type(seat) is not int or seat not in range(3) or not 1 <= remaining <= 10:
+        raise RuleViolation("Invalid remaining tricks")
+    awards = [0, 0, 0]
+    if target is None:
+        awards[seat] = remaining
+    else:
+        defender = sole_vister(game, seat)
+        if (
+            defender is None
+            or type(target) is not int
+            or target not in BY_OWN_TARGETS[game.contract.level]
+        ):
+            raise RuleViolation("Invalid defender target")
+        actual = sum(trick.winner == defender for trick in game.completed_tricks)
+        needed = target - actual
+        if not 0 <= needed <= remaining:
+            raise RuleViolation("Defender target cannot be reached")
+        # A settlement called 'by own' must still fulfill the declared contract.
+        declarer_actual = sum(trick.winner == seat for trick in game.completed_tricks)
+        if declarer_actual + remaining - needed < game.contract.level:
+            raise RuleViolation("Declarer target cannot be reached")
+        awards[defender] = needed
+        awards[seat] = remaining - needed
+    return tuple(awards)
+
+
+def by_own_options(game: GameState, seat: int) -> tuple[int, ...]:
+    if not can_claim(game, seat) or sole_vister(game, seat) is None:
+        return ()
+    options = []
+    for target in BY_OWN_TARGETS[game.contract.level]:
+        try:
+            claim_awards(game, seat, target)
+        except RuleViolation:
+            continue
+        options.append(target)
+    return tuple(options)
+
+
 def offer_claim(
-    game: GameState, seat: int, display_order: tuple[Card, ...] | None = None
+    game: GameState,
+    seat: int,
+    display_order: tuple[Card, ...] | None = None,
+    *,
+    defender_target: int | None = None,
 ) -> GameState:
     if not can_claim(game, seat):
         raise RuleViolation("Remaining tricks cannot be offered now")
+    if defender_target is not None and (
+        type(defender_target) is not int
+        or defender_target not in by_own_options(game, seat)
+        or display_order is not None
+    ):
+        raise RuleViolation("Invalid by-own offer")
     hand = game.hands[seat]
     if display_order is not None and (
         len(display_order) != len(hand) or set(display_order) != set(hand)
@@ -48,7 +121,12 @@ def offer_claim(
             seat,
             len(game.completed_tricks),
             game.trick,
-            display_order=hand if display_order is None else display_order,
+            display_order=()
+            if defender_target is not None
+            else hand
+            if display_order is None
+            else display_order,
+            defender_target=defender_target,
         ),
     )
 
@@ -69,8 +147,8 @@ def vote_claim(game: GameState, seat: int, approve: bool) -> GameState:
     updated = replace(claim, approved=claim.approved | {seat})
     if updated.approved != claim_voters(game, claim.seat):
         return replace(game, claim=updated)
-    counts = list(game.tricks_won)
-    counts[claim.seat] += 10 - len(game.completed_tricks)
+    awards = claim_awards(game, claim.seat, claim.defender_target)
+    counts = tuple(count + award for count, award in zip(game.tricks_won, awards))
     return replace(
         game,
         claim=replace(updated, accepted=True),

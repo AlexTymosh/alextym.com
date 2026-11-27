@@ -58,6 +58,7 @@ from preferans.online.presentation import (
     allows_replay_move,
     change as change_presentation,
     close_after_move,
+    close_widow_after_defense,
     invalidate_ready,
 )
 from preferans.online.pause_clock import synchronize
@@ -548,7 +549,7 @@ class FirestoreRooms:
                     controls.get("paused_at") is not None
                     and action not in {"score_adjust", "counter_cancel"}
                     and action not in PRESENTATION_ACTIONS
-                    and not (action == "play" and allows_replay_move(controls))
+                    and not allows_replay_move(controls, action)
                 ):
                     raise StoreError(409, "Game is paused for a connection or shared reason")
             elif room["status"] == "playing":
@@ -969,7 +970,7 @@ class FirestoreRooms:
                         if game_restored is not None:
                             game = game_restored
                     else:
-                        replay_move = action == "play" and allows_replay_move(controls)
+                        replay_move = allows_replay_move(controls, action)
                         if (
                             controls.get("paused_at") is not None and not replay_move
                         ) or controls.get("vote"):
@@ -984,8 +985,10 @@ class FirestoreRooms:
                                 now,
                                 args.get("hide_under_sheet") is True,
                             )
-                        if replay_move:
-                            close_after_move(controls, now)
+                        if action in {"play", "declare"}:
+                            close_after_move(controls, now, action)
+                        if action in {"declare", "defense", "mode"}:
+                            close_widow_after_defense(controls, game, now)
                         event_data = redacted_action(action, args)
                         if action == "without_three":
                             event_data = {"bid": public_bid(game.contract)}

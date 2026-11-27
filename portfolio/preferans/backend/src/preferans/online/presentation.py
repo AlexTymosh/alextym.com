@@ -81,9 +81,18 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
             if not (game and game.widow_revealed > 0):
                 raise PresentationError(409, "No public widow")
             if not getattr(game, "is_passout", False) and (
-                getattr(game, "trick", ()) or getattr(game, "completed_tricks", ())
+                getattr(game, "phase", None)
+                not in {
+                    "discard",
+                    "declare",
+                    "defense_first",
+                    "defense_second",
+                    "defense_reconsider",
+                }
+                or getattr(game, "trick", ())
+                or getattr(game, "completed_tricks", ())
             ):
-                raise PresentationError(409, "Widow review ends with the first played card")
+                raise PresentationError(409, "Widow review ends after defense decisions")
         if kind == "discard_replay" and not (
             game
             and game.declarer == seat
@@ -98,7 +107,10 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
             "game_id": room.get("game_id"),
             "opened_at_ms": at,
         }
-        desired.add("shared_overlay")
+        if kind == "discard_replay":
+            desired.discard("shared_overlay")
+        else:
+            desired.add("shared_overlay")
     elif action == "overlay_close":
         _keys(args, {"overlay_id"})
         if (
@@ -107,6 +119,8 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
             or args["overlay_id"] != p["overlay"]["id"]
         ):
             raise PresentationError(409, "Overlay changed")
+        if p["overlay"]["kind"] == "discard_replay" and p["overlay"]["seat"] != seat:
+            raise PresentationError(403, "Only the declarer may close discard review")
         p["overlay"] = None
         desired.discard("shared_overlay")
     elif action == "break_start":
@@ -155,18 +169,25 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
     return {"presentation_version": rev, "seat": seat}
 
 
-def allows_replay_move(control: dict) -> bool:
+def allows_replay_move(control: dict, action: str = "play") -> bool:
     overlay = (control.get("presentation") or {}).get("overlay")
     return bool(
         overlay
-        and overlay["kind"] == "last_trick"
+        and (
+            (action == "play" and overlay["kind"] in {"last_trick", "discard_replay"})
+            or (action == "declare" and overlay["kind"] == "discard_replay")
+            or (action in {"declare", "defense", "mode"} and overlay["kind"] == "widow_replay")
+        )
         and reasons(control) == {"shared_overlay"}
         and not control.get("vote")
     )
 
 
-def close_after_move(control: dict, at: int) -> None:
-    if allows_replay_move(control):
+def close_after_move(control: dict, at: int, action: str = "play") -> None:
+    overlay = (control.get("presentation") or {}).get("overlay")
+    if allows_replay_move(control, action) or (
+        overlay and overlay["kind"] == "discard_replay" and action in {"play", "declare"}
+    ):
         p = state(control)
         p["overlay"] = None
         p["revision"] += 1
@@ -187,3 +208,18 @@ def invalidate_ready(control: dict, presence: list[int | None], interrupted: boo
     pause["ready"] = ready
     p["revision"] += 1
     return [{"action": "break_readiness_reset", "data": {"presentation_version": p["revision"]}}]
+
+
+def close_widow_after_defense(control: dict, game, at: int) -> None:
+    overlay = (control.get("presentation") or {}).get("overlay")
+    if (
+        overlay
+        and overlay["kind"] == "widow_replay"
+        and not game.is_passout
+        and game.phase
+        not in {"discard", "declare", "defense_first", "defense_second", "defense_reconsider"}
+    ):
+        p = state(control)
+        p["overlay"] = None
+        p["revision"] += 1
+        transition(control, reasons(control) - {"shared_overlay"}, at)

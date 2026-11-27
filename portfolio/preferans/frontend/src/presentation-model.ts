@@ -20,7 +20,9 @@ export function isPresentation(x:unknown): x is Presentation {
 }
 export function replayMoveAllowed(view:RoomView):boolean {
   const reasons=view.controls?.pause_reasons??[];
-  return view.presentation?.overlay?.kind==="last_trick"&&reasons.length===1&&reasons[0]==="shared_overlay"&&!view.controls?.undo&&["play","opening_lead"].includes(view.phase??"");
+  const kind=view.presentation?.overlay?.kind;
+  const phase=view.phase??"";
+  return reasons.length===1&&reasons[0]==="shared_overlay"&&!view.controls?.undo&&((kind==="last_trick"&&["play","opening_lead"].includes(phase))||(kind==="discard_replay"&&["play","opening_lead","declare"].includes(phase))||(kind==="widow_replay"&&["declare","defense_first","defense_second","defense_reconsider","choose_mode"].includes(phase)));
 }
 export function musicPosition(m:Music,now:number){
   const offset=m.offset_ms+(m.playing?Math.max(0,now-m.changed_at_ms):0);
