@@ -641,7 +641,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     }else setPeekDiscard(v=>!v);
   };
   const declareBesideDiscard=Boolean(view&&view.phase==="declare"&&view.my_seat===view.declarer&&view.own_discard?.length===2);
-  const ownHand = view && <div className={styles.handsPanel} data-discard-inline={!draft&&!declareBesideDiscard&&view.my_seat===view.declarer&&view.own_discard?.length===2?"true":undefined}>
+  const ownHand = view && <div className={styles.handsPanel}>
     {draft&&<div className={styles.discardSlots} aria-label="Зона сноса" onDragOver={e=>e.preventDefault()} onDrop={discardDrop}>
       {[0,1].map(i=>{const card=chosenCards[i];return <button key={i} type="button" className={styles.discardSlot} data-pointer-drag="discard" aria-label={card?`Вернуть карту ${cardLabel(card)} в руку`:"Место для сноса"} disabled={!card||!canInteractCards} draggable={!!card&&canInteractCards} onDragStart={e=>card&&beginDrag(e,"discard",card)} onDragEnd={endDrag} onClick={()=>card&&setSelected(old=>changeDraft(old,cardId(card),false))}>{card?<CardArtwork card={peekDiscard?card:undefined}/>:"+"}</button>;})}
       <div className={styles.discardActions}>

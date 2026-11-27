@@ -220,3 +220,9 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Keep auction, declaration, discard and claim controls next to the local hand instead of stretching the hand to fill the lower lane.
 - Derive the card row height from its width, scale and card aspect ratio; retain bounded shrinkage on short screens and headroom for raised cards. Preserve inline private discard review, table and center geometry.
 - Add browser regressions for control-to-card spacing and card containment at several screen sizes and element scales. No changes to game commands, scoring, backend or Firestore.
+
+## PR42 - Avatar-relative speech and stable hand width
+
+- Correct the PR31 speech anchor: attach the badge to the actual avatar wrapper, not the wider seat grid cell. Preserve scaling and gag visibility.
+- Remove the PR40 phase-dependent inline discard review, which reduced hand width and consequently card height after declaration. Keep discard controls above the hand and preserve PR41 bottom alignment and bounded fitting.
+- Add phase-transition and avatar-anchor regression checks. No backend, scoring, storage or realtime changes. Full CI and live room acceptance remain required.
