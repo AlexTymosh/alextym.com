@@ -1,6 +1,6 @@
 /** Pure display layout. All scoring values are supplied by the server. */
 export type InkToken = { label:string; manual?:boolean; latest?:boolean; underline?:boolean };
-export const tokenWidth = (token:InkToken):number => token.label.length*9.5+(token.manual?112:0)+7;
+export const tokenWidth = (token:InkToken):number => token.label.length*(token.manual?6:9.5)+7;
 
 export function packNotebookRows(tokens:readonly InkToken[], maxWidth:number):InkToken[][] {
   if(!Number.isFinite(maxWidth)||maxWidth<=0)throw new Error("Positive row width required");

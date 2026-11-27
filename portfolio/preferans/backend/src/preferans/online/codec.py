@@ -74,6 +74,9 @@ def decode(obj: object, depth: int = 0) -> object:
             kwargs.setdefault("misere_resume_turn", None)
             kwargs.setdefault("misere_refused_at", None)
             kwargs.setdefault("claim", None)
+        if cls is game.TrickClaim:
+            kwargs = dict(kwargs)
+            kwargs.setdefault("display_order", {"$tuple": []})
         if set(kwargs) != expected:
             raise ValueError("State schema mismatch")
         return cls(**{name: decode(val, depth + 1) for name, val in kwargs.items()})

@@ -151,7 +151,7 @@ def test_counter_exact_boundary_and_no_duplicate_counter():
     assert api.view(rid, "a")["controls"]["counter"] is None
 
 
-def test_counter_two_periods_and_next_period_with_heartbeat():
+def test_counter_late_reconciliation_charges_only_once():
     api, rid, clock = service()
     pulse_all(api, rid, clock)
     current = api.view(rid, "a")
@@ -165,12 +165,13 @@ def test_counter_two_periods_and_next_period_with_heartbeat():
     current = api.view(rid, "a")
     response = api.command(rid, "abc"[opp], "pulse-run-timer", current["version"], "pulse", {})
     seen = api.view(rid, "a")
-    assert seen["score"]["hill"][target] == 12
-    assert seen["controls"]["counter"]["periods"] == 2
-    assert seen["controls"]["counter"]["deadline_ms"] == clock[0] + TIMER_MS
+    assert seen["score"]["hill"][target] == 6
+    assert seen["controls"]["counter"] is None
+    assert seen["controls"]["counter_result"]["penalty"] == 6
+    assert seen["controls"]["counter_exhausted_target"] == target
     history = api.events(rid, "a")["events"]
     assert (
-        sum(e["data"].get("periods", 0) for e in history if e["action"] == "counter_expired") == 2
+        sum(e["data"].get("periods", 0) for e in history if e["action"] == "counter_expired") == 1
     )
     assert response["version"] > current["version"]
 
@@ -420,8 +421,16 @@ def test_counter_cancel_authority_idempotency_and_charges(monkeypatch):
     assert seen["controls"]["counter"] is None
     assert seen["score"]["hill"][target] > base
     assert any(event["action"] == "counter_cancel" for event in api.events(rid, "a")["events"])
+    with pytest.raises(StoreError) as repeated:
+        api.command(rid, "abc"[initiator], "cancel-start-02", seen["version"], "counter_start", {})
+    assert repeated.value.code == 409
+    api.command(rid, "abc"[target], "next-decision-01", seen["version"], "pass", {})
+    seen = api.view(rid, "a")
+    new_initiator = next(i for i in range(3) if i != seen["turn"])
     started = api.command(
-        rid, "abc"[initiator], "cancel-start-02", seen["version"], "counter_start", {}
+        rid, "abc"[new_initiator], "cancel-start-03", seen["version"], "counter_start", {}
     )
-    api.command(rid, "abc"[initiator], "cancel-own-02", started["version"], "counter_cancel", {})
+    api.command(
+        rid, "abc"[new_initiator], "cancel-own-02", started["version"], "counter_cancel", {}
+    )
     assert api.view(rid, "a")["controls"]["counter"] is None

@@ -43,6 +43,8 @@ import { BidPanel } from "./BidPanel.ru";
 import { CycleSetting } from "./CycleSetting.ru";
 import { DealStatus } from "./DealStatus.ru";
 import { ClaimPanel } from "./ClaimPanel.ru";
+import { UndoRequest, ControlFeedback, TableZoom } from "./ControlDialogs.ru";
+import { canRequestUndo, tableZoomValue } from "./control-feedback";
 import { MisereOfferPanel } from "./MisereOfferPanel.ru";
 import { orderHand, ownCards, type SortMode } from "./interaction-model";
 import { autoSettlementAllowed } from "./table-pr20";
@@ -161,6 +163,11 @@ function ActionPanel({ view, busy, command, profiles,
 
 export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}) {
   const [roomId, setRoomId] = useState("");
+  const [undoDraft,setUndoDraft]=useState<string|null>(null);
+  const [tableZoom,setTableZoom]=useState(100);
+  const zoomKey=preferenceScope?`preferans:table-zoom:${preferenceScope}`:null;
+  useEffect(()=>{if(zoomKey)try{setTableZoom(tableZoomValue(localStorage.getItem(zoomKey)));}catch{/* Optional preference. */}},[zoomKey]);
+  const changeTableZoom=(value:number)=>{const next=tableZoomValue(value);setTableZoom(next);if(zoomKey)try{localStorage.setItem(zoomKey,String(next));}catch{/* Optional preference. */}};
   const liveMedia = useLiveMedia();
   const {bind: bindMedia, receive: receiveMedia} = liveMedia;
   const [view, setView] = useState<RoomView | null>(null);
@@ -633,6 +640,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     </div>
   </div>;
   const playerName=(seat:number)=>profiles?.[seat]?.name||seatNames[seat]||"Игрок";
+  const undoScope=view?`${view.room_id}:${view.game_id}:${view.controls?.undo_candidate_version??view.version}`:"";
+  const undoAllowed=Boolean(view&&canRequestUndo(view)&&!discardScene.phase);
   const tableStatus = view && (()=>{
     const transient=dropNotice||status||(busy&&pending?.label!=="play"?"Операция выполняется…":"");
     if(view.controls?.counter&&!view.controls?.undo)return <>{transient&&<small>{transient}</small>}<CounterDisplay view={view} name={playerName} serverNow={serverNow} busy={busy} onCancel={()=>command("counter_cancel")}/></>;
@@ -640,7 +649,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if(view.final_review)return "Проверьте итоговые расчёты";
     if(view.status==="closed")return "Закончили!";
     if(view.status==="archived")return "Партия архивирована";
-    if(view.controls?.undo)return <PreferansControls view={view} profiles={profiles} busy={busy} command={command}/>;
+    if(view.controls?.undo)return "Голосование за отмену";
     if(view.controls?.paused)return pauseMessage(view,rtPresence,playerName);
     if(discardScene.phase)return "Пересдаём!";
     if(view.claim?.status==="rejected")return `${playerName(view.claim.rejected_by!)} не согласен`;
@@ -689,17 +698,19 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         </section>}
 
         {view && <>
+          <TableZoom value={tableZoom} onChange={changeTableZoom}/>
           <ImmersiveMenu key={view.room_id} active={view.status !== "lobby"} settings={settings} copy={copyInvitation}
             urgent={Boolean(view.punch_choices?.some(pair=>pair.to===view.my_seat&&pair.replacement===null))}
             shared={view.presentation?.enabled&&view.claim?.status!=="pending" ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
-            <GameTable view={view} discardScene={discardScene} onCounter={seat=>command("counter_start",{target:seat})} onSwap={seat=>command("seat_swap_offer",{to:seat})} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
+            <GameTable view={view} tableZoom={tableZoom} discardScene={discardScene} onCounter={seat=>command("counter_start",{target:seat})} onSwap={seat=>command("seat_swap_offer",{to:seat})} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
               theme={selectedTheme} roundTable={roundTable} tableSurface={surface} tableOpacity={1-tableTransparency/100} surfaceOpacity={opacity} scoreAdjustment={<ScoreAdjustment view={view} profiles={profiles} busy={busy} adjust={adjust}/>} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||!!discardScene.phase||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
+              counterPanel={view.controls?.counter&&!view.controls?.undo?<CounterDisplay view={view} name={playerName} serverNow={serverNow} busy={busy} onCancel={()=>command("counter_cancel")}/>:undefined}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
-              claimPanel={<><ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/><MisereOfferPanel view={view} profiles={profiles} busy={busy} command={command} sortMode={sortMode}/></>}
-              claimButton={(view.controls?.can_request_undo&&!view.controls.paused&&!view.controls.undo||view.can_offer_misere&&view.phase==="play"||view.can_claim&&view.claim?.status!=="pending")?<>{view.controls?.can_request_undo&&!view.controls.paused&&!view.controls.undo&&<button type="button" className={styles.undoIconButton} aria-label="Запросить отмену последнего действия" title="Запросить отмену последнего действия" disabled={busy||!!discardScene.phase||view.claim?.status==="pending"} onClick={()=>{const answer=window.prompt("Почему отменить последний ход или ставку?","Ошибся при выборе");if(answer&&answer.trim().length>=5)command("undo_request",{reason:answer.trim()});}}><UndoIcon/></button>}{view.can_offer_misere&&view.phase==="play"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("misere_offer")}>{view.my_seat===view.declarer?"Показать карты и предложить что я сыграл":`Согласен, что ${playerName(view.declarer??0)} сыграл мизер`}</button>:null}{view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:null}</>:undefined}
+              claimPanel={<><ControlFeedback view={view} name={playerName} serverNow={serverNow}/>{view.controls?.undo&&<PreferansControls view={view} profiles={profiles} busy={busy} command={command}/>}{undoAllowed&&undoDraft===undoScope&&<UndoRequest key={undoScope} busy={busy} onCancel={()=>setUndoDraft(null)} onSend={reason=>{setUndoDraft(null);command("undo_request",{reason});}}/>}<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/><MisereOfferPanel view={view} profiles={profiles} busy={busy} command={command} sortMode={sortMode}/></>}
+              claimButton={(undoAllowed||view.can_offer_misere&&view.phase==="play"||view.can_claim&&view.claim?.status!=="pending")?<>{undoAllowed&&<button type="button" className={styles.undoIconButton} aria-label="Запросить отмену последнего действия" title="Запросить отмену последнего действия" disabled={busy||!!discardScene.phase||view.claim?.status==="pending"} onClick={()=>setUndoDraft(undoScope)}><UndoIcon/></button>}{view.can_offer_misere&&view.phase==="play"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("misere_offer")}>{view.my_seat===view.declarer?"Показать карты и предложить что я сыграл":`Согласен, что ${playerName(view.declarer??0)} сыграл мизер`}</button>:null}{view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} title="показать всем мои карты и заявить что все оставшиеся взятки - мои!" onClick={()=>command("claim_offer",{cards:hand})}>Все мои!</button>:null}</>:undefined}
               hand={ownHand} handCount={visibleHand.length} handBreaks={visibleHand.filter((card,index)=>index>0&&visibleHand[index-1].suit!==card.suit).length} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}

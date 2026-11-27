@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 from .auction import RuleViolation
+from .cards import Card
 from .game import DefenseDecision, EndReason, GameState, Phase, TrickClaim
 
 PLAY_PHASES = (Phase.PLAY, Phase.OPENING_LEAD, Phase.CHOOSE_MODE)
@@ -31,10 +32,25 @@ def can_claim(game: GameState, seat: int) -> bool:
     )
 
 
-def offer_claim(game: GameState, seat: int) -> GameState:
+def offer_claim(
+    game: GameState, seat: int, display_order: tuple[Card, ...] | None = None
+) -> GameState:
     if not can_claim(game, seat):
         raise RuleViolation("Remaining tricks cannot be offered now")
-    return replace(game, claim=TrickClaim(seat, len(game.completed_tricks), game.trick))
+    hand = game.hands[seat]
+    if display_order is not None and (
+        len(display_order) != len(hand) or set(display_order) != set(hand)
+    ):
+        raise RuleViolation("Claim display order must match the authenticated hand")
+    return replace(
+        game,
+        claim=TrickClaim(
+            seat,
+            len(game.completed_tricks),
+            game.trick,
+            display_order=hand if display_order is None else display_order,
+        ),
+    )
 
 
 def vote_claim(game: GameState, seat: int, approve: bool) -> GameState:

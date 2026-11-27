@@ -220,7 +220,7 @@ def seat_view(
                 "approved": sorted(claim.approved),
                 "rejected_by": claim.rejected_by,
                 "awarded": 10 - claim.at_tricks if claim.accepted else 0,
-                "cards": [public_card(c) for c in state.hands[claim.seat]]
+                "cards": [public_card(c) for c in (claim.display_order or state.hands[claim.seat])]
                 if state.claim_pending
                 else [],
             }

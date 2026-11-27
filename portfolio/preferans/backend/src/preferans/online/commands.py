@@ -64,8 +64,13 @@ def apply_command(state: GameState, seat: int, action: str, data: object) -> Gam
     if state.claim_pending and action != "claim_vote":
         raise RuleViolation("Resolve the remaining-tricks offer first")
     if action == "claim_offer":
-        _keys(data, set())
-        return offer_claim(state, seat)
+        if not data:
+            return offer_claim(state, seat)
+        _keys(data, {"cards"})
+        values = data["cards"]
+        if not isinstance(values, list) or len(values) > 10:
+            raise RuleViolation("Invalid claim display order")
+        return offer_claim(state, seat, tuple(_card(value) for value in values))
     if action == "claim_vote":
         _keys(data, {"approve"})
         return vote_claim(state, seat, data["approve"])

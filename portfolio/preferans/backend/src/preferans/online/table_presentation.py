@@ -1,4 +1,4 @@
-"""Numeric-only notebook history and lobby naming helpers."""
+"""Notebook history and lobby naming helpers."""
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -57,10 +57,17 @@ def notebook(score, controls: dict) -> dict:
             group = group_key
         steps[-1]["entries"].append({**mark, "delta": delta, "reason": reason})
         if manual:
-            marks.append({**mark, "manual": True})
+            marks.append(
+                {
+                    **mark,
+                    "manual": True,
+                    **({"manual_reason": reason} if reason != "manual" else {}),
+                }
+            )
 
     corrections = controls.get("score_sheet_adjustments", [])
     legacy = controls.get("adjustments", [])
+    legacy_reasons = {item["game_version"]: item.get("reason") for item in legacy}
     recorded = {item["game_version"] for item in corrections}
     if any(item["game_version"] not in recorded for item in legacy):
         exact = False
@@ -76,7 +83,7 @@ def notebook(score, controls: dict) -> dict:
                 item["delta"],
                 ("manual", item["game_version"]),
                 {"kind": "manual"},
-                "manual",
+                item.get("reason") or legacy_reasons.get(item["game_version"]) or "manual",
                 manual=True,
             )
 

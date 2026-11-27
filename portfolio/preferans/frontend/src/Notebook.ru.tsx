@@ -3,7 +3,7 @@ import { notebookAngle, splitPlayerName } from "./table-pr20";
 import { notebookName } from "./room-preparation";
 import { bidLabel, type RoomView, type NotebookMark } from "./game-model.ru";
 import { notebookAt } from "./notebook-history";
-import { packNotebookRows, poolEntryText, notebookEntryLabel, vistEquation, type InkToken } from "./notebook-layout";
+import { packNotebookRows, poolEntryText, notebookEntryLabel, tokenWidth, vistEquation, type InkToken } from "./notebook-layout";
 import { tableSeats, type SeatProfile } from "./table-model";
 import { punchGeometry, type NotebookPunch } from "./notebook-punches";
 import styles from "./preferans-notebook.module.css";
@@ -46,7 +46,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     const tokens=values.map((n,i):InkToken=>{
       const mark=marks.find(m=>m.index===i);
       const label=cell.kind==="pool"?poolEntryText(values,i,score.target??20):String(n);
-      return {label:notebookEntryLabel(label),manual:!!mark?.manual,latest:!!mark?.latest,underline:!!distributed&&cell.kind==="hill"&&i===values.length-1};
+      return {label:mark?.manual?`(${notebookEntryLabel(label)} ручн.коррекция: ${mark.manual_reason??"причина не сохранена"})`:notebookEntryLabel(label),manual:!!mark?.manual,latest:!!mark?.latest,underline:!!distributed&&cell.kind==="hill"&&i===values.length-1};
     });
     const rows=packNotebookRows(tokens,cell.kind==="hill"?232:176);
     if(distributed&&cell.kind==="vist"&&cell.against!==undefined){
@@ -69,15 +69,15 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     const kind=cells.get(v)?.kind;
     const direction=kind==="vist"?1:-1;
     return <g transform={`translate(${x} ${y}) rotate(${angle})`}>{rows.map((row,index)=>{
-      const widths=row.map(t=>t.label.length*9.5+(t.manual?112:0)+7);
+      const widths=row.map(tokenWidth);
       const indent=kind==="hill"?index*(angle===0?Math.ceil(rowHeight/slope)+2:angle===-90?Math.ceil(rowHeight*slope)+2:0):0;
       const available=kind==="hill"?Math.max(24,extent-(angle===0?2*indent:index*(Math.ceil(rowHeight*slope)+2))):extent;
       const scale=Math.min(1,available/Math.max(1,widths.reduce((a,b)=>a+b,0)));
       let offset=0;
       return <g key={index} transform={`translate(${indent} ${direction*index*rowHeight}) scale(${scale} 1)`}>{row.map((token,i)=>{
-        const start=offset;offset+=widths[i];const labelWidth=Math.max(1,token.label.length*9.5);
+        const start=offset;offset+=widths[i];const labelWidth=Math.max(1,tokenWidth(token)-7);
         const color=token.latest?"#b51524":token.manual?"#87620b":undefined;
-        return <g key={i} fill={color}><text x={start} y={0} textLength={labelWidth} lengthAdjust="spacingAndGlyphs">{token.label}</text>{token.manual&&<text x={start+labelWidth+3} y={0} fill="#87620b" fontSize="10" textLength="105" lengthAdjust="spacingAndGlyphs">ручная корректировка</text>}{token.underline&&<g stroke={color??"#20498f"} strokeWidth="1.2"><line x1={start} x2={start+labelWidth} y1="4" y2="4"/><line x1={start} x2={start+labelWidth} y1="7" y2="7"/></g>}</g>;
+        return <g key={i} fill={color}>{token.manual&&<title>{token.label}</title>}<text x={start} y={0} fontSize={token.manual?12:undefined} textLength={labelWidth} lengthAdjust="spacingAndGlyphs">{token.label}</text>{token.underline&&<g stroke={color??"#20498f"} strokeWidth="1.2"><line x1={start} x2={start+labelWidth} y1="4" y2="4"/><line x1={start} x2={start+labelWidth} y1="7" y2="7"/></g>}</g>;
       })}</g>;
     })}</g>;
   };
@@ -135,7 +135,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     {!miniature&&steps.length>0&&<div className={styles.historyNav} aria-label="История записей">
       <div><button type="button" aria-label="Предыдущая запись" disabled={cursor===0} onClick={()=>setStepIndex(cursor-1)}>←</button><strong>Запись {cursor} / {steps.length}</strong><button type="button" aria-label="Следующая запись" disabled={cursor===steps.length} onClick={()=>setStepIndex(cursor+1===steps.length?null:cursor+1)}>→</button><button type="button" onClick={()=>setStepIndex(null)} disabled={!past}>Последняя</button></div>
       <p>{step?step.kind==="manual"?"Ручная корректировка":step.kind==="penalty"?"Штраф":step.passout?`Распасы ${step.passout}`:step.contract&&step.declarer!=null?`${name(step.declarer)} · ${bidLabel(step.contract)}`:"Раздача (контракт не сохранён)":"Начало записей"}</p>
-      {step&&<ul>{step.entries.map((e,i)=><li key={i}>{name(e.seat)} · {e.field==="hill"?"Гора":e.field==="pool"?"Пуля":`Висты на ${name(e.against!)}`} {signed(e.delta)}</li>)}</ul>}
+      {step&&<ul>{step.entries.map((e,i)=><li key={i}>{name(e.seat)} · {e.field==="hill"?"Гора":e.field==="pool"?"Пуля":`Висты на ${name(e.against!)}`} {signed(e.delta)}{step.kind==="manual"&&` (ручн.коррекция: ${e.reason==="manual"?"причина не сохранена":e.reason})`}</li>)}</ul>}
     </div>}
     {!miniature&&!past&&scoreAdjustment&&<div className={styles.accountingActions}>{scoreAdjustment}</div>}
     <span className={miniature?styles.miniatureBody:styles.paperBody}>

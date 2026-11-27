@@ -45,12 +45,12 @@ def act(c, seat, action, at=100_000, **args):
 def test_overlay_replace_and_any_seat_close():
     c = control()
     act(c, 0, "overlay_open", kind="score_sheet")
-    assert c["timer"]["remaining_ms"] == 80_000
+    assert c["timer"]["deadline_ms"] == 180_000
     act(c, 1, "overlay_open", 103_000, kind="radio")
-    assert c["timer"]["remaining_ms"] == 80_000
+    assert c["timer"]["remaining_ms"] == 77_000
     assert projection(c, True, 103_000)["overlay"]["seat"] == 1
     act(c, 2, "overlay_close", 104_000, overlay_id=2)
-    assert c["timer"]["deadline_ms"] == 184_000
+    assert c["timer"]["deadline_ms"] == 181_000
     assert c["next_deal"]["deadline_ms"] == 109_000
 
 

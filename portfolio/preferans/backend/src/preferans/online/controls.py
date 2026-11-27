@@ -13,13 +13,12 @@ from preferans.domain.auction import BidKind, RuleViolation
 from preferans.domain.game import GameState, Phase
 from preferans.domain.ledger import EntryKind, LedgerEntry, ScoreState
 from preferans.online.codec import decode, encode
-from preferans.online.pause_clock import reasons, transition
+from preferans.online.pause_clock import reasons, timer_paused, transition
 
 TIMER_MS = 180_000
 VOTE_MS = 120_000
 HEARTBEAT_MS = 45_000
 STALE_MS = 100_000
-MAX_PERIODS_PER_SYNC = 100_000
 
 
 class ControlError(ValueError):
@@ -81,6 +80,8 @@ def _text(value: object) -> str:
 def record_candidate(
     control: dict, before: GameState, after: GameState, action: str, actor: int, version: int
 ) -> None:
+    # A new authoritative action ends the previous decision and unlocks a new counter.
+    control.pop("counter_exhausted_target", None)
     # Only the latest qualifying move can be undone; a complete trick cannot.
     eligible_card = (
         action == "play"
@@ -107,13 +108,10 @@ def request_undo(control: dict, actor: int, version: int, now_ms: int, reason: o
     candidate = control.get("candidate")
     if control.get("paused_at") is not None:
         raise ControlError(409, "Game is paused")
-    if control.get("vote") or not candidate or candidate["seat"] != actor:
+    if control.get("timer") or control.get("vote") or not candidate or candidate["seat"] != actor:
         raise ControlError(409, "Only the author of the latest reversible move may request undo")
     note = _text(reason)
-    timer = control.get("timer")
-    if timer is not None:
-        timer["remaining_ms"] = max(0, timer["deadline_ms"] - now_ms)
-        timer["deadline_ms"] = None
+    control.pop("undo_result", None)
     deadline = now_ms + control["policy"]["undo_seconds"] * 1000
     control["vote"] = {
         "kind": candidate["kind"],
@@ -141,7 +139,7 @@ def vote_undo(
     vote["votes"][str(actor)] = approve
     event = {"kind": vote["kind"], "voter": actor, "approved": approve}
     if not approve:
-        _end_vote(control, now_ms)
+        _finish_undo(control, now_ms, "rejected")
         event["outcome"] = "rejected"
         return None, event
     if len(vote["votes"]) != 2:
@@ -151,10 +149,16 @@ def vote_undo(
     before = decode(candidate["game"])
     if not isinstance(before, GameState):
         raise ControlError(503, "Undo snapshot unavailable")
-    _end_vote(control, now_ms)
+    _finish_undo(control, now_ms, "accepted")
     control["candidate"] = None
     event["outcome"] = "accepted"
     return before, event
+
+
+def _finish_undo(control: dict, now_ms: int, outcome: str) -> None:
+    vote = control["vote"]
+    control["undo_result"] = {"requester": vote["requester"], "outcome": outcome, "at_ms": now_ms}
+    _end_vote(control, now_ms)
 
 
 def _end_vote(control: dict, now_ms: int) -> None:
@@ -175,6 +179,11 @@ def start_counter(
         raise ControlError(409, "Counter cannot start during a pause or vote")
     if control.get("timer") is not None:
         raise ControlError(409, "A counter is already active")
+    if control.get("counter_exhausted_target") == target:
+        raise ControlError(409, "This decision has already incurred a counter penalty")
+    # A started counter invalidates the previous undo candidate, including after cancellation.
+    control["candidate"] = None
+    control.pop("counter_result", None)
     price = timer_cost(game, score)
     period = control["policy"]["counter_seconds"] * 1000
     multiplier = control["policy"]["counter_multiplier"]
@@ -229,35 +238,45 @@ def tick_controls(
         and isinstance(vote.get("deadline_ms"), int)
         and now_ms >= vote["deadline_ms"]
     ):
-        _end_vote(control, now_ms)
+        _finish_undo(control, now_ms, "expired")
         events.append({"action": "undo_expired", "data": {"kind": vote["kind"]}})
     timer = control.get("timer")
-    if not timer or control.get("paused_at") is not None or timer.get("deadline_ms") is None:
+    if not timer or timer_paused(control) or timer.get("deadline_ms") is None:
         return score, events
     if game is None or acting_seat(game) != timer["target"]:
         stop_counter(control)
         events.append({"action": "counter_stopped", "data": {"reason": "turn_changed"}})
         return score, events
+    target = timer["target"]
+    # Rooms persisted by the former repeating-clock implementation may already
+    # have paid. Retire that timer without another posting.
+    if timer.get("periods", 0) > 0:
+        control["counter_exhausted_target"] = target
+        control["candidate"] = None
+        stop_counter(control)
+        events.append({"action": "counter_stopped", "data": {"reason": "already_charged"}})
+        return score, events
     if now_ms < timer["deadline_ms"]:
         return score, events
-    periods = 1 + (now_ms - timer["deadline_ms"]) // timer["period_ms"]
-    if periods > MAX_PERIODS_PER_SYNC:
-        raise ControlError(503, "Counter requires operator review")
-    charge = periods * timer["penalty"]
-    target = timer["target"]
+    charge = timer["penalty"]
     hill = list(score.hill)
     hill[target] += charge
     entry = LedgerEntry(
         len(score.entries) + 1, deal_id or "timer", EntryKind.HILL, target, charge, "counter_180s"
     )
     score = replace(score, hill=tuple(hill), entries=(*score.entries, entry))
-    timer["deadline_ms"] += periods * timer["period_ms"]
-    timer["periods"] += periods
+    control["counter_result"] = {
+        "target": target,
+        "initiator": timer["initiator"],
+        "multiplier": charge // timer["cost"],
+        "penalty": charge,
+        "at_ms": now_ms,
+    }
+    control["counter_exhausted_target"] = target
+    control["candidate"] = None
+    stop_counter(control)
     events.append(
-        {
-            "action": "counter_expired",
-            "data": {"target": target, "periods": periods, "penalty": charge},
-        }
+        {"action": "counter_expired", "data": {"target": target, "periods": 1, "penalty": charge}}
     )
     return score, events
 
@@ -334,7 +353,10 @@ def adjust_score(
     control["score_sheet_adjustments"] = [
         *control.get("score_sheet_adjustments", []),
         {
-            **{key: event[key] for key in ("field", "seat", "against", "delta", "game_version")},
+            **{
+                key: event[key]
+                for key in ("field", "seat", "against", "delta", "game_version", "reason")
+            },
             "ledger_sequence": len(score.entries),
         },
     ]
@@ -375,7 +397,28 @@ def public_controls(control: dict, now_ms: int, seat: int | None) -> dict:
             if vote
             else None
         ),
+        **(
+            {"counter_result": control["counter_result"].copy()}
+            if control.get("counter_result")
+            else {}
+        ),
+        **(
+            {"counter_exhausted_target": control["counter_exhausted_target"]}
+            if "counter_exhausted_target" in control
+            else {}
+        ),
+        **(
+            {"undo_result": {k: control["undo_result"][k] for k in ("outcome", "at_ms")}}
+            if seat is not None and (control.get("undo_result") or {}).get("requester") == seat
+            else {}
+        ),
+        **(
+            {"undo_candidate_version": control["candidate"]["version"]}
+            if seat is not None and (control.get("candidate") or {}).get("seat") == seat
+            else {}
+        ),
         "can_request_undo": seat is not None
+        and not timer
         and not vote
         and control.get("candidate") is not None
         and control["candidate"]["seat"] == seat,
@@ -388,7 +431,7 @@ def reconcile(
     control: dict, game: GameState | None, score: ScoreState, now_ms: int, deal_id: str | None
 ) -> tuple[ScoreState, list[dict]]:
     """Conservatively freeze a counter when any player's heartbeat becomes stale."""
-    if control.get("paused_at") is not None:
+    if control.get("paused_at") is not None and timer_paused(control):
         return score, []
     if not (control.get("timer") or control.get("vote")):
         return score, []

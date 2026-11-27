@@ -53,7 +53,7 @@ export function PreferansControls({ view, profiles, busy, command }: {
   const active = view.status === "playing";
   const vote = controls.undo;
   if(!active||!vote)return null;
-  return <section className={`${styles.controlPanel} ${styles.undoPanel}`} data-undo-vote={vote?"true":undefined} aria-label="Отмена действий">
+  return <section className={`${styles.controlPanel} ${styles.undoPanel} ${styles.undoDialog}`} data-undo-vote={vote?"true":undefined} role="dialog" aria-label="Отмена действий">
     {vote && <div className={styles.controlNote} role="group" aria-label="Голосование за отмену">
       <strong>Запрос на отмену: {vote.kind === "card_play" ? "карты" : "ставки"}</strong>
       <p>{names[vote.requester]}: {vote.reason}</p>
