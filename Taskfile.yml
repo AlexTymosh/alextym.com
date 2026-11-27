@@ -103,6 +103,9 @@ tasks:
       - node scripts/check-website-portfolio-boundaries.mjs
       - node scripts/check-fleet-backend-boundaries.mjs
       - node scripts/check-workforce-scaffold.mjs
+      - node --test portfolio/sameplace/tests/freeze.test.mjs
+      - node portfolio/sameplace/tests/check-freeze.mjs
+      - node portfolio/sameplace/tests/check-foundation.mjs
 
   repo:check:
     desc: Run repository hygiene checks.
@@ -163,20 +166,20 @@ tasks:
     desc: Run Ruff lint checks.
     dir: backend
     cmds:
-      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests
+      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests ../portfolio/sameplace/backend/src ../portfolio/sameplace/tests
 
   backend:format-check:
     desc: Check backend formatting.
     dir: backend
     cmds:
-      - uv run ruff format --check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests
+      - uv run ruff format --check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests ../portfolio/sameplace/backend/src ../portfolio/sameplace/tests
 
   backend:format:
     desc: Apply safe Ruff fixes and format backend code.
     dir: backend
     cmds:
-      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests --fix
-      - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests
+      - uv run ruff check . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests ../portfolio/sameplace/backend/src ../portfolio/sameplace/tests --fix
+      - uv run ruff format . ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests ../portfolio/sameplace/backend/src ../portfolio/sameplace/tests
 
   backend:imports:
     desc: Check Python import direction across site and Fleet modules.
@@ -188,7 +191,7 @@ tasks:
     desc: Compile backend Python modules to catch syntax errors early.
     dir: backend
     cmds:
-      - uv run python -m compileall app scripts tests ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests
+      - uv run python -m compileall app scripts tests ../portfolio/fleet_hub/backend/src ../portfolio/fleet_hub/tests ../portfolio/workforce_intelligence/backend/src ../portfolio/workforce_intelligence/tests ../portfolio/preferans/backend/src ../portfolio/preferans/tests ../portfolio/sameplace/backend/src ../portfolio/sameplace/tests
 
   backend:test:
     desc: Run backend tests.
@@ -448,6 +451,12 @@ tasks:
         -BackendPort {{.BACKEND_PORT}}
         -FrontendPort {{.FRONTEND_PORT}}
 
+  frontend:sameplace-contract:
+    desc: Verify project-local SamePlace translation contracts.
+    cmds:
+      - node --test portfolio/sameplace/tests/localization.test.mjs
+      - node portfolio/sameplace/tests/lint-frontend.mjs
+
   frontend:lint:
     desc: Run frontend ESLint checks.
     dir: frontend
@@ -503,6 +512,7 @@ tasks:
     cmds:
       - task: frontend:install
       - task: frontend:lint
+      - task: frontend:sameplace-contract
       - task: frontend:typecheck
       - task: frontend:resume-check
       - task: frontend:build
@@ -514,6 +524,7 @@ tasks:
     cmds:
       - task: frontend:install
       - task: frontend:lint
+      - task: frontend:sameplace-contract
       - task: frontend:typecheck
       - task: frontend:resume-check
       - task: frontend:build
