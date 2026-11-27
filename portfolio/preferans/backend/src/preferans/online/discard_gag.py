@@ -1,7 +1,7 @@
 """Presentation metadata only: the authoritative deck always contains 32 cards."""
 
-GAG_FAKE_MS = 8000
-GAG_TOTAL_MS = 11900
+GAG_FAKE_MS = 10100
+GAG_TOTAL_MS = 14000
 
 
 def record_discard(control: dict, game_id: str, seat: int, at_ms: int, hide: bool) -> None:

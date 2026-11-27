@@ -179,3 +179,12 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 ### PR36 animation test follow-up
 
 - Supply the new zoom coordinate helper to the isolated PR31 browser animation test. Retain the raw-order, final-transform and animation cleanup assertions. Production animation code is unchanged.
+
+## PR37 - Table presentation polish
+
+- Dim available nonselected auction groups while suits are expanded; preserve disabled opacity. Bottom-align shorter suit buttons and use the normal bid typeface for no trump.
+- Use a canonical room invitation and a dedicated lobby admin copy button. Focus the notebook viewport and route wheel input to its scroll area.
+- Use the real authorized hand DOM and standard dealing animation for both phases of the hidden-discard joke. Extend the discovery cue to 2.8 seconds; server and client share the same 14-second gate. No cards or scores are changed.
+- Restrict normal public widow review to before the first card, with press-and-hold behavior; preserve passout widow rules. Review one's discard beside the hand; shared observers see only a notice.
+- Refine concession text, discard/declare alignment, first-hand label and activity strokes. Full repository CI and visual acceptance remain pending.
+- PR37 test follow-up: compile the complete table-motion module into a fresh lexical scope for each scale and assert browser errors and card count. No production animation changes.

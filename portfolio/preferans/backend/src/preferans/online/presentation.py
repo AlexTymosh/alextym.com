@@ -77,8 +77,13 @@ def change(control: dict, room: dict, game, seat: int, action: str, args: dict, 
             raise PresentationError(422, "Invalid overlay")
         if kind == "last_trick" and not (game and game.completed_tricks):
             raise PresentationError(409, "No completed trick")
-        if kind == "widow_replay" and not (game and game.widow_revealed > 0):
-            raise PresentationError(409, "No public widow")
+        if kind == "widow_replay":
+            if not (game and game.widow_revealed > 0):
+                raise PresentationError(409, "No public widow")
+            if not getattr(game, "is_passout", False) and (
+                getattr(game, "trick", ()) or getattr(game, "completed_tricks", ())
+            ):
+                raise PresentationError(409, "Widow review ends with the first played card")
         if kind == "discard_replay" and not (
             game
             and game.declarer == seat

@@ -518,7 +518,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const hand = orderHand(ownCards(view), order, sortMode);
   const isPlay = view?.phase === "opening_lead" || view?.phase === "play";
   const localPlay=view&&pendingPlay&&pendingPlay.room===view.room_id&&pendingPlay.game===view.game_id&&pendingPlay.version===view.version?pendingPlay:null;
-  const canInteractCards = Boolean(!busy && !localPlay && view && allowedToAct(view) && (isPlay || view.phase === "discard"));
+  const canInteractCards = Boolean(!busy && !discardScene.phase && !localPlay && view && allowedToAct(view) && (isPlay || view.phase === "discard"));
   const ownPlayable = canInteractCards && (!isPlay || view?.turn === view?.my_seat);
   const onCardSelect = (card: Card) => {
     const id = cardId(card);
@@ -590,7 +590,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const handDrop=(e:DragEvent,target?:string)=>{const drag=takeDrag(e);if(!view||!drag)return;if(drag.kind==="discard"&&draft&&canInteractCards)setSelected(old=>changeDraft(old,drag.id,false));else if(drag.kind==="card"&&drag.owner===view.my_seat&&target)reorder(drag.id,target);};
   const copyInvitation = () => {
     if (!roomId) return;
-    void navigator.clipboard.writeText(window.location.href).then(() => setStatus("Ссылка скопирована."))
+    const url=new URL("/portfolio/preferans",window.location.origin);
+    url.searchParams.set("room",roomId);
+    if(!navigator.clipboard){setStatus("Не удалось скопировать. Скопируй адрес из браузера.");return;}
+    void navigator.clipboard.writeText(url.href).then(() => setStatus("Ссылка скопирована."))
       .catch(() => setStatus("Не удалось скопировать. Скопируй адрес из браузера."));
   };
 
@@ -613,6 +616,16 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     {view&&[0,1,2].some(seat=>mayPassDeck(view,seat))&&<div><strong>Передать колоду</strong>{[0,1,2].filter(seat=>mayPassDeck(view,seat)).map(seat=><button key={seat} type="button" disabled={busy} onClick={()=>command("dealer_pass",{dealer:seat})}>{profiles?.[seat]?.name||seatNames[seat]}</button>)}</div>}
     <small>Для ручной сортировки клавиатурой: Alt + стрелка влево или вправо.</small>
   </div>;
+  const ownReview=view?.presentation?.overlay;
+  const sharedDiscard=ownReview?.kind==="discard_replay"&&ownReview.seat===view?.my_seat;
+  const discardVisible=Boolean(view?.presentation?.enabled?sharedDiscard:peekDiscard);
+  const toggleDiscardReview=()=>{
+    if(view?.presentation?.enabled){
+      if(sharedDiscard&&ownReview)shared("overlay_close",{overlay_id:ownReview.id});
+      else openShared("discard_replay");
+    }else setPeekDiscard(v=>!v);
+  };
+  const declareBesideDiscard=Boolean(view&&view.phase==="declare"&&view.my_seat===view.declarer&&view.own_discard?.length===2);
   const ownHand = view && <div className={styles.handsPanel}>
     {draft&&<div className={styles.discardSlots} aria-label="Зона сноса" onDragOver={e=>e.preventDefault()} onDrop={discardDrop}>
       {[0,1].map(i=>{const card=chosenCards[i];return <button key={i} type="button" className={styles.discardSlot} data-pointer-drag="discard" aria-label={card?`Вернуть карту ${cardLabel(card)} в руку`:"Место для сноса"} disabled={!card||!canInteractCards} draggable={!!card&&canInteractCards} onDragStart={e=>card&&beginDrag(e,"discard",card)} onDragEnd={endDrag} onClick={()=>card&&setSelected(old=>changeDraft(old,cardId(card),false))}>{card?<CardArtwork card={peekDiscard?card:undefined}/>:"+"}</button>;})}
@@ -622,10 +635,15 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         <button type="button" disabled={!canInteractCards||chosenCards.length!==2} onClick={()=>command("discard",{cards:chosenCards,hide_under_sheet:true})}>Спрятать надежно</button>
       </div>
     </div>}
-    {!draft&&view.hidden_discard&&view.own_discard?.length===2&&<div className={styles.discardSlots} aria-label="Спрятанный снос"><button type="button" aria-label="Посмотреть спрятанный снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><EyeIcon/></button>{!view.presentation?.enabled&&peekDiscard&&view.own_discard.map((card,i)=><span className={styles.discardSlot} key={i}><CardArtwork card={card}/></span>)}</div>}
-    {!draft&&!view.hidden_discard&&view.own_discard?.length===2&&<div className={styles.discardSlots} aria-label="Сброшенные карты">
-      {view.own_discard.map((c,i)=><button type="button" className={styles.discardSlot} key={i} aria-label="Посмотреть свой снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><CardArtwork card={!view.presentation?.enabled&&peekDiscard?c:undefined}/></button>)}
-      <button type="button" aria-label="Показать снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><EyeIcon/></button>
+    {!draft&&view.my_seat===view.declarer&&view.own_discard?.length===2&&<div className={styles.declareRow} data-declaration={declareBesideDiscard?"true":undefined}>
+      {declareBesideDiscard&&<div className={styles.declareBids} data-table-actions="true"><ActionPanel view={view} busy={busy||!!discardScene.phase} profiles={profiles} command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute} onStart={start} onSettle={settle}/></div>}
+      <div className={styles.discardReview}>
+        {discardVisible&&<small className={styles.discardReviewNote} role="status">{view.presentation?.enabled?"Соперники видят, что вы подглядываете, но не видят сами сброшенные карты":"Сброшенные карты видишь только ты"}</small>}
+        <div className={styles.discardSlots} aria-label={view.hidden_discard?"Спрятанный снос":"Сброшенные карты"}>
+          {view.own_discard.map((card,i)=><span className={styles.discardSlot} key={i}><CardArtwork card={discardVisible?card:undefined}/></span>)}
+          <button type="button" disabled={busy||!!discardScene.phase||view.claim?.status==="pending"} aria-label={discardVisible?"Скрыть снос":"Показать снос"} aria-pressed={discardVisible} onClick={toggleDiscardReview}><EyeIcon/></button>
+        </div>
+      </div>
     </div>}
     <div className={styles.handRow} aria-label="Игровые карты" onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e)}>
       {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
@@ -668,10 +686,10 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     return view.is_passout?<><strong data-passout-status="true">Распасы</strong>{turn&&<small>{turn}</small>}</>:<><strong>{isPlay?(turn||statusNames[view.status]):(bidding??phaseLabel(view.phase))}</strong>{!isPlay&&turn&&<small>{turn}</small>}{isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat&&<small>Управляешь открытой рукой</small>}</>;
   })();
   const actions = view && <>
-    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} profiles={profiles} busy={busy} command={command}/><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
-    <ActionPanel view={view} busy={busy||!!discardScene.phase} profiles={profiles}
+    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} profiles={profiles} busy={busy} command={command}/><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/>{view.room_admin&&<button type="button" onClick={copyInvitation}>Скопировать ссылку на комнату</button>}</>}
+    {!declareBesideDiscard&&<ActionPanel view={view} busy={busy||!!discardScene.phase} profiles={profiles}
       command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
-      onStart={start} onSettle={settle} />
+      onStart={start} onSettle={settle} />}
   </>;
   return <CardBackContext.Provider value={back}><main className={`${styles.root} ${styles.tableRoot}`}>
     <header data-preferans-game-header="true" className={`${styles.header} ${styles.compactHeader}`}>
@@ -708,7 +726,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
               theme={selectedTheme} roundTable={roundTable} tableSurface={surface} tableOpacity={1-tableTransparency/100} surfaceOpacity={opacity} scoreAdjustment={<ScoreAdjustment view={view} profiles={profiles} busy={busy} adjust={adjust}/>} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||!!discardScene.phase||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               counterPanel={view.controls?.counter&&!view.controls?.undo?<CounterDisplay view={view} name={playerName} serverNow={serverNow} busy={busy} onCancel={()=>command("counter_cancel")}/>:undefined}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
-              announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
+              announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert"><p>{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]} ПСИХАНУЛ и выкинул листик.</p><p>По голому удару ему!</p></div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               claimPanel={<><ControlFeedback view={view} name={playerName} serverNow={serverNow}/>{view.controls?.undo&&<PreferansControls view={view} profiles={profiles} busy={busy} command={command}/>}{undoAllowed&&undoDraft===undoScope&&<UndoRequest key={undoScope} busy={busy} onCancel={()=>setUndoDraft(null)} onSend={reason=>{setUndoDraft(null);command("undo_request",{reason});}}/>}<ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/><MisereOfferPanel view={view} profiles={profiles} busy={busy} command={command} sortMode={sortMode}/></>}
               claimButton={(undoAllowed||view.can_offer_misere&&view.phase==="play"||view.can_claim&&view.claim?.status!=="pending")?<>{undoAllowed&&<button type="button" className={styles.undoIconButton} aria-label="Запросить отмену последнего действия" title="Запросить отмену последнего действия" disabled={busy||!!discardScene.phase||view.claim?.status==="pending"} onClick={()=>setUndoDraft(undoScope)}><UndoIcon/></button>}{view.can_offer_misere&&view.phase==="play"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("misere_offer")}>{view.my_seat===view.declarer?"Показать карты и предложить что я сыграл":`Согласен, что ${playerName(view.declarer??0)} сыграл мизер`}</button>:null}{view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} title="показать всем мои карты и заявить что все оставшиеся взятки - мои!" onClick={()=>command("claim_offer",{cards:hand})}>Все мои!</button>:null}</>:undefined}
               hand={ownHand} handCount={visibleHand.length} handBreaks={visibleHand.filter((card,index)=>index>0&&visibleHand[index-1].suit!==card.suit).length} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}

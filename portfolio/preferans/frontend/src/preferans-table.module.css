@@ -658,11 +658,11 @@
 .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --rail:clamp(0px,17.55cqw,310.5px); }
 @media(max-height:650px) and (orientation:landscape) { .table[data-playing="true"] .bottomArea,.table[data-playing="true"][data-furniture="true"] .bottomArea { --rail:clamp(0px,17.55cqw,calc(var(--play-height)*.34)); } }
 .table[data-gag-active="true"] [data-table-actions],.table[data-gag-active="true"] .claimButton { visibility:hidden; pointer-events:none; }
-.table[data-gag-fake="true"] .seat>.callBubble,.table[data-gag-fake="true"] .opponentHand,.table[data-gag-fake="true"] .ownHand,.table[data-gag-fake="true"] .widow,.table[data-gag-fake="true"] .fieldStatus { visibility:hidden; }
+.table[data-gag-fake="true"] .seat>.callBubble,.table[data-gag-fake="true"] .widow,.table[data-gag-fake="true"] .fieldStatus { visibility:hidden; }
 .table[data-hide-flight="true"] .tablePaper { animation:liftForHide 1.4s var(--gag-paper-offset,0ms) ease-in-out both; }
-.table[data-gag-fake="true"] .tablePaper { animation:liftForRedeal 8s var(--gag-paper-offset,0ms) ease-in-out both; }
+.table[data-gag-fake="true"] .tablePaper { animation:liftForRedeal 10.1s var(--gag-paper-offset,0ms) ease-in-out both; }
 @keyframes liftForHide {0%,100%{transform:rotate(-11deg)} 25%,75%{transform:translateY(-25%) rotate(-20deg);}}
-@keyframes liftForRedeal {0%,64%,100%{transform:rotate(-11deg)} 69%,91%{transform:translateY(-48%) rotate(-27deg)}}
+@keyframes liftForRedeal {0%,57%,100%{transform:rotate(-11deg)} 60%,94%{transform:translateY(-48%) rotate(-27deg)}}
 .table .gagScene { position:absolute; inset:0; z-index:4; pointer-events:none; }
 .table .gagScene>span { position:absolute; display:block; width:clamp(15px,3.5cqw,56px); aspect-ratio:2/3; transform:translate(-50%,-50%); }
 .table .gagScene img { display:block; width:100%; height:100%; }
@@ -671,10 +671,10 @@
 .table .gagDealCard { left:50%;top:42%; animation:gagDeal .7s var(--deal-delay) both ease-out,gagReturn .8s var(--return-delay) forwards ease-in; }
 @keyframes gagDeal {0%{left:50%;top:42%;opacity:0} 12%{opacity:1} 100%{left:var(--to-x);top:var(--to-y);opacity:1}}
 @keyframes gagReturn {0%{left:var(--to-x);top:var(--to-y);opacity:1} 90%{opacity:1} 100%{left:50%;top:42%;opacity:0}}
-.table .gagFoundCard {left:var(--paper-x,9%);top:var(--paper-y,62%);animation:gagFound 8s var(--gag-offset) both ease-in-out;}
+.table .gagFoundCard {left:var(--paper-x,9%);top:var(--paper-y,62%);animation:gagFound 10.1s var(--gag-offset) both ease-in-out;}
 @keyframes gagFound {
-  0%,64%{opacity:0;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.22)}
-  66%,82.5%{opacity:1;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.22)}
+  0%,58.4%{opacity:0;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.22)}
+  58.5%,86.14%{opacity:1;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.22)}
   96%{opacity:1;left:50%;top:42%} 100%{opacity:0;left:50%;top:42%}
 }
 .table .gagMessage { position:absolute; left:50%;top:45%;transform:translate(-50%,-50%);width:min(65%,620px);font-size:clamp(.85rem,2cqw,1.65rem);text-align:center;color:#fff0ce;text-shadow:0 2px 5px #000; }
@@ -761,3 +761,22 @@
 .table .paperCounter { position:absolute; top:.5rem; right:.5rem; z-index:27; max-width:min(38%,240px); padding:.4rem; border:1px solid #ad976a; border-radius:.5rem; background:#17352c; text-align:center; font-size:clamp(.65rem,1cqw,.85rem); }
 .table .paperCounter .counterDigits { font-size:clamp(1.1rem,2.4cqw,1.8rem); }
 .table .paperCounter button { font-size:.8rem; padding:.15rem .4rem; min-height:26px; }
+
+/* PR37: one auction row with lower aligned suit choices and a local peek. */
+.table .bidGroups,.table .bidGroups>div,.table .bidGroups .bidSuits { align-items:flex-end; }
+.table .bidGroups button[data-bid-muted="true"]:not(:disabled) { filter:grayscale(.85); opacity:.68; }
+.table .bidGroups button[data-bid-muted="true"]:hover:not(:disabled) { filter:grayscale(.25); opacity:1; }
+.table .bidGroups .bidSuits:has(button[data-no-trump="true"]) { margin-inline-end:.25rem; }
+.table .bidGroups .bidSuits button[data-bid-tone="suit"] { height:2.5590375rem; min-height:2.5590375rem; box-sizing:border-box; padding-block:.12rem; line-height:1; font-family:Georgia,serif; font-weight:700; }
+.table .bidGroups .bidSuits button[data-no-trump="true"] { font-family:inherit; font-weight:700; font-size:1.4375em; }
+.table .bidGroups .bidSuits .suitGlyph[data-no-trump="true"] { transform:none; }
+@media(max-height:650px) and (orientation:landscape) { .table .bidGroups .bidSuits button[data-bid-tone="suit"] { height:2.07rem; min-height:2.07rem; } }
+.table .widowEye { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; max-width:min(32cqw,240px); font-size:clamp(.66rem,1.15cqw,.9rem); touch-action:none; white-space:normal; }
+.table .widowEye svg { flex:none; }
+.table .widowEye span { text-align:left; }
+.table .handColumn>.firstHand { align-self:flex-start; margin:0; text-align:left; }
+.table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="deal"]) .widow { visibility:visible; }
+.table[data-gag-fake="true"] .opponentHand,.table[data-gag-fake="true"] .ownHand { pointer-events:none; }
+.table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .opponentHand,.table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .ownHand { animation:gagRecall .8s ease-in-out both; }
+@keyframes gagRecall { from { opacity:1; } to { opacity:0; } }
+@media(prefers-reduced-motion:reduce) { .table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .opponentHand,.table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .ownHand { animation:none; opacity:0; } }

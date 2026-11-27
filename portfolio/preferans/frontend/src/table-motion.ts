@@ -12,7 +12,8 @@ export function flightDelta(from:DOMRect,to:DOMRect) {
   return {x:b.x-a.x,y:b.y-a.y};
 }
 export const localTableScale=(table:HTMLElement):number=>table.offsetWidth?table.getBoundingClientRect().width/table.offsetWidth||1:1;
-export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[]):()=>void {
+export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly string[]=[],elapsedMs=0):()=>void {
+  if(elapsedMs>=DEAL_SORT_AT_MS+DEAL_SORT_MS)return ()=>{};
   const source=table.querySelector<HTMLElement>("[data-play-field]");
   if(!source)return ()=>{};
   const origin=source.getBoundingClientRect();
@@ -55,7 +56,7 @@ export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly 
     const start={transform:`translate3d(${delta.x/scale}px,${delta.y/scale}px,0) rotate(-8deg) scale(.75)`,opacity:0};
     const delay=i*135;
     if(!slot){
-      animations.push(card.animate([start,{transform:"none",opacity:1}],{duration:DEAL_FLIGHT_MS,delay,easing:"cubic-bezier(.2,.75,.3,1)",fill:"backwards"}));
+      animations.push(card.animate([start,{transform:"none",opacity:1}],{duration:DEAL_FLIGHT_MS,delay:delay-elapsedMs,easing:"cubic-bezier(.2,.75,.3,1)",fill:"backwards"}));
       return;
     }
     const duration=DEAL_SORT_AT_MS+DEAL_SORT_MS-delay;
@@ -65,10 +66,10 @@ export function animateDeal(table:HTMLElement, dealer:number, rawOrder:readonly 
       {transform,opacity:1,offset:DEAL_FLIGHT_MS/duration},
       {transform,opacity:1,offset:(DEAL_SORT_AT_MS-delay)/duration,easing:"ease-in-out"},
       {transform:"none",opacity:1,offset:1},
-    ],{duration,delay,fill:"both"}));
+    ],{duration,delay:delay-elapsedMs,fill:"both"}));
   }));
   const restoreLayers=()=>layers.forEach(({node,previous})=>{node.style.zIndex=previous;});
-  const sortTimer=setTimeout(restoreLayers,DEAL_SORT_AT_MS);
+  const sortTimer=setTimeout(restoreLayers,Math.max(0,DEAL_SORT_AT_MS-elapsedMs));
   return ()=>{clearTimeout(sortTimer);restoreLayers();animations.forEach(animation=>animation.cancel());};
 }
 export function animateCollection(table:HTMLElement,winner:number,onFinished?:()=>void):()=>void {

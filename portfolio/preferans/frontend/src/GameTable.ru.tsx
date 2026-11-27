@@ -13,7 +13,7 @@ import { Notebook } from "./Notebook.ru";
 import { WidowDisplay } from "./WidowDisplay.ru";
 import { activityProgress } from "./table-details";
 import { actualTrickCount } from "./claim-model";
-import { counterTarget } from "./gag-model";
+import { counterTarget, GAG_FAKE_MS } from "./gag-model";
 import { showFirstHand } from "./control-feedback";
 import { maySwapSeat } from "./room-preparation";
 import { usePaperLift } from "./paper-lift";
@@ -30,8 +30,8 @@ function ActivityRing({since,now}: {since:number|undefined;now:()=>number}) {
   const progress=activityProgress(since,at);
   const ringId=useId().replace(/[^a-zA-Z0-9_-]/g,"");
   return <svg className={styles.activityRing} viewBox="0 0 160 90" preserveAspectRatio="none" aria-hidden="true">
-    <defs><mask id={`activity-${ringId}`} maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="90"><path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="white" strokeWidth="3.43" strokeDasharray={`${progress} 100`}/></mask></defs>
-    {progress>0&&<path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="currentColor" strokeWidth="1.715" strokeOpacity="0.5" strokeLinecap="butt" strokeDasharray="1.5 1.1" mask={`url(#activity-${ringId})`}/>}
+    <defs><mask id={`activity-${ringId}`} maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="90"><path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="white" strokeWidth="2.9155" strokeDasharray={`${progress} 100`}/></mask></defs>
+    {progress>0&&<path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="currentColor" strokeWidth="1.45775" strokeOpacity="0.5" strokeLinecap="butt" strokeDasharray="1.5 1.1" mask={`url(#activity-${ringId})`}/>}
   </svg>;
 }
 
@@ -109,20 +109,20 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
   </section>;
 }
 
-function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, pendingPlay, deck, statusLine, announcement }: { statusLine:ReactNode; announcement?:ReactNode; pendingPlay?:{owner:number;card:Card}|null; view: RoomView; collecting: boolean; onWidow?: () => void; onField?: () => void; onTableDrop?: (e:DragEvent)=>void; award?: string; deck?:ReactNode }) {
+function CenterCards({ view, collecting, onField, onTableDrop, award, pendingPlay, deck, statusLine, announcement }: { statusLine:ReactNode; announcement?:ReactNode; pendingPlay?:{owner:number;card:Card}|null; view: RoomView; collecting: boolean; onField?: () => void; onTableDrop?: (e:DragEvent)=>void; award?: string; deck?:ReactNode }) {
   const frame=passoutWidowFrame(view,collecting);
   const widow = view.phase==="discard"&&!award?{count:0,cards:[]}:visibleWidow(frame.view);
   const publicWidow = replayWidow(frame.view);
   const [replay,setReplay] = useState(false);
-  const showReplay = !frame.held && replay && publicWidow.length > 0;
-  const opponentWidow = opponentWidowCards(view);
+  const showReplay = Boolean(view.is_passout && !frame.held && replay && publicWidow.length > 0);
+  const opponentWidow = pendingPlay ? null : opponentWidowCards(view);
   const shown = collecting ? view.last_trick ?? [] : [...(view.trick ?? []), ...(pendingPlay&&!(view.trick??[]).some(p=>p.owner===pendingPlay.owner)?[pendingPlay]:[])];
   const names = tableSeats(view.my_seat);
-  const widowNode=<>{opponentWidow?<WidowDisplay cards={opponentWidow} onReplay={onWidow}/>:<div className={styles.widow} data-widow-zone="true" aria-label="Прикуп" data-award={award}>
+  const widowNode=<>{opponentWidow?<WidowDisplay cards={opponentWidow}/>:<div className={styles.widow} data-widow-zone="true" aria-label="Прикуп" data-award={award}>
       {widow.count > 0 && <><div className={styles.widowCards}>
-        {Array.from({length:showReplay?publicWidow.length:widow.count},(_,i)=><span key={i} className={styles.tableCard}><CardArtwork card={(showReplay?publicWidow:widow.cards)[i]}/></span>)}
+        {Array.from({length:widow.count},(_,i)=><span key={i} className={styles.tableCard}><CardArtwork card={widow.cards[i]}/></span>)}
       </div></>}
-      {widow.count === 0 && publicWidow.length > 0 && <><div className={styles.widowCards}>{Array.from({length:2},(_,i)=><span className={styles.widowGhost} key={i}>{showReplay&&publicWidow[i]&&<CardArtwork card={publicWidow[i]}/>}</span>)}</div><button type="button" className={styles.widowEye} aria-label={showReplay?"Скрыть прикуп":"Показать прикуп"} title="Показать прикуп" aria-expanded={showReplay} onClick={()=>{setReplay(v=>!v);if(onWidow&&!showReplay)onWidow();}}><EyeIcon/></button></>}
+      {view.is_passout&&view.status==="playing"&&widow.count===0&&publicWidow.length>0&&<><div className={styles.widowCards}>{publicWidow.map((card,i)=><span className={styles.widowGhost} key={i}>{showReplay&&<CardArtwork card={card}/>}</span>)}</div><button type="button" className={styles.widowEye} aria-label={showReplay?"Скрыть прикуп":"Показать прикуп"} aria-expanded={showReplay} onClick={()=>setReplay(v=>!v)}><EyeIcon/></button></>}
     </div>}</>;
   return <div className={styles.center}>
     {deck&&<div className={styles.nextDeck} aria-label="Колода для новой раздачи">{deck}</div>}
@@ -140,12 +140,12 @@ function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, p
   </div>;
 }
 
-export function GameTable({view, tableZoom=100, counterPanel, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected, claimPanel, claimButton, roundTable, tableSurface, tableOpacity, finalReviewAction, scoreAdjustment, handCount, handBreaks, onCounter, onSwap, discardScene}: {
+export function GameTable({view, tableZoom=100, counterPanel, profiles, presence, hand, actions, renderOpenCard, objects, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected, claimPanel, claimButton, roundTable, tableSurface, tableOpacity, finalReviewAction, scoreAdjustment, handCount, handBreaks, onCounter, onSwap, discardScene}: {
   view: RoomView; profiles: SeatProfile[] | null; presence: Presence[] | null;
   tableZoom?:number;counterPanel?:ReactNode;claimPanel?:ReactNode;claimButton?:ReactNode;roundTable:boolean;tableSurface:string;tableOpacity:number;finalReviewAction?:ReactNode;scoreAdjustment?:ReactNode;handCount:number;handBreaks:number;onCounter?:(seat:Seat)=>void;onSwap?:(seat:Seat)=>void;discardScene:{now:number;phase:"fake"|"deal"|null;hide:boolean};
   theme:TableTheme;localConnected:boolean;surfaceOpacity:number;sheetExit?:ReactNode;serverNow:()=>number;statusLine:ReactNode;sortMode:SortMode;onReplay?:()=>void;onScore?:()=>void;announcement?:ReactNode;busy:boolean;pendingPlay?:{owner:number;card:Card}|null;
   hand: ReactNode; actions: ReactNode; renderOpenCard: (card: Card, seat: Seat) => ReactNode;
-  objects?: ReactNode; sharedPanel?: ReactNode; onWidow?: () => void; onField?: () => void;
+  objects?: ReactNode; sharedPanel?: ReactNode; onField?: () => void;
   mediaForSeat?: (seat: Seat) => ReactNode;
   deck?: ReactNode; localControls?: ReactNode; onSeatDrop?: (seat:Seat,e:DragEvent)=>void; onTableDrop?: (e:DragEvent)=>void;
 }) {
@@ -184,16 +184,20 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
   useEffect(()=>()=>{if(timer.current) clearTimeout(timer.current);},[]);
   const active=animation&&animation.game===view.game_id&&animation.count===(view.played_tricks??0)?animation.kind:null;
   const collecting=active==="trick" && (Boolean(view.is_passout)||(!(view.trick?.length)&&!pendingPlay));
-  const dealing=(active==="deal"||discardScene.phase==="deal")&&view.phase==="auction";
+  const dealing=(active==="deal"||discardScene.phase!==null)&&view.phase==="auction";
+  const gagAt=view.redeal_gag?.at_ms;
   const animationSeat=view.last_trick_winner;
   const currentDealer=view.dealer;
   const dealOrder=dealing?(view.hand??[]).map(cardId).join(","):"";
   useLayoutEffect(()=>{
     const table=tableRef.current;
     if(!table)return;
-    if(dealing&&currentDealer!==undefined&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches)return animateDeal(table,currentDealer,dealOrder.split(","));
+    if(dealing&&currentDealer!==undefined&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+      const elapsed=discardScene.phase&&gagAt!==undefined?Math.max(0,serverNow()-gagAt-(discardScene.phase==="deal"?GAG_FAKE_MS:0)):0;
+      return animateDeal(table,currentDealer,dealOrder.split(","),elapsed);
+    }
     if(collecting&&animationSeat!=null)return animateCollection(table,animationSeat,view.is_passout?()=>setAnimation(null):undefined);
-  },[dealing,dealOrder,collecting,animationSeat,currentDealer,view.is_passout,view.game_id,view.played_tricks]);
+  },[dealing,dealOrder,collecting,animationSeat,currentDealer,view.is_passout,view.game_id,view.played_tricks,discardScene.phase,gagAt,serverNow]);
   useLayoutEffect(()=>{
     const el=tableRef.current;if(!el)return;
     const fit=()=>{
@@ -222,7 +226,7 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
   return <div className={styles.tableScene} data-table-zoomed={tableZoom!==100?"true":undefined} style={{"--table-zoom":tableZoom/100} as CSSProperties}><section ref={tableRef} data-gag-fake={discardScene.phase==="fake"?"true":undefined} data-gag-active={discardScene.phase?"true":undefined} data-hide-flight={discardScene.hide?"true":undefined} data-furniture={objects?"true":undefined} data-round-table={roundTable?"true":undefined} data-table-surface={tableSurface} data-claim-pending={view.claim?.status==="pending"||view.phase==="misere_offer"?"true":undefined} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity,"--table-opacity":tableOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={dealing?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true" data-lobby={inLobby?"true":undefined} data-paper-open={paperOpen?"true":undefined} data-center-choice={centerChoice?"true":undefined}>
     <div className={styles.tableTop}>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.left} onCounter={onCounter} onSwap={onSwap} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={!between&&dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
-      <CenterCards statusLine={centerChoice?<div className={styles.settlementChoice} data-table-actions="true">{statusLine}{actions}</div>:statusLine} announcement={announcement} pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}`} deck={between?deck:undefined} view={view} collecting={collecting} onWidow={onWidow} onField={onField} onTableDrop={onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>
+      <CenterCards statusLine={centerChoice?<div className={styles.settlementChoice} data-table-actions="true">{statusLine}{actions}</div>:statusLine} announcement={announcement} pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}`} deck={between?deck:undefined} view={view} collecting={collecting} onField={onField} onTableDrop={onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.right} onCounter={onCounter} onSwap={onSwap} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)} deck={!between&&dealerFor(view)===seats.right?deck:undefined} onSeatDrop={onSeatDrop}/>
     </div>
     {view.score&&<button type="button" className={styles.tablePaper} data-paper-miniature="true" data-sheet-discarded={view.status==="closed"&&view.sheet_loser!==undefined?"true":undefined} aria-label="Открыть пульку" title="Пулька" disabled={busy||view.status==="closed"&&view.sheet_loser!==undefined} onClick={()=>onScore?onScore():setScoreOpen(true)}>
@@ -240,11 +244,11 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
     <div className={styles.bottomArea} style={{"--hand-count":handCount,"--hand-breaks":handBreaks} as CSSProperties}>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.bottom} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.bottom)} deck={!between&&dealerFor(view)===seats.bottom?deck:undefined} onSeatDrop={onSeatDrop} localControls={localControls}/>
       {!inLobby&&<div className={styles.handColumn}>
-        {view.my_seat!==null&&showFirstHand(view,view.my_seat)&&<span className={styles.firstHand}>Первым ходит {profiles?.[view.my_seat]?.name||fallbackName(view.my_seat)}</span>}
+        {view.my_seat!==null&&showFirstHand(view,view.my_seat)&&<span className={styles.firstHand}>{view.turn===view.my_seat?"Ход за тобой":`Первым ходит ${profiles?.[view.my_seat]?.name||fallbackName(view.my_seat)}`}</span>}
         {view.my_seat!==null&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seats.bottom}`} view={view} seat={seats.bottom} busy={busy} onReplay={replay}/>}
         {!centerChoice&&<div className={styles.decision} data-table-actions="true">{actions}</div>}
         {claimButton&&<div className={styles.claimButton}>{claimButton}</div>}
-        {view.my_seat!==null&&<div className={styles.ownHand} data-own-hand="true" data-claim-hidden={(view.claim?.status==="pending"&&view.claim.seat===view.my_seat||view.phase==="misere_offer"&&view.declarer===view.my_seat)?"true":undefined}>{hand}</div>}
+        {view.my_seat!==null&&<div className={styles.ownHand} data-own-hand="true" inert={Boolean(discardScene.phase)} data-claim-hidden={(view.claim?.status==="pending"&&view.claim.seat===view.my_seat||view.phase==="misere_offer"&&view.declarer===view.my_seat)?"true":undefined}>{hand}</div>}
       </div>}
       {!inLobby&&objects&&<div className={styles.bottomFurniture} data-radio-dock="true">{objects}</div>}
       {inLobby && <p className={styles.lobbyHint}>Занято мест: {view.occupied.filter(Boolean).length} из 3</p>}

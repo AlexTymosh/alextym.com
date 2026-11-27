@@ -1,4 +1,4 @@
-import { useId, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { notebookAngle, splitPlayerName } from "./table-pr20";
 import { notebookName } from "./room-preparation";
 import { bidLabel, type RoomView, type NotebookMark } from "./game-model.ru";
@@ -12,6 +12,28 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const [orientation,setOrientation] = useState(0);
   const [stepIndex,setStepIndex] = useState<number|null>(null);
   const [zoom,setZoom] = useState(1);
+  const paperViewport=useRef<HTMLSpanElement>(null);
+  useEffect(()=>{
+    if(miniature)return;
+    const viewport=paperViewport.current;
+    const wrapper=viewport?.parentElement;
+    if(!viewport||!wrapper)return;
+    viewport.focus({preventScroll:true});
+    const forwardWheel=(event:WheelEvent)=>{
+      if(event.ctrlKey||event.metaKey||event.defaultPrevented||!(event.target instanceof Node)||viewport.contains(event.target))return;
+      if(event.target instanceof Element&&event.target.closest("input,select,textarea,[contenteditable=true]"))return;
+      const unit=event.deltaMode===1?16:event.deltaMode===2?viewport.clientHeight:1;
+      const dx=event.deltaX*unit,dy=event.deltaY*unit;
+      const vertical=dy!==0&&viewport.scrollHeight>viewport.clientHeight;
+      const horizontal=dx!==0&&viewport.scrollWidth>viewport.clientWidth;
+      if(!vertical&&!horizontal)return;
+      event.preventDefault();
+      viewport.scrollBy({left:dx,top:dy});
+    };
+    const wheelRoot:HTMLElement|Document=viewport.closest("[data-paper-lift]")?document:wrapper;
+    wheelRoot.addEventListener("wheel",forwardWheel as EventListener,{passive:false});
+    return()=>wheelRoot.removeEventListener("wheel",forwardWheel as EventListener);
+  },[miniature]);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const score = view.score;
   if (!score) return <p>Расчётов пока нет.</p>;
@@ -140,7 +162,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     {!miniature&&!past&&scoreAdjustment&&<div className={styles.accountingActions}>{scoreAdjustment}</div>}
     <span className={miniature?styles.miniatureBody:styles.paperBody}>
     {!miniature&&<span className={styles.scissors} aria-hidden="true">✁</span>}
-    <span className={miniature?styles.miniatureCanvas:styles.paperViewport} data-zoomed={!miniature&&zoom!==1?"true":undefined} style={{"--paper-zoom":miniature?1:zoom} as CSSProperties}>
+    <span ref={miniature?undefined:paperViewport} tabIndex={miniature?undefined:0} role={miniature?undefined:"region"} aria-label={miniature?undefined:"Прокручиваемый листик"} className={miniature?styles.miniatureCanvas:styles.paperViewport} data-zoomed={!miniature&&zoom!==1?"true":undefined} style={{"--paper-zoom":miniature?1:zoom} as CSSProperties}>
     <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} role="img" aria-label="Рукописная пулька">
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern>{finalPunches.length>0&&<marker id={`punch-arrow-${id}`} markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5.5L0 11Z" fill="#b51524"/></marker>}</defs>
       <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>
