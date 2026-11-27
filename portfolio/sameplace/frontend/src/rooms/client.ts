@@ -1,6 +1,6 @@
 import { ROOM_ROOT } from "../room-transport";
 export class RoomRequestError extends Error {
-  constructor(public readonly status: number, public readonly code: string) { super(code); }
+  constructor(public readonly status: number, public readonly code: string, public readonly retryAfterSeconds = 0) { super(code); }
 }
 export async function roomRequest<T>(path: string, payload?: object, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${ROOM_ROOT}/api/${path}`, {
@@ -8,7 +8,8 @@ export async function roomRequest<T>(path: string, payload?: object, signal?: Ab
     ...(payload === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }),
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok || !data) throw new RoomRequestError(response.status, typeof data?.detail === "string" ? data.detail : "UNAVAILABLE");
+  const retry = Number(response.headers.get("Retry-After"));
+  if (!response.ok || !data) throw new RoomRequestError(response.status, typeof data?.detail === "string" ? data.detail : "UNAVAILABLE", Number.isFinite(retry) ? Math.max(0, Math.min(600, retry)) : 0);
   return data as T;
 }
 export type Role = "designer" | "moderator" | "dj" | "organizer" | "inviter";

@@ -27,6 +27,11 @@ async function forward(path: string, method: string, authorization: string, body
     const response = await fetch(backend(path), { method, headers: { Authorization: authorization, Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(25000) });
     const data: unknown = await response.json();
     if (!data || typeof data !== "object" || Array.isArray(data) || (!response.ok && ![400,401,403,404,405,409,413,415,422,429,503].includes(response.status))) return reply(502, {detail:"UNAVAILABLE"});
+    if (response.ok && /^rooms\/[a-z0-9-]+\/ticket$/.test(path)) {
+      const url = backend("realtime");
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      return reply(response.status, { ...data, ws_url: url.href });
+    }
     return reply(response.status, data, response.headers.get("Retry-After"));
   } catch { return reply(502, {detail:"UNAVAILABLE"}); }
 }
