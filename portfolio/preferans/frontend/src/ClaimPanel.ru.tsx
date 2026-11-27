@@ -12,8 +12,8 @@ export function ClaimPanel({view,profiles,busy,command}:{view:RoomView;profiles:
   const vote=view.my_seat!==null&&c.voters.includes(view.my_seat)&&!c.approved.includes(view.my_seat);
   const labels=claimVoteLabels(view,c.seat);
   return <section className={styles.claimPanel} role="region" aria-label={c.defender_target===undefined?"Все мои":"По своим"}>
-    <strong>{c.defender_target===undefined?`${name(c.seat)} говорит, что все взятки его`:`${name(c.seat)} предлагает по своим: ${name(c.voters[0])} — ${c.defender_target} взяток за раздачу`}</strong>
-    {c.defender_target===undefined&&<div className={styles.claimCards}>{c.cards.map(card=><span key={`${card.suit}${card.rank}`}><CardArtwork card={card}/></span>)}</div>}
+    <strong>{c.defender_target===undefined?`${name(c.seat)} говорит, что все взятки его`:`${name(c.seat)} предлагает по своим. ${view.my_seat===c.voters[0]?"Тебе":name(c.voters[0])} - ${c.defender_target} ${c.defender_target===1?"взятка":c.defender_target<5?"взятки":"взяток"}`}</strong>
+    <div className={styles.claimCards}>{c.cards.map(card=><span key={`${card.suit}${card.rank}`}><CardArtwork card={card}/></span>)}</div>
     {vote?<div className={styles.claimVotes}><button type="button" disabled={busy||!!view.controls?.paused} onClick={()=>command("claim_vote",{approve:true})}>{labels.approve}</button><button type="button" disabled={busy||!!view.controls?.paused} onClick={()=>command("claim_vote",{approve:false})}>{labels.reject}</button></div>:<p>Ожидаем: {c.voters.filter(i=>!c.approved.includes(i)).map(name).join(", ")}</p>}
   </section>;
 }

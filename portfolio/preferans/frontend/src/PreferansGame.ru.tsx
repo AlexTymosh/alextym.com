@@ -16,7 +16,7 @@ import { PreferansControls } from "./PreferansControls.ru";
 import { ScoreAdjustment } from "./ScoreAdjustment.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
-import { canHint, sharedHint, hintKey, hintScope, canRaiseOwn, ownRaiseScope, type HintSender } from "./defense-hints";
+import { canHint, sharedHint, hintKey, hintScope, canRaiseOwn, ownRaiseScope, mergeHintSnapshot, type HintSender } from "./defense-hints";
 import { pauseMessage, awardedMessage, auctionMessage, illegalCardMessage, declarationMessage } from "./play-status.ru";
 import { CounterDisplay } from "./CounterDisplay.ru";
 import { useDiscardScene } from "./HiddenDiscardScene.ru";
@@ -254,8 +254,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     if(next.server_clock_ms!==undefined&&!next.presentation)serverOffset.current=next.server_clock_ms-Date.now();
     const before=viewRef.current;
     if(before?.game_id!==next.game_id||before?.phase!==next.phase||(before?.played_tricks??0)!==(next.played_tricks??0)||(before?.trick?.length??0)!==(next.trick?.length??0))setPeekDiscard(false);
-    viewRef.current = next;
-    setView(next);
+    const merged=mergeHintSnapshot(viewRef.current,next,hintSender.current?.room===next.room_id);
+    viewRef.current = merged;
+    setView(merged);
     setInvited(null);
   }, []);
 
@@ -549,14 +550,21 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     setPendingPlay({room:view.room_id,game:view.game_id,version:view.version,owner,card});
     command("play",{card,owner});
   };
-  const raised=(card:Card,owner:number)=>Boolean(view&&(
-    canHint(view,owner,card)&&(view.defense_hints?.some(mark=>mark.owner===owner&&cardId(mark.card)===cardId(card))||localHints.scope===hintScope(view)&&localHints.keys.includes(hintKey(owner,card)))||
-    canRaiseOwn(view,owner,card)&&ownRaised.scope===ownRaiseScope(view)&&ownRaised.keys.includes(hintKey(owner,card))));
+  const raised=(card:Card,owner:number)=>{
+    if(!view)return false;
+    const key=hintKey(owner,card);
+    if(rtReady&&sharedHint(view,owner,card))return view.defense_hints?.some(mark=>hintKey(mark.owner,mark.card)===key)===true;
+    return Boolean(canHint(view,owner,card)&&localHints.scope===hintScope(view)&&localHints.keys.includes(key)||
+      canRaiseOwn(view,owner,card)&&ownRaised.scope===ownRaiseScope(view)&&ownRaised.keys.includes(key));
+  };
   const toggleHint=(card:Card,owner:number)=>{
     // A delayed single click must not act on a newer deal or turn.
     if(!view||viewRef.current?.version!==view.version||viewRef.current?.game_id!==view.game_id||viewRef.current?.room_id!==view.room_id||!canHint(view,owner,card))return;
     const key=hintKey(owner,card),scope=hintScope(view);
-    if(view.game_id&&sharedHint(view,owner,card)&&hintSender.current?.room===view.room_id&&hintSender.current.send({game_id:view.game_id,version:view.version,owner,card,raised:!raised(card,owner)}))return;
+    if(view.game_id&&sharedHint(view,owner,card)&&hintSender.current?.room===view.room_id&&hintSender.current.send({game_id:view.game_id,version:view.version,owner,card,raised:!raised(card,owner)})){
+      setLocalHints(old=>old.scope===scope?{scope,keys:old.keys.filter(k=>k!==key)}:old);
+      return;
+    }
     setLocalHints(old=>{const keys=old.scope===scope?old.keys:[];return {scope,keys:keys.includes(key)?keys.filter(k=>k!==key):[...keys,key]};});
   };
   const toggleOwnRaise=(card:Card,owner:number)=>{
@@ -633,7 +641,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     }else setPeekDiscard(v=>!v);
   };
   const declareBesideDiscard=Boolean(view&&view.phase==="declare"&&view.my_seat===view.declarer&&view.own_discard?.length===2);
-  const ownHand = view && <div className={styles.handsPanel}>
+  const ownHand = view && <div className={styles.handsPanel} data-discard-inline={!draft&&!declareBesideDiscard&&view.my_seat===view.declarer&&view.own_discard?.length===2?"true":undefined}>
     {draft&&<div className={styles.discardSlots} aria-label="Зона сноса" onDragOver={e=>e.preventDefault()} onDrop={discardDrop}>
       {[0,1].map(i=>{const card=chosenCards[i];return <button key={i} type="button" className={styles.discardSlot} data-pointer-drag="discard" aria-label={card?`Вернуть карту ${cardLabel(card)} в руку`:"Место для сноса"} disabled={!card||!canInteractCards} draggable={!!card&&canInteractCards} onDragStart={e=>card&&beginDrag(e,"discard",card)} onDragEnd={endDrag} onClick={()=>card&&setSelected(old=>changeDraft(old,cardId(card),false))}>{card?<CardArtwork card={peekDiscard?card:undefined}/>:"+"}</button>;})}
       <div className={styles.discardActions}>

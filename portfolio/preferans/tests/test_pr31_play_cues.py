@@ -140,3 +140,28 @@ def test_closed_hand_is_never_disclosed_by_a_cue():
     assert decorated_view(room, room.views["c"])["defense_hints"] == []
     room.views["b"]["controls"] = {"paused": True}
     assert "defense_hints" not in decorated_view(room, room.views["b"])
+
+
+def test_open_defense_owner_and_partner_share_the_same_cue():
+    room, cards = fixture("regular", "open")
+    # Real sole-vister mode exposes only the passing defender's hand.
+    for view in room.views.values():
+        view["open_hands"] = [{"seat": 2, "cards": [cards[2]]}]
+    frame = {
+        "type": "defense_hint",
+        "protocol": 1,
+        "game_id": "g",
+        "version": 10,
+        "owner": 2,
+        "card": cards[2],
+        "raised": True,
+    }
+    assert receive_hint(room, "b", frame)
+    assert decorated_view(room, room.views["c"])["defense_hints"] == [
+        {"owner": 2, "card": cards[2]}
+    ]
+    assert receive_hint(room, "c", {**frame, "raised": False})
+    assert decorated_view(room, room.views["b"])["defense_hints"] == []
+    assert not receive_hint(room, "c", {**frame, "owner": 1, "card": cards[1]})
+    room.views["b"]["mode"] = "closed"
+    assert not receive_hint(room, "b", frame)

@@ -224,7 +224,7 @@ def seat_view(
                 "rejected_by": claim.rejected_by,
                 "awarded": 10 - claim.at_tricks if claim.accepted else 0,
                 "cards": [public_card(c) for c in (claim.display_order or state.hands[claim.seat])]
-                if state.claim_pending and claim.defender_target is None
+                if state.claim_pending
                 else [],
                 **(
                     {

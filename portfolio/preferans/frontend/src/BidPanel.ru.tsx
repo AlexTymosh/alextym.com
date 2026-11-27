@@ -52,9 +52,10 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
           onClick={choose}>{asking?`${labels[key].replace(/!$/,"").toUpperCase()}, ТЫ УВЕРЕН?`:labels[key]}</button>
           {group===key&&(options.length>0||totus.length>0)&&<span className={styles.bidSuits} aria-label={`${labels[key]}: доступные масти`}>
             {totus.length>0&&<span className={styles.totusOptions}>
-              {auction&&confirmed!=="ten_no_widow"?<button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>setConfirmation({group:"ten_no_widow",version:view.version})}>Тотус без прикупа!</button>:<>{totus.map(bid=><button type="button" key={JSON.stringify(bid)} disabled={busy} data-bid-tone="dark" onClick={()=>submit(bid)}>{`Тотус ${bid.suit?suitSymbol(bid.suit):"БК"}${auction?" — подтвердить":""}`}</button>)}</>}
+              {auction&&confirmed!=="ten_no_widow"?<button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>setConfirmation({group:"ten_no_widow",version:view.version})}>Тотус без прикупа!</button>:<>{totus.map(bid=><button type="button" key={JSON.stringify(bid)} aria-label={bidLabel(bid)} title={bidLabel(bid)} disabled={busy}
+                data-bid-tone="suit" data-no-trump={bid.suit?undefined:"true"} className={bid.suit==="H"||bid.suit==="D"?styles.redSuit:undefined} onClick={()=>submit(bid)}><span className={styles.suitGlyph} data-no-trump={bid.suit?undefined:"true"}>{bid.suit?suitSymbol(bid.suit):"БК"}</span></button>)}</>}
             </span>}
-            {options.map(bid=><button type="button" key={JSON.stringify(bid)} aria-label={bidLabel(bid)} disabled={busy}
+            {!(auction&&confirmed==="ten_no_widow")&&options.map(bid=><button type="button" key={JSON.stringify(bid)} aria-label={bidLabel(bid)} disabled={busy}
               data-bid-tone="suit" data-no-trump={bid.suit?undefined:"true"} className={bid.suit==="H"||bid.suit==="D"?styles.redSuit:undefined} onClick={()=>submit(bid)}><span className={styles.suitGlyph} data-no-trump={bid.suit?undefined:"true"}>{bid.suit?suitSymbol(bid.suit):"БК"}</span></button>)}
           </span>}
         </div>;

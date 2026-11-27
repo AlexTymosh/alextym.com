@@ -205,3 +205,12 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Restore even pool target in lobby, show first-deal action on the field only when all are ready, retain dealer and server readiness guards. Keep the existing automatic next-deal path and manual deck fallback.
 - Keep the table and center geometry independent of peripheral element scale; move control feedback into field status; collapse history by default and fetch it on expansion. Display Version 1.0 in game header.
 - No additional periodic Firestore requests or provider configuration changes. Full CI and three-player visual acceptance required.
+
+## PR40 - Open by-own hand, bounded layout and visible dealing stack
+
+- Account profile links to Settings; totus confirmation uses suit glyphs without changing auction commands.
+- Share pending by-own claimant hand only with seated players and restore normal hand presentation on rejection. Preserve settlement, votes and completed tricks.
+- Keep authoritative equal-version defense cues over local marks and use downward cues on side hands. Closed hands and declarer access remain protected.
+- Fit the local hand within the remaining lower lane, preserving fixed table and center geometry. Keep the last-trick overlay translucent and concise.
+- Show a decorative shrinking deck during packet flights, 30 cards in the fake deal and 32 in the real deal. No new storage operations or provider changes.
+- Full CI and three-client acceptance required.

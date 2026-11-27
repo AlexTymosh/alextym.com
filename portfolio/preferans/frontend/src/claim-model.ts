@@ -11,7 +11,7 @@ export function validClaim(value:unknown, view:Record<string,unknown>):boolean {
   if(!value||typeof value!=="object"||!seat(view.my_seat))return false;
   const c=value as Claim;
   const own=c.defender_target!==undefined;
-  if(own&&(![1,2,3,4].includes(c.defender_target!)||c.seat!==view.declarer||!Array.isArray(c.awards)||c.awards.length!==3||!c.awards.every(n=>Number.isInteger(n)&&n>=0&&n<=10)||c.awards.reduce((a,b)=>a+b,0)!==c.awarded||!Array.isArray(c.voters)||c.voters.length!==1||!Array.isArray(c.cards)||c.cards.length!==0))return false;
+  if(own&&(![1,2,3,4].includes(c.defender_target!)||c.seat!==view.declarer||!Array.isArray(c.awards)||c.awards.length!==3||!c.awards.every(n=>Number.isInteger(n)&&n>=0&&n<=10)||c.awards.reduce((a,b)=>a+b,0)!==c.awarded||!Array.isArray(c.voters)||c.voters.length!==1||!Array.isArray(c.cards)))return false;
   if(!own&&c.awards!==undefined)return false;
   return seat(c.seat)&&["pending","accepted","rejected"].includes(c.status)&&seats(c.voters)&&c.voters.length>0&&!c.voters.includes(c.seat)&&
     seats(c.approved)&&c.approved.every(i=>c.voters.includes(i))&&

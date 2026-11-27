@@ -63,3 +63,9 @@
 .discardOverlay .replay>div { width:clamp(60px,11cqw,140px); }
 .discardOverlay .replay img { width:100%; height:auto; display:block; }
 .discardOverlay header button { background:#153a30b0; color:#fff4db; }
+
+.panel.lastTrickOverlay { background:rgb(20 49 39 / .18); border:0; box-shadow:none; text-shadow:0 1px 4px #000; }
+.lastTrickOverlay header { justify-content:center; text-align:center; }
+.lastTrickOverlay header>div { flex:1 1 100%; }
+.lastTrickOverlay header button { margin:auto; }
+.lastTrickOverlay .replay>div { text-align:center; }
