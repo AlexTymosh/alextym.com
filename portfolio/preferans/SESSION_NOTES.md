@@ -151,3 +151,11 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Move the counter to opponent avatar alarms, keep undo request/votes outside the menu and lobby policy in settings. Countdown follows server deadline and freezes on pause; custom policy multiplier is displayed accurately.
 - Optional hide-under-sheet discard stores only presentation metadata after a valid discard. The next start consumes it once, generates exactly one fresh authoritative 32-card deck, and shares a timestamp for a fake 30-back deal, complaint, recovery and real deal animation. The fake deal never creates cards, a result, a score change or another dealer rotation. Gameplay commands wait for the 9.5-second scene; no additional Firestore operations or recurring polling.
 - Full repository CI and three-client visual acceptance remain required.
+
+## PR34 - Table details and presentation polish
+
+- Correct passout vote copy; suffix dots on notebook entries, align zoom and tear controls, compact history and move accounting controls above the drawing. Larger translucent punch badges, shifted toward the centre along their existing diagonals; arrow directions and scoring unchanged.
+- Bare discard replay, eye glyphs, inline dark concession, compact undo next to claim, discard controls next to slots and content-sized reward choice.
+- Own-hand private card raises for all seated players except declarer discard selection, retaining the existing authorized defense hint channel. Dashed single growing activity ring.
+- Add local original procedural walnut, marble and leather material maps. Extend the synchronized hidden-discard scene to 11.9s with a two-second complaint and card discovery cue. Animate confirmed technical sheet disposal only on the live transition; no additional operations or score changes.
+- Full CI and three-client visual acceptance required.

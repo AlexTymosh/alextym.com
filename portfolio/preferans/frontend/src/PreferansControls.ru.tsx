@@ -52,13 +52,8 @@ export function PreferansControls({ view, profiles, busy, command }: {
   }
   const active = view.status === "playing";
   const vote = controls.undo;
-  if(!active||(!vote&&(!controls.can_request_undo||controls.paused)))return null;
+  if(!active||!vote)return null;
   return <section className={`${styles.controlPanel} ${styles.undoPanel}`} data-undo-vote={vote?"true":undefined} aria-label="Отмена действий">
-    {active && controls.can_request_undo && !controls.paused && !vote &&
-      <button type="button" disabled={busy} onClick={() => {
-        const answer = window.prompt("Почему отменить последний ход или ставку?", "Ошибся при выборе");
-        if (answer && answer.trim().length >= 5) command("undo_request", { reason: answer.trim() });
-      }}>Запросить отмену последнего действия</button>}
     {vote && <div className={styles.controlNote} role="group" aria-label="Голосование за отмену">
       <strong>Запрос на отмену: {vote.kind === "card_play" ? "карты" : "ставки"}</strong>
       <p>{names[vote.requester]}: {vote.reason}</p>

@@ -24,3 +24,8 @@ export function poolEntryText(values:readonly number[],index:number,target:numbe
 export function vistEquation(before:number,distributed:number):InkToken[] {
   return [{label:`${before} +`},{label:String(distributed),underline:true},{label:`= ${before+distributed}`}];
 }
+
+/** Running-balance notation: a full stop follows each entry, not precedes it. */
+export function notebookEntryLabel(value:string):string {
+  return `${value}.`;
+}

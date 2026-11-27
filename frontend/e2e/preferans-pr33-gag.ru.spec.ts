@@ -2,7 +2,7 @@ import { expect,test } from "@playwright/test";
 import { auctionMessage,awardedMessage } from "../../portfolio/preferans/frontend/src/play-status.ru";
 import { counterTarget,counterSeconds,gagPhase,GAG_TOTAL_MS,GAG_FAKE_MS } from "../../portfolio/preferans/frontend/src/gag-model";
 import { isRoomView,type RoomView } from "../../portfolio/preferans/frontend/src/game-model.ru";
-import { packNotebookRows } from "../../portfolio/preferans/frontend/src/notebook-layout";
+import { packNotebookRows, notebookEntryLabel } from "../../portfolio/preferans/frontend/src/notebook-layout";
 const base:RoomView={room_id:"a".repeat(32),version:10,game_id:"g",status:"playing",phase:"auction",my_seat:0,room_admin:false,occupied:[true,true,true],turn:1,controls:{paused:false,counter:null,undo:null,can_request_undo:false,adjustments:[]}};
 const score={pool:[0,0,0],hill:[0,0,0],vists:[[0,0,0],[0,0,0],[0,0,0]],closed:false,ruleset_hash:"test",passout_level:7};
 const pass={kind:"pass" as const,bid:null};
@@ -38,7 +38,7 @@ test("joke is time-bounded, private projections contain no cards",()=>{
   expect(isRoomView({...base,previous_passout:9})).toBe(false);
 });
 test("wider hill line keeps more entries and preserves order",()=>{
-  const tokens=[3,17,35,37,39].map((n,i)=>({label:`. ${n}`,latest:i===4}));
+  const tokens=[3,17,35,37,39,42].map((n,i)=>({label:notebookEntryLabel(String(n)),latest:i===5}));
   expect(packNotebookRows(tokens,176).length).toBeGreaterThan(1);
   expect(packNotebookRows(tokens,232)).toEqual([tokens]);
 });

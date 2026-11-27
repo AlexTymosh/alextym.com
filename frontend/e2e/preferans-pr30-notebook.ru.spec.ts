@@ -19,7 +19,7 @@ test("misere offer capability is limited to seated live players",()=>{
   expect(isRoomView({...base,can_offer_misere:true})).toBe(true);
   expect(isRoomView({...base,can_offer_misere:true,my_seat:null})).toBe(false);
   expect(isRoomView({...base,can_offer_misere:true,phase:"auction"})).toBe(false);
-  expect(claimVoteLabels({...base,is_passout:true},1).reject).toBe("Я против! (отэто я гоню...)");
+  expect(claimVoteLabels({...base,is_passout:true},1).reject).toBe("Я против! (вот это я гоню...)");
 });
 test("final hill amounts are validated and legacy reveal is rejected",()=>{
   const v:RoomView={...base,status:"closed",phase:"finished",final_settlement:{pairs:[[0,18,24],[-18,0,10],[-24,-10,0]],net:[42,-8,-34]},final_hill_vists:[0,10,20]};

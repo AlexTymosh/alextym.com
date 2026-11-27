@@ -2,8 +2,11 @@ import type { RoomView } from "./game-model.ru";
 import { actorSeat } from "./table-model";
 
 export const HIDE_DURATION_MS=1400;
-export const GAG_FAKE_MS=5600;
-export const GAG_TOTAL_MS=9500;
+export const GAG_MISSING_MS=3200;
+export const GAG_FOUND_MS=5200;
+export const GAG_RETURN_MS=6600;
+export const GAG_FAKE_MS=8000;
+export const GAG_TOTAL_MS=11900;
 export type GagMark={seat:number;at_ms:number};
 export function isGagMark(value:unknown):value is GagMark {
   if(!value||typeof value!=="object")return false;

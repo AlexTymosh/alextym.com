@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, DragEvent } from "react";
+import type { DragEvent } from "react";
 import {
   ApiError, adjustRoom, createRoom, invitation, joinRoom, newKey, roomView,
   sendCommand, settleRoom, startRoom,
@@ -16,12 +16,13 @@ import { PreferansControls } from "./PreferansControls.ru";
 import { ScoreAdjustment } from "./ScoreAdjustment.ru";
 import { LiveMediaControls, MediaSeatTile, useLiveMedia } from "./LiveMedia.ru";
 import { connectRealtime, type Presence } from "./realtime-client";
-import { canHint, sharedHint, hintKey, hintScope, type HintSender } from "./defense-hints";
+import { canHint, sharedHint, hintKey, hintScope, canRaiseOwn, ownRaiseScope, type HintSender } from "./defense-hints";
 import { pauseMessage, awardedMessage, auctionMessage } from "./play-status.ru";
 import { CounterDisplay } from "./CounterDisplay.ru";
 import { useDiscardScene } from "./HiddenDiscardScene.ru";
 import { gagPhase } from "./gag-model";
 import { CardArtwork } from "./CardArtwork.ru";
+import { EyeIcon, UndoIcon } from "./GameIcons";
 import { GameTable } from "./GameTable.ru";
 import { SharedRoom, SharedObjects, type SharedCommand } from "./SharedRoom.ru";
 import { replayMoveAllowed, type OverlayKind } from "./presentation-model";
@@ -87,9 +88,9 @@ function CardFace({ card, selected, playable, pendingPlay, fromWidow, raised, on
   );
 }
 
-function ActionPanel({ view, busy, selectedCards, command, profiles,
+function ActionPanel({ view, busy, command, profiles,
   regularRoute, setRegularRoute, onStart, onSettle }: {
-  view: RoomView; busy: boolean; selectedCards: Card[]; profiles:SeatProfile[]|null;
+  view: RoomView; busy: boolean; profiles:SeatProfile[]|null;
   command: (action: CommandAction, args?: Record<string, unknown>) => void;
   regularRoute: "pool" | "hill_first"; setRegularRoute: (x: "pool" | "hill_first") => void;
   onStart: () => void; onSettle: () => void;
@@ -121,24 +122,21 @@ function ActionPanel({ view, busy, selectedCards, command, profiles,
     if(!view.settlement_options)return view.room_admin?<button type="button" className={styles.primary} disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} onClick={onSettle}>Рассчитать раздачу</button>:null;
     return <section className={styles.actionPanel} aria-label="Сдача завершена">
       {view.my_seat===view.declarer ? <>
-        {view.settlement_options?.regular_choice && <label className={styles.field}>Куда записать выигрыш
-          <select value={regularRoute} onChange={(e: ChangeEvent<HTMLSelectElement>) => setRegularRoute(e.target.value as "pool" | "hill_first")}>
-            <option value="pool">Записать соперникам в пулю</option><option value="hill_first">Списать с горы</option></select></label>}
+        {view.settlement_options?.regular_choice && <div className={styles.rewardRoute} role="group" aria-label="Куда записать выигрыш">
+          <strong>Куда записать выигрыш</strong><div>
+            <button type="button" disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} aria-pressed={regularRoute==="pool"} onClick={()=>setRegularRoute("pool")}>Записать соперникам в пулю</button>
+            <button type="button" disabled={busy||Boolean(view.controls?.paused||view.controls?.undo)} aria-pressed={regularRoute==="hill_first"} onClick={()=>setRegularRoute("hill_first")}>Списать с горы</button>
+          </div></div>}
         <button type="button" disabled={busy || Boolean(view.controls?.paused || view.controls?.undo)} className={styles.primary} onClick={onSettle}>Рассчитать раздачу</button>
       </> : null}
     </section>;
   }
   if (view.status === "archived" || view.status === "closed") return null;
   if (view.phase === "misere_offer") return null;
-  if (!myTurn || view.phase === "play" || view.phase === "opening_lead") return null;
+  if (!myTurn || view.phase === "play" || view.phase === "opening_lead" || view.phase === "discard") return null;
   return <section className={`${styles.actionPanel} ${styles.compactAction}`} aria-label="Игровое действие">
     {view.phase === "auction" && <>
       <BidPanel key={`${view.game_id}:auction`} view={view} busy={busy} command={command}/>
-    </>}
-    {view.phase === "discard" && <>
-      <button type="button" className={styles.primary} disabled={busy || selectedCards.length !== 2}
-        onClick={() => command("discard", { cards: selectedCards })}>Снести две карты</button>
-      <button type="button" disabled={busy||selectedCards.length!==2} onClick={()=>command("discard",{cards:selectedCards,hide_under_sheet:true})}>Спрятать надежно</button>
     </>}
     {view.phase === "declare" && <>
       <BidPanel key={`${view.game_id}:declare`} view={view} busy={busy} command={command}/>
@@ -168,6 +166,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const [view, setView] = useState<RoomView | null>(null);
   const hintSender=useRef<{room:string;send:HintSender}|null>(null);
   const [localHints,setLocalHints]=useState<{scope:string;keys:string[]}>({scope:"",keys:[]});
+  const [ownRaised,setOwnRaised]=useState<{scope:string;keys:string[]}>({scope:"",keys:[]});
   const [invited, setInvited] = useState<RoomInvitation | null>(null);
   const viewRef = useRef<RoomView | null>(null);
   const serverOffset = useRef(0);
@@ -220,9 +219,9 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const selectedTheme=localTableTheme==="room"?view?.table_theme??"felt":localTableTheme;
   const opacity=effectiveOpacity(selectedTheme,transparency);
   const surfaceKey=preferenceScope?`preferans:surface:${preferenceScope}`:null;
-  const [surface,setSurface]=useState<"pine"|"cloth"|"plastic"|"green"|"blue"|"glass">("pine");
+  const [surface,setSurface]=useState<"pine"|"cloth"|"plastic"|"green"|"blue"|"glass"|"walnut"|"marble"|"leather">("pine");
   const [tableTransparency,setTableTransparency]=useState(0);
-  useEffect(()=>{if(surfaceKey)try{const raw=localStorage.getItem(surfaceKey);if(raw==="pine"||raw==="cloth"||raw==="plastic"||raw==="green"||raw==="blue"||raw==="glass")setSurface(raw);else setSurface("pine");setTableTransparency(parseTransparency(localStorage.getItem(surfaceKey+":opacity"))??0);}catch{/* Optional preference. */}},[surfaceKey]);
+  useEffect(()=>{if(surfaceKey)try{const raw=localStorage.getItem(surfaceKey);if(raw==="pine"||raw==="cloth"||raw==="plastic"||raw==="green"||raw==="blue"||raw==="glass"||raw==="walnut"||raw==="marble"||raw==="leather")setSurface(raw);else setSurface("pine");setTableTransparency(parseTransparency(localStorage.getItem(surfaceKey+":opacity"))??0);}catch{/* Optional preference. */}},[surfaceKey]);
   const roundKey=preferenceScope?`preferans:round-table:${preferenceScope}`:null;
   const [roundTable,setRoundTable]=useState(true);
   useEffect(()=>{if(roundKey)try{setRoundTable(localStorage.getItem(roundKey)!=="off");}catch{/* Optional preference. */}},[roundKey]);
@@ -517,13 +516,26 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     setPendingPlay({room:view.room_id,game:view.game_id,version:view.version,owner,card});
     command("play",{card,owner});
   };
-  const raised=(card:Card,owner:number)=>Boolean(view&&canHint(view,owner,card)&&(view.defense_hints?.some(mark=>mark.owner===owner&&cardId(mark.card)===cardId(card))||localHints.scope===hintScope(view)&&localHints.keys.includes(hintKey(owner,card))));
+  const raised=(card:Card,owner:number)=>Boolean(view&&(
+    canHint(view,owner,card)&&(view.defense_hints?.some(mark=>mark.owner===owner&&cardId(mark.card)===cardId(card))||localHints.scope===hintScope(view)&&localHints.keys.includes(hintKey(owner,card)))||
+    canRaiseOwn(view,owner,card)&&ownRaised.scope===ownRaiseScope(view)&&ownRaised.keys.includes(hintKey(owner,card))));
   const toggleHint=(card:Card,owner:number)=>{
     // A delayed single click must not act on a newer deal or turn.
     if(!view||viewRef.current?.version!==view.version||viewRef.current?.game_id!==view.game_id||viewRef.current?.room_id!==view.room_id||!canHint(view,owner,card))return;
     const key=hintKey(owner,card),scope=hintScope(view);
     if(view.game_id&&sharedHint(view,owner,card)&&hintSender.current?.room===view.room_id&&hintSender.current.send({game_id:view.game_id,version:view.version,owner,card,raised:!raised(card,owner)}))return;
     setLocalHints(old=>{const keys=old.scope===scope?old.keys:[];return {scope,keys:keys.includes(key)?keys.filter(k=>k!==key):[...keys,key]};});
+  };
+  const toggleOwnRaise=(card:Card,owner:number)=>{
+    const current=viewRef.current;
+    if(!view||!current||ownRaiseScope(current)!==ownRaiseScope(view)||!canRaiseOwn(current,owner,card))return;
+    const key=hintKey(owner,card),scope=ownRaiseScope(current);
+    // Only the pre-existing authorization path can send an already-visible hint.
+    if(sharedHint(current,owner,card)&&current.version===view.version&&current.game_id&&hintSender.current?.room===current.room_id&&hintSender.current.send({game_id:current.game_id,version:current.version,owner,card,raised:!raised(card,owner)})){
+      setOwnRaised(old=>old.scope===scope?{scope,keys:old.keys.filter(k=>k!==key)}:old);
+      return;
+    }
+    setOwnRaised(old=>{const keys=old.scope===scope?old.keys:[];return {scope,keys:keys.includes(key)?keys.filter(k=>k!==key):[...keys,key]};});
   };
   const renderOpenCard = (card: Card, seat: Seat) => {
     const playable = Boolean(isPlay && canInteractCards && view?.turn === seat && legal.has(cardId(card)));
@@ -567,7 +579,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
     <label><input type="checkbox" checked={roundTable} onChange={e=>changeRoundTable(e.target.checked)}/> Круглый стол (вид сверху)</label>
-    <CycleSetting<typeof surface> label="Поверхность круглого стола" value={surface} options={[["pine","Сосна"],["cloth","Скатерть"],["plastic","Советский пластик"],["green","Зелёная"],["blue","Синяя"],["glass","Стекло"]]} onChange={value=>{setSurface(value);if(surfaceKey)try{localStorage.setItem(surfaceKey,value);}catch{/* Optional preference. */}}}/>
+    <CycleSetting<typeof surface> label="Поверхность круглого стола" value={surface} options={[["pine","Сосна"],["cloth","Скатерть"],["plastic","Советский пластик"],["green","Зелёная"],["blue","Синяя"],["glass","Стекло"],["walnut","Тёмный орех"],["marble","Мрамор"],["leather","Тёмная кожа"]]} onChange={value=>{setSurface(value);if(surfaceKey)try{localStorage.setItem(surfaceKey,value);}catch{/* Optional preference. */}}}/>
     <label>Прозрачность стола: {tableTransparency}% <input type="range" min={0} max={75} step={5} value={tableTransparency} onChange={e=>{const value=Number(e.target.value);setTableTransparency(value);if(surfaceKey)try{localStorage.setItem(surfaceKey+":opacity",String(value));}catch{/* Optional preference. */}}}/></label>
     <label className={styles.transparencySetting}>Прозрачность поля: {Math.round((1-opacity)*100)}% <input type="range" min={0} max={75} step={5} value={Math.round((1-opacity)*100)} onChange={e=>changeTransparency(Number(e.target.value))}/></label>
     {view?.room_admin&&["lobby","playing","between","awaiting_settlement"].includes(view.status)&&<CycleSetting<TableTheme> label="Поле комнаты по умолчанию" value={view.table_theme==="glass"?"felt":view.table_theme??"felt"} disabled={busy||Boolean(view.controls?.paused)} options={[["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={theme=>command("table_theme",{theme})}/>}
@@ -578,20 +590,25 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const ownHand = view && <div className={styles.handsPanel}>
     {draft&&<div className={styles.discardSlots} aria-label="Зона сноса" onDragOver={e=>e.preventDefault()} onDrop={discardDrop}>
       {[0,1].map(i=>{const card=chosenCards[i];return <button key={i} type="button" className={styles.discardSlot} data-pointer-drag="discard" aria-label={card?`Вернуть карту ${cardLabel(card)} в руку`:"Место для сноса"} disabled={!card||!canInteractCards} draggable={!!card&&canInteractCards} onDragStart={e=>card&&beginDrag(e,"discard",card)} onDragEnd={endDrag} onClick={()=>card&&setSelected(old=>changeDraft(old,cardId(card),false))}>{card?<CardArtwork card={peekDiscard?card:undefined}/>:"+"}</button>;})}
-      <button type="button" aria-label="Посмотреть выбранный снос" aria-pressed={peekDiscard} onClick={()=>setPeekDiscard(v=>!v)}>◉</button>
+      <button type="button" aria-label="Посмотреть выбранный снос" aria-pressed={peekDiscard} onClick={()=>setPeekDiscard(v=>!v)}><EyeIcon/></button>
+      <div className={styles.discardActions}>
+        <button type="button" className={styles.primary} disabled={!canInteractCards||chosenCards.length!==2} onClick={()=>command("discard",{cards:chosenCards})}>Снести две карты</button>
+        <button type="button" disabled={!canInteractCards||chosenCards.length!==2} onClick={()=>command("discard",{cards:chosenCards,hide_under_sheet:true})}>Спрятать надежно</button>
+      </div>
     </div>}
-    {!draft&&view.hidden_discard&&view.own_discard?.length===2&&<div className={styles.discardSlots} aria-label="Спрятанный снос"><button type="button" aria-label="Посмотреть спрятанный снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}>◉</button>{!view.presentation?.enabled&&peekDiscard&&view.own_discard.map((card,i)=><span className={styles.discardSlot} key={i}><CardArtwork card={card}/></span>)}</div>}
+    {!draft&&view.hidden_discard&&view.own_discard?.length===2&&<div className={styles.discardSlots} aria-label="Спрятанный снос"><button type="button" aria-label="Посмотреть спрятанный снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><EyeIcon/></button>{!view.presentation?.enabled&&peekDiscard&&view.own_discard.map((card,i)=><span className={styles.discardSlot} key={i}><CardArtwork card={card}/></span>)}</div>}
     {!draft&&!view.hidden_discard&&view.own_discard?.length===2&&<div className={styles.discardSlots} aria-label="Сброшенные карты">
       {view.own_discard.map((c,i)=><button type="button" className={styles.discardSlot} key={i} aria-label="Посмотреть свой снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><CardArtwork card={!view.presentation?.enabled&&peekDiscard?c:undefined}/></button>)}
+      <button type="button" aria-label="Показать снос" onClick={()=>view.presentation?.enabled?openShared("discard_replay"):setPeekDiscard(v=>!v)}><EyeIcon/></button>
     </div>}
     <div className={styles.handRow} aria-label="Игровые карты" onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e)}>
       {visibleHand.map((card,index)=><div data-hand-card="true" data-suit-break={index>0&&visibleHand[index-1].suit!==card.suit?"true":undefined} data-from-widow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))?"true":undefined} className={styles.cardWithSort} key={cardId(card)}>
-        <CardFace card={card} selected={false} raised={view.my_seat!==null&&raised(card,view.my_seat)} onHint={view.my_seat!==null&&canHint(view,view.my_seat,card)?()=>toggleHint(card,view.my_seat!):undefined} fromWidow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
+        <CardFace card={card} selected={false} raised={view.my_seat!==null&&raised(card,view.my_seat)} onHint={!busy&&!discardScene.phase&&view.my_seat!==null&&canRaiseOwn(view,view.my_seat,card)?()=>toggleOwnRaise(card,view.my_seat!):undefined} fromWidow={draft&&view.widow?.some(c=>cardId(c)===cardId(card))} pendingPlay={!!localPlay&&localPlay.owner===view.my_seat&&cardId(localPlay.card)===cardId(card)} playable={ownPlayable&&(draft||legal.has(cardId(card)))}
           onClick={ownPlayable&&draft?()=>onCardSelect(card):undefined}
           onDoubleClick={isPlay&&ownPlayable&&legal.has(cardId(card))?()=>{if(view.my_seat!==null)playNow(card,view.my_seat);}:undefined}
           onDragStart={e=>beginDrag(e,"card",card,view.my_seat??undefined)} onDragEnd={endDrag}
           onDragOver={e=>e.preventDefault()} onDrop={e=>handDrop(e,cardId(card))}
-          onKeyDown={e=>{if(isPlay&&ownPlayable&&legal.has(cardId(card))&&(e.key==="Enter"||e.key===" ")){e.preventDefault();if(view.my_seat!=null)playNow(card,view.my_seat);return;}if(e.altKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){const target=visibleHand[index+(e.key==="ArrowLeft"?-1:1)];if(target){e.preventDefault();reorder(cardId(card),cardId(target));}}}}/>
+          onKeyDown={e=>{if(e.altKey&&e.key==="ArrowUp"&&view.my_seat!==null&&canRaiseOwn(view,view.my_seat,card)){e.preventDefault();toggleOwnRaise(card,view.my_seat);return;}if(isPlay&&ownPlayable&&legal.has(cardId(card))&&(e.key==="Enter"||e.key===" ")){e.preventDefault();if(view.my_seat!=null)playNow(card,view.my_seat);return;}if(e.altKey&&(e.key==="ArrowLeft"||e.key==="ArrowRight")){const target=visibleHand[index+(e.key==="ArrowLeft"?-1:1)];if(target){e.preventDefault();reorder(cardId(card),cardId(target));}}}}/>
       </div>)}
       {!visibleHand.length&&view.status==="playing"&&<span className={styles.subtle}>Нет карт для отображения</span>}
     </div>
@@ -625,8 +642,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const actions = view && <>
     {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
     {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} profiles={profiles} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
-    {!view.controls?.undo&&view.status!=="lobby"&&<PreferansControls view={view} profiles={profiles} busy={busy||!!discardScene.phase} command={command}/>}
-    <ActionPanel view={view} busy={busy||!!discardScene.phase} selectedCards={chosenCards} profiles={profiles}
+    <ActionPanel view={view} busy={busy||!!discardScene.phase} profiles={profiles}
       command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
       onStart={start} onSettle={settle} />
   </>;
@@ -665,7 +681,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}
               claimPanel={<><ClaimPanel view={view} profiles={profiles} busy={busy} command={command}/><MisereOfferPanel view={view} profiles={profiles} busy={busy} command={command} sortMode={sortMode}/></>}
-              claimButton={(view.can_offer_misere&&view.phase==="play"||view.can_claim&&view.claim?.status!=="pending")?<>{view.can_offer_misere&&view.phase==="play"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("misere_offer")}>{view.my_seat===view.declarer?"Показать карты и предложить что я сыграл":`Согласен, что ${playerName(view.declarer??0)} сыграл мизер`}</button>:null}{view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:null}</>:undefined}
+              claimButton={(view.controls?.can_request_undo&&!view.controls.paused&&!view.controls.undo||view.can_offer_misere&&view.phase==="play"||view.can_claim&&view.claim?.status!=="pending")?<>{view.controls?.can_request_undo&&!view.controls.paused&&!view.controls.undo&&<button type="button" className={styles.undoIconButton} aria-label="Запросить отмену последнего действия" title="Запросить отмену последнего действия" disabled={busy||!!discardScene.phase||view.claim?.status==="pending"} onClick={()=>{const answer=window.prompt("Почему отменить последний ход или ставку?","Ошибся при выборе");if(answer&&answer.trim().length>=5)command("undo_request",{reason:answer.trim()});}}><UndoIcon/></button>}{view.can_offer_misere&&view.phase==="play"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("misere_offer")}>{view.my_seat===view.declarer?"Показать карты и предложить что я сыграл":`Согласен, что ${playerName(view.declarer??0)} сыграл мизер`}</button>:null}{view.can_claim&&view.claim?.status!=="pending"?<button type="button" disabled={busy||!!view.controls?.paused||!!view.controls?.undo} onClick={()=>command("claim_offer")}>Все мои</button>:null}</>:undefined}
               hand={ownHand} handCount={visibleHand.length} handBreaks={visibleHand.filter((card,index)=>index>0&&visibleHand[index-1].suit!==card.suit).length} actions={actions} renderOpenCard={renderOpenCard} onTableDrop={tableDrop} onSeatDrop={seatDrop}
               deck={dealerFor(view)!==null?<Deck enabled={!busy&&view.my_seat===dealerFor(view)&&(mayStart(view)||[0,1,2].some(seat=>mayPassDeck(view,seat)))} canDeal={mayStart(view)} start={start} drag={e=>beginDrag(e,"deck")} end={endDrag}/>:undefined}
               localControls={LIVE_MEDIA_ENABLED&&!archived&&view.my_seat!==null?<div className={styles.ownMediaButtons}>{!liveMedia.state.joined?<button type="button" disabled={!liveMedia.available||liveMedia.state.joining} onClick={liveMedia.join} title="Вход в звонок с выключенными камерой и микрофоном">Связь</button>:<><button type="button" aria-label={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} aria-pressed={liveMedia.state.audio} disabled={liveMedia.state.changing} title={liveMedia.state.audio?"Выключить микрофон":"Включить микрофон"} onClick={()=>liveMedia.toggle("audio")}>{liveMedia.state.audio?"🎙":"🔇"}</button><button type="button" aria-label={liveMedia.state.video?"Выключить камеру":"Включить камеру"} aria-pressed={liveMedia.state.video} disabled={liveMedia.state.changing} title={liveMedia.state.video?"Выключить камеру":"Включить камеру"} onClick={()=>liveMedia.toggle("video")}>{liveMedia.state.video?"▣":"⊘"}</button><button type="button" aria-label="Выйти из звонка" onClick={liveMedia.leave}>×</button></>}</div>:undefined}

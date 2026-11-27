@@ -660,9 +660,9 @@
 .table[data-gag-active="true"] [data-table-actions],.table[data-gag-active="true"] .claimButton { visibility:hidden; pointer-events:none; }
 .table[data-gag-fake="true"] .seat>.callBubble,.table[data-gag-fake="true"] .opponentHand,.table[data-gag-fake="true"] .ownHand,.table[data-gag-fake="true"] .widow,.table[data-gag-fake="true"] .fieldStatus { visibility:hidden; }
 .table[data-hide-flight="true"] .tablePaper { animation:liftForHide 1.4s var(--gag-paper-offset,0ms) ease-in-out both; }
-.table[data-gag-fake="true"] .tablePaper { animation:liftForRedeal 5.6s var(--gag-paper-offset,0ms) ease-in-out both; }
+.table[data-gag-fake="true"] .tablePaper { animation:liftForRedeal 8s var(--gag-paper-offset,0ms) ease-in-out both; }
 @keyframes liftForHide {0%,100%{transform:rotate(-11deg)} 25%,75%{transform:translateY(-25%) rotate(-20deg);}}
-@keyframes liftForRedeal {0%,70%,100%{transform:rotate(-11deg)} 78%,91%{transform:translateY(-25%) rotate(-20deg)}}
+@keyframes liftForRedeal {0%,64%,100%{transform:rotate(-11deg)} 69%,91%{transform:translateY(-48%) rotate(-27deg)}}
 .table .gagScene { position:absolute; inset:0; z-index:4; pointer-events:none; }
 .table .gagScene>span { position:absolute; display:block; width:clamp(15px,3.5cqw,56px); aspect-ratio:2/3; transform:translate(-50%,-50%); }
 .table .gagScene img { display:block; width:100%; height:100%; }
@@ -671,7 +671,43 @@
 .table .gagDealCard { left:50%;top:42%; animation:gagDeal .7s var(--deal-delay) both ease-out,gagReturn .8s var(--return-delay) forwards ease-in; }
 @keyframes gagDeal {0%{left:50%;top:42%;opacity:0} 12%{opacity:1} 100%{left:var(--to-x);top:var(--to-y);opacity:1}}
 @keyframes gagReturn {0%{left:var(--to-x);top:var(--to-y);opacity:1} 90%{opacity:1} 100%{left:50%;top:42%;opacity:0}}
-.table .gagFoundCard {left:var(--paper-x,9%);top:var(--paper-y,62%);animation:gagFound 5.6s var(--gag-offset) both ease-in-out;}
-@keyframes gagFound {0%,75%{opacity:0} 79%{opacity:1;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:var(--paper-y,62%)} 91%{opacity:1;left:50%;top:42%} 100%{opacity:0;left:50%;top:42%}}
+.table .gagFoundCard {left:var(--paper-x,9%);top:var(--paper-y,62%);animation:gagFound 8s var(--gag-offset) both ease-in-out;}
+@keyframes gagFound {
+  0%,64%{opacity:0;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.22)}
+  66%,82.5%{opacity:1;left:calc(var(--paper-x,9%) + var(--found-offset,0%));top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.22)}
+  96%{opacity:1;left:50%;top:42%} 100%{opacity:0;left:50%;top:42%}
+}
 .table .gagMessage { position:absolute; left:50%;top:45%;transform:translate(-50%,-50%);width:min(65%,620px);font-size:clamp(.85rem,2cqw,1.65rem);text-align:center;color:#fff0ce;text-shadow:0 2px 5px #000; }
 @media(prefers-reduced-motion:reduce) { .table .gagScene>span { display:none; } .table[data-hide-flight="true"] .tablePaper,.table[data-gag-fake="true"] .tablePaper { animation:none; } }
+
+/* PR34: compact reward choice, original local material maps, and sheet disposal. */
+.table .widowEye svg { display:block; width:18px; height:18px; }
+.table[data-center-choice="true"] .trickField .fieldStatus { inset:4% 0; }
+.table .settlementChoice { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.45rem; width:max-content; max-width:min(100%,360px); max-height:100%; overflow:auto; padding:.6rem .8rem; border:1px solid #ad976a; border-radius:.65rem; background:#16352be8; text-align:center; pointer-events:auto; }
+.table .fieldStatus .settlementChoice section { width:max-content; max-width:100%; border:0; background:transparent; padding:0; text-align:center; box-shadow:none; }
+.table .settlementChoice section>label { align-items:center; text-align:center; }
+.table .settlementChoice section>button { display:block; margin:.25rem auto 0; }
+.table .settlementChoice section>div { display:flex; justify-content:center; flex-wrap:wrap; gap:.3rem; }
+.table .settlementChoice button { white-space:normal; }
+.table[data-table-surface="walnut"] { --material:url('./materials/walnut.jpg'); }
+.table[data-table-surface="marble"] { --material:url('./materials/marble.jpg'); }
+.table[data-table-surface="leather"] { --material:url('./materials/leather.jpg'); }
+.table[data-round-table="true"][data-table-surface="walnut"] .trickField { border-color:#65442b; outline-color:#b08962; }
+.table[data-round-table="true"][data-table-surface="marble"] .trickField { border-color:#a69b90; outline-color:#ded9c9; }
+.table[data-round-table="true"][data-table-surface="leather"] .trickField { border-color:#422c25; outline-color:#a47b58; }
+.table .tablePaper[data-sheet-discarded="true"] { visibility:hidden; pointer-events:none; }
+.table .sheetTearScene { position:absolute; inset:0; z-index:21; pointer-events:none; overflow:hidden; }
+.table .tearWalker { position:absolute; left:var(--tear-from-x); top:var(--tear-from-y); width:clamp(32px,5cqw,74px); height:auto; color:#f3d9a0; filter:drop-shadow(0 2px 3px #000); animation:tearWalk 3.8s linear both; }
+.table .tearWalker .walkerLeg { transform-origin:50% 55%; animation:tearStep .36s ease-in-out infinite alternate; }
+.table .tearWalker .walkerLeg:nth-of-type(2) { animation-delay:-.36s; }
+@keyframes tearStep { from{transform:rotate(-15deg)} to{transform:rotate(15deg)} }
+@keyframes tearWalk { 0%{opacity:0;left:var(--tear-from-x);top:var(--tear-from-y);transform:translate(-50%,-80%) scale(.65)} 8%{opacity:1} 34%,53%{opacity:1;left:var(--tear-x);top:var(--tear-y);transform:translate(-100%,-50%)} 62%,80%{opacity:1;left:var(--tear-x);top:var(--tear-y);transform:translate(-100%,-50%) rotate(-13deg)} 100%{opacity:0;left:var(--tear-x);top:var(--tear-y);transform:translate(-100%,-50%)} }
+.table .tearPiece { position:absolute; left:var(--tear-x); top:var(--tear-y); width:var(--tear-w); transform:translate(-50%,-50%) rotate(-11deg); animation:tearPieceFlight 3.8s ease-in-out both; }
+@keyframes tearPieceFlight { 0%,32%{opacity:1;transform:translate(-50%,-50%) rotate(-11deg)} 43%{opacity:1;transform:translate(calc(-50% + var(--tear-dx)),calc(-50% + var(--tear-dy))) rotate(var(--tear-angle))} 62%{opacity:1;transform:translate(-50%,-50%) rotate(70deg) scale(.24,.2)} 80%{opacity:1;transform:translate(-50%,-65%) rotate(120deg) scale(.2)} 100%{opacity:0;left:110%;top:28%;transform:translate(-50%,-50%) rotate(460deg) scale(.15)} }
+@media(prefers-reduced-motion:reduce) { .table .sheetTearScene { display:none; } }
+
+/* The complaint is readable for two seconds, before the paper reveal. */
+.table .gagScene[data-redeal-stage="missing"] .gagMessage { font-size:clamp(1rem,2.5cqw,2.05rem); color:#d6a33c; text-shadow:0 2px 5px #000,0 0 2px #000; }
+.table .gagFoundHint { position:absolute; display:flex; align-items:flex-start; left:calc(var(--paper-x,9%) + var(--paper-w,9%)*.25); top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.16); transform:translateY(-45%); color:#e7bf62; text-shadow:0 1px 3px #000; font-size:clamp(.8rem,1.6cqw,1.3rem); white-space:nowrap; }
+.table .gagFoundHint svg { width:clamp(24px,5cqw,64px); height:auto; flex:none; }
+@media(prefers-reduced-motion:reduce) { .table .gagFoundHint svg { display:none; } }
