@@ -346,19 +346,27 @@
 /* PR40: local hand fits the available grid lane; side cues move downward. */
 .tableRoot [data-position="left"] .playingCard[data-defense-raised="true"]:not([data-pointer-dragging="true"]),
 .tableRoot [data-position="right"] .playingCard[data-defense-raised="true"]:not([data-pointer-dragging="true"]) { transform:translateY(18%)!important; }
-.tableRoot [data-own-hand="true"] .handsPanel { height:100%; flex:1 1 0; min-height:0; display:flex; flex-direction:column; gap:.2rem; }
+.tableRoot [data-own-hand="true"] .handsPanel { height:auto; flex:0 1 auto; min-height:0; max-height:100%; display:flex; flex-direction:column; gap:.35rem; }
 .tableRoot [data-own-hand="true"] .handsPanel[data-discard-inline="true"] { flex-direction:row-reverse; align-items:stretch; gap:.35rem; }
-.tableRoot [data-own-hand="true"] .handsPanel[data-discard-inline="true"]>.declareRow { flex:0 1 auto; max-width:44%; align-self:end; }
+.tableRoot [data-own-hand="true"] .handsPanel[data-discard-inline="true"]>.declareRow { flex:0 1 auto; max-width:44%; max-height:100%; align-self:end; overflow:auto; }
 .tableRoot [data-own-hand="true"] .handsPanel:not([data-discard-inline="true"])>.declareRow,
-.tableRoot [data-own-hand="true"] .handsPanel>.discardSlots { flex:0 1 auto; min-height:0; max-height:42%; overflow:auto; }
+.tableRoot [data-own-hand="true"] .handsPanel>.discardSlots { flex:0 1 auto; min-height:0; max-height:calc(var(--play-height,500px)*.19); overflow:auto; }
+.tableRoot [data-own-hand="true"] .handsPanel>.discardSlots { margin:0; }
 .tableRoot [data-own-hand="true"] .discardSlot { width:min(var(--side-w,50px),calc(var(--play-height,500px)*.075)); flex:none; }
 .tableRoot [data-own-hand="true"] .discardReviewNote { max-height:2.5em; overflow:auto; }
 .tableRoot [data-own-hand="true"] .handRow {
-  flex:1 1 0; min-height:0; min-width:0; width:100%; box-sizing:border-box;
+  --hand-row-ratio:1.5;
+  --hand-card-limit:calc(min(13.5dvh,calc(var(--play-height,500px)*.18),140px)*var(--table-zoom,1));
+  flex:0 1 auto; min-height:0; min-width:0; width:100%; box-sizing:border-box;
+  aspect-ratio:var(--hand-units,7.46)/var(--hand-row-ratio);
+  max-height:calc(var(--hand-card-limit)*var(--hand-row-ratio));
   container-type:size; align-items:flex-end; justify-content:flex-start; margin:0; padding:0; overflow:visible;
 }
+/* Size the row from its card geometry; shrink it only when the lane is full. */
+.tableRoot [data-own-hand="true"] .handRow:has([data-defense-raised="true"]) { --hand-row-ratio:1.77; }
+.tableRoot [data-own-hand="true"] .handsPanel[data-discard-inline="true"]>.handRow { flex:1 1 0; align-self:end; }
 .tableRoot [data-own-hand="true"] .cardWithSort {
-  --fitted-card-w:max(1px,min(calc(min(13.5dvh,calc(var(--play-height,500px)*.18),140px)*var(--table-zoom,1)),calc(100cqw / var(--hand-units,7.46)),calc(100cqh / 1.8)));
+  --fitted-card-w:max(1px,min(var(--hand-card-limit),calc(100cqw / var(--hand-units,7.46)),calc(100cqh / var(--hand-row-ratio))));
   width:var(--fitted-card-w); flex:0 0 var(--fitted-card-w);
 }
 .tableRoot [data-own-hand="true"] .cardWithSort+.cardWithSort { margin-left:calc(var(--fitted-card-w)*-.62); }
