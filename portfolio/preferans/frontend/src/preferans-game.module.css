@@ -328,7 +328,7 @@
 /* PR37: private discard review and contract selection share the same row. */
 .tableRoot .sheetDrama { font-size:clamp(1.2rem,3vw,2.49rem); }
 .tableRoot .sheetDrama p { margin:0; }
-.tableRoot .sheetDrama p+p { margin-top:1em; }
+.tableRoot .sheetDrama p+p { margin-top:1.35em; }
 .widowLabel { display:inline-flex; align-items:center; justify-content:center; padding:.3em .2em; font-size:clamp(6.25px,calc(var(--card-w,65px)*.13125),16.25px); text-align:center; }
 .tableRoot .declareRow { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; min-width:0; }
 .tableRoot .declareBids { flex:1 1 auto; min-width:0; overflow:auto; max-height:calc(var(--play-height,500px)*.24); }

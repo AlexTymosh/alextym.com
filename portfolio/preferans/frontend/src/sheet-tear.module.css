@@ -1,0 +1,21 @@
+.scene{position:absolute;inset:0;z-index:21;pointer-events:none;overflow:hidden;--paper-x:10%;--paper-y:62%;--paper-w:10cqw;--avatar-x:50%;--avatar-y:80%;--scene-ms:6800ms;--person-w:clamp(64px,12cqw,160px);--stand-x:calc(var(--paper-x) + var(--person-w)*.42);--stand-y:calc(var(--paper-y) + var(--person-w)*.12);--lift-y:calc(var(--paper-y) - var(--person-w)*.12)}
+.walker{position:absolute;left:var(--avatar-x);top:var(--avatar-y);width:var(--person-w);height:auto;z-index:2;animation:walk var(--scene-ms) linear both;filter:drop-shadow(0 3px 4px #0008)}
+.character{display:block;width:100%;height:auto;transform-origin:center;animation:face var(--scene-ms) linear both}
+.legBack,.legFront{transform-box:fill-box;transform-origin:50% 0%;animation:step var(--scene-ms) linear both}
+.legBack{animation-name:stepBack}
+.armFront,.armBack{transform-box:fill-box;transform-origin:90% 15%;animation:arms var(--scene-ms) linear both}
+.armBack{animation-name:backArms}
+.paper,.piece{position:absolute;left:var(--paper-x);top:var(--paper-y);width:var(--paper-w);transform:translate(-50%,-50%) rotate(-11deg);z-index:3}
+.paper{animation:paper var(--scene-ms) linear both}
+.piece{opacity:0;animation:pieces var(--scene-ms) linear both}
+.ball{position:absolute;left:var(--paper-x);top:var(--lift-y);width:clamp(19px,3.2cqw,42px);height:auto;z-index:4;animation:ball var(--scene-ms) linear both}
+@keyframes walk{0%{opacity:0;left:var(--avatar-x);top:var(--avatar-y);transform:translate(-50%,-50%) scale(.16)}5%{opacity:1;transform:translate(-50%,-50%) scale(.42)}35%{opacity:1;left:var(--stand-x);top:var(--stand-y);transform:translate(-50%,-50%) scale(1)}39%,78%{opacity:1;left:var(--stand-x);top:var(--stand-y);transform:translate(-50%,-50%) scale(1)}96%{opacity:1;left:var(--avatar-x);top:var(--avatar-y);transform:translate(-50%,-50%) scale(.35)}100%{opacity:0;left:var(--avatar-x);top:var(--avatar-y);transform:translate(-50%,-50%) scale(.05)}}
+@keyframes face{0%,33%{transform:scaleX(var(--facing,1))}35%,79%{transform:scaleX(1)}80%,100%{transform:scaleX(calc(-1 * var(--facing,1)))}}
+@keyframes step{0%,35%,39%,78%,100%{transform:rotate(0)}8%,20%,32%,84%,94%{transform:rotate(21deg)}14%,26%,89%,98%{transform:rotate(-21deg)}}
+@keyframes stepBack{0%,35%,39%,78%,100%{transform:rotate(0)}8%,20%,32%,84%,94%{transform:rotate(-21deg)}14%,26%,89%,98%{transform:rotate(21deg)}}
+@keyframes arms{0%,35%{transform:rotate(0)}39%,44%{transform:rotate(15deg)}48%{transform:rotate(-26deg)}54%{transform:rotate(12deg)}60%,68%{transform:rotate(-12deg) scaleX(.85)}72%{transform:rotate(30deg)}76%{transform:rotate(-65deg)}80%,100%{transform:rotate(0)}}
+@keyframes backArms{0%,35%{transform:rotate(0)}39%,44%{transform:rotate(10deg)}48%{transform:rotate(32deg)}54%{transform:rotate(-12deg)}60%,68%{transform:rotate(15deg)}76%{transform:rotate(-10deg)}80%,100%{transform:rotate(0)}}
+@keyframes paper{0%,35%{opacity:1;top:var(--paper-y);transform:translate(-50%,-50%) rotate(-11deg)}39%,43.9%{opacity:1;top:var(--lift-y);transform:translate(-50%,-50%) rotate(0)}44%,100%{opacity:0;top:var(--lift-y)}}
+@keyframes pieces{0%,43.9%{opacity:0;top:var(--lift-y);transform:translate(-50%,-50%)}44%{opacity:1;top:var(--lift-y);transform:translate(-50%,-50%)}51%,55%{opacity:1;top:var(--lift-y);transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--angle))}64%{opacity:1;top:var(--lift-y);transform:translate(-50%,-50%) rotate(65deg) scale(.2)}65%,100%{opacity:0;top:var(--lift-y);transform:translate(-50%,-50%) scale(.12)}}
+@keyframes ball{0%,64.9%{opacity:0;transform:translate(-50%,-50%) scale(.4)}65%,71%{opacity:1;left:var(--paper-x);top:var(--lift-y);transform:translate(-50%,-50%) scale(1)}77%{opacity:1;left:57%;top:15%;transform:translate(-50%,-50%) rotate(250deg)}82%,100%{opacity:0;left:110%;top:34%;transform:translate(-50%,-50%) rotate(500deg) scale(.6)}}
+@media(prefers-reduced-motion:reduce){.scene{display:none}}

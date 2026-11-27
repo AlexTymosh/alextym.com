@@ -63,7 +63,7 @@ export function HiddenDiscardScene({view,now,hide,phase,name,serverNow}:{serverN
   </div>;
   return <div ref={scene} className={styles.gagScene} data-redeal-stage={elapsed<GAG_MISSING_MS?"deal":elapsed<GAG_FOUND_MS?"missing":elapsed<GAG_RETURN_MS?"found":"return"}>
     {[0,1].map(i=><span key={`found:${i}`} aria-hidden="true" className={styles.gagFoundCard} style={{"--gag-offset":`${-initial}ms`,"--found-offset":`${i*2.0}%`} as CSSProperties}><CardArtwork decorative/></span>)}
-    {elapsed>=GAG_MISSING_MS&&elapsed<GAG_FOUND_MS&&<strong className={styles.gagMessage} role="status">бля, {name(marker.seat)} ты задолбал! Куда ты карты сбросил?</strong>}
+    {elapsed>=GAG_MISSING_MS&&elapsed<GAG_FOUND_MS&&<strong className={styles.gagMessage} role="status">Двух карт не хватает! {name(marker.seat)} ты задолбал, куда ты карты спрятал?!</strong>}
     {elapsed>=GAG_FOUND_MS&&elapsed<GAG_RETURN_MS&&<div className={styles.gagFoundHint}><svg viewBox="0 0 64 34" width="64" height="34" aria-hidden="true"><path d="M60 5Q28 -2 7 26M7 26L11 13M7 26L20 26" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg><strong>Вот они!</strong></div>}
     {elapsed>=GAG_RETURN_MS&&elapsed<GAG_FAKE_MS&&<strong className={styles.gagMessage}>Пересдаём!</strong>}
   </div>;

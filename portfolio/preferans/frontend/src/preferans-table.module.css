@@ -593,7 +593,7 @@
   height:auto; aspect-ratio:1; flex:none; max-height:100%;
   isolation:isolate;
 }
-.table .trickField .widow { position:absolute; top:0; left:50%; transform:translateX(-50%); min-height:0; z-index:4; }
+.table .trickField .widow { position:absolute; top:clamp(5px,1.2cqh,12px); left:50%; transform:translateX(-50%); min-height:0; z-index:4; }
 .table .trickField .widow .tableCard,.table .trickField .widow .widowGhost { width:min(calc(var(--side-w)*1.2),12cqh); }
 .table .trickField .widowEye { position:relative; z-index:5; }
 .table .trickField .fieldStatus { inset:26% 14% 14%; }
@@ -696,15 +696,7 @@
 .table[data-round-table="true"][data-table-surface="marble"] .trickField { border-color:#a69b90; outline-color:#ded9c9; }
 .table[data-round-table="true"][data-table-surface="leather"] .trickField { border-color:#422c25; outline-color:#a47b58; }
 .table .tablePaper[data-sheet-discarded="true"] { visibility:hidden; pointer-events:none; }
-.table .sheetTearScene { position:absolute; inset:0; z-index:21; pointer-events:none; overflow:hidden; }
-.table .tearWalker { position:absolute; left:var(--tear-from-x); top:var(--tear-from-y); width:clamp(32px,5cqw,74px); height:auto; color:#f3d9a0; filter:drop-shadow(0 2px 3px #000); animation:tearWalk 3.8s linear both; }
-.table .tearWalker .walkerLeg { transform-origin:50% 55%; animation:tearStep .36s ease-in-out infinite alternate; }
-.table .tearWalker .walkerLeg:nth-of-type(2) { animation-delay:-.36s; }
-@keyframes tearStep { from{transform:rotate(-15deg)} to{transform:rotate(15deg)} }
-@keyframes tearWalk { 0%{opacity:0;left:var(--tear-from-x);top:var(--tear-from-y);transform:translate(-50%,-80%) scale(.65)} 8%{opacity:1} 34%,53%{opacity:1;left:var(--tear-x);top:var(--tear-y);transform:translate(-100%,-50%)} 62%,80%{opacity:1;left:var(--tear-x);top:var(--tear-y);transform:translate(-100%,-50%) rotate(-13deg)} 100%{opacity:0;left:var(--tear-x);top:var(--tear-y);transform:translate(-100%,-50%)} }
-.table .tearPiece { position:absolute; left:var(--tear-x); top:var(--tear-y); width:var(--tear-w); transform:translate(-50%,-50%) rotate(-11deg); animation:tearPieceFlight 3.8s ease-in-out both; }
-@keyframes tearPieceFlight { 0%,32%{opacity:1;transform:translate(-50%,-50%) rotate(-11deg)} 43%{opacity:1;transform:translate(calc(-50% + var(--tear-dx)),calc(-50% + var(--tear-dy))) rotate(var(--tear-angle))} 62%{opacity:1;transform:translate(-50%,-50%) rotate(70deg) scale(.24,.2)} 80%{opacity:1;transform:translate(-50%,-65%) rotate(120deg) scale(.2)} 100%{opacity:0;left:110%;top:28%;transform:translate(-50%,-50%) rotate(460deg) scale(.15)} }
-@media(prefers-reduced-motion:reduce) { .table .sheetTearScene { display:none; } }
+
 
 /* The complaint is readable for two seconds, before the paper reveal. */
 .table .gagScene[data-redeal-stage="missing"] .gagMessage { font-size:clamp(1rem,2.5cqw,2.05rem); color:#d6a33c; text-shadow:0 2px 5px #000,0 0 2px #000; }
@@ -780,3 +772,13 @@
 .table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .opponentHand,.table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .ownHand { animation:gagRecall .8s ease-in-out both; }
 @keyframes gagRecall { from { opacity:1; } to { opacity:0; } }
 @media(prefers-reduced-motion:reduce) { .table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .opponentHand,.table[data-gag-fake="true"]:has(.gagScene[data-redeal-stage="return"]) .ownHand { animation:none; opacity:0; } }
+
+/* Gather old cards into the next deck; keep their layout for the local animation only. */
+.table[data-between-deals="true"] [data-trick-train],
+.table[data-between-deals="true"] .opponentHand,
+.table[data-between-deals="true"] .ownHand,
+.table[data-between-deals="true"] [data-widow-zone],
+.table[data-between-deals="true"] [data-trick-seat] { visibility:hidden; pointer-events:none; }
+.table[data-gathering="true"] [data-deck-collect-target] { visibility:hidden; }
+.table[data-gathering="true"] .nextDeck button { pointer-events:none; }
+.table [data-gather-clone] { pointer-events:none; visibility:visible; }

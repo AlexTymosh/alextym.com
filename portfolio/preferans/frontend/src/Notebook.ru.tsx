@@ -13,6 +13,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const [stepIndex,setStepIndex] = useState<number|null>(null);
   const [zoom,setZoom] = useState(1);
   const paperViewport=useRef<HTMLSpanElement>(null);
+  const pan=useRef<{pointer:number;x:number;y:number;left:number;top:number}|null>(null);
   useEffect(()=>{
     if(miniature)return;
     const viewport=paperViewport.current;
@@ -23,16 +24,31 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
       if(event.ctrlKey||event.metaKey||event.defaultPrevented||!(event.target instanceof Node)||viewport.contains(event.target))return;
       if(event.target instanceof Element&&event.target.closest("input,select,textarea,[contenteditable=true]"))return;
       const unit=event.deltaMode===1?16:event.deltaMode===2?viewport.clientHeight:1;
-      const dx=event.deltaX*unit,dy=event.deltaY*unit;
+      const dx=(event.shiftKey&&!event.deltaX?event.deltaY:event.deltaX)*unit,dy=(event.shiftKey?0:event.deltaY)*unit;
       const vertical=dy!==0&&viewport.scrollHeight>viewport.clientHeight;
       const horizontal=dx!==0&&viewport.scrollWidth>viewport.clientWidth;
       if(!vertical&&!horizontal)return;
       event.preventDefault();
       viewport.scrollBy({left:dx,top:dy});
     };
-    const wheelRoot:HTMLElement|Document=viewport.closest("[data-paper-lift]")?document:wrapper;
+    const popup=viewport.closest<HTMLElement>("[data-paper-lift]");
+    const windowBox=viewport.closest<HTMLElement>("[data-notebook-window]");
+    const table=popup?.closest<HTMLElement>("[data-table-view]");
+    const fit=()=>{
+      if(!popup||!windowBox||!table)return;
+      // Subtract toolbars, history and accounting from the actual table budget.
+      const chrome=Math.max(0,windowBox.scrollHeight-viewport.offsetHeight);
+      const limit=Math.min(window.innerHeight*.9,table.clientHeight-12);
+      const next=`${Math.max(72,Math.floor(limit-chrome-4))}px`;
+      if(viewport.style.getPropertyValue("--paper-fit-limit")!==next)viewport.style.setProperty("--paper-fit-limit",next);
+    };
+    fit();
+    const observer=typeof ResizeObserver!=="undefined"&&windowBox&&table?new ResizeObserver(fit):null;
+    if(observer&&windowBox&&table){observer.observe(table);observer.observe(windowBox);for(const child of Array.from(windowBox.children))observer.observe(child);}
+    window.addEventListener("resize",fit);
+    const wheelRoot:HTMLElement|Document=popup?document:wrapper;
     wheelRoot.addEventListener("wheel",forwardWheel as EventListener,{passive:false});
-    return()=>wheelRoot.removeEventListener("wheel",forwardWheel as EventListener);
+    return()=>{observer?.disconnect();window.removeEventListener("resize",fit);wheelRoot.removeEventListener("wheel",forwardWheel as EventListener);};
   },[miniature]);
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const score = view.score;
@@ -145,7 +161,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     </g>;
   };
   const Wrapper=miniature?"span":"div";
-  return <Wrapper className={miniature?styles.miniature:styles.wrap} style={{"--paper-ratio":(angle?h:w)/(angle?w:h)} as CSSProperties} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
+  return <Wrapper data-notebook-window={miniature?undefined:"true"} className={miniature?styles.miniature:styles.wrap} style={{"--paper-ratio":(angle?h:w)/(angle?w:h)} as CSSProperties} aria-label={miniature?undefined:"Пулька в клетку"} aria-hidden={miniature?true:undefined}>
     {!miniature&&<div className={styles.paperToolbar}>
       <div className={styles.paperExit}>{!past&&sheetExit}</div>
       <div className={styles.rotateControls}><button type="button" aria-label="Повернуть к левому игроку" onClick={()=>setOrientation(n=>(n+1)%3)}>↶</button><button type="button" aria-label="Моя сторона" onClick={()=>setOrientation(0)}>Моя сторона</button><button type="button" aria-label="Повернуть к правому игроку" onClick={()=>setOrientation(n=>(n+2)%3)}>↷</button></div>
@@ -162,7 +178,20 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
     {!miniature&&!past&&scoreAdjustment&&<div className={styles.accountingActions}>{scoreAdjustment}</div>}
     <span className={miniature?styles.miniatureBody:styles.paperBody}>
     {!miniature&&<span className={styles.scissors} aria-hidden="true">✁</span>}
-    <span ref={miniature?undefined:paperViewport} tabIndex={miniature?undefined:0} role={miniature?undefined:"region"} aria-label={miniature?undefined:"Прокручиваемый листик"} className={miniature?styles.miniatureCanvas:styles.paperViewport} data-zoomed={!miniature&&zoom!==1?"true":undefined} style={{"--paper-zoom":miniature?1:zoom} as CSSProperties}>
+    <span ref={miniature?undefined:paperViewport}
+      onPointerDown={miniature?undefined:e=>{
+        const el=e.currentTarget;
+        if(e.pointerType!=="mouse"||e.button!==0||(el.scrollWidth<=el.clientWidth&&el.scrollHeight<=el.clientHeight))return;
+        pan.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,left:el.scrollLeft,top:el.scrollTop};
+        el.setPointerCapture(e.pointerId);el.dataset.panning="true";e.preventDefault();
+      }}
+      onPointerMove={miniature?undefined:e=>{
+        const start=pan.current;if(!start||start.pointer!==e.pointerId)return;
+        const el=e.currentTarget;const scale=el.offsetWidth?el.getBoundingClientRect().width/el.offsetWidth||1:1;
+        el.scrollLeft=start.left-(e.clientX-start.x)/scale;el.scrollTop=start.top-(e.clientY-start.y)/scale;
+      }}
+      onLostPointerCapture={miniature?undefined:e=>{pan.current=null;delete e.currentTarget.dataset.panning;}}
+      tabIndex={miniature?undefined:0} role={miniature?undefined:"region"} aria-label={miniature?undefined:"Прокручиваемый листик"} className={miniature?styles.miniatureCanvas:styles.paperViewport} data-zoomed={!miniature&&zoom!==1?"true":undefined} style={{"--paper-zoom":miniature?1:zoom} as CSSProperties}>
     <svg viewBox={`0 0 ${angle?h:w} ${angle?w:h}`} className={styles.paper} role="img" aria-label="Рукописная пулька">
       <defs><pattern id={`grid-${id}`} width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#b4ccdb" strokeWidth=".65"/></pattern>{finalPunches.length>0&&<marker id={`punch-arrow-${id}`} markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5.5L0 11Z" fill="#b51524"/></marker>}</defs>
       <g transform={rotation}><rect width={w} height={h} fill="#fbf9ee"/><rect width={w} height={h} fill={`url(#grid-${id})`}/>

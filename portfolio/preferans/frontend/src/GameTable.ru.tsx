@@ -7,7 +7,7 @@ import { actorSeat, opponentCards, seatPosition, tableSeats, type Seat, type Sea
 import styles from "./preferans-table.module.css";
 import { animationBetween, orderHand, passoutWidowFrame, replayWidow, visibleWidow, type SortMode } from "./interaction-model";
 import { dealerFor } from "./table-interaction";
-import { animateDeal, animateArrival, animateCollection, DEAL_DURATION_MS, TRICK_DURATION_MS } from "./table-motion";
+import { animateDeal, animateArrival, animateCollection, animateGather, DEAL_DURATION_MS, TRICK_DURATION_MS } from "./table-motion";
 import { latestTrickSeat, trickTrain, opponentWidowCards } from "./table-refinements";
 import { Notebook } from "./Notebook.ru";
 import { WidowDisplay } from "./WidowDisplay.ru";
@@ -162,6 +162,7 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
   const replay=onReplay??(()=>setLocalReplay(replayId));
   const previous = useRef<RoomView|null>(null);
   const tableRef=useRef<HTMLElement>(null);
+  const deckPoint=useRef<{room:string;x:number;y:number}|null>(null);
   const localPaper=Boolean((showFinal||(scoreOpen&&!onScore))&&view.sheet_loser===undefined&&view.score&&!view.presentation?.overlay);
   const paperOpen=localPaper||view.presentation?.overlay?.kind==="score_sheet";
   usePaperLift(tableRef,paperOpen);
@@ -183,7 +184,7 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
   },[view]);
   useEffect(()=>()=>{if(timer.current) clearTimeout(timer.current);},[]);
   const active=animation&&animation.game===view.game_id&&animation.count===(view.played_tricks??0)?animation.kind:null;
-  const collecting=active==="trick" && (Boolean(view.is_passout)||(!(view.trick?.length)&&!pendingPlay));
+  const collecting=!between&&active==="trick" && (Boolean(view.is_passout)||(!(view.trick?.length)&&!pendingPlay));
   const dealing=(active==="deal"||discardScene.phase!==null)&&view.phase==="auction";
   const gagAt=view.redeal_gag?.at_ms;
   const animationSeat=view.last_trick_winner;
@@ -191,13 +192,26 @@ export function GameTable({view, tableZoom=100, counterPanel, profiles, presence
   const dealOrder=dealing?(view.hand??[]).map(cardId).join(","):"";
   useLayoutEffect(()=>{
     const table=tableRef.current;
+    if(!between||!table)return;
+    const target=table.querySelector<HTMLElement>("[data-deck-collect-target]");
+    const field=table.querySelector<HTMLElement>("[data-play-field]");
+    if(!target||!field)return;
+    const locate=()=>{const d=target.getBoundingClientRect(),f=field.getBoundingClientRect();if(f.width&&f.height)deckPoint.current={room:view.room_id,x:(d.left+d.width/2-f.left)/f.width,y:(d.top+d.height/2-f.top)/f.height};};
+    locate();const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(locate):null;observer?.observe(table);
+    const cleanup=window.matchMedia("(prefers-reduced-motion: reduce)").matches?undefined:animateGather(table);
+    return()=>{observer?.disconnect();cleanup?.();};
+  },[between,view.room_id,view.game_id]);
+  useLayoutEffect(()=>{
+    const table=tableRef.current;
     if(!table)return;
     if(dealing&&currentDealer!==undefined&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
       const elapsed=discardScene.phase&&gagAt!==undefined?Math.max(0,serverNow()-gagAt-(discardScene.phase==="deal"?GAG_FAKE_MS:0)):0;
-      return animateDeal(table,currentDealer,dealOrder.split(","),elapsed);
+      const field=table.querySelector<HTMLElement>("[data-play-field]")?.getBoundingClientRect(),point=deckPoint.current;
+      const origin=field&&point?.room===view.room_id&&discardScene.phase!=="deal"?new DOMRect(field.left+field.width*point.x,field.top+field.height*point.y,0,0):undefined;
+      return animateDeal(table,currentDealer,dealOrder.split(","),elapsed,origin);
     }
     if(collecting&&animationSeat!=null)return animateCollection(table,animationSeat,view.is_passout?()=>setAnimation(null):undefined);
-  },[dealing,dealOrder,collecting,animationSeat,currentDealer,view.is_passout,view.game_id,view.played_tricks,discardScene.phase,gagAt,serverNow]);
+  },[dealing,dealOrder,collecting,animationSeat,currentDealer,view.is_passout,view.game_id,view.played_tricks,discardScene.phase,gagAt,serverNow,view.room_id]);
   useLayoutEffect(()=>{
     const el=tableRef.current;if(!el)return;
     const fit=()=>{
