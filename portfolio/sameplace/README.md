@@ -11,3 +11,8 @@ The project is embedded in the existing Next.js and FastAPI hosts. Domain logic 
 All engineering documentation, identifiers, comments, commit messages and ADRs are English. The canonical requirements are Russian (`.ru.md`) and initial user-facing text is Russian in localized resources. No global site localization. No paid infrastructure or data migration. Legacy Preferans remains frozen at the baseline recorded in `docs/legacy-freeze.json`.
 
 Run the repository CI and the project-specific checks in [test strategy](docs/TEST_STRATEGY.md). No separate npm install inside this project.
+
+
+## SP03 room shell and social/realtime
+
+Private room members may meet even without the owner. Profile, friendships, room favourites, recent visits, chat and internal waiting-at-room notices are scoped to SamePlace. The one-worker realtime feature is disabled by default. See [realtime protocol](docs/REALTIME_AND_MEDIA.md), [resource budget](docs/RESOURCE_BUDGET.md), [ADR 0004](docs/adr/0004-single-worker-realtime.md) and [session ledger](SESSION_NOTES.md). All release gates, local CI and local Emulator/real-device verification still apply. No automatic email or SMS, music, video, or game engine in this stage.

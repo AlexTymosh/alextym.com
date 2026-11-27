@@ -7,3 +7,12 @@ test("private SamePlace room entrypoints and BFF stay disabled by default", asyn
   }
   expect((await request.get("/portfolio/sameplace/api/rooms")).status()).toBe(404);
 });
+
+
+test("SamePlace social and ticket routes are private and off by default", async ({ request }) => {
+  const base = "/portfolio/sameplace/api";
+  expect((await request.get(`${base}/social/me`)).status()).toBe(404);
+  expect((await request.get(`${base}/rooms/friday/chat`)).status()).toBe(404);
+  expect((await request.post(`${base}/rooms/friday/ticket`, {data:{origin:"https://example.invalid"}})).status()).toBe(404);
+  expect((await request.post(`${base}/rooms/friday/ping`, {data:{}})).status()).toBe(404);
+});

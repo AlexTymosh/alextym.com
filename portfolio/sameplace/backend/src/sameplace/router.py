@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
-from .rooms.api import make_room_router as make_room_router
+from .social.composition import make_room_router as make_room_router
 
 router = APIRouter(prefix="/sameplace", tags=["sameplace"])
 

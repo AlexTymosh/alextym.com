@@ -172,6 +172,14 @@ class RoomService:
 
         return self.store.run(execute)
 
+    def authorized_room(self, unit, slug, actor):
+        """Authorize an active room inside a caller-owned transaction."""
+        return self._room(unit, slug, actor)
+
+    def execute_command(self, actor, action, subject, command, operation):
+        """Reuse the room-core durable receipt and audit mechanism."""
+        return self._command(actor, action, subject, command, operation)
+
     def identity(self, actor):
         def read(unit):
             index = user(unit, actor.uid)

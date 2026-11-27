@@ -1,0 +1,30 @@
+# Resource budget and release gates
+
+Status: SP03 candidate. Strict GBP 0; no automatically billable resources. The owner-reported PR22 recovery improved legacy transport; no independent current provider counters or quota measurements were obtained. This stage intentionally shares existing infrastructure without changing tiers, projects, secrets, deployment flags, or billing. The free-capacity targets must be confirmed from current provider consoles/docs before activation (SP10), not assumed by source code.
+
+## Bounded runtime and operations
+
+| Resource | SP03 bound / policy |
+|---|---|
+| Durable rooms | SP02 policy: default 100, max 300; 3 non-archived owned rooms per approved creator |
+| Active meetings and participants | Defaults 4 / 20, room cap <=10; atomic process-local admission; one UID once; actual lower cap to be verified |
+| WS | 120 connections, 2 per UID, 32 pending handshakes, 128 short tickets; 1 s memory coalescing, 25 s client ping, 60 s auth, 90 s lease/grace |
+| HTTP pressure | Existing shared process-local POST limiter 30/user/min, 180 total/min; separate social GET limiter same ceiling; no global guarantee and verification still costs resources |
+| Friend/profile | 40 relationships/pending/blocked per user; no global directory; 10 recent rooms, 100 favourite IDs; no background social polling |
+| Chat | 50 visible messages per page; per-room live aggregate up to 500 messages and 400,000 UTF-8 JSON bytes, 1,000 characters per message; 12 messages per sender per minute. Reject rather than silently shorten the 30-day retention when full. This bounded initial aggregate trades small-room simplicity for whole-document read/write bandwidth. Measure contention and byte cost; segment into pages/shards before larger usage. |
+| Notifications | 10 recipients/request, 300 characters, 3 internal requests/10 min/sender, one per same room/recipient/10 min/sender, 50 retained inbox entries/recipient, 7-day expiry. No email/SMS provider; stub does not write/dispatch. |
+| Location proposals | 8 active per meeting, 2-minute expiry, 64 recent ephemeral command receipts per person |
+| Quota errors | Shared SP03/Room Core process circuit with existing 120 s cooldown for confirmed quota errors; 503 + Retry-After, no immediate restart loop |
+
+Only room mutation / social mutation / recent visit when changed writes durable state. No writes on ping/pong, idle cleanup, layout, typing, or presence updates. No Firestore realtime listeners, external queue, Redis, scheduled job or paid TTL. `expires_at_ms` filtered before issuing messages. Chat physical cleanup on send or manual moderator action rewrites one bounded document; idle expired records may remain until maintenance. No background billing-triggered deletes. Existing room-core receipts/audit are retained; growth/retention and Firestore aggregate limits must be assessed before production, no destructive cleanup without separate plan. Inbox expiry filters on read and prunes on next send; not a guarantee of deletion from backups.
+
+## Read/write estimate (not a measurement)
+
+Ticket issue and redemption independently verify current identity and read room mapping, room, policy and profile; successful first visit may additionally read/write profile and public mapping. Reauth reuses identity+room verification once per socket per minute, not per ping. For 10 tabs at 60 s, 600 reauth operations/hour; the room access itself is about 4 document reads per check, ~2,400 room/policy/profile reads/hour before identity, actual actions, retries and other site traffic. Two tabs of one user count once for capacity but both reauthenticate; this is an operational cost, not a claimed free 8-hour guarantee. Chat sends write bounded room chat aggregate plus existing receipt/audit; committed changes cause each open chat panel to fetch at most one page per received revision, coalesced per socket. Explicit social/profile reads can fan out up to 40 friend profiles and 50 notice room checks; no repeated listing when panel closed. Actual document read costs, contention, bytes and identity-provider overhead must be measured. Lower caps and/or adjust safely bounded projection delivery based on evidence, never turn off access checks to meet a quota.
+
+## Verification and stop conditions
+
+1. Verify exact free plan/no payment method escalation, production/preview isolation, current shared provider usage and actual Render worker/instance count. Keep feature flags off until acceptance. Use a local demo Firebase Emulator, synthetic users, no live production data or credentials. Never enable paid usage, TTL, jobs, metrics or automatic upgrades.
+2. Baseline shared site reads/writes/bytes, Render active hours/bandwidth and Vercel requests; isolate room, connect 2–3 then intended cap. Confirm one healthy socket per tab, no constant HTTP view/pulse, no writes on heartbeat, no work in empty rooms; record usage before/after. Verify disconnect, identity revoke, tab counts, room/global admission, retries, chat and explicit social/inbox reads. Run controlled 15–30 min then 1 hour. Only then consider 6h/8h soak within budget; record actual measured counters, CPU/memory, latency, errors and retry counts.
+3. Preserve PR22's project-wide 70/85/95% thresholds (illustrative historical free Firestore read/write quotas 50k/20k per day; verify current). At 70% investigate, at 85% do not start prolonged sessions, at 95% stop load/close connections. Check all services, no paid monitoring. Configure verified lower active capacity if necessary; if free video does not support 10 users, lower room ceiling rather than claim 10. Provider billing and resource exhaustion are external facts, not guaranteed by an in-memory limiter.
+4. On outage: stop new meetings, expose degraded state, keep durable room history, honor Retry-After. No fallback poll storms or automatic paid service. Disable realtime flag first (does not alter legacy); disable SamePlace if identity/security issue. Do not delete room/chat records to recover quota. No cloud mutation in this PR.

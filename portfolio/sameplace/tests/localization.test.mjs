@@ -72,3 +72,20 @@ test("BFF allows only exact SamePlace room operations and methods", () => {
   assert.equal(validInviteToken("a".repeat(32) + "." + "B".repeat(43)), true);
   assert.equal(validInviteToken("../token"), false);
 });
+
+
+test("SP03 allows only registered social, chat, location and ticket operations", () => {
+  for (const [method, parts] of [["GET", ["social","me"]], ["POST",["social","profile"]], ["POST",["social","friend"]], ["POST",["social","read_notice"]], ["GET",["rooms","friday","chat"]], ["POST",["rooms","friday","chat","page"]], ["POST",["rooms","friday","chat","send"]], ["POST",["rooms","friday","chat","hide"]], ["POST",["rooms","friday","chat","cleanup"]], ["POST",["rooms","friday","location","propose"]], ["POST",["rooms","friday","location","answer"]], ["POST",["rooms","friday","location","cancel"]], ["POST",["rooms","friday","location","move"]], ["GET",["rooms","friday","recipients"]], ["POST",["rooms","friday","ping"]], ["POST",["rooms","friday","ticket"]], ["POST",["rooms","friday","favourite"]]]) {
+    assert.equal(roomOperation(method,parts),parts.join("/"));
+  }
+  for (const [method, parts] of [["GET",["rooms","friday","ticket"]],["POST",["social","directory"]],["POST",["rooms","friday","chat","arbitrary"]],["POST",["rooms","friday","location","answer","extra"]],["GET",["realtime"]],["POST",["rooms","../other","ping"]]]) assert.equal(roomOperation(method,parts),null);
+});
+execFileSync(process.execPath,[tsc,"--strict","--target","ES2020","--module","commonjs","--outDir",join(out,"layout"),resolve(source,"../social/layout.ts")],{stdio:"inherit"});
+const {positions}=requireCompiled("./layout/layout.js");
+test("participant layouts have deterministic non-overlapping places for 0-10 people",()=>{
+  assert.deepEqual(positions(2),["5 / 1","1 / 5"]);
+  assert.deepEqual(positions(3),["5 / 3","1 / 1","1 / 5"]);
+  assert.deepEqual(positions(4),["5 / 3","3 / 1","1 / 3","3 / 5"]);
+  for(let n=0;n<=10;n++){assert.equal(positions(n).length,n);assert.equal(new Set(positions(n)).size,n);}
+  assert.throws(()=>positions(11),RangeError);
+});

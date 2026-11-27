@@ -1,0 +1,21 @@
+.shell { display: grid; gap: 1rem; min-width: 0; }
+.panel { display: grid; gap: .65rem; border: 1px solid var(--border, #8886); border-radius: 12px; padding: 1rem; min-width: 0; }
+.panel button { width: fit-content; max-width: 100%; min-height: 42px; white-space: normal; }
+.panel input:not([type="checkbox"]), .panel textarea, .panel select { width: 100%; max-width: 100%; min-height: 42px; }
+.form { display: grid; gap: .7rem; min-width: 0; }
+.form label, .panel label { display: grid; gap: .25rem; min-width: 0; }
+.form fieldset { display: grid; gap: .4rem; border: 1px solid var(--border, #8886); min-width: 0; }
+.form .check, .panel .check { display: flex; align-items: center; gap: .5rem; }
+.list, .chat { display: grid; gap: .6rem; padding-inline-start: 1rem; overflow-wrap: anywhere; }
+.list li { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.chat { max-height: 22rem; overflow-y: auto; }
+.chat p { white-space: pre-wrap; overflow-wrap: anywhere; margin: .25rem 0; }
+.chat time { font-size: .78rem; opacity: .75; }
+.tableLayout { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); grid-template-rows: repeat(5,minmax(2.5rem,auto)); gap: .3rem; min-height: 18rem; align-items: center; }
+.table { grid-area: 2 / 2 / 5 / 5; display: grid; place-items: center; min-height: 8rem; border-radius: 45%; background: #355e46; border: 4px solid #856747; color: white; font-size: .9rem; text-align: center; padding: .5rem; }
+.person { display: grid; justify-items: center; align-content: center; min-width: 0; font-size: .8rem; text-align: center; overflow-wrap: anywhere; }
+.avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; background: #596779; color: #fff; font-weight: 600; }
+.observers { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.proposal { border: 1px solid var(--border, #8886); border-radius: 8px; padding: .6rem; overflow-wrap: anywhere; }
+.wrap { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .panel { padding: .65rem; } .tableLayout { min-height: 15rem; gap: .15rem; } .person { font-size: .7rem; } .avatar { width: 2rem; height: 2rem; } }
