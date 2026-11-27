@@ -2,13 +2,13 @@
 
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
+from .rooms.api import make_room_router as make_room_router
 
 router = APIRouter(prefix="/sameplace", tags=["sameplace"])
 
 
 class FoundationStatus(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     project_id: str = "sameplace"
     stage: str = "foundation"
     contract_version: int = 1

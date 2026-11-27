@@ -7,7 +7,7 @@ from fleet_hub.bootstrap import prepare_demo_database
 from fleet_hub.router import configure_host_access, router as fleet_router
 from workforce_intelligence.router import router as workforce_router
 from preferans.router import make_realtime_router, router as preferans_router
-from sameplace.router import router as sameplace_router
+from sameplace.router import make_room_router, router as sameplace_router
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.cors import CORSMiddleware
 
@@ -29,6 +29,11 @@ from app.security.workforce_demo import require_workforce_member, router as work
 from app.security.fleet_access import guard_fleet_routes, require_fleet_access
 from app.security.preferans_access import require_preferans_member, verify_preferans_realtime
 from app.security.sameplace_access import require_sameplace_member
+from app.security.sameplace_identity import (
+    require_sameplace_identity,
+    sameplace_database,
+    sameplace_enabled,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -86,6 +91,10 @@ def create_app() -> FastAPI:
     app.include_router(
         sameplace_router, prefix="/api", dependencies=[Depends(require_sameplace_member)]
     )
+    room_router = make_room_router(
+        require_sameplace_identity, sameplace_database, sameplace_enabled
+    )
+    app.include_router(room_router, prefix="/api")
     app.include_router(analytics_router, prefix="/api")
     app.include_router(redis_probe_router)
     configure_metrics(app, settings)
