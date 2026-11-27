@@ -1,19 +1,19 @@
 # SamePlace — Session notes and implementation roadmap
 
-**Revision:** 1.2 | **Date:** 2026-11-27 | **Scope:** SamePlace only
+**Revision:** 2.0 | **Date:** 2026-11-27 | **Scope:** SamePlace only
 
-**Status:** SP01 CANDIDATE r02 correction prepared; r01 local CI failed at one host integration assertion. Full rerun and hosted checks pending. Not merged or deployed.
+**Status:** SP01 MERGED; SP02 CANDIDATE r01 prepared. Full local CI and hosted acceptance pending. Not activated.
 
 Canonical path: `portfolio/sameplace/SESSION_NOTES.md`.
 
-Requirements: [SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md](docs/SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md) (SP-TRS-001, 1.0-draft, 2026-11-27). The document must be added in SP01 if it is not already present. The Owner's latest explicit decisions override earlier proposals; record any approved requirements change in the specification and an ADR, not only in this log.
+Requirements: [SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md](docs/SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md) (SP-TRS-001, 1.0-draft, 2026-11-27). The document is already committed in SP01. The Owner's latest explicit decisions override earlier proposals; record any approved requirements change in the specification and an ADR, not only in this log.
 
 ## 1. Resume here
 
-- **Last inspected main:** `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777` ([commit](https://github.com/AlexTymosh/alextym.com/commit/1e76eaa4c0ba58ceed0e5b5615917a6ee229f777)). Legacy Preferans is at PR42. This is the pinned SP01 freeze source; the checked-in inventory is generated from its Git tree at installation. No remote tag was created.
-- **Last merged SamePlace PR:** none. Registry currently lists `fleet_hub`, `workforce_intelligence`, `preferans` only. Neither SamePlace notes nor its canonical specification was found at the expected paths on main.
-- **Current candidate:** SP01 r02 incremental correction, `sameplace-sp01-foundation-r02-fix.zip`, on the existing `feat/sameplace-foundation` branch after r01 installation. Do not reapply r01 or recreate the branch. Run focused host integration tests and the full original no-Task CI runner, then review/merge; only then resume SP02 from actual main.
-- **Current evidence:** Owner-reported r01 backend run: 1,554 passed, 1 failed, 8 skipped, 1 warning; failure at `test_host_mounts_the_guarded_router`. FastAPI 0.137 changed router inclusion internals; replace flat route-list introspection with HTTP behavior tests. Six replacement HTTP cases pass on a synthetic host using the actual candidate router/guard and locally available FastAPI 0.128.2; actual full host and locked FastAPI still require local verification. The r01 evidence remains below. Full CI and hosted checks not yet green or independently verified. No production changes.
+- **Last inspected main:** `98945bc295e5988e6f4223513c023ce6b4605799` (SP01 squash merge, confirmed by GitHub read-only inspection; Vercel combined status success only). Legacy freeze source remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777` (PR42). Do not regenerate the freeze inventory.
+- **Last merged SamePlace PR:** SP01, verified on main at `98945bc295e5988e6f4223513c023ce6b4605799`. Owner reports merged; exact full CI log not provided. Both canonical requirements and session ledger present.
+- **Current candidate:** SP02 r01, `sameplace-sp02-room-core-r01.zip`, branch `feat/sameplace-room-core`, exact pinned main above. Apply only to clean matching main, run focused tests, full no-Task CI and optional local Emulator. Do not activate production.
+- **Current evidence:** isolated domain/HTTP/fake-storage/guard tests pass on local FastAPI 0.128.2 with mocked host identity (not locked FastAPI); real full host and provider tests pending. See latest session entry.
 - **Plan:** 10 sequential implementation PRs, 46 planned logical commits (4+5+5+5+5+6+4+4+4+4). Planning estimate, not an enforced count. Documentation is included in each PR; no separate documentation-only scaffold PR. One implementation branch and ZIP candidate at a time.
 - **Production:** keep SamePlace disabled until the explicit release gate. Do not disable or modify legacy Preferans, existing site features, or cloud billing to make SamePlace work.
 
@@ -225,8 +225,8 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 
 | PR | Planned commits | Status | Candidate / merge SHA | Evidence / next action |
 |---|---:|---|---|---|
-| SP01 | 4 | CANDIDATE r02 | `1e76eaa4c0ba` (base only) | r01 backend failed; apply incremental correction and rerun full CI |
-| SP02 | 5 | PLANNED | - | Depends on SP01 |
+| SP01 | 4 | MERGED | `98945bc295e5` | Owner confirmed; main contents verified; Vercel success, full CI log not independently observed |
+| SP02 | 5 | CANDIDATE r01 | `98945bc295e5` (base) | Room core implemented; full local/hosted CI and Emulator pending |
 | SP03 | 5 | PLANNED | - | Depends on SP02 |
 | SP04 | 5 | PLANNED | - | Depends on SP03 |
 | SP05 | 5 | PLANNED | - | Depends on SP03/SP04 |
@@ -235,7 +235,7 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 | SP08 | 4 | PLANNED | - | Depends on SP06; default sequence SP07 then SP08 |
 | SP09 | 4 | PLANNED | - | Requires approved Domino rules |
 | SP10 | 4 | PLANNED | - | All previous stages and acceptance gates |
-| **Total** | **46** | **0 merged** | - | SP01 candidate; all later stages planned |
+| **Total** | **46** | **1 merged** | - | SP02 candidate; SP03–SP10 planned |
 
 ## 10. Open items (carry forward until evidenced or resolved)
 
@@ -250,7 +250,7 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 | OPEN-07 | Concrete Domino rules approved by Owner. | Before SP09 |
 | OPEN-08 | Long-run resource budget, complete acceptance matrix and release/rollback evidence. | SP10 |
 | OPEN-09 | SamePlace name clearance and commercial hosting/license/privacy requirements. | Future commercial launch; not private development blocker |
-| OPEN-10 | r01 backend CI failed in host integration test; r02 HTTP-based correction prepared. Full local rerun and hosted CI required. | SP01 |
+| OPEN-10 | SP01 r02 included in merged main; historical failure retained, full post-fix CI log not independently observed. | SP01 merged |
 
 ## 11. Session history (append; do not erase past failures)
 
@@ -281,6 +281,16 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 - Replace brittle inspection with HTTP tests against the actual host app: disabled feature (404, no identity lookup), 401/403/503 authorization propagation, successful 200 response and correct project grant scope with exactly one check, wrong method 405, and legacy route existence via an unsupported method (405, no legacy storage handler). Keep the existing dependency-direction test unchanged. No private FastAPI routing API used. No runtime application, host, dependency, legacy, or infrastructure changes.
 - Author validation: six new HTTP cases passed using a synthetic composition host, actual candidate router/guard, mocked grant verification and FastAPI 0.128.2; full host, architecture test and locked dependency behavior must be checked on Owner's checkout. Full CI remains pending. Do not mark it as passed before actual evidence.
 - Delivery: incremental ZIP `sameplace-sp01-foundation-r02-fix.zip` updates only `tests/test_host_integration.py` and this session log on the existing SP01 branch. Keep the original CI runner and four commit groups; no additional PR or commit required. Run focused tests then full CI, and only commit/push if green.
+
+### 2026-11-27 — SP02 / candidate r01 — Identity, room access and ownership
+
+- Base: `98945bc295e5988e6f4223513c023ce6b4605799`, SP01 merged as verified in GitHub. Branch `feat/sameplace-room-core`, ZIP `sameplace-sp02-room-core-r01.zip`. Five logical commits. No remote writes. Preserve canonical Russian specification, freeze source/inventory, old Preferans API and all existing provider settings.
+- Implemented typed room commands, versioned aggregate and transactional port; private room catalogue, creation approval, immutable unique slug, three active rooms/owner, configured storage and capacity caps, owner-only platform limits, archive/restore, delegated roles, moderation, two-party transfer, target-bound expiring one-time invitations and idempotent redemption, neutral errors, quota circuit and bounded process-local mutation limiter. Room-only Firebase identity verifies existing record policy, new verified email account can prove identity without creating global Lab record or project grant. Route-local session, BFF and Russian UI. Firestore documents under `sameplace_room_core_v1` only on authorized mutation; no migrations, real writes or production activation.
+- Requirements: T-002–012, T-069–072, T-082 partial. Active presence, simultaneous admission limits, meetings, capacity and queue (T-013/014), live revocation, favourites/recent, social chat/notification stubs belong to SP03. Interiors identifiers only, no art/editor/media. Activity/game/bot/commerce later. No payments, automatic SMS or invite email delivery.
+- Decision requiring review: newly generated invitation URL uses `/portfolio/sameplace/j#<token>` to keep secret outside HTTP path/referrer logs; legacy proposed `/j/{token}` remains compatible. Explicit scoped sign-out does not clear global site session; host sign-out does not clear scoped SamePlace session. No automatic grant. Local registration explicitly sends Firebase verification email only on request. Initial policy caps 100 stored rooms, four active rooms, 20 active humans, capacity ceiling ten (the latter three are configured, not measured/enforced active capacity yet). Room owner may restore only if currently approved/within limits. Receipt/audit cleanup and privacy deletion are release gates; no paid TTL. See ADR 0003.
+- Tests: isolated service, transaction adapter fake, HTTP tests on FastAPI 0.128.2, and mocked host guard tests with stand-in policy: 31 PASS, one opt-in Emulator skipped. These do not prove locked FastAPI or real Firebase behavior. JS localization and exact BFF allowlist: 6 PASS. Package hashes and installer fixture verification recorded in delivery README. Actual host tests, full CI, real Firestore/Auth Emulator, enabled UI/CSRF tests, provider logging and resource measurements NOT RUN in author environment. Owner runs complete local CI and reviews before merge. No guarantee of free AV capacity.
+- English docs updated: DOMAIN_MODEL, SECURITY_AND_PERMISSIONS, API_CONTRACT, ARCHITECTURE, TEST_STRATEGY, ADR 0003 and README files. Russian UI only in localized resources, no global site changes. Keep the feature off through acceptance. No separate dependencies or lock changes; only host mount and route-local credential/BFF adapters outside project. Existing SP01 status unchanged.
+- Rollback: keep flag off; revert SP02 as a unit if necessary, do not delete any room records or change freeze inventory. No persistent production data expected because no activation. Before SP03 verify actual merged main and local/hosted evidence; carry forward open Emulator/provider and admission checks.
 
 ### Template for the next candidate entry (replace placeholders; retain history)
 
