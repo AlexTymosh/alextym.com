@@ -16,10 +16,13 @@ assert.equal(manifest.demo.path, "/portfolio/sameplace");
 assert.equal(manifest.demo.apiPrefix, "/api/sameplace");
 assert.equal(manifest.catalog.visible, false, "Publication needs explicit release approval");
 const page = read("frontend/app/portfolio/sameplace/page.tsx");
-assert.match(page, /from "@sameplace"/);
+assert.match(page, /from "\.\/client"/);
+assert.match(read("frontend/app/portfolio/sameplace/client.tsx"), /from "@sameplace"/);
 assert.match(page, /robots: \{ index: false, follow: false \}/);
 assert.match(page, /if \(!isLabEnabled\(\) \|\| process\.env\.SAMEPLACE_ENABLED !== "true"\) notFound\(\)/);
-assert.match(page, /await requireLabProjectPage\("sameplace"\)/);
+assert.doesNotMatch(page, /requireLabProjectPage/);
+assert.match(page, /<SamePlaceClient/);
+assert.match(read("frontend/app/portfolio/sameplace/api/[...operation]/route.ts"), /hasSameOrigin\(request\)/);
 const backend = read("backend/app/main.py");
 assert.match(backend, /app\.include_router\(\s*sameplace_router, prefix="\/api", dependencies=\[Depends\(require_sameplace_member\)\]\s*\)/);
 assert.match(backend, /app\.include_router\(\s*preferans_router, prefix="\/api", dependencies=\[Depends\(require_preferans_member\)\]\s*\)/);
@@ -76,4 +79,6 @@ for (const folder of ["frontend/app", "frontend/components"]) {
     }
   }
 }
-console.log("SamePlace SP01 integration boundaries: PASS");
+assert.match(backend, /room_router = make_room_router\(\s*require_sameplace_identity, sameplace_database, sameplace_enabled,?\s*\)/);
+assert.match(backend, /app\.include_router\(room_router, prefix="\/api"\)/);
+console.log("SamePlace integration boundaries: PASS");

@@ -57,3 +57,18 @@ test("pseudo translation stretches labels without changing identifiers or the de
   assert.ok(t("players.one", { count: 1 }).includes("1"));
   assert.equal(createTranslator("ru")("foundation.motto"), ru["foundation.motto"]);
 });
+
+
+// Compile the actual allowlist separately to preserve the translator output path.
+execFileSync(process.execPath, [tsc, "--strict", "--target", "ES2020", "--module", "commonjs", "--outDir", join(out, "transport"), resolve(source, "../room-transport.ts")], { stdio: "inherit" });
+const { roomOperation, validInviteToken } = requireCompiled("./transport/room-transport.js");
+test("BFF allows only exact SamePlace room operations and methods", () => {
+  assert.equal(roomOperation("GET", ["rooms", "friday"]), "rooms/friday");
+  assert.equal(roomOperation("POST", ["rooms", "friday", "invite"]), "rooms/friday/invite");
+  assert.equal(roomOperation("POST", ["rooms", "friday", "design"]), "rooms/friday/design");
+  for (const parts of [["rooms", "../secret"], ["rooms", "abc", "arbitrary"], ["rooms", "abc", "invite", "extra"], ["admin", "unknown"], ["preferans", "rooms"], ["rooms", "a%2Fb"]]) assert.equal(roomOperation("POST", parts), null);
+  assert.equal(roomOperation("GET", ["rooms", "friday", "archive"]), null);
+  assert.equal(roomOperation("DELETE", ["rooms", "friday"]), null);
+  assert.equal(validInviteToken("a".repeat(32) + "." + "B".repeat(43)), true);
+  assert.equal(validInviteToken("../token"), false);
+});

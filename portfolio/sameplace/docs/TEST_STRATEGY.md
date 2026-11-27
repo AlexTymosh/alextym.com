@@ -1,4 +1,4 @@
-# Test strategy — foundation
+# Test strategy — foundation and room core
 
 ## Commands (repository root unless noted)
 
@@ -21,3 +21,11 @@ The host workflow retains all five jobs. The project job fetches the pinned base
 | T-085 | No paid configuration or provider activation | No data/paid code/config introduced; future measured resource gates still pending |
 
 All tests are synthetic or local. Mock authorization tests prove the adapter contract, not Firebase token verification. Existing host tests exercise shared authorization. Full legacy regression, hosted CI, actual quota and device tests must not be marked passed without evidence. Before release test mobile and desktop with real roles, connection loss/restart, hidden data, data integrity and media capacity. Do not use production records or credentials as test fixtures.
+
+## SP02 additions
+
+- `uv run --locked python -m pytest ../portfolio/sameplace/tests/test_sameplace_room_core.py ../portfolio/sameplace/tests/test_sameplace_room_storage.py ../portfolio/sameplace/tests/test_sameplace_room_http.py ../portfolio/sameplace/tests/test_sameplace_room_guards.py ../portfolio/sameplace/tests/test_sameplace_room_host.py` from backend. Test service invariants, concurrent final-slot, scope/negative access, invite replay/expiry/revoke, transfer, archive/restore, request validation, actual HTTP composition. MemoryStore and fake SDK are isolated tests, not Emulator evidence.
+- `test_sameplace_room_emulator.py` is opt-in: local loopback Firestore Emulator only, unique `demo-sameplace-*` project, anonymous credentials, two competing final room slots. Set `SAMEPLACE_RUN_EMULATOR=1` and `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` only after launching a local Firestore Emulator. It must never be run against production. Actual Auth Emulator, cross-project guest denial on real host, explicit revoke/session binding, CSRF/BFF, enabled mobile UI and provider logs require staging acceptance.
+- Existing translator test also compiles and tests the exact BFF operation whitelist. Existing freeze guard is unchanged. New Playwright disabled-entrypoint test covers root room paths and BFF. Full locked Ruff/build/browser/CI required.
+
+T-002–012: focused service and HTTP coverage; actual Firestore concurrent transactions and live auth still pending. T-013/014: capacity values and Owner-only policy persisted; live admission and distinct-user count are SP03, NOT passed here. T-069–072: unchanged deny-all rules, object permission tests, no-cache and idempotent transaction model; real Emulator and production-safe logging verification pending. T-082: Owner-only policy/approval unit coverage. No claims that full acceptance or release is complete.
