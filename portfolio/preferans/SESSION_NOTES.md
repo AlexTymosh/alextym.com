@@ -214,3 +214,9 @@ Owner confirmed the current rules change without a new ruleset version. Claims r
 - Fit the local hand within the remaining lower lane, preserving fixed table and center geometry. Keep the last-trick overlay translucent and concise.
 - Show a decorative shrinking deck during packet flights, 30 cards in the fake deal and 32 in the real deal. No new storage operations or provider changes.
 - Full CI and three-client acceptance required.
+
+## PR41 - Compact hand controls
+
+- Keep auction, declaration, discard and claim controls next to the local hand instead of stretching the hand to fill the lower lane.
+- Derive the card row height from its width, scale and card aspect ratio; retain bounded shrinkage on short screens and headroom for raised cards. Preserve inline private discard review, table and center geometry.
+- Add browser regressions for control-to-card spacing and card containment at several screen sizes and element scales. No changes to game commands, scoring, backend or Firestore.
