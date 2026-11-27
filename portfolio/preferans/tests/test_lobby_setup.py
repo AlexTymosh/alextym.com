@@ -166,3 +166,11 @@ def test_directory_profile_budget_and_safe_names(monkeypatch):
     assert all(room["player_names"][2] is None for room in result["rooms"])
     assert "private@example.invalid" not in str(result)
     assert any(room["player_names"][1] is None for room in result["rooms"])
+
+
+def test_preferans_alias_is_optional_and_does_not_replace_account_name():
+    record = {"first_name": "Player", "last_name": "One", "preferans_alias": "Nickname"}
+    result = profile_projection(record)
+    assert result == {"name": "Player One", "avatar": None, "alias": "Nickname"}
+    for invalid in ("", "name@example.invalid", "a" * 41, 12, "a\u202eb"):
+        assert "alias" not in profile_projection({**record, "preferans_alias": invalid})

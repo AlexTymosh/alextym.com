@@ -1,5 +1,6 @@
 import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import { notebookAngle, splitPlayerName } from "./table-pr20";
+import { notebookName } from "./room-preparation";
 import { bidLabel, type RoomView, type NotebookMark } from "./game-model.ru";
 import { notebookAt } from "./notebook-history";
 import { packNotebookRows, poolEntryText, notebookEntryLabel, vistEquation, type InkToken } from "./notebook-layout";
@@ -20,7 +21,7 @@ export function Notebook({view, profiles, miniature=false, title, sheetExit, onC
   const past = cursor<steps.length;
   const history = past?notebookAt(view.score_sheet!,cursor):view.score_sheet;
   const step = steps[cursor-1];
-  const name = (seat:number) => profiles?.[seat]?.name || `Игрок ${seat+1}`;
+  const name = (seat:number) => notebookName(profiles?.[seat],`Игрок ${seat+1}`);
   const cellMarks=new Map<number[],NotebookMark[]>();
   const cells=new Map<number[],{kind:"hill"|"pool"|"vist";seat:number;against?:number}>();
   const vals = (kind: "hill" | "pool" | "vist", seat: number, against?: number) => {

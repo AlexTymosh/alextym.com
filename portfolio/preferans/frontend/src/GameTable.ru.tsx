@@ -14,6 +14,8 @@ import { WidowDisplay } from "./WidowDisplay.ru";
 import { activityProgress } from "./table-details";
 import { actualTrickCount } from "./claim-model";
 import { counterTarget } from "./gag-model";
+import { maySwapSeat } from "./room-preparation";
+import { usePaperLift } from "./paper-lift";
 import { HiddenDiscardScene } from "./HiddenDiscardScene.ru";
 import { SheetTearScene, SHEET_TEAR_MS } from "./SheetTearScene.ru";
 
@@ -27,8 +29,8 @@ function ActivityRing({since,now}: {since:number|undefined;now:()=>number}) {
   const progress=activityProgress(since,at);
   const ringId=useId().replace(/[^a-zA-Z0-9_-]/g,"");
   return <svg className={styles.activityRing} viewBox="0 0 160 90" preserveAspectRatio="none" aria-hidden="true">
-    <defs><mask id={`activity-${ringId}`} maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="90"><path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="white" strokeWidth="7" strokeDasharray={`${progress} 100`}/></mask></defs>
-    {progress>0&&<path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3.5" strokeOpacity="0.5" strokeLinecap="butt" strokeDasharray="1.5 1.1" mask={`url(#activity-${ringId})`}/>}
+    <defs><mask id={`activity-${ringId}`} maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="90"><path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="white" strokeWidth="4.9" strokeDasharray={`${progress} 100`}/></mask></defs>
+    {progress>0&&<path d="M3 81 V9 Q3 3 9 3 H151 Q157 3 157 9 V81 Q157 87 151 87 H9 Q3 87 3 81" pathLength="100" fill="none" stroke="currentColor" strokeWidth="2.45" strokeOpacity="0.5" strokeLinecap="butt" strokeDasharray="1.5 1.1" mask={`url(#activity-${ringId})`}/>}
   </svg>;
 }
 
@@ -72,8 +74,8 @@ function TrickStack({view,seat,onReplay,busy}: {view:RoomView;seat:Seat;onReplay
     {open&&cards&&!onReplay&&<div className={styles.trickPreview}>{cards.map(p=><span key={p.owner}><CardArtwork card={p.card}/></span>)}<button type="button" aria-label="Закрыть взятку" onClick={()=>setOpen(false)}>×</button></div>}
   </div>;
 }
-function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, deck, localControls, onSeatDrop, serverNow, sortMode, onReplay, busy, localConnected, onCounter }: {
-  view: RoomView; seat: Seat; profiles: SeatProfile[] | null; presence: Presence[] | null; serverNow:()=>number; sortMode:SortMode; onReplay?:()=>void; busy:boolean; localConnected:boolean; onCounter?:(seat:Seat)=>void;
+function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, deck, localControls, onSeatDrop, serverNow, sortMode, onReplay, busy, localConnected, onCounter, onSwap }: {
+  view: RoomView; seat: Seat; profiles: SeatProfile[] | null; presence: Presence[] | null; serverNow:()=>number; sortMode:SortMode; onReplay?:()=>void; busy:boolean; localConnected:boolean; onCounter?:(seat:Seat)=>void; onSwap?:(seat:Seat)=>void;
   renderOpenCard: (card: Card, seat: Seat) => ReactNode; media?: ReactNode; deck?: ReactNode; localControls?: ReactNode; onSeatDrop?: (seat:Seat,e:DragEvent)=>void;
 }) {
   const own = view.my_seat === seat;
@@ -90,7 +92,8 @@ function SeatAtTable({ view, seat, profiles, presence, renderOpenCard, media, de
   return <section className={`${styles.seat} ${styles[position]}`} data-seat={seat} data-position={position}
     aria-label={`${positionNames[position]}: ${profiles?.[seat]?.name || fallbackName(seat)}${own ? ", ты" : ""}`} onDragOver={e=>{if(onSeatDrop)e.preventDefault();}} onDrop={e=>onSeatDrop?.(seat,e)}>
     {speech&&<span className={styles.callBubble}>{speech}</span>}
-    <div className={styles.avatarAnchor}><div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div><Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={own?(localConnected?"online":"reconnecting"):presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} since={view.activity_started_at_ms} now={serverNow} counterAction={!own&&view.my_seat!==null&&view.status==="playing"&&view.occupied[seat]&&onCounter?<button type="button" className={styles.counterAlarm} aria-label={`Поставить на счётчик: ${profiles?.[seat]?.name||fallbackName(seat)}`} title="Поставить на счётчик" disabled={busy||counterTarget(view)!==seat} onClick={()=>onCounter(seat)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M4 3 2 5m18-2 2 2M6 19l-2 3m14-3 2 3"/></svg></button>:undefined} />
+    <div className={styles.avatarAnchor}><div className={styles.seatSignals}>{active&&<ThinkingClock since={view.activity_started_at_ms} now={serverNow}/>}</div><Avatar seat={seat} profile={profiles?.[seat]} active={active} presence={own?(localConnected?"online":"reconnecting"):presence?.[seat]} occupied={view.occupied[seat]} own={own} media={media} dealer={(dealerFor(view)??view.dealer)===seat} since={view.activity_started_at_ms} now={serverNow} counterAction={!own&&view.my_seat!==null&&view.status==="playing"&&view.occupied[seat]&&onCounter?<button type="button" className={styles.counterAlarm} aria-label={`Поставить на счётчик: ${profiles?.[seat]?.name||fallbackName(seat)}`} title="Поставить на счётчик" disabled={busy||counterTarget(view)!==seat} onClick={()=>onCounter(seat)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M4 3 2 5m18-2 2 2M6 19l-2 3m14-3 2 3"/></svg></button>:onSwap&&maySwapSeat(view,seat)?<button type="button" className={styles.swapSeatButton} disabled={busy} aria-label={`Поменяться с ${profiles?.[seat]?.name||fallbackName(seat)}`} title="Предложить обмен местами" onClick={()=>onSwap(seat)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h15l-4-4M19 7l-4 4M20 17H5l4-4M5 17l4 4"/></svg></button>:undefined} />
+      {view.status==="lobby"&&view.occupied[seat]&&<span className={styles.lobbyPlayerName}>{profiles?.[seat]?.name||fallbackName(seat)}</span>}
       {view.first_hand===seat&&["playing","awaiting_settlement"].includes(view.status)&&<span className={styles.firstHand}>Первый ход</span>}
       {position!=="bottom"&&<TrickStack key={`${view.game_id}:${view.played_tricks??0}:${seat}`} view={view} seat={seat} busy={busy} onReplay={onReplay}/>}
     </div>
@@ -136,9 +139,9 @@ function CenterCards({ view, collecting, onWidow, onField, onTableDrop, award, p
   </div>;
 }
 
-export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected, claimPanel, claimButton, roundTable, tableSurface, tableOpacity, finalReviewAction, scoreAdjustment, handCount, handBreaks, onCounter, discardScene}: {
+export function GameTable({view, profiles, presence, hand, actions, renderOpenCard, objects, onWidow, onField, sharedPanel, mediaForSeat, deck, localControls, onSeatDrop, onTableDrop, theme, serverNow, statusLine, pendingPlay, sortMode, onReplay, busy, onScore, announcement, sheetExit, surfaceOpacity, localConnected, claimPanel, claimButton, roundTable, tableSurface, tableOpacity, finalReviewAction, scoreAdjustment, handCount, handBreaks, onCounter, onSwap, discardScene}: {
   view: RoomView; profiles: SeatProfile[] | null; presence: Presence[] | null;
-  claimPanel?:ReactNode;claimButton?:ReactNode;roundTable:boolean;tableSurface:string;tableOpacity:number;finalReviewAction?:ReactNode;scoreAdjustment?:ReactNode;handCount:number;handBreaks:number;onCounter?:(seat:Seat)=>void;discardScene:{now:number;phase:"fake"|"deal"|null;hide:boolean};
+  claimPanel?:ReactNode;claimButton?:ReactNode;roundTable:boolean;tableSurface:string;tableOpacity:number;finalReviewAction?:ReactNode;scoreAdjustment?:ReactNode;handCount:number;handBreaks:number;onCounter?:(seat:Seat)=>void;onSwap?:(seat:Seat)=>void;discardScene:{now:number;phase:"fake"|"deal"|null;hide:boolean};
   theme:TableTheme;localConnected:boolean;surfaceOpacity:number;sheetExit?:ReactNode;serverNow:()=>number;statusLine:ReactNode;sortMode:SortMode;onReplay?:()=>void;onScore?:()=>void;announcement?:ReactNode;busy:boolean;pendingPlay?:{owner:number;card:Card}|null;
   hand: ReactNode; actions: ReactNode; renderOpenCard: (card: Card, seat: Seat) => ReactNode;
   objects?: ReactNode; sharedPanel?: ReactNode; onWidow?: () => void; onField?: () => void;
@@ -148,7 +151,7 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
   const seats = tableSeats(view.my_seat);
   const inLobby = view.status === "lobby";
   const between = view.status === "between";
-  const centerChoice=Boolean(view.status==="awaiting_settlement"&&(view.settlement_options?.regular_choice&&view.my_seat===view.declarer||view.my_seat!==null&&view.settlement_options?.passout_pending?.includes(view.my_seat)));
+  const centerChoice=inLobby||Boolean(view.status==="awaiting_settlement"&&(view.settlement_options?.regular_choice&&view.my_seat===view.declarer||view.my_seat!==null&&view.settlement_options?.passout_pending?.includes(view.my_seat)));
   const [scoreOpen,setScoreOpen]=useState(false);
   const [dismissedFinal,setDismissedFinal]=useState<string|null>(null);
   const showFinal=Boolean(view.final_settlement&&dismissedFinal!==view.room_id);
@@ -158,6 +161,9 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
   const replay=onReplay??(()=>setLocalReplay(replayId));
   const previous = useRef<RoomView|null>(null);
   const tableRef=useRef<HTMLElement>(null);
+  const localPaper=Boolean((showFinal||(scoreOpen&&!onScore))&&view.sheet_loser===undefined&&view.score&&!view.presentation?.overlay);
+  const paperOpen=localPaper||view.presentation?.overlay?.kind==="score_sheet";
+  usePaperLift(tableRef,paperOpen);
   const timer = useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
   const [animation,setAnimation] = useState<{kind:"deal"|"trick"|"widow"|"dealer"|"tear";game:string|null;count:number;from?:string}|null>(null);
   useLayoutEffect(()=>{
@@ -207,23 +213,23 @@ export function GameTable({view, profiles, presence, hand, actions, renderOpenCa
     if(gameHeader&&observer)observer.observe(gameHeader);
     return()=>{observer?.disconnect();window.removeEventListener("resize",fit);window.visualViewport?.removeEventListener("resize",fit);document.removeEventListener("fullscreenchange",fit);};
   },[inLobby]);
-  return <div className={styles.tableScene}><section ref={tableRef} data-gag-fake={discardScene.phase==="fake"?"true":undefined} data-gag-active={discardScene.phase?"true":undefined} data-hide-flight={discardScene.hide?"true":undefined} data-furniture={objects?"true":undefined} data-round-table={roundTable?"true":undefined} data-table-surface={tableSurface} data-claim-pending={view.claim?.status==="pending"||view.phase==="misere_offer"?"true":undefined} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity,"--table-opacity":tableOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={dealing?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true" data-center-choice={centerChoice?"true":undefined}>
+  return <div className={styles.tableScene}><section ref={tableRef} data-gag-fake={discardScene.phase==="fake"?"true":undefined} data-gag-active={discardScene.phase?"true":undefined} data-hide-flight={discardScene.hide?"true":undefined} data-furniture={objects?"true":undefined} data-round-table={roundTable?"true":undefined} data-table-surface={tableSurface} data-claim-pending={view.claim?.status==="pending"||view.phase==="misere_offer"?"true":undefined} data-theme={theme==="glass"?"felt":theme} style={{"--surface-opacity":surfaceOpacity,"--table-opacity":tableOpacity} as CSSProperties} data-holding-trick={collecting?"true":undefined} data-playing={inLobby?undefined:"true"} data-between-deals={view.status==="between"?"true":undefined} data-dealing={dealing?"true":undefined} data-deck-from={active==="dealer"?animation?.from:undefined} data-local-dealer={seatPosition(view.my_seat,view.dealer??-1)??undefined} className={styles.table} aria-label="Игровой стол" data-table-view="true" data-lobby={inLobby?"true":undefined} data-paper-open={paperOpen?"true":undefined} data-center-choice={centerChoice?"true":undefined}>
     <div className={styles.tableTop}>
-      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.left} onCounter={onCounter} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={!between&&dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
-      <CenterCards statusLine={centerChoice?<div className={styles.settlementChoice}>{statusLine}{actions}</div>:statusLine} announcement={announcement} pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}`} deck={between?deck:undefined} view={view} collecting={collecting} onWidow={onWidow} onField={onField} onTableDrop={onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>
-      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.right} onCounter={onCounter} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)} deck={!between&&dealerFor(view)===seats.right?deck:undefined} onSeatDrop={onSeatDrop}/>
+      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.left} onCounter={onCounter} onSwap={onSwap} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.left)} deck={!between&&dealerFor(view)===seats.left?deck:undefined} onSeatDrop={onSeatDrop}/>
+      <CenterCards statusLine={centerChoice?<div className={styles.settlementChoice} data-table-actions="true">{statusLine}{actions}</div>:statusLine} announcement={announcement} pendingPlay={pendingPlay} key={`${view.room_id}:${view.game_id}`} deck={between?deck:undefined} view={view} collecting={collecting} onWidow={onWidow} onField={onField} onTableDrop={onTableDrop} award={active==="widow"?seatPosition(view.my_seat,view.declarer??-1)??undefined:undefined}/>
+      <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.right} onCounter={onCounter} onSwap={onSwap} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.right)} deck={!between&&dealerFor(view)===seats.right?deck:undefined} onSeatDrop={onSeatDrop}/>
     </div>
     {view.score&&<button type="button" className={styles.tablePaper} data-paper-miniature="true" data-sheet-discarded={view.status==="closed"&&view.sheet_loser!==undefined?"true":undefined} aria-label="Открыть пульку" title="Пулька" disabled={busy||view.status==="closed"&&view.sheet_loser!==undefined} onClick={()=>onScore?onScore():setScoreOpen(true)}>
       <Notebook view={view} profiles={profiles} miniature/>
     </button>}
-    {(showFinal||(scoreOpen&&!onScore))&&view.sheet_loser===undefined&&view.score&&!view.presentation?.overlay&&<section className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles} reviewAction={finalReviewAction} scoreAdjustment={scoreAdjustment} title={view.final_review?"Проверка итоговых расчётов":view.final_settlement?"Закончили!":`${profiles?.[view.my_seat??-1]?.name||fallbackName(view.my_seat??0)} смотрит листик`} sheetExit={sheetExit} onClose={closeScore}/></section>}
+    {localPaper&&<section data-paper-lift="true" className={`${styles.localDrawer} ${styles.scoreDrawer} ${styles.tableScoreDrawer}`} role="dialog" aria-label="Пулька"><Notebook view={view} profiles={profiles} reviewAction={finalReviewAction} scoreAdjustment={scoreAdjustment} title={view.final_review?"Проверка итоговых расчётов":view.final_settlement?"Закончили!":`${profiles?.[view.my_seat??-1]?.name||fallbackName(view.my_seat??0)} смотрит листик`} sheetExit={sheetExit} onClose={closeScore}/></section>}
+    {paperOpen&&view.hidden_discard&&!discardScene.phase&&!discardScene.hide&&<div className={styles.paperHiddenCards} aria-label="Две закрытые карты под листиком">{[0,1].map(i=><span key={i}><CardArtwork decorative/></span>)}</div>}
     {inLobby&&objects}
     {sharedPanel}
     {claimPanel}
     {active==="tear"&&view.sheet_loser!==undefined&&view.score&&<SheetTearScene view={view} profiles={profiles}/>}
     {(discardScene.hide||discardScene.phase==="fake")&&<HiddenDiscardScene key={`${view.game_id}:${discardScene.phase??"hide"}`} view={view} {...discardScene} serverNow={serverNow} name={seat=>profiles?.[seat]?.name||fallbackName(seat)}/>}
     {!onReplay&&localReplay===replayId&&view.last_trick?.length===3&&<section className={styles.localReplay} role="dialog" aria-label="Последняя взятка"><strong>{profiles?.[view.my_seat??-1]?.name||fallbackName(view.my_seat??0)} смотрит последнюю взятку</strong><div className={styles.localReplayCards}>{view.last_trick.map(p=><div key={p.owner}><span>{profiles?.[p.owner]?.name||fallbackName(p.owner)}</span><CardArtwork card={p.card}/></div>)}</div><button type="button" onClick={()=>setLocalReplay(null)}>Закрыть</button></section>}
-    {inLobby&&<div className={styles.decision} data-table-actions="true">{actions}</div>}
     <div className={styles.bottomArea} style={{"--hand-count":handCount,"--hand-breaks":handBreaks} as CSSProperties}>
       <SeatAtTable serverNow={serverNow} sortMode={sortMode} onReplay={replay} busy={busy} view={view} seat={seats.bottom} localConnected={localConnected} profiles={profiles} presence={presence} renderOpenCard={renderOpenCard} media={mediaForSeat?.(seats.bottom)} deck={!between&&dealerFor(view)===seats.bottom?deck:undefined} onSeatDrop={onSeatDrop} localControls={localControls}/>
       {!inLobby&&<div className={styles.handColumn}>

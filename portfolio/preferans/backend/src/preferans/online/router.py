@@ -79,6 +79,7 @@ class Command(Mutation):
         "passout_reward",
         "pulse",
         "counter_start",
+        "counter_cancel",
         "undo_request",
         "undo_vote",
         "preset",

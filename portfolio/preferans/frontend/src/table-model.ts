@@ -2,7 +2,7 @@ import type { Card, RoomView } from "./game-model.ru";
 
 export type SeatPosition = "left" | "right" | "bottom";
 export type Seat = 0 | 1 | 2;
-export type SeatProfile = { name: string | null; avatar: string | null };
+export type SeatProfile = { name: string | null; avatar: string | null; alias?:string };
 export type RoomSummary = {
   room_id: string; status: RoomView["status"]; occupied: boolean[]; mine: boolean;
   created_at_ms?: number|null; daily_number?: number|null; waiting_names?: string[]; player_names?: (string|null)[];
@@ -51,7 +51,8 @@ export function safeProfiles(value: unknown): SeatProfile[] | null {
     const name = typeof p.name === "string" && p.name.length <= 160 && !/[@\u0000-\u001f\u007f-\u009f]/.test(p.name) ? p.name : null;
     const avatar = typeof p.avatar === "string" && p.avatar.length <= 133_400 && /^data:image\/webp;base64,[A-Za-z0-9+/=]+$/.test(p.avatar) ? p.avatar : null;
     const email = typeof p.email === "string" && p.email.length<=254 && /^[^@\s\u0000-\u001f]+@[^@\s\u0000-\u001f]+$/.test(p.email)?p.email:null;
-    return { name:name||email, avatar };
+    const alias=typeof p.alias==="string"&&p.alias.length<=40&&!/[@\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/.test(p.alias)?p.alias.trim():"";
+    return { name:name||email, avatar, ...(alias?{alias}:{}) };
   });
 }
 export function safeDirectory(value: unknown): { rooms: RoomSummary[]; can_create: boolean; truncated: boolean } | null {

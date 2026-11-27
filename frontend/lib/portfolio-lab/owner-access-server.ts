@@ -7,6 +7,8 @@ import { projectGrantRole } from "./project-grants";
 import type { GrantChange } from "./grant-change";
 import { isLabOAuthProvider, labOAuthBindings } from "./admission-policy";
 import { labProviderNames } from "./auth-ui";
+import { preferansAlias } from "./preferans-alias";
+import { firebaseQuota } from "./firestore-quota";
 
 function grantRef(db: ReturnType<typeof getFirestore>, projectId: string, uid: string) {
   return db.collection("portfolio_lab_projects").doc(projectId).collection("grants").doc(uid);
@@ -40,7 +42,9 @@ export async function listLabUsers(after?: string) {
       name: isLabOAuthProvider(provider.providerId) ? labProviderNames[provider.providerId] : "Email & password",
       email: provider.email ?? null,
     }));
-    return { uid: account.uid, email: account.email ?? null, disabled: account.disabled, linkedAccounts, grants };
+    const profile = await firebaseQuota.run(() => db.collection("portfolio_lab_profiles").doc(account.uid).get());
+    const alias = preferansAlias(profile.data()?.preferans_alias) ?? "";
+    return { uid: account.uid, email: account.email ?? null, disabled: account.disabled, linkedAccounts, grants, alias };
   }));
   return { users, next: records.size > 25 ? identities[identities.length - 1].id : null };
 }

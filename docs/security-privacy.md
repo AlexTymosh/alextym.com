@@ -577,3 +577,5 @@ Security is acceptable when:
 - assistant uses insufficient-data response;
 - provider budget limit is configured;
 - logs do not contain sensitive data.
+
+The optional Preferans nickname is a display-only label managed by the platform Owner through the private access-management page. It is UID-bound, validated, preserved on ordinary profile writes and never used for login, admission, grant evaluation or public RAG. Room-member profile access is unchanged; aliases are not included in the room directory or public account responses.

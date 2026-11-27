@@ -196,6 +196,22 @@ def stop_counter(control: dict) -> None:
     control["timer"] = None
 
 
+def cancel_counter(control: dict, actor: int, *, admin: bool) -> dict:
+    _valid_seat(actor)
+    timer = control.get("timer")
+    if not timer:
+        raise ControlError(409, "No active counter")
+    if actor != timer["initiator"] and not admin:
+        raise ControlError(403, "Counter initiator or room admin required")
+    event = {
+        "initiator": timer["initiator"],
+        "target": timer["target"],
+        "periods": timer["periods"],
+    }
+    stop_counter(control)
+    return event
+
+
 def tick_controls(
     control: dict, game: GameState | None, score: ScoreState, now_ms: int, deal_id: str | None
 ) -> tuple[ScoreState, list[dict]]:

@@ -132,7 +132,16 @@ def profile_projection(record: object) -> dict:
     if not isinstance(avatar, str) or len(avatar) > 133_400 or not AVATAR.fullmatch(avatar):
         avatar = None
     # Do not return provider URLs, email fallbacks, linked providers or UID.
-    return {"name": " ".join(p for p in parts if p) or None, "avatar": avatar}
+    result = {"name": " ".join(p for p in parts if p) or None, "avatar": avatar}
+    alias = record.get("preferans_alias")
+    if (
+        isinstance(alias, str)
+        and 0 < len(alias.strip()) <= 40
+        and len(alias) <= 40
+        and not re.search(r"[@\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]", alias)
+    ):
+        result["alias"] = alias.strip()
+    return result
 
 
 def room_profiles(db: Any, room_id: str, uid: str, *, email_lookup=None) -> dict:

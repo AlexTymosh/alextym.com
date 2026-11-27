@@ -87,7 +87,7 @@ export type RoomInvitation = {
 export type ApiFailure = { status: number; detail: string };
 export type CommandAction =
   | "bid" | "pass" | "here" | "discard" | "declare" | "defense" | "mode" | "misere_offer" | "misere_vote" | "claim_offer" | "claim_vote" | "passout_reward"
-  | "play" | "without_three" | "pulse" | "counter_start" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "punch_choose" | "final_confirm" | "archive" | "ruleset_select";
+  | "play" | "without_three" | "pulse" | "counter_start" | "counter_cancel" | "undo_request" | "undo_vote" | "preset" | "lobby_ready" | "lobby_config" | "dealer_pass" | "table_theme" | "overlay_open" | "overlay_close" | "break_start" | "break_ready" | "music" | "sheet_discard" | "seat_swap_offer" | "seat_swap_vote" | "punch_choose" | "final_confirm" | "archive" | "ruleset_select";
 
 export const ROOM_ID_RE = /^[0-9a-f]{32}$/;
 const SUITS: Record<Suit, { symbol: string; label: string }> = {

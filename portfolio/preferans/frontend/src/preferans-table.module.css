@@ -711,3 +711,43 @@
 .table .gagFoundHint { position:absolute; display:flex; align-items:flex-start; left:calc(var(--paper-x,9%) + var(--paper-w,9%)*.25); top:calc(var(--paper-y,62%) + var(--paper-h,12%)*.16); transform:translateY(-45%); color:#e7bf62; text-shadow:0 1px 3px #000; font-size:clamp(.8rem,1.6cqw,1.3rem); white-space:nowrap; }
 .table .gagFoundHint svg { width:clamp(24px,5cqw,64px); height:auto; flex:none; }
 @media(prefers-reduced-motion:reduce) { .table .gagFoundHint svg { display:none; } }
+
+/* PR35: filled auction/vote actions and in-room preparation. */
+.table .bidGroups button:not([data-bid-tone]),.table .claimButton button:not([aria-label]) { background:#284b3d; color:#fff4db; }
+.table .bidGroups button:not([data-bid-tone]):not([aria-expanded="true"]):hover:not(:disabled),.table .claimButton button:not([aria-label]):hover:not(:disabled) { background:#3d6350; color:#fff4db; border-color:#e5ca93; }
+.table .bidGroups button[data-bid-tone="sky"]:hover:not(:disabled) { background:#b5e6ff; color:#15314b; }
+.table .bidGroups button[data-bid-tone="dark"]:hover:not(:disabled) { background:#3b3b3b; color:#fff7dc; }
+.table .bidGroups button[aria-expanded="true"] { background:#ae8950; color:#fff; }
+.table .bidGroups button[aria-expanded="true"]:hover:not(:disabled) { background:#bd995f; color:#fff; }
+.table .bidGroups button[data-bid-tone="suit"] { background:#f6eedc; color:#1e2823; }
+.table .bidGroups button[data-bid-tone="suit"]:hover:not(:disabled) { background:#fff6dc; color:#1e2823; }
+.table .bidGroups button[data-bid-tone="suit"].redSuit,.table .bidGroups button[data-bid-tone="suit"].redSuit:hover:not(:disabled) { color:#a52c39; }
+.table .bidGroups button[type="button"]:disabled { opacity:.26; cursor:not-allowed; }
+.table .bidGroups button[type="button"] { min-height:2.843375rem; }
+.table .bidSuits .suitGlyph { display:inline-block; transform:scale(1.27); line-height:1; }
+.table .claimPanel .claimVotes button:first-child,.table .claimPanel .claimVotes button:first-child:hover:not(:disabled) { background:#315b3d; color:#fff4db; }
+.table .claimPanel .claimVotes button:last-child,.table .claimPanel .claimVotes button:last-child:hover:not(:disabled) { background:#71332d; color:#fff4db; }
+.table .claimPanel .claimVotes button:hover:not(:disabled) { filter:brightness(1.18); border-color:#e5ca93; }
+.table .avatar .swapSeatButton { position:absolute; right:5px; bottom:5px; z-index:8; width:clamp(24px,3.2cqw,38px); height:clamp(24px,3.2cqw,38px); min-height:0; padding:4px; display:grid; place-items:center; color:#f6e9c7; background:#153a30; border:1px solid #d6bd80; border-radius:50%; }
+.table .avatar .swapSeatButton:hover:not(:disabled) { background:#836337; }
+.table .avatar .swapSeatButton svg { width:100%;height:100%;border-radius:0; }
+.table .lobbyPlayerName { position:absolute; left:0; right:0; top:100%; margin-top:.2rem; color:#fff4db; font-size:.78rem; text-align:center; overflow-wrap:anywhere; }
+.table[data-lobby="true"] { --tile-w:clamp(56px,min(22cqw,28dvh),300px); min-height:min(var(--available-table-height,600px),720px); display:flex; flex-direction:column; }
+.table[data-lobby="true"] .tableTop { flex:1 1 auto; grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr); align-items:start; }
+.table[data-lobby="true"] .center { align-self:stretch; }
+.table[data-lobby="true"] .trickField { width:100%; max-width:520px; aspect-ratio:auto; min-height:clamp(240px,44dvh,400px); border-radius:1.25rem; }
+.table[data-lobby="true"] .fieldStatus { inset:4%; }
+.table[data-lobby="true"] .settlementChoice { max-width:100%; width:100%; max-height:100%; font-size:clamp(.7rem,1.2cqw,.95rem); }
+.table[data-lobby="true"] .settlementChoice section { width:100%; }
+.table[data-lobby="true"] .settlementChoice section p { margin:.2rem 0; }
+.table[data-lobby="true"] .settlementChoice section h3 { margin:.25rem 0; }
+.table[data-lobby="true"] .bottomArea { margin-top:auto; grid-template-columns:1fr; justify-items:center; }
+.table[data-paper-open="true"] .tablePaper { visibility:hidden; pointer-events:none; }
+.table .paperHiddenCards { position:absolute; left:clamp(12px,5cqw,80px); bottom:31%; z-index:5; display:flex; gap:2px; transform:rotate(-11deg); pointer-events:none; }
+.table .paperHiddenCards>span { display:block; width:clamp(20px,3.5cqw,58px); }
+.table .paperHiddenCards img { display:block; width:100%; height:auto; }
+@media(max-height:650px) and (orientation:landscape) {
+  .table .bidGroups button[type="button"] { min-height:2.3rem; }
+  .table[data-lobby="true"] .trickField { min-height:clamp(160px,50dvh,290px); }
+  .table .paperHiddenCards { bottom:33%; }
+}

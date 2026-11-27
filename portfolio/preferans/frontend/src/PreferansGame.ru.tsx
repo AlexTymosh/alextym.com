@@ -192,6 +192,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     return () => controller.abort();
   }, [profileRoom, occupiedKey]);
   const activeRoomRef = useRef("");
+  const autoJoinedRoom = useRef("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Mutation | null>(null);
   const [pollKey, setPollKey] = useState(0);
@@ -259,6 +260,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     bindMedia(0, null);
     viewRef.current = null;
     activeRoomRef.current = id;
+    autoJoinedRoom.current = "";
     setProfileState(null);
     setView(null); setInvited(null); setSelected([]); setOrder([]);
     setRtReady(false); setRtPresence(null);
@@ -273,6 +275,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     bindMedia(0, null);
     viewRef.current = null;
     activeRoomRef.current = "";
+    autoJoinedRoom.current = "";
     setProfileState(null);
     setRoomId(""); setView(null); setInvited(null); setSelected([]); setStatus("");
     setRtReady(false); setRtPresence(null);
@@ -307,7 +310,23 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
         if (error instanceof ApiError && error.status === 404 && !viewRef.current) {
           try {
             const found = await invitation(roomId);
-            if (!stopped) { setInvited(found); setOnline(true); setStatus(""); errors = 0; }
+            if (!stopped && activeRoomRef.current===roomId) {
+              setInvited(found); setOnline(true); setStatus(""); errors = 0;
+              if (!found.occupied.every(Boolean) && autoJoinedRoom.current!==roomId && !inFlight.current) {
+                autoJoinedRoom.current=roomId;
+                inFlight.current=true;setBusy(true);
+                try {
+                  await joinRoom(roomId,newKey(),found.version);
+                  if(!stopped&&activeRoomRef.current===roomId){
+                    const joined=await roomView(roomId);
+                    if(!stopped&&activeRoomRef.current===roomId&&!("unchanged" in joined)){
+                      if(joined.presentation)serverOffset.current=joined.presentation.server_now_ms-Date.now();
+                      updateView(joined);setInvited(null);
+                    }
+                  }
+                } finally {inFlight.current=false;setBusy(false);}
+              }
+            }
           } catch (inviteError) {
             if (!stopped) setStatus(inviteError instanceof ApiError ? statusMessage(inviteError.status) : statusMessage(503));
           }
@@ -574,7 +593,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const openShared = (kind: OverlayKind) => shared("overlay_open", {kind});
   const visibleHand=draft?hand.filter(c=>!selected.includes(cardId(c))):hand;
   const settings=<div className={styles.settingsPanel}>
-    {view&&<>{view.status==="lobby"&&<PreferansControls view={view} profiles={profiles} busy={busy} command={command}/>}<ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
+    {view&&<>{view.status==="lobby"&&<><LobbySetup view={view} profiles={profiles} busy={busy} command={command} mode="config"/><RulesetEditor view={view} busy={busy} command={command}/><PreferansControls view={view} profiles={profiles} busy={busy} command={command}/></>}<ReleaseControls key={`${view.room_id}:${view.game_id}`} view={view} busy={busy} command={command}/></>}
     <CycleSetting<SortMode> label="Сортировка карт" value={sortMode} options={[["grouped","По длине масти"],["suit","По порядку мастей"]]} onChange={changeSort}/>
     <button type="button" onClick={()=>setOrder([])}>Автосортировка</button>
     <CycleSetting<TableTheme|"room"> label="Игровое поле" value={localTableTheme==="glass"?"felt":localTableTheme} options={[["room","Как в комнате"],["felt","Зелёное сукно"],["blue","Синее сукно"],["wood","Тёплый коричневый"]]} onChange={changeTableTheme}/>
@@ -590,8 +609,8 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const ownHand = view && <div className={styles.handsPanel}>
     {draft&&<div className={styles.discardSlots} aria-label="Зона сноса" onDragOver={e=>e.preventDefault()} onDrop={discardDrop}>
       {[0,1].map(i=>{const card=chosenCards[i];return <button key={i} type="button" className={styles.discardSlot} data-pointer-drag="discard" aria-label={card?`Вернуть карту ${cardLabel(card)} в руку`:"Место для сноса"} disabled={!card||!canInteractCards} draggable={!!card&&canInteractCards} onDragStart={e=>card&&beginDrag(e,"discard",card)} onDragEnd={endDrag} onClick={()=>card&&setSelected(old=>changeDraft(old,cardId(card),false))}>{card?<CardArtwork card={peekDiscard?card:undefined}/>:"+"}</button>;})}
-      <button type="button" aria-label="Посмотреть выбранный снос" aria-pressed={peekDiscard} onClick={()=>setPeekDiscard(v=>!v)}><EyeIcon/></button>
       <div className={styles.discardActions}>
+        <button type="button" aria-label="Посмотреть выбранный снос" aria-pressed={peekDiscard} onClick={()=>setPeekDiscard(v=>!v)}><EyeIcon/></button>
         <button type="button" className={styles.primary} disabled={!canInteractCards||chosenCards.length!==2} onClick={()=>command("discard",{cards:chosenCards})}>Снести две карты</button>
         <button type="button" disabled={!canInteractCards||chosenCards.length!==2} onClick={()=>command("discard",{cards:chosenCards,hide_under_sheet:true})}>Спрятать надежно</button>
       </div>
@@ -616,7 +635,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
   const playerName=(seat:number)=>profiles?.[seat]?.name||seatNames[seat]||"Игрок";
   const tableStatus = view && (()=>{
     const transient=dropNotice||status||(busy&&pending?.label!=="play"?"Операция выполняется…":"");
-    if(view.controls?.counter&&!view.controls?.undo)return <>{transient&&<small>{transient}</small>}<CounterDisplay view={view} name={playerName} serverNow={serverNow}/></>;
+    if(view.controls?.counter&&!view.controls?.undo)return <>{transient&&<small>{transient}</small>}<CounterDisplay view={view} name={playerName} serverNow={serverNow} busy={busy} onCancel={()=>command("counter_cancel")}/></>;
     if(transient&&!view.controls?.undo)return transient;
     if(view.final_review)return "Проверьте итоговые расчёты";
     if(view.status==="closed")return "Закончили!";
@@ -640,8 +659,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
     return view.is_passout?<><strong data-passout-status="true">Распасы</strong>{turn&&<small>{turn}</small>}</>:<><strong>{isPlay?(turn||statusNames[view.status]):(bidding??phaseLabel(view.phase))}</strong>{!isPlay&&turn&&<small>{turn}</small>}{isPlay&&view.turn!==view.my_seat&&view.controller===view.my_seat&&<small>Управляешь открытой рукой</small>}</>;
   })();
   const actions = view && <>
-    {view.status === "lobby" && view.lobby_setup && <RulesetEditor view={view} busy={busy} command={command}/>}
-    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} profiles={profiles} busy={busy} command={command} /><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
+    {view.status === "lobby" && view.lobby_setup && <><LobbySetup view={view} profiles={profiles} busy={busy} command={command}/><SeatSwap view={view} profiles={profiles} busy={busy} command={command}/></>}
     <ActionPanel view={view} busy={busy||!!discardScene.phase} profiles={profiles}
       command={command} regularRoute={regularRoute} setRegularRoute={setRegularRoute}
       onStart={start} onSettle={settle} />
@@ -676,7 +694,7 @@ export function PreferansGame({preferenceScope}: {preferenceScope?: string} = {}
             shared={view.presentation?.enabled&&view.claim?.status!=="pending" ? openShared : undefined}
             media={LIVE_MEDIA_ENABLED && !archived && view.my_seat !== null
               ? <LiveMediaControls media={liveMedia}/> : <p>Видео и голос пока отключены. Игровая связь от них не зависит.</p>}>
-            <GameTable view={view} discardScene={discardScene} onCounter={seat=>command("counter_start",{target:seat})} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
+            <GameTable view={view} discardScene={discardScene} onCounter={seat=>command("counter_start",{target:seat})} onSwap={seat=>command("seat_swap_offer",{to:seat})} profiles={profiles} presence={rtReady&&rtPresence?rtPresence:null} localConnected={online||rtReady}
               theme={selectedTheme} roundTable={roundTable} tableSurface={surface} tableOpacity={1-tableTransparency/100} surfaceOpacity={opacity} scoreAdjustment={<ScoreAdjustment view={view} profiles={profiles} busy={busy} adjust={adjust}/>} finalReviewAction={view.final_review?(view.room_admin?<button type="button" disabled={busy} onClick={()=>{if(window.confirm("Подтвердить итоговые расчёты и завершить партию?"))command("final_confirm");}}>Расчёты проверены</button>:<small>Ожидаем подтверждения администратора.</small>):undefined} sheetExit={<SheetExit view={view} busy={busy} command={command}/>} serverNow={serverNow} pendingPlay={localPlay} sortMode={sortMode} busy={busy||!!discardScene.phase||view.claim?.status==="pending"} onReplay={view.presentation?.enabled?()=>openShared("last_trick"):undefined}
               statusLine={<>{tableStatus}{!busy&&pending&&<button type="button" onClick={()=>void mutate(pending.label,pending.run)}>Повторить операцию</button>}</>}
               announcement={view.status==="closed"&&view.sheet_loser!==undefined?<div className={styles.sheetDrama} role="alert">{profiles?.[view.sheet_loser]?.name||seatNames[view.sheet_loser]}: ПСИХАНУЛ и выкинул листик. По голому удару ему!</div>:view.end_reason==="without_three"&&view.declarer!=null&&view.my_seat!==null&&view.my_seat!==view.declarer&&["awaiting_settlement","between"].includes(view.status)?<p className={styles.concedeDrama} role="status">{profiles?.[view.declarer]?.name||seatNames[view.declarer]} зассал и кинул «без трёх»!</p>:undefined}

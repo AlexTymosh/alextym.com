@@ -10,6 +10,7 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
   const availableBids = auction ? view.legal_bids ?? [] : view.legal_contracts ?? [];
   const bids = availableBids;
   const [group,setGroup] = useState<BidGroup|null>(null);
+  const [concedeVersion,setConcedeVersion]=useState<number|null>(null);
   const options = group ? bidsInGroup(bids,group) : [];
   const [confirmation,setConfirmation] = useState<{group:BidGroup;version:number}|null>(null);
   const confirmed = confirmation?.version===view.version?confirmation.group:null;
@@ -26,7 +27,10 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
   }
   return <div className={styles.bidPanel} aria-label={auction?"Торговля":"Окончательный контракт"}>
     <div className={styles.bidGroups}>
-      {canConcede&&<button type="button" data-bid-tone="dark" disabled={busy} onClick={()=>{if(window.confirm(`Ты уверен, что хочешь объявить «Без трёх» (${bidLabel(view.winning_bid!)})?`))command("without_three");}}>Без трёх</button>}
+      {canConcede&&(concedeVersion===view.version?<div role="group" aria-label="Подтверждение без трёх">
+        <button type="button" data-bid-tone="dark" data-confirm="true" disabled={busy} onClick={()=>{setConcedeVersion(null);command("without_three");}}>Подтвердить «Без трёх»</button>
+        <button type="button" disabled={busy} onClick={()=>setConcedeVersion(null)}>Отмена</button>
+      </div>:<button type="button" data-bid-tone="dark" disabled={busy} onClick={()=>{setConfirmation(null);setGroup(null);setConcedeVersion(view.version);}}>Без трёх</button>)}
       {auction && <button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>{setConfirmation(null);command("pass");}}>ПАС</button>}
       {BID_GROUPS.filter(key=>key!=="ten_no_widow").map(key=>{
         const available=bidsInGroup(bids,key);
@@ -50,7 +54,7 @@ export function BidPanel({view,busy,command}: {view:RoomView;busy:boolean;comman
               {auction&&confirmed!=="ten_no_widow"?<button type="button" disabled={busy} data-bid-tone="dark" onClick={()=>setConfirmation({group:"ten_no_widow",version:view.version})}>Тотус без прикупа!</button>:<>{totus.map(bid=><button type="button" key={JSON.stringify(bid)} disabled={busy} data-bid-tone="dark" onClick={()=>submit(bid)}>{`Тотус ${bid.suit?suitSymbol(bid.suit):"БК"}${auction?" — подтвердить":""}`}</button>)}</>}
             </span>}
             {options.map(bid=><button type="button" key={JSON.stringify(bid)} aria-label={bidLabel(bid)} disabled={busy}
-              className={bid.suit==="H"||bid.suit==="D"?styles.redSuit:undefined} onClick={()=>submit(bid)}>{bid.suit?suitSymbol(bid.suit):"БК"}</button>)}
+              data-bid-tone="suit" className={bid.suit==="H"||bid.suit==="D"?styles.redSuit:undefined} onClick={()=>submit(bid)}><span className={styles.suitGlyph}>{bid.suit?suitSymbol(bid.suit):"БК"}</span></button>)}
           </span>}
         </div>;
       })}

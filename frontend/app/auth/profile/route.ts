@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
         first_name: firstName, last_name: lastName,
         avatar_source: source,
         avatar_data_url: source === "upload" ? (uploaded || current?.avatar_data_url || null) : null,
+        ...(typeof current?.preferans_alias === "string" ? { preferans_alias: current.preferans_alias } : {}),
         revision: (body.revision as number) + 1, updated_at_ms: Date.now(),
       });
       return 200;

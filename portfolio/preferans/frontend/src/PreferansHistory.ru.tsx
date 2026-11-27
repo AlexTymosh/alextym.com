@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import styles from "./preferans-history.module.css";
+import { sideOpponent } from "./history-seats";
 
 import {
   type Result, type Ranking, type SortField, type Metric,
@@ -149,9 +150,9 @@ export function PreferansHistory({ refreshKey = 0 }: { refreshKey?: number }) {
         <summary>{when(game.finished_at_ms)} · {game.deal_count} раздач · {game.reason === "sheet_discarded" ? "Техническое поражение" : "Пуля закрыта"}</summary>
         <div className={styles.resultBody}><p>Правила {game.ruleset_id ?? ""} v{game.ruleset_version} · {game.ruleset_hash.slice(0, 12)} ·
           {game.duration_ms === null ? " продолжительность неизвестна" : ` ${(game.duration_ms / 60000).toFixed(1)} мин`}</p>
-          <table><thead><tr><th>Игрок</th><th>Висты</th><th>Место</th><th>Пуля</th><th>Гора</th></tr></thead>
+          <table><thead><tr><th>Игрок</th><th>Соперник слева</th><th>Соперник справа</th><th>Висты</th><th>Место</th><th>Пуля</th><th>Гора</th></tr></thead>
           <tbody>{game.players.map(player => <tr key={player.id}>
-            <td>{playerLabel(player.id,names)}</td><td>{player.net_vists}</td><td>{player.place ?? "Ничья"}</td>
+            <td>{playerLabel(player.id,names)}</td>{(["left","right"] as const).map(side=>{const opponent=sideOpponent(game.players,player.seat,side);return <td key={side}>{opponent?playerLabel(opponent.id,names):"—"}</td>;})}<td>{player.net_vists}</td><td>{player.place ?? "Ничья"}</td>
             <td>{player.pool}</td><td>{player.hill}</td></tr>)}</tbody></table>
           {Array.isArray(game.punches)&&game.punches.length>0&&<><p>Условные удары: {game.punches.map(p=>`${playerLabel(game.players.find(player=>player.seat===p.from)?.id??String(p.from+1),names)} → ${playerLabel(game.players.find(player=>player.seat===p.to)?.id??String(p.to+1),names)}: ${p.bare} голых, ${p.ordinary} обычных`).join(" · ")}</p>
             {game.reason==="pool_closed"&&!game.punches_confirmed&&Array.isArray(game.punch_choices)&&game.punches.some(p=>p.bare>0)&&<a href={`/portfolio/preferans?room=${game.room_id}`}>Открыть завершённую комнату для выбора (участникам)</a>}</>}
