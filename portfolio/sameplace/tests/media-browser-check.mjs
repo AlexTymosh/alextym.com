@@ -3,7 +3,7 @@
 // devices; no Firebase, external requests, website account or paid provider.
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
-import {mkdtempSync,readFileSync,rmSync} from "node:fs";
+import {mkdtempSync,rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join,resolve} from "node:path";
 import {fileURLToPath} from "node:url";
@@ -15,15 +15,51 @@ const temp=mkdtempSync(join(tmpdir(),"sameplace-media-"));
 let browser;
 try{
   const media=resolve(root,"portfolio/sameplace/frontend/src/media");
-  execFileSync(process.execPath,[requireHost.resolve("typescript/bin/tsc"),"--strict","--target","ES2020","--module","commonjs","--lib","ES2020,DOM,DOM.Iterable","--skipLibCheck","--outDir",temp,resolve(media,"types.ts"),resolve(media,"mesh.ts")],{stdio:"inherit"});
-  const modules=["types","mesh"].map(name=>`register(${JSON.stringify("./"+name)},(exports,require)=>{${readFileSync(join(temp,name+".js"),"utf8")}\n});`).join("\n");
-  const bundle=`(()=>{const mods={},cache={};const register=(name,fn)=>mods[name]=fn;const require=(name)=>{if(!cache[name]){const exports={};cache[name]=exports;mods[name](exports,require);}return cache[name];};${modules}\nwindow.MeshProvider=require("./mesh").MeshProvider;})();`;
+  execFileSync(process.execPath,[requireHost.resolve("typescript/bin/tsc"),"--strict","--target","ES2020","--module","ES2020","--lib","ES2020,DOM,DOM.Iterable","--skipLibCheck","--outDir",temp,resolve(media,"types.ts"),resolve(media,"mesh.ts")],{stdio:"inherit"});
   browser=await chromium.launch({headless:true,args:["--use-fake-device-for-media-stream","--use-fake-ui-for-media-stream"]});
   const context=await browser.newContext({permissions:["camera","microphone"]});
   const page=await context.newPage();
-  await page.route("**/*",route=>route.request().url()==="http://localhost:8765/"?route.fulfill({status:200,contentType:"text/html",body:"<html><body></body></html>"}):route.abort());
+  await page.route("**/*", async route => {
+    const url = route.request().url();
+
+    if (url === "http://localhost:8765/") {
+      return route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: '<html><body><script type="module" src="/bootstrap.js"></script></body></html>',
+      });
+    }
+
+    if (url === "http://localhost:8765/bootstrap.js") {
+      return route.fulfill({
+        contentType: "text/javascript",
+        body: 'import { MeshProvider } from "/mesh.js"; window.MeshProvider = MeshProvider;',
+      });
+    }
+
+    if (url === "http://localhost:8765/mesh.js") {
+      return route.fulfill({
+        contentType: "text/javascript",
+        path: join(temp, "mesh.js"),
+      });
+    }
+
+    if (url === "http://localhost:8765/types") {
+      return route.fulfill({
+        contentType: "text/javascript",
+        path: join(temp, "types.js"),
+      });
+    }
+
+    return route.abort();
+  });
+
   await page.goto("http://localhost:8765/");
-  await page.addScriptTag({content:bundle});
+  await page.waitForFunction(
+    () => typeof window.MeshProvider === "function",
+    {},
+    { timeout: 10000 }
+  );
   await page.evaluate(()=>{
     const aId="a".repeat(32),bId="b".repeat(32),pair="c".repeat(32),meeting="d".repeat(32);
     const views={};const a=new window.MeshProvider(v=>views.a=v),b=new window.MeshProvider(v=>views.b=v);
