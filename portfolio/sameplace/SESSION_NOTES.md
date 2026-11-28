@@ -1,8 +1,8 @@
 # SamePlace — Session notes and implementation roadmap
 
-**Revision:** 3.0 | **Date:** 2026-11-27 | **Scope:** SamePlace only
+**Revision:** 4.0 | **Date:** 2026-11-27 | **Scope:** SamePlace only
 
-**Status:** SP01–SP02 MERGED; SP03 CANDIDATE r01 prepared. Full local/hosted CI, Emulator and real-device acceptance pending. Not activated.
+**Status:** SP01–SP03 MERGED; SP04 CANDIDATE r01. Full local/hosted CI and release acceptance pending. Not activated.
 
 Canonical path: `portfolio/sameplace/SESSION_NOTES.md`.
 
@@ -10,10 +10,10 @@ Requirements: [SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md](docs/SAMEPLACE_FULL
 
 ## 1. Resume here
 
-- **Last inspected main:** `e33b71b4e815819c9086f8114dec47871473ea0c` (SP02 merge verified by GitHub; Vercel combined status success only). Legacy freeze source remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777` (PR42). Do not regenerate the freeze inventory.
-- **Last merged SamePlace PR:** SP02, verified on main at `e33b71b4e815819c9086f8114dec47871473ea0c`. Owner reports merged and marked full local/hosted CI green in SP02 PR checklist; raw logs not independently observed; local Emulator remains open.
-- **Current candidate:** SP03 r01, `sameplace-sp03-social-realtime-r01.zip`, branch `feat/sameplace-social-realtime`, exact pinned main above. Apply only to clean matching main, run full no-Task CI and local Emulator/actual browser acceptance before any activation.
-- **Current evidence:** isolated SP03 domain/HTTP/WS tests pass on FastAPI 0.128.2 with synthetic identity and memory/fake transaction storage; pure TS modules typechecked and TSX syntax checked. See latest evidence. Full locked host CI and Emulator/actual browser gates remain open.
+- **Last inspected main:** `1381cf379cac5c8cd5f5f6b24c55564830c19ece` (SP03 merge confirmed by GitHub). Legacy freeze baseline remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777`; never regenerate it.
+- **Last merged SamePlace PR:** SP03, verified on main at `1381cf379cac5c8cd5f5f6b24c55564830c19ece`. Owner reports merged following the E702 correction; full CI log not independently observed. SP02/SP03 Emulator and real-device acceptance remain open.
+- **Current candidate:** SP04 r01 `sameplace-sp04-interiors-music-r01.zip`, branch `feat/sameplace-interiors-music`. Apply on exact clean main, run full no-Task CI and release-gate tests. Do not activate production.
+- **Current evidence:** SP04 focused domain and ASGI/WS checks pass with synthetic identity/storage; pure TS localization, transport and WAV tests pass. Full locked host CI, Emulator, real-browser media and artistic/rights acceptance remain open.
 - **Plan:** 10 sequential implementation PRs, 46 planned logical commits (4+5+5+5+5+6+4+4+4+4). Planning estimate, not an enforced count. Documentation is included in each PR; no separate documentation-only scaffold PR. One implementation branch and ZIP candidate at a time.
 - **Production:** keep SamePlace disabled until the explicit release gate. Do not disable or modify legacy Preferans, existing site features, or cloud billing to make SamePlace work.
 
@@ -227,15 +227,15 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 |---|---:|---|---|---|
 | SP01 | 4 | MERGED | `98945bc295e5` | Owner confirmed; main contents verified; Vercel success, full CI log not independently observed |
 | SP02 | 5 | MERGED | `e33b71b4e815` | Owner reports full local/hosted CI green; merge verified; Emulator remains open |
-| SP03 | 5 | CANDIDATE r01 | `e33b71b4e815` (base) | Social/realtime implemented; full locked CI and acceptance pending |
-| SP04 | 5 | PLANNED | - | Depends on SP03 |
+| SP03 | 5 | MERGED | `1381cf379cac` | Owner reports merged; raw CI logs not independently observed |
+| SP04 | 5 | CANDIDATE r01 | `1381cf379cac` (base) | Interior and music candidate; release gates pending |
 | SP05 | 5 | PLANNED | - | Depends on SP03/SP04 |
 | SP06 | 6 | PLANNED | - | Depends on SP05 and frozen Preferans source |
 | SP07 | 4 | PLANNED | - | Depends on SP03/SP06; capacity evidence |
 | SP08 | 4 | PLANNED | - | Depends on SP06; default sequence SP07 then SP08 |
 | SP09 | 4 | PLANNED | - | Requires approved Domino rules |
 | SP10 | 4 | PLANNED | - | All previous stages and acceptance gates |
-| **Total** | **46** | **2 merged** | - | SP03 candidate; SP04–SP10 planned |
+| **Total** | **46** | **3 merged** | - | SP04 candidate; SP05–SP10 planned |
 
 ## 10. Open items (carry forward until evidenced or resolved)
 
@@ -338,3 +338,18 @@ End of current log. Append new entries in chronological order; update the resume
 ### SP03 r01 - Ruff correction
 
 - Fixed E702 in test_sameplace_social_http.py by separating two statements. No runtime behavior changed. Full CI rerun required.
+
+### 2026-11-27 — SP03 merge verification / SP04 candidate r01
+
+- Verified SP03 merge on `1381cf379cac5c8cd5f5f6b24c55564830c19ece` and used the actual main blob inventory. Owner reports merged; no independent full CI log. The E702 correction remains in the history. Frozen legacy and canonical Russian specification are untouched. No host application, dependency or provider changes.
+- Branch `feat/sameplace-interiors-music`; ZIP `sameplace-sp04-interiors-music-r01.zip`; five planned logical commits. Requirements T-047–056, T-061, T-080, T-084/085 are partially covered; ADR 0005. `decor` owns catalogue, validation, state, receipts and transport. Existing shared quota/limiter and hub reused. Built-in five schematic scenes and three player skins, two S-50 objects in apartment/club, location-scoped editor, per-UID private templates, shared music scope and local audio controls. Two original recorded test tones; real radio disabled pending approval. No photo, commercial recording or third-party asset shipped.
+- Scope and remaining gates: full RoomTemplate bundle, persistent personal display preferences, exact art/model accuracy, real browser/audio and provider/Emulator acceptance, stream permissions, and activity-safe scene changes/mixing are not completed. SP05/06 must validate real game changes; SP07 voice ducking and independent voice/game levels. Current scenes are schematic. No paid or production activation.
+- Tests: isolated Python/FastAPI synthetic-store domain and HTTP/WS suite, SP03 regression suite, pure TypeScript/Node localization/BFF/audio checks; 32 passing isolated tests (12 new domain cases, 1 ASGI HTTP/WS case, 19 SP03 regressions); 12 Node tests (4 new, 8 existing) and 10 changed TypeScript/TSX files syntax-transpiled without error; full React typecheck not performed. Full repository checkout, locked dependency CI, Ruff, Next build, browser and Docker remain local gates. Do not label full CI green until observed. English INTERIOR_ENGINE, ASSET_LICENSES, ADR, API/domain/security/media/budget/test docs and this ledger updated.
+- Next: apply candidate, verify tests and merge; only then SP05 Activity SDK. Preserve all previous session history. Rollback by reverting SP04 with feature off; do not delete decor records or regenerate freeze inventory.
+
+### 2026-11-27 — SP04 r02 — ESLint generated-artifact correction
+
+- Owner-reported `npm run lint`: 239 errors and 2,825 warnings; Babel identified generated Playwright trace assets under `frontend/playwright-report/trace/assets/`. Independent SamePlace source lint: 0 errors, 3 warnings (DecorPanel, RoomCore, ChatPanel). The original failure is consistent with generated artifacts being scanned; exact remaining source-lint status must be confirmed after the correction.
+- Extend the host ESLint global ignore list to exclude generated Playwright reports, test results, dist and generated configuration. Keep existing rules and the separate SamePlace/Fleet source lint checks unchanged. No report deletion, dependency changes or legacy source edits.
+- Leave the three non-blocking warnings visible; review the ref cleanup and navigation behavior separately rather than mechanically changing lifecycle logic. Full CI rerun required. The SP04 candidate commit grouping includes the shared lint configuration in commit five.
+- Owner approved reordering future stages to SP05 Voice & Video, SP06 Activity SDK, SP07 Preferans Engine. Update the roadmap and dependent documents when beginning SP05 after SP04 merges. No media implementation in this correction.

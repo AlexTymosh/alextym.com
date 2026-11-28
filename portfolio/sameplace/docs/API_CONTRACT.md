@@ -54,3 +54,15 @@ API prefix `/api/sameplace`, browser BFF `/portfolio/sameplace/api`. All HTTP mu
 | WS `/realtime` | auth ticket then ping only; viewer-specific snapshot / pong / machine error | Exact origin, fresh verified identity, room admission, periodic reauth |
 
 Additional machine errors: WAIT_CAPACITY, OTHER_MEETING, TAB_LIMIT, REALTIME_BUSY, REALTIME_DISABLED, RETRY_REALTIME, TICKET_INVALID, REALTIME_REVOKED, JOIN_MEETING_REQUIRED, PROFILE_NOT_FOUND, FRIEND_STATE, FRIEND_LIMIT, NOTIFICATION_CONSENT, INBOX_LIMIT, CHAT_LIMIT, CURSOR_EXPIRED, MESSAGE_NOT_FOUND, PROPOSAL_INVALID/PROPOSAL_LIMIT. No raw request, credential, private UID or provider exception returned. See REALTIME_AND_MEDIA for full envelope and recovery. No production activation.
+
+## SP04 decor endpoints (under `/api/sameplace`)
+
+| Method / path | Body / result | Permission |
+|---|---|---|
+| GET `/rooms/{slug}/decor` | private scene/music projection, catalogue and caller's own template library | Active member |
+| POST `/rooms/{slug}/decor/publish` | request_id, location, revision, room_version, scene -> fresh projection | Owner/designer |
+| POST `/rooms/{slug}/decor/save_template` | request_id, name, scene, optional template_id, revision -> fresh projection | Owner/designer |
+| POST `/rooms/{slug}/decor/delete_template` | request_id, template_id, revision -> fresh projection | Owner/designer and own library |
+| POST `/rooms/{slug}/decor/music` | request_id, scope, revision, action, optional source_id / position_ms -> fresh projection | Owner/DJ |
+
+All operations follow existing private response, request size, identity, rate and quota rules. Room revision notification fences successful scene/music commands. Command receipts are reused; duplicate command cannot repeat a durable mutation. Errors SCENE_CONFLICT, MUSIC_CONFLICT, SOURCE_UNAVAILABLE, INVALID_SEEK, TEMPLATE_LIMIT. No raw arbitrary URL permitted. Scene registry IDs and machine errors are language independent.

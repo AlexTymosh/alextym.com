@@ -16,3 +16,7 @@ Run the repository CI and the project-specific checks in [test strategy](docs/TE
 ## SP03 room shell and social/realtime
 
 Private room members may meet even without the owner. Profile, friendships, room favourites, recent visits, chat and internal waiting-at-room notices are scoped to SamePlace. The one-worker realtime feature is disabled by default. See [realtime protocol](docs/REALTIME_AND_MEDIA.md), [resource budget](docs/RESOURCE_BUDGET.md), [ADR 0004](docs/adr/0004-single-worker-realtime.md) and [session ledger](SESSION_NOTES.md). All release gates, local CI and local Emulator/real-device verification still apply. No automatic email or SMS, music, video, or game engine in this stage.
+
+## SP04: scenes and music
+
+The private room includes original schematic scene presets, per-location designer editor, private reusable interior templates and a persistent audio controller. Source catalogue starts with two original test tones; external radio is operator-disabled until rights review. See [Interior engine](docs/INTERIOR_ENGINE.md), [asset register](docs/ASSET_LICENSES.md), [media operations](docs/REALTIME_AND_MEDIA.md) and [session ledger](SESSION_NOTES.md). Production stays disabled.
