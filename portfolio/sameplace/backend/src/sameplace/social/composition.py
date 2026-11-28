@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from ..rooms.api import make_room_router as make_core_router
 from ..rooms.quota import QuotaCircuit
 from ..rooms.rate_limit import RequestLimiter
+from ..decor.api import make_decor_router
 from .api import make_social_router
 from .hub import Hub
 
@@ -90,5 +91,8 @@ def make_room_router(
             circuit,
             limiter,
         )
+    )
+    router.include_router(
+        make_decor_router(identify, database_provider, enabled, hub, circuit, limiter)
     )
     return router
