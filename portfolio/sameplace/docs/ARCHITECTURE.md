@@ -1,6 +1,6 @@
-# Architecture — SP01–SP03
+# Architecture — SP01–SP04
 
-Status: SP03 candidate; not activated. SP01 and SP02 were merged. The Russian requirements remain the normative product specification.
+Status: SP04 candidate; not activated. SP01–SP03 are merged. The Russian requirements remain the normative product specification.
 
 ## Composition and dependency direction
 
@@ -36,7 +36,7 @@ The host owns infrastructure and authentication; SamePlace owns application beha
 
 ## Future modules
 
-Room Core is implemented for durable room administration. Social/Realtime is implemented in SP03; Interior/Media, Activity Host and isolated engines remain planned. The activity manifest contract in `backend/src/sameplace/contracts/activity.py` is a first validated metadata seam. It distinguishes module, contract, state and rules versions, player counts, roles, spectator modes, UI entrypoint, supported locale tags and scene surfaces. The metadata can represent additional languages without enabling them; only the RU runtime dictionary is active. Publication must verify module support for every active locale. No code loading or entitlement runtime yet; add lifecycle ports in SP05 after Room Core is stable. A capability may only be published after its implementation and tests exist. Test-only fixtures are not available activities.
+Room Core is implemented for durable room administration. Social/Realtime is implemented in SP03; SP04 adds independent scene and music state. Activity Host and isolated engines remain planned. The activity manifest contract in `backend/src/sameplace/contracts/activity.py` is a first validated metadata seam. It distinguishes module, contract, state and rules versions, player counts, roles, spectator modes, UI entrypoint, supported locale tags and scene surfaces. The metadata can represent additional languages without enabling them; only the RU runtime dictionary is active. Publication must verify module support for every active locale. No code loading or entitlement runtime yet; add lifecycle ports in SP05 after Room Core is stable. A capability may only be published after its implementation and tests exist. Test-only fixtures are not available activities.
 
 ## Legacy freeze
 
@@ -83,3 +83,7 @@ flowchart TD
 ```
 
 Room Core retains its storage and authorization ownership. The project factory in `social/composition.py` shares a bounded quota circuit and write limiter across both routers, without modifying host startup. `social/service.py` reuses public room transaction/authorization methods; `social/hub.py` has no storage, network or host imports. The BFF remains a thin origin/credential forwarding adapter. New UI components, layouts, translator keys and realtime client stay within SamePlace. See REALTIME_AND_MEDIA, RESOURCE_BUDGET, ADR 0004. SamePlace and realtime flags remain off by default.
+
+## SP04 interior and music composition
+
+`decor` owns catalogue, strict commands, transactional application service, and router. `social/composition.py` adds the router with existing host adapters, quota circuit, write limiter and hub; no website runtime changes. Frontend `decor` owns SceneCanvas, SceneEditor, MusicPlayer, typed projections and audio math. MeetingPanel mounts the persistent DecorPanel; it overlays the existing layout and does not own game rules. The browser uses existing BFF with exact added operation paths. Audio source lifetime depends on media source, not scene or skin. See INTERIOR_ENGINE and ADR 0005.

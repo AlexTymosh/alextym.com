@@ -1,6 +1,6 @@
 # Realtime room shell and future media boundary
 
-Status: SP03 candidate. WebRTC, radio, activity state and video are not implemented in this stage. See the canonical Russian requirements and [ADR 0004](adr/0004-single-worker-realtime.md). No provider is activated or billed.
+Status: SP04 candidate. SP03 is merged; scene and music state are implemented. WebRTC, activity state and video remain future stages. See the canonical Russian requirements and [ADR 0004](adr/0004-single-worker-realtime.md). No provider is activated or billed.
 
 ## Runtime ownership
 
@@ -55,3 +55,9 @@ Current meeting locations are `lounge` and `table` placeholders. Organizer/room 
 ## Future audio/video, music and activity
 
 One logical connection per active tab is the intended transport for future private activity projections, media signaling and music state. No separate socket per module. SP04 adds interior/music state; SP05 adds activity contract/authorization; SP07 adds audio/video and verified free capacity. Do not stream video through FastAPI or enable TURN/SFU billing. No recording, microphone permission, automatic provider enrollment or media UI claims in SP03. Any transport/provider adapter must maintain origin/auth, capacity, rate limits and no raw secret-state broadcasts.
+
+## SP04 music controller
+
+Room and optional lounge/table override states use independent revisions and server epoch. Removing an override increments its tombstone version; stale commands cannot resurrect it. Owner/DJ may select, play, pause, stop, rewind/seek recorded sources and restore inheritance. `MusicPlayer` stays mounted inside the room shell, so a visual device switch does not replace the audio element/source. Source lifetime is keyed only by source ID, mode, availability and URL; recorded playback derives its target from server time and wraps over the 8-second fixture. Local offset is an approximate sample at response receipt; exact timing across real browsers must be measured. Browser permission is explicit; local volume and mute are independent; audio is paused while realtime is offline, released when leaving. Radio buffering prevents exact alignment. No audio routed into microphones or server relay. Voice/ambient/game sound mixing and ducking are deferred to SP07/activity integration.
+
+Server-only env pairs: `SAMEPLACE_RADIO_DISCO_URL` / `SAMEPLACE_RADIO_DISCO_RIGHTS_VERIFIED`, `SAMEPLACE_RADIO_ROCK_URL` / `SAMEPLACE_RADIO_ROCK_RIGHTS_VERIFIED`, `SAMEPLACE_RADIO_RETRO_URL` / `SAMEPLACE_RADIO_RETRO_RIGHTS_VERIFIED`. Set flags only after rights and transport review. An unpublished default room selects Melodia Disco and shared playing state only if its rights-verified source is configured; otherwise stopped test Disco. Existing persisted source choices are never silently replaced. Users still have to permit local audio. No new paid services or production environment changes. See ASSET_LICENSES.

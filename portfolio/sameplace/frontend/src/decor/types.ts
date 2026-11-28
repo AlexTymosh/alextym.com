@@ -1,0 +1,10 @@
+export type Location = "lounge" | "table";
+export type Scope = "room" | Location;
+export type DecorObject = {id:string;asset_id:string;x:number;y:number;scale:number;rotation:number;z:number};
+export type Scene = {schema_version:1;background:string;lighting:string;surface:string;skin:string;objects:DecorObject[]};
+export type SceneVersion = {revision:number;scene:Scene};
+export type Template = {id:string;revision:number;name:string;scene:Scene;updated_at_ms:number};
+export type Source = {id:string;mode:"live_radio"|"recorded";available:boolean;duration_ms:number|null;url?:string};
+export type MusicState = {revision:number;source_id:string;playback:"playing"|"paused"|"stopped";position_ms:number;started_at_ms:number;changed_by:string|null};
+export type DecorView = {id:string;room_version:number;can_design:boolean;can_dj:boolean;scenes:Record<Location,SceneVersion>;music:{room:MusicState;lounge?:MusicState;table?:MusicState};music_versions:Partial<Record<Scope,number>>;sources:Record<string,Source>;catalogue:{schema_version:1;assets:Record<string,{kind:string;variant:string}>;skins:string[];surfaces:Record<string,string[]>;scenes:{id:string;revision:number;scene:Scene}[];lights:string[]};templates:Template[];server_now_ms:number};
+export type MusicAction = "select"|"play"|"pause"|"stop"|"seek"|"inherit";

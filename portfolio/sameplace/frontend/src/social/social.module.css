@@ -19,3 +19,14 @@
 .proposal { border: 1px solid var(--border, #8886); border-radius: 8px; padding: .6rem; overflow-wrap: anywhere; }
 .wrap { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .panel { padding: .65rem; } .tableLayout { min-height: 15rem; gap: .15rem; } .person { font-size: .7rem; } .avatar { width: 2rem; height: 2rem; } }
+
+.mat { background: repeating-linear-gradient(0deg, #527b94 0 15px, #b7c9c9 15px 19px); border: 3px solid #e9d7b7; border-radius: 5px; }
+.deck { background: #b68e61; border-color: #557482; border-radius: 8px; }
+.square { background: #8a5735; border-radius: 6px; }
+.wood { background: #8a5735; }
+
+.scenicLayout { position: relative; isolation: isolate; aspect-ratio: 16 / 9; min-height: 15rem; grid-template-rows: repeat(5,minmax(0,1fr)); }
+.backdrop { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: 8px; background: #685d4d; }
+.backdrop svg { width: 100%; height: 100%; object-fit: contain; }
+.scenicLayout .person { z-index: 1; padding: .15rem; border-radius: 8px; background: #1f2937c9; color: #fff; }
+@media (max-width: 480px) { .scenicLayout { aspect-ratio: auto; min-height: 17rem; } }

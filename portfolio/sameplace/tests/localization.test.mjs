@@ -89,3 +89,32 @@ test("participant layouts have deterministic non-overlapping places for 0-10 peo
   for(let n=0;n<=10;n++){assert.equal(positions(n).length,n);assert.equal(new Set(positions(n)).size,n);}
   assert.throws(()=>positions(11),RangeError);
 });
+
+// SP04: production audio timing and exact new BFF operations.
+execFileSync(process.execPath,[tsc,"--strict","--target","ES2020","--module","commonjs","--outDir",join(out,"decor"),resolve(source,"../decor/audio.ts")],{stdio:"inherit"});
+const {targetPosition,demoWave}=requireCompiled("./decor/audio.js");
+test("SP04 permits only exact decor read and write operations",()=>{
+  assert.equal(roomOperation("GET",["rooms","friday","decor"]),"rooms/friday/decor");
+  for(const action of ["publish","save_template","delete_template","music"]){
+    assert.equal(roomOperation("POST",["rooms","friday","decor",action]),`rooms/friday/decor/${action}`);
+    assert.equal(roomOperation("GET",["rooms","friday","decor",action]),null);
+  }
+  assert.equal(roomOperation("POST",["rooms","friday","decor","arbitrary"]),null);
+  assert.equal(roomOperation("POST",["rooms","../secret","decor","music"]),null);
+});
+test("recorded audio uses epoch and wraparound; radio has no seek target",()=>{
+  const state={position_ms:7000,started_at_ms:10000,playback:"playing"};
+  assert.equal(targetPosition(state,{duration_ms:8000},12500),1.5);
+  assert.equal(targetPosition({...state,playback:"paused"},{duration_ms:8000},12500),7);
+  assert.equal(targetPosition(state,{duration_ms:null},12500),0);
+});
+test("original demo WAVs have correct headers, duration and distinct bytes",async()=>{
+  const a=Buffer.from(await demoWave("test_disco").arrayBuffer());
+  const b=Buffer.from(await demoWave("test_retro").arrayBuffer());
+  assert.equal(a.toString("ascii",0,4),"RIFF");assert.equal(a.toString("ascii",8,12),"WAVE");
+  assert.equal(a.readUInt32LE(24),16000);assert.equal(a.readUInt32LE(40),256000);
+  assert.equal(a.length,256044);assert.notDeepEqual(a,b);assert.throws(()=>demoWave("untrusted"));
+});
+test("scene, assets, device and audio source labels exist",()=>{
+  for(const id of ["apartment","garage","beach","kindergarten_boat","card_club","table_round","table_square","table_felt","mat_blue","mat_striped","boat_deck","boat_bench","chair_wood","chair_metal","lamp","plant","bag","speaker_s50","cushion","vesna_212s4","vega_122s_two_tier","mayak_233","test_disco","test_retro","melodia_disco","radio_roks","retro_radio"]){assert.ok(ru[`decor.${id}`],id);}
+});

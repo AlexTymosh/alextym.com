@@ -1,0 +1,15 @@
+.workspace { display: grid; gap: .75rem; min-width: 0; }
+.panel { display: grid; gap: .6rem; padding: .85rem; border: 1px solid var(--border, #8886); border-radius: 12px; min-width: 0; }
+.panel h3, .panel h4 { margin: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+.controls label { flex: 1 1 9rem; display: grid; gap: .25rem; min-width: 0; }
+.controls label:has(input[type="checkbox"]) { display: flex; align-items: center; }
+.panel button, .panel select, .panel input:not([type="checkbox"]) { min-height: 44px; max-width: 100%; }
+.panel select, .panel input:not([type="checkbox"]) { width: 100%; }
+.scene { display: block; width: 100%; height: auto; border-radius: 8px; background: #685d4d; }
+.previewViewport { max-width: 100%; overflow: auto; }
+.draggable { cursor: grab; touch-action: none; }
+.draggable:active { cursor: grabbing; }
+.device { width: min(100%, 14rem); padding: .2rem; }
+.device svg { display: block; width: 100%; height: auto; }
+@media (max-width: 480px) { .panel { padding: .6rem; } .controls label { flex-basis: 7rem; } }
