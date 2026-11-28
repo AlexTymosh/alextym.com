@@ -12,8 +12,9 @@ export function roomOperation(method: string, parts: string[]): string | null {
   }
   if (parts[0] !== "rooms" || !slug.test(parts[1] ?? "")) return null;
   if (method === "GET" && parts.length === 2) return parts.join("/");
-  if (method === "GET" && parts.length === 3 && ["chat", "recipients"].includes(parts[2])) return parts.join("/");
+  if (method === "GET" && parts.length === 3 && ["chat", "recipients", "decor"].includes(parts[2])) return parts.join("/");
   if (method === "POST" && parts.length === 3 && (actions.has(parts[2]) || ["favourite", "ping", "ticket"].includes(parts[2]))) return parts.join("/");
+  if (method === "POST" && parts.length === 4 && parts[2] === "decor" && ["publish", "save_template", "delete_template", "music"].includes(parts[3])) return parts.join("/");
   if (method === "POST" && parts.length === 4 && ((parts[2] === "chat" && ["page", "send", "hide", "cleanup"].includes(parts[3])) || (parts[2] === "location" && ["propose", "answer", "cancel", "move"].includes(parts[3])))) return parts.join("/");
   return null;
 }
