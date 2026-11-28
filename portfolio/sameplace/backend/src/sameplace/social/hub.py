@@ -67,9 +67,12 @@ class Hub:
         self.last_seen: dict[str, int] = {}
         self.public_last_seen: set[str] = set()
         self.handshakes = 0
+        self.media_observer = None
 
     def _touch(self, meeting):
         meeting.sequence += 1
+        if self.media_observer is not None:
+            self.media_observer(meeting)
 
     def _cleanup(self):
         now = self.clock()

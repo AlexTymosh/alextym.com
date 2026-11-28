@@ -7,6 +7,7 @@ from ..rooms.api import make_room_router as make_core_router
 from ..rooms.quota import QuotaCircuit
 from ..rooms.rate_limit import RequestLimiter
 from ..decor.api import make_decor_router
+from ..media.signaling import configured_media, configured_stun, configured_media_capacity
 from .api import make_social_router
 from .hub import Hub
 
@@ -55,6 +56,9 @@ def make_room_router(
     enabled=lambda: True,
     realtime_enabled=configured_realtime,
     allowed_origin=configured_origin,
+    media_enabled=configured_media,
+    ice_servers=configured_stun,
+    media_capacity=configured_media_capacity,
 ):
     hub = Hub()
     circuit = QuotaCircuit()
@@ -90,6 +94,9 @@ def make_room_router(
             hub,
             circuit,
             limiter,
+            media_enabled,
+            ice_servers,
+            media_capacity,
         )
     )
     router.include_router(

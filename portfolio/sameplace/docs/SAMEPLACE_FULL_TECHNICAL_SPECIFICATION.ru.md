@@ -1369,9 +1369,9 @@ Evidence report: commit SHA, environment/versions, test cases, passed/failed/ski
 | 2. Identity/Room Core | Approval, memberships, roles, creation/slug, invite redeem, ownership/archive, capacity/admission | T-002–015, security tests; приглашённый без общего grant имеет только room access |
 | 3. Social/Room Shell | Lobby, friends/privacy, chat, favorites, позвать друзей (SMS/email mock), realtime bootstrap/recovery, layout profiles | T-016–025, 051, 062–063, 074–075 |
 | 4. Interior/Media controller | Scene registry, пять локаций, assets/skins, 2D editor (базовый), music state, 2–4 templates | T-047–056, 084, no paid adapters |
-| 5. Preferans engine | Извлечение нового независимого пакета, differential tests, adapter/UI и rulesets | T-083, freeze green, оригинальный UI сохранён по UAT |
-| 6. Activity lifecycle | Seats/ready/swap, observers, room/game split, pause/resume, repeat, results/rankings, cross-room locks | T-026–046, 066–073; длительное сохранение state |
-| 7. Voice/video | Общий media provider, P2P, channels, moderation, real-device capacity determination | T-057–061, actual free limit, без overage |
+| 5. Voice/video | Общий media provider, P2P, channels, moderation, real-device capacity determination | T-057–061, actual free limit, без overage |
+| 6. Activity lifecycle / SDK | Seats/ready/swap, observers, room/game split, pause/resume, repeat, results/rankings, cross-room locks | T-026–046, 066–073; длительное сохранение state |
+| 7. Preferans engine | Извлечение нового независимого пакета, differential tests, adapter/UI и rulesets | T-083, freeze green, оригинальный UI сохранён по UAT |
 | 8. Виртуальные игроки | Bot interface/implementation, legal actions, safe replacement, eligibility | T-036–038, bounded CPU, no hidden-info advantage |
 | 9. Второй модуль | Домино после согласования конкретных правил и отдельного module spec; собственный layout/menu/tests | T-065, 066; не переписано ядро/преферанс |
 | 10. Hardening/Release | Расширение каталога, mobile polish, failure drills, soak, docs, CI, Owner acceptance | Все applicable gates, £0, production feature flags только с явным разрешением |
