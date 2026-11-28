@@ -66,3 +66,7 @@ Additional machine errors: WAIT_CAPACITY, OTHER_MEETING, TAB_LIMIT, REALTIME_BUS
 | POST `/rooms/{slug}/decor/music` | request_id, scope, revision, action, optional source_id / position_ms -> fresh projection | Owner/DJ |
 
 All operations follow existing private response, request size, identity, rate and quota rules. Room revision notification fences successful scene/music commands. Command receipts are reused; duplicate command cannot repeat a durable mutation. Errors SCENE_CONFLICT, MUSIC_CONFLICT, SOURCE_UNAVAILABLE, INVALID_SEEK, TEMPLATE_LIMIT. No raw arbitrary URL permitted. Scene registry IDs and machine errors are language independent.
+
+## SP05 media extension (existing WebSocket)
+
+No new HTTP operations, BFF allowlist or browser credentials. Existing `/api/sameplace/realtime` auth remains mandatory. Media state and addressed signaling are feature-gated, with strict payload bounds. `media.join`, `media.leave`, `media.tracks`, `media.signal`, `media.mode`, `media.mute` commands; `media.state`, `media.signal`, `media.error`, `media.disabled` server frames. Current room/channel/pair and active connection checked on each signal. Owner/organizer/moderator mode and Owner/moderator mute use fresh verified room permissions; no remote unmute. Stable MEDIA_* codes, never echo SDP/ICE/credentials in error. See REALTIME_AND_MEDIA for detailed protocol. No persistence or video proxy.

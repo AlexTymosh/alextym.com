@@ -1,6 +1,6 @@
 # Interior engine — SP04
 
-Status: implementation candidate; not a visual acceptance or production release. The canonical Russian product specification remains authoritative. Five original schematic vector scenes are included; their artistic fidelity is not approved. No third-party image, user photo, external SVG or downloaded model is embedded.
+Status: SP04 merged; not a visual acceptance or production release. The canonical Russian product specification remains authoritative. Five original schematic vector scenes are included; their artistic fidelity is not approved. No third-party image, user photo, external SVG or downloaded model is embedded.
 
 ## Ownership and contracts
 
@@ -14,4 +14,6 @@ Per-UID private reusable library supports up to 12 saved templates. Copy to a dr
 
 ## Acceptance and future integration
 
-SP05/06 must bind activity surfaces and immutable logical seats, and defer unsafe scene changes while an activity is running. No game state exists in SP04. Validate mobile pointer and keyboard editor, conflicts across two browsers, asset bounds and historical visual accuracy before release. Source artwork is intentionally schematic. See ASSET_LICENSES, REALTIME_AND_MEDIA, TEST_STRATEGY and ADR 0005.
+SP06/07 must bind activity surfaces and immutable logical seats, and defer unsafe scene changes while an activity is running. No game state exists in SP04. Validate mobile pointer and keyboard editor, conflicts across two browsers, asset bounds and historical visual accuracy before release. Source artwork is intentionally schematic. See ASSET_LICENSES, REALTIME_AND_MEDIA, TEST_STRATEGY and ADR 0005.
+
+SP05 places media and local audio preferences above the scene. Video tile is presentation only; audio sinks and media provider survive changes of decoration and device skin. Voice/music gains share one preference model; actual browser audio behavior remains subject to UAT.
