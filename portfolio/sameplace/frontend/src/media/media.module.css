@@ -1,0 +1,7 @@
+.panel { display:grid; gap:.65rem; padding:.75rem; border:1px solid var(--border,#8886); border-radius:10px; min-width:0; }
+.controls { display:flex; flex-wrap:wrap; gap:.45rem; align-items:center; }
+.controls button,.panel button { min-height:44px; max-width:100%; }
+.settings { display:grid; gap:.6rem; padding:.5rem 0; }
+.settings label { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+.settings select { max-width:100%; }
+.video { width:100%; height:100%; aspect-ratio:4/3; border-radius:8px; object-fit:cover; background:#242a30; }
