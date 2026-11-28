@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createTranslator, type MessageKey } from "../i18n/messages";
 import { ROOM_ROOT } from "../room-transport";
@@ -95,6 +96,7 @@ function RoomPanel({ room, identity, busy, run, invitation }: { room: Room; iden
   </>;
 }
 export function SamePlaceRoomCore({ slug, token, authenticate, signOut }: Props) {
+  const router=useRouter();
   const [identity, setIdentity] = useState<Identity | null>(null); const [catalogue, setCatalogue] = useState<Catalogue | null>(null); const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [invitation, setInvitation] = useState(""); const [revision, setRevision] = useState(0);
   const inFlight = useRef(false);
@@ -121,7 +123,7 @@ export function SamePlaceRoomCore({ slug, token, authenticate, signOut }: Props)
       const result = await roomRequest<Room>(path, data);
       if (epoch !== permissionEpoch.current) return;
       if (result.invitation_token) setInvitation(`${window.location.origin}${ROOM_ROOT}/j#${result.invitation_token}`);
-      if ((path === "rooms" || path === "redeem") && result.slug) { window.location.assign(`${ROOM_ROOT}/r/${result.slug}`); return; }
+      if ((path === "rooms" || path === "redeem") && result.slug) { router.replace(`${ROOM_ROOT}/r/${result.slug}`); return; }
       if (slug && result.slug === slug) setRoom(result);
       else setRevision(old => old + 1);
     } catch (cause) {

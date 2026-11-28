@@ -104,6 +104,13 @@ class SocialService:
             room = self._room(unit, actor, slug)
             return {
                 "room": {k: room[k] for k in ("id", "slug", "status", "capacity")},
+                "media_permission": {
+                    "channel": can(room, actor.uid, "organizer")
+                    or can(room, actor.uid, "moderator"),
+                    "moderate": can(room, actor.uid, "moderator"),
+                    "owner": room["owner_uid"] == actor.uid,
+                    "owner_uid": room["owner_uid"],
+                },
                 "limits": policy(unit)["limits"],
                 "profile": public_profile(unit, actor.uid),
             }

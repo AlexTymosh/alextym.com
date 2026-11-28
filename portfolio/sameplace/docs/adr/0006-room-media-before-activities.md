@@ -1,0 +1,9 @@
+# ADR 0006 — Room media before activity lifecycle
+
+Status: accepted roadmap change by Owner; implementation candidate, real-device evidence pending.
+
+Context: Room Core, social shell and independent scenes/music are already merged. Voice/video must belong to Room/Meeting, not to a game or seat. Waiting until after Preferans would encourage accidental remounting and postpones discovery of NAT/capacity and audio problems.
+
+Decision: move Voice & Video to SP05 (4 logical commits), Activity SDK to SP06 (5), independent Preferans to SP07 (6). SP08–SP10 unchanged; 46 planned commits total. Room-level `MediaProvider` and local audio preferences live above the decor and future activity UI. Use existing single-worker authenticated WS for addressed, bounded signaling; media is sent directly peer-to-peer. One endpoint per UID, opt-in devices, ephemeral room/location policy, peer generation fencing, moderation and device cleanup. No paid fallback, no provider credentials, no production enablement. Room-only UAT can begin after SP05 in a verified isolated environment; games are not required for media. Hosted private pilot requires explicit authorization and a verified free budget. Public activation remains SP10. Full activity transitions must preserve this controller, and lower effective capacity if media testing cannot prove the configured limit.
+
+Alternatives: dedicated signaling service (unnecessary duplication); tying WebRTC to game UI (wrong lifecycle); SFU/TURN by default (no confirmed hard zero-cost limit); delay all media until Preferans (late discovery of risk). Consequences: P2P cannot enforce revocation against tampered peers already connected, NAT may fail, bandwidth/CPU scale quadratically across the mesh; real network/device tests are release blockers, not inferred from code. The new order isolates these failures from game development. See MEDIA_OPERATIONS and REALTIME_AND_MEDIA.

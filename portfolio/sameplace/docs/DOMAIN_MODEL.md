@@ -46,3 +46,7 @@ Ephemeral: `Meeting` has room ID, opaque meeting ID, sequence, room/chat revisio
 ## SP04 stored records
 
 Within `sameplace_room_core_v1`, `decor_<room-id>` stores schema_version 1, optional published scenes keyed by lounge/table, music states keyed by room/lounge/table and monotonic `music_versions` including inheritance tombstones. Scene revision 0 is a computed default, never persisted as a published scene. Source ID, playback status, position_ms, started_at_ms and changed_by public ID are independent of scene data. `scene_library_<hash(uid)>` stores schema_version 1 and up to 12 template records (id, revision, name, scene, updated_at_ms); each scene is copied on publication. Room archival preserves these documents. No eager migration; reads do not create records. Max 16 objects/scene. Existing durable receipts and audits cover writes. No game state stored by this module.
+
+## SP05 ephemeral media domain
+
+`MediaState` owns a meeting-keyed Session: room/local mode, one Endpoint per UID (active connection, public ID, opt-in track flags, bounded inbox and signal rate), temporary moderator mute set and pair-generation identifiers. The existing Hub owns authoritative presence/location; MediaState observes it under the same lock, never creates a game seat or alters durable room state. Pair removed when endpoint/channel no longer permitted; obsolete signaling pruned. Local preference model is versioned browser-only, no credential or device info server-side. Restart loses media policy and endpoints; room/chat remain. No schema migration.

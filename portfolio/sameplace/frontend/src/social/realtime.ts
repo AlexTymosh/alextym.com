@@ -1,5 +1,6 @@
 import { roomRequest, RoomRequestError } from "../rooms/client";
 import type { Snapshot } from "./types";
+import { parseMedia, type MediaFrame, type Send } from "../media/types";
 export type ConnectionStatus = "connecting" | "online" | "waiting" | "degraded" | "disabled";
 type Ticket = { ticket: string; ws_url: string; protocol_version: number };
 const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
@@ -8,7 +9,7 @@ function validSnapshot(value: unknown): value is Snapshot {
   const v = value as Snapshot;
   return v.type === "room.snapshot" && v.protocol_version === 1 && typeof v.meeting_id === "string" && typeof v.room_id === "string" && Number.isSafeInteger(v.sequence) && Number.isSafeInteger(v.chat_revision) && Number.isSafeInteger(v.room_revision) && Number.isSafeInteger(v.inbox_revision) && Array.isArray(v.people) && v.people.length <= 10 && Array.isArray(v.proposals) && v.proposals.length <= 8;
 }
-export function openMeeting(slug: string, roomId: string, handlers: { snapshot: (value: Snapshot) => void; status: (status: ConnectionStatus, code?: string) => void; denied: () => void }): () => void {
+export function openMeeting(slug: string, roomId: string, handlers: { snapshot: (value: Snapshot) => void; status: (status: ConnectionStatus, code?: string) => void; denied: () => void; media?: (frame: MediaFrame) => void; transport?: (send: Send | null) => void }): () => void {
   let stopped = false, attempts = 0, socket: WebSocket | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined, heartbeat: ReturnType<typeof setInterval> | undefined;
   let connectDeadline: ReturnType<typeof setTimeout> | undefined;
@@ -19,6 +20,7 @@ export function openMeeting(slug: string, roomId: string, handlers: { snapshot: 
     if (connectDeadline) clearTimeout(connectDeadline);
     heartbeat = undefined; connectDeadline = undefined;
     const old = socket; socket = undefined;
+    handlers.transport?.(null);
     if (old) { old.onopen = null; old.onmessage = null; old.onclose = null; old.onerror = null; old.close(); }
   }
   function schedule(status: ConnectionStatus, code?: string, minimumSeconds=0) {
@@ -51,6 +53,12 @@ export function openMeeting(slug: string, roomId: string, handlers: { snapshot: 
             lastMeeting = data.meeting_id; lastSequence = data.sequence; lastInbox = data.inbox_revision;
             if (connectDeadline) { clearTimeout(connectDeadline); connectDeadline = undefined; }
             if (!heartbeat) {
+              handlers.transport?.(frame => {
+                if (stopped || socket !== current || current.readyState !== WebSocket.OPEN || current.bufferedAmount > 262144) return false;
+                const message = JSON.stringify(frame);
+                if (new TextEncoder().encode(message).length > 32768) return false;
+                current.send(message); return true;
+              });
               lastPong = Date.now();
               heartbeat = setInterval(() => {
                 if (socket !== current) return;
@@ -60,6 +68,7 @@ export function openMeeting(slug: string, roomId: string, handlers: { snapshot: 
             }
             attempts = 0; handlers.status("online"); handlers.snapshot(data);
           } else if (data && typeof data === "object" && "type" in data) {
+            if (lastMeeting) { const media = parseMedia(data,lastMeeting); if (media) handlers.media?.(media); }
             if (data.type === "pong") lastPong = Date.now();
             if (data.type === "error" && "code" in data && typeof data.code === "string") lastError = data.code;
           }

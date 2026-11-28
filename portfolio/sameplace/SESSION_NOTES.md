@@ -1,8 +1,8 @@
 # SamePlace — Session notes and implementation roadmap
 
-**Revision:** 4.0 | **Date:** 2026-11-27 | **Scope:** SamePlace only
+**Revision:** 5.0 | **Date:** 2026-11-28 | **Scope:** SamePlace only
 
-**Status:** SP01–SP03 MERGED; SP04 CANDIDATE r01. Full local/hosted CI and release acceptance pending. Not activated.
+**Status:** SP01–SP04 MERGED; SP05 CANDIDATE r01 (room media). Full locked CI and real-device acceptance pending. Not activated.
 
 Canonical path: `portfolio/sameplace/SESSION_NOTES.md`.
 
@@ -10,11 +10,11 @@ Requirements: [SAMEPLACE_FULL_TECHNICAL_SPECIFICATION.ru.md](docs/SAMEPLACE_FULL
 
 ## 1. Resume here
 
-- **Last inspected main:** `1381cf379cac5c8cd5f5f6b24c55564830c19ece` (SP03 merge confirmed by GitHub). Legacy freeze baseline remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777`; never regenerate it.
-- **Last merged SamePlace PR:** SP03, verified on main at `1381cf379cac5c8cd5f5f6b24c55564830c19ece`. Owner reports merged following the E702 correction; full CI log not independently observed. SP02/SP03 Emulator and real-device acceptance remain open.
-- **Current candidate:** SP04 r01 `sameplace-sp04-interiors-music-r01.zip`, branch `feat/sameplace-interiors-music`. Apply on exact clean main, run full no-Task CI and release-gate tests. Do not activate production.
-- **Current evidence:** SP04 focused domain and ASGI/WS checks pass with synthetic identity/storage; pure TS localization, transport and WAV tests pass. Full locked host CI, Emulator, real-browser media and artistic/rights acceptance remain open.
-- **Plan:** 10 sequential implementation PRs, 46 planned logical commits (4+5+5+5+5+6+4+4+4+4). Planning estimate, not an enforced count. Documentation is included in each PR; no separate documentation-only scaffold PR. One implementation branch and ZIP candidate at a time.
+- **Last inspected main:** `84f55a8217322d6f54294339f51f56a61bbe04da` (SP04 merge verified by GitHub). Legacy freeze source remains `1e76eaa4c0ba58ceed0e5b5615917a6ee229f777`; do not regenerate.
+- **Last merged SamePlace PR:** SP04 at `84f55a8217322d6f54294339f51f56a61bbe04da`. Owner reported all eight local CI groups passed and 336 protected Git blobs unchanged; merge independently verified. Emulator and real-device acceptance pending.
+- **Current candidate:** SP05 r01 `sameplace-sp05-room-media-r01.zip`, branch `feat/sameplace-room-media`. Apply on exact clean main; full CI, optional local browser smoke and actual two-user UAT before media activation.
+- **Current evidence:** Focused 64 Python tests pass in reconstructed synthetic checkout, including 9 media and 55 regression cases. Pure TS strict check and 16 Node tests (4 new, 12 regression) passed. Chromium loopback navigation blocked by author environment; no real-device or hosted UAT claim.
+- **Plan:** 10 sequential implementation PRs, 46 planned logical commits (4+5+5+5+4+5+6+4+4+4). Planning estimate, not an enforced count. Documentation is included in each PR; no separate documentation-only scaffold PR. One implementation branch and ZIP candidate at a time.
 - **Production:** keep SamePlace disabled until the explicit release gate. Do not disable or modify legacy Preferans, existing site features, or cloud billing to make SamePlace work.
 
 ## 2. Non-negotiable constraints
@@ -62,9 +62,9 @@ Maintain the following set incrementally, not as empty files created for their o
 | `docs/DOMAIN_MODEL.md`, `docs/SECURITY_AND_PERMISSIONS.md`, `docs/API_CONTRACT.md` | SP02 | Entities, ownership, state invariants, error codes, role and object permission matrix |
 | `docs/REALTIME_AND_MEDIA.md`, `docs/RESOURCE_BUDGET.md` | SP03 | Protocol, lifecycle, quotas, degradation, measurements, no paid fallback |
 | `docs/INTERIOR_ENGINE.md`, `docs/ASSET_LICENSES.md` | SP04 | Scene schema, anchors, variants, editor, provenance and audio permissions |
-| `docs/ACTIVITY_SDK.md`, `docs/STATE_COMPATIBILITY.md` | SP05 | Module manifest, commands, projections, capability/version contract, lifecycle, migrations |
-| `docs/PREFERANS_MIGRATION.md` | SP06 | Frozen source provenance, copied code inventory, differential test evidence, rules deviations (none without approval) |
-| `docs/MEDIA_OPERATIONS.md` | SP07 | Consent, NAT tests, device capacity, moderation and provider limitations |
+| `docs/ACTIVITY_SDK.md`, `docs/STATE_COMPATIBILITY.md` | SP06 | Module manifest, commands, projections, capability/version contract, lifecycle, migrations |
+| `docs/PREFERANS_MIGRATION.md` | SP07 | Frozen source provenance, copied code inventory, differential test evidence, rules deviations (none without approval) |
+| `docs/MEDIA_OPERATIONS.md` | SP05 | Consent, NAT tests, device capacity, moderation and provider limitations |
 | `docs/BOT_POLICY.md` | SP08 | Legal inputs, safe substitution, scheduling and ranking eligibility |
 | `docs/activities/domino/` | SP09 | Module architecture, Owner-approved rules reference, tests and limitations |
 | `docs/RELEASE_RUNBOOK.md`, `docs/ACCEPTANCE_EVIDENCE.md`, `CHANGELOG.md` | SP10 (evidence and changelog earlier as applicable) | Release, rollback, verification, open gaps |
@@ -121,11 +121,22 @@ Branch: `feat/sameplace-interiors-music`. Depends on SP03.
 4. `feat(sameplace): implement shared music and replaceable player skins` — DJ, room/local audio policy, radio/recorded source distinction, autoplay, individual volume; two-block Vega plus S-50, Spring/Vesna and approved variants; no server audio rebroadcast.
 5. `test(sameplace): verify scene persistence and media independence` — scene conflicts, asset rights, touch controls, state synchronization and audio continuity; English technical docs.
 
-Exit: scene can be changed without changing game rules; music controller independent of skin. T-047–056, 061, 080, 084–085 (game-switch cases fully verified in SP06). Actual stream availability/rights are a gate, not an assumed fact.
+Exit: scene can be changed without changing game rules; music controller independent of skin. T-047–056, 061, 080, 084–085 (game-switch cases verified in SP07). Actual stream availability/rights are a gate, not an assumed fact.
 
-### SP05 — Activity SDK and authoritative game lifecycle (5 commits)
+### SP05 — Room-wide voice and video (4 commits)
 
-Branch: `feat/sameplace-activity-host`. Depends on SP03/SP04. This precedes full Preferans adaptation deliberately so its host contract can be tested independently.
+Branch: `feat/sameplace-room-media`. Depends on SP03/SP04; independent of SDK and games. Activity continuity verified in SP06/SP07.
+
+1. `feat(sameplace): implement replaceable room media provider` — interface and P2P signalling, room/location channels, bounded peer lifecycle, no paid fallback.
+2. `feat(sameplace): implement media consent and moderation controls` — camera/mic user gesture, explicit mute/kick/ban, privacy, track cleanup, no remote unmute; document P2P enforcement limits.
+3. `feat(sameplace): integrate responsive media participant tiles` — replace static avatars, mobile policies, device selection, location transitions, separate music volume.
+4. `test(sameplace): establish free media capacity and failure behavior` — mock automation plus real-network/device acceptance protocol, NAT and bandwidth tests, verified effective cap, zero-cost evidence. If real evidence unavailable, keep media disabled and mark release blocker, never claim ten supported.
+
+Exit: T-054, 057–061, 080, 085; media controller survives scene/skin changes; actual game-switch proof follows SP06/SP07; failure does not break Room Core. Production capacity needs actual measurements and Owner authorization.
+
+### SP06 — Activity SDK and authoritative game lifecycle (5 commits)
+
+Branch: `feat/sameplace-activity-host`. Depends on SP05 (room media is independently feature-gated). This precedes full Preferans adaptation deliberately so its host contract can be tested independently.
 
 1. `feat(sameplace): define versioned activity SDK and registry` — manifest/capabilities, independent modules, user/room entitlements, schema/version pin, public/private projections, static trusted module registry.
 2. `feat(sameplace): implement activity state machine and seat locks` — create/configure/readiness/start, one active slot per room and global human lock, reservations, spectator role and organizer/game-master distinction.
@@ -133,11 +144,11 @@ Branch: `feat/sameplace-activity-host`. Depends on SP03/SP04. This precedes full
 4. `feat(sameplace): implement activity shell and result lifecycle` — lazy module loading/unmount, activity submenu, repeat, result finalization and history/ranking infrastructure; explicit module authorization and capability guards.
 5. `test(sameplace): exercise SDK with deterministic test activities` — small test-only module(s), never advertised as real games; concurrent commands, stale versions, reconnect, two independent paused activities, contract tests, SDK docs.
 
-Exit: generic lifecycle works without importing any legacy or Preferans-specific domain; room shell not coupled to a test activity; no bogus public game. T-026–035, 038–045, 064, 066–068, 070–073 as generic contracts; Preferans-specific proof deferred SP06 and bot-specific SP08. Document chosen SDK minimalism and version compatibility strategy.
+Exit: generic lifecycle works without importing any legacy or Preferans-specific domain; room shell not coupled to a test activity; no bogus public game. T-026–035, 038–045, 064, 066–068, 070–073 as generic contracts; Preferans-specific proof deferred SP07 and bot-specific SP08. Document chosen SDK minimalism and version compatibility strategy.
 
-### SP06 — Independent Preferans engine and real integration (6 commits)
+### SP07 — Independent Preferans engine and real integration (6 commits)
 
-Branch: `feat/sameplace-preferans-engine`. Depends on SP05 and the approved freeze source. Highest regression risk; one cohesive PR with two internal checkpoints.
+Branch: `feat/sameplace-preferans-engine`. Depends on SP06 and the approved freeze source. Highest regression risk; one cohesive PR with two internal checkpoints.
 
 1. `refactor(sameplace): extract independent preferans engine from frozen source` — new package namespace, source provenance, pure domain/rules/scoring/codec, no live legacy imports or writes; no rule invention.
 2. `test(sameplace): establish preferans differential and golden scenarios` — reproduce approved source cases including recent PR changes, scoring, auction, misere, passout, undo/claims, private projections; exact recorded reference inputs and deterministic outputs; compare test-only fixtures or pinned reference in isolated harness, not a production dependency.
@@ -146,22 +157,11 @@ Branch: `feat/sameplace-preferans-engine`. Depends on SP05 and the approved free
 5. `feat(sameplace): integrate preferans session results and room continuity` — readiness/seat swaps, observers, repeated game, pause/rejoin after restart, history/ranking idempotency, room-level media continuity; no historical import.
 6. `test(sameplace): verify full preferans parity and legacy isolation` — differential, Emulator, three players plus guest, mobile desktop, restart, old project smoke and freeze; document remaining UAT gaps.
 
-Internal stop after commits 1–2: engine package and differential tests must be coherent before UI integration. Stop after commits 3–4: exercise real adapter and privacy before final scoring/history. Split into SP06A/SP06B only if context, source availability, diff size or failing integration prevents safe completion; do not merge a broken engine. Exit: original remains identical; new module provides verified parity and independent activity lifecycle. T-026–035, 039–046, 054, 061, 064, 068–073, 077–078, 083. Bot-specific cases remain SP08. Any known rule ambiguity blocks affected behavior until Owner clarification.
-
-### SP07 — Room-wide voice and video (4 commits)
-
-Branch: `feat/sameplace-room-media`. Depends on SP03/SP06; shared controller must survive activity switching.
-
-1. `feat(sameplace): implement replaceable room media provider` — interface and P2P signalling, room/location channels, bounded peer lifecycle, no paid fallback.
-2. `feat(sameplace): implement media consent and moderation controls` — camera/mic user gesture, explicit mute/kick/ban, privacy, track cleanup, no remote unmute; document P2P enforcement limits.
-3. `feat(sameplace): integrate responsive media participant tiles` — replace static avatars, mobile policies, device selection, location transitions, separate music volume.
-4. `test(sameplace): establish free media capacity and failure behavior` — mock automation plus real-network/device acceptance protocol, NAT and bandwidth tests, verified effective cap, zero-cost evidence. If real evidence unavailable, keep media disabled and mark release blocker, never claim ten supported.
-
-Exit: T-054, 057–061, 080, 085; media survives games; failure does not break Room Core. Production capacity needs actual measurements and Owner authorization.
+Internal stop after commits 1–2: engine package and differential tests must be coherent before UI integration. Stop after commits 3–4: exercise real adapter and privacy before final scoring/history. Split into SP07A/SP07B only if context, source availability, diff size or failing integration prevents safe completion; do not merge a broken engine. Exit: original remains identical; new module provides verified parity and independent activity lifecycle. T-026–035, 039–046, 054, 061, 064, 068–073, 077–078, 083. Bot-specific cases remain SP08. Any known rule ambiguity blocks affected behavior until Owner clarification.
 
 ### SP08 — Virtual players and safe substitution (4 commits)
 
-Branch: `feat/sameplace-virtual-players`. Depends on SP06; SP07 precedes it in default delivery order.
+Branch: `feat/sameplace-virtual-players`. Depends on SP07.
 
 1. `feat(sameplace): define bounded bot actor and substitution contract` — legal actor projection, deterministic scheduling, deadline/cancellation, no AI API or hidden information.
 2. `feat(sameplace): implement preferans bot strategy` — validated legal choices, bounded CPU, testable seeded behavior, difficulty only where meaningful and approved; no human identity impersonation.
@@ -194,7 +194,7 @@ Exit: all applicable T-001–085 evidenced, full local and hosted CI, actual clo
 
 ## 6. PR count rationale and stop rules
 
-The roadmap groups by architectural dependency and risk, not by every UI control. Ten PRs and roughly 46 logical commits are a planning estimate for full private v1.0, including Domino, bots, media, editor and release evidence. A first useful closed beta with room and real Preferans is reached at SP06 (subject to gates); it is not full v1.0. Do not add speculative features to fill a planned PR.
+The roadmap groups by architectural dependency and risk, not by every UI control. Ten PRs and roughly 46 logical commits are a planning estimate for full private v1.0, including Domino, bots, media, editor and release evidence. A first useful private room/media pilot can start after SP05 (isolated and explicitly authorized); a first closed beta with room and real Preferans is reached at SP07 (subject to gates); it is not full v1.0. Do not add speculative features to fill a planned PR.
 
 No reliable fixed token or LOC limit guarantees context retention. Keep one active PR; maintain a short internal checklist at each logical commit. Before beginning the next checkpoint, verify current diff, changed contracts, failing tests and docs, record continuation state. If the full package cannot be safely reviewed, split only at a buildable dependency boundary; record reason, remaining tasks, and revised count. Never continue with guessed file contents or lost context. Correcting a failed candidate normally stays in the same branch/PR, with a new ZIP revision and explicit correction entry, not a new numbered stage. Never combine freeze/access, new engine extraction and media-provider activation into one giant rewrite. Avoid repetitive micro-PRs for cosmetic tweaks.
 
@@ -228,14 +228,14 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 | SP01 | 4 | MERGED | `98945bc295e5` | Owner confirmed; main contents verified; Vercel success, full CI log not independently observed |
 | SP02 | 5 | MERGED | `e33b71b4e815` | Owner reports full local/hosted CI green; merge verified; Emulator remains open |
 | SP03 | 5 | MERGED | `1381cf379cac` | Owner reports merged; raw CI logs not independently observed |
-| SP04 | 5 | CANDIDATE r01 | `1381cf379cac` (base) | Interior and music candidate; release gates pending |
-| SP05 | 5 | PLANNED | - | Depends on SP03/SP04 |
-| SP06 | 6 | PLANNED | - | Depends on SP05 and frozen Preferans source |
-| SP07 | 4 | PLANNED | - | Depends on SP03/SP06; capacity evidence |
-| SP08 | 4 | PLANNED | - | Depends on SP06; default sequence SP07 then SP08 |
+| SP04 | 5 | MERGED | `84f55a821732` | Owner local CI pass; 336 protected blobs; merge verified |
+| SP05 | 4 | CANDIDATE r01 | `84f55a821732` (base) | Room media candidate; private two-user UAT pending |
+| SP06 | 5 | PLANNED | - | Activity SDK; depends on SP05 |
+| SP07 | 6 | PLANNED | - | Independent Preferans; depends on SP06 and frozen source |
+| SP08 | 4 | PLANNED | - | Depends on SP07 |
 | SP09 | 4 | PLANNED | - | Requires approved Domino rules |
 | SP10 | 4 | PLANNED | - | All previous stages and acceptance gates |
-| **Total** | **46** | **3 merged** | - | SP04 candidate; SP05–SP10 planned |
+| **Total** | **46** | **4 merged** | - | SP05 candidate; SP06–SP10 planned |
 
 ## 10. Open items (carry forward until evidenced or resolved)
 
@@ -243,14 +243,16 @@ Mandatory per-PR common gates: full CI, clean diff, freeze guard, unchanged site
 |---|---|---|
 | OPEN-01 | Pinned PR42 SHA in SP01; generate and verify actual inventory on apply. Owner to protect freeze guard/manifest and confirm merged baseline. | SP01 |
 | OPEN-02 | Verify exact Lab identity/admission bootstrap for room-only guests, invite ownership proof and revocation; avoid generic grant bypass. | SP02 |
-| OPEN-03 | Current Firestore usage, actual free quota/Render/Vercel configuration, staging isolation and current provider terms; PR22 resolved per Owner, not independently metered. | SP03, SP10 |
+| OPEN-03 | Current Firestore usage, actual free quota/Render/Vercel configuration, staging isolation and current provider terms; PR22 resolved per Owner, not independently metered. | SP03, SP05, SP10 |
 | OPEN-04 | Licensed scene assets, Vega two-block and S-50 appearance, radio sources/rights. | SP04 |
-| OPEN-05 | Full current Preferans source/rules inventory, test parity, package migration boundary and actual three-player/mobile UAT. | SP06 |
-| OPEN-06 | NAT and free AV capacity on actual devices; if lower than ten, enforce lower effective cap. No hard no-charge proof means no paid provider activation. | SP07, SP10 |
+| OPEN-05 | Full current Preferans source/rules inventory, test parity, package migration boundary and actual three-player/mobile UAT. | SP07 |
+| OPEN-06 | NAT and free AV capacity on actual devices; if lower than ten, enforce lower effective cap. No hard no-charge proof means no paid provider activation. | SP05, SP10 |
 | OPEN-07 | Concrete Domino rules approved by Owner. | Before SP09 |
 | OPEN-08 | Long-run resource budget, complete acceptance matrix and release/rollback evidence. | SP10 |
 | OPEN-09 | SamePlace name clearance and commercial hosting/license/privacy requirements. | Future commercial launch; not private development blocker |
 | OPEN-10 | SP01 r02 included in merged main; historical failure retained, full post-fix CI log not independently observed. | SP01 merged |
+
+Private UAT checkpoints: after SP05, test room gathering/voice/video without games at `/portfolio/sameplace/rooms` and `/r/<slug>` on an approved isolated environment. See MEDIA_OPERATIONS for two-user instructions, flags and stop conditions. SP06 test-only activity lifecycle; SP07 actual three-player Preferans; SP08 bots; SP09 Domino; SP10 public release. No remote environment is activated by this candidate.
 
 ## 11. Session history (append; do not erase past failures)
 
@@ -353,3 +355,12 @@ End of current log. Append new entries in chronological order; update the resume
 - Extend the host ESLint global ignore list to exclude generated Playwright reports, test results, dist and generated configuration. Keep existing rules and the separate SamePlace/Fleet source lint checks unchanged. No report deletion, dependency changes or legacy source edits.
 - Leave the three non-blocking warnings visible; review the ref cleanup and navigation behavior separately rather than mechanically changing lifecycle logic. Full CI rerun required. The SP04 candidate commit grouping includes the shared lint configuration in commit five.
 - Owner approved reordering future stages to SP05 Voice & Video, SP06 Activity SDK, SP07 Preferans Engine. Update the roadmap and dependent documents when beginning SP05 after SP04 merges. No media implementation in this correction.
+
+### 2026-11-28 — SP04 merge verification / SP05 candidate r01
+
+- Verified actual main `84f55a8217322d6f54294339f51f56a61bbe04da`. Owner reported all eight local CI groups passed, legacy freeze PASS with 336 protected blobs, then merge. No claim of independent full hosted CI or actual media acceptance.
+- Owner-approved reorder: SP05 Voice & Video (4 commits), SP06 Activity SDK (5), SP07 Preferans (6), SP08–10 unchanged, 46 planned total. ADR 0006 and current roadmap, architecture, canonical Russian §23.1 schedule and affected dependent docs updated; rules unchanged.
+- Candidate `sameplace-sp05-room-media-r01.zip`, branch `feat/sameplace-room-media`. Room-owned P2P provider, existing WS addressed signaling, explicit consent, one media endpoint per UID, room/local policy, moderator mute, bounded queues, device cleanup, avatar/video tiles, local preferences, voice/music gains and approximate ducking. Ambient/game bus gains reserved for future sound sources. No paid TURN/SFU runtime or implicit STUN. SP04 lint warnings addressed by stable generation object cleanup and Next router navigation; not independently ESLint-verified.
+- Evidence: 64 focused Python tests in reconstructed checkout (9 new media tests + 55 existing room/social/decor tests); FastAPI 0.128.2, synthetic identity/store, not locked full host. Pure TypeScript strict check and 16 Node tests passed (4 new, 12 regression); actual compiled controller fixture tests. Real Chromium smoke navigation blocked by author environment policy (ERR_BLOCKED_BY_ADMINISTRATOR); do not bypass; optional local script prepared. Full repository CI, host Ruff/ESLint, locked typecheck/build, Docker, Playwright, Emulator, real two-device/network and capacity acceptance remain open.
+- No legacy files, dependency lock, billing, provider configuration, remote writes or production activation. P2P cannot enforce tampered-client revocation; STUN-only may fail across NAT; no verified capacity beyond tests. Private UAT begins after local CI in an approved isolated test environment; hosted pilot only with explicit Owner authorization and verified GBP 0. Real game-switch proof SP06/SP07. Full RoomTemplate/display prefs and final art/radio rights remain open.
+- Next: apply ZIP, run full CI, review and merge; perform private two-user test per MEDIA_OPERATIONS, report results. SP06 only after SP05 merge and with known media limitations; keep public production off. Rollback disable media, revert candidate without deleting room data.

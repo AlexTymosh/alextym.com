@@ -20,3 +20,7 @@ Private room members may meet even without the owner. Profile, friendships, room
 ## SP04: scenes and music
 
 The private room includes original schematic scene presets, per-location designer editor, private reusable interior templates and a persistent audio controller. Source catalogue starts with two original test tones; external radio is operator-disabled until rights review. See [Interior engine](docs/INTERIOR_ENGINE.md), [asset register](docs/ASSET_LICENSES.md), [media operations](docs/REALTIME_AND_MEDIA.md) and [session ledger](SESSION_NOTES.md). Production stays disabled.
+
+## SP05 room voice/video and testing
+
+SP01–SP04 merged. SP05 is the room media candidate; Activity SDK moves to SP06 and Preferans to SP07 (ADR 0006). Room management, presence, chat and decor are testable in a configured isolated environment. After SP05 CI, use [MEDIA_OPERATIONS](docs/MEDIA_OPERATIONS.md) for a private two-user walkthrough, feature flags, no-cost constraints, real-device acceptance and rollback. Canonical room list path `/portfolio/sameplace/rooms`; hosted production remains disabled until explicitly authorized. No public game is available yet.
